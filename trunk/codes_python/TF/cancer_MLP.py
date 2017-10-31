@@ -16,7 +16,7 @@ cancer = load_breast_cancer()
 #dsets = reload(dsets)
 
 import tensorflow as tf
-from tensorflow.contrib.keras.layers import LeakyReLU
+#from tensorflow.contrib.keras.layers import LeakyReLU
 
 def y2indicator(y, T):
     N = len(y)

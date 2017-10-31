@@ -34,6 +34,9 @@ class Neural_Network():
         for kway in kwargs :
             inputs[kway] = kwargs[kway]
         
+        self.wlastkey = "wlast"
+        self.blastkey = "blast"
+        
         self.inputs = inputs
         self.N_ = N_
 ###-------------------------------------------------------------------------------        
@@ -88,8 +91,8 @@ class Neural_Network():
                 biases_d[bkey] = np.zeros(self.N_[curr_key])
             
             except KeyError :
-                w_dict["wlast"] = np.random.randn(self.N_[prev_key], self.N_["K"]) / self.N_[prev_key]
-                biases_d["bias_to_out"] = np.zeros(self.N_["K"])
+                w_dict[self.wlastkey] = np.random.randn(self.N_[prev_key], self.N_["K"]) / self.N_[prev_key]
+                biases_d[self.blastkey] = np.zeros(self.N_["K"])
                 err = True
             jj +=1
 
@@ -99,6 +102,7 @@ class Neural_Network():
     def tf_variables(self):
         ### We want to create as many tf.tensors as we have weight and biases matrices 
             ### Those ones will be tf.Variables(weight.astype(np.float32))
+            
         w_tf_d, b_tf_d = dict(), dict()
         wkeys = [i.split("_")[0] for i in self.w_dict.keys()]
         bkeys = [i.split("_")[0] for i in self.biases_d.keys()]
@@ -115,13 +119,55 @@ class Neural_Network():
         self.w_tf_d = w_tf_d
         self.b_tf_d = b_tf_d
 ###-------------------------------------------------------------------------------
-    def operations(self, activation="relu", err_eval="cross_entropy"):
-        print ok
+    def feed_forward(self, activation="relu"):
+        Z = dict()
+        act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu"]
+        
+        ### A wide variety of models are availables to compute the neuronal outputs.
+        ### We chose that way of implementation : the main work is done only if str_act
+        ### belongs to a list predefined that should be improved by time
+        #####   Must read and cite articles or documentations related to activation fcts
+        
+        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu] ) :
+            if str_act == activation :
+                Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
+                print ("act function chose %s \t act function wanted %s" %(str_act, activation))
+                for i in xrange(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
+                    curr_zkey, prev_zkey = "z%d" %(i), "z%d" %(i-1)
+                    wkey = "w%d" %(i)
+                    bkey = "b%d" %(i)
+                    Z[curr_zkey] = act( tf.matmul(Z[prev_zkey], self.w_tf_d[wkey] )  + self.b_tf_d[bkey] ) 
+                print curr_zkey
+                self.y_pred_model = tf.matmul(Z[curr_zkey], self.w_tf_d[self.wlastkey]) + self.b_tf_d[self.blastkey]
+        if Z == {}:
+            raise AttributeError ("\"{}\" activation function is unknown.\nActivation function must be one of {}".format(activation, act_func_lst))
+        ### We constructed operations 
+        self.Z = Z
+        
+    def error_computations(err_eval) :
+        ### Now we compute error based on different available models
+        ### We just begin with cross_entropy. Specified way of computation may be required 
+        ### for particular error functions 
+        
+        error_lst_fct = ["cross_entropy", "OLS"]
+        #####   To be continued.
+        #####   Must read and cite articles or documentations related to error func
+        for str_err, err_eval in zip(error_lst_fct, [tf.nn.softmax_cross_entropy_with_logits, tf.square]) :
+            if str_err ==err_eval :
+                loss = tf.reduce_sum()
+###-------------------------------------------------------------------------------
+
+###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 if __name__=="__main__":
+    
     TF = Neural_Network(0.0004, model="", pathfile="test.csv")
     from sklearn.datasets import load_breast_cancer
     cancer = load_breast_cancer()
     TF.train_and_split(cancer.data, cancer.target)
     TF.build_graph()
     TF.tf_variables()
+    TF.feed_forward("relu")
+    
+    
+    
