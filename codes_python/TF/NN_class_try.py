@@ -122,7 +122,7 @@ class Neural_Network():
     def feed_forward(self, activation="relu"):
         Z = dict()
         act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu"]
-        
+        # to have leakyrelu upgrade tensorflow sudo pip install tensorflow==1.4.0-rc0 
         ### A wide variety of models are availables to compute the neuronal outputs.
         ### We chose that way of implementation : the main work is done only if str_act
         ### belongs to a list predefined that should be improved by time
