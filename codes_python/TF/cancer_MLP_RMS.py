@@ -142,5 +142,6 @@ perc = res["True"]/float(res["True"] + res["False"])
 
 print("{}".format(perc))
 
+sess.close()
 #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
