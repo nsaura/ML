@@ -7,6 +7,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
+import time
+
 from sklearn.model_selection    import  train_test_split
 from sklearn.datasets           import  load_breast_cancer
 cancer = load_breast_cancer()
@@ -38,7 +40,7 @@ def find_divisor(N) :
 #-----------------------------------------------------------------
 sess = tf.InteractiveSession()
 
-lr = 0.00004
+lr = 0.0004
 
 X, y = cancer.data, cancer.target
 
@@ -51,13 +53,14 @@ X_test =  (X_test-X_train_mean)/(X_train.std(axis=0))
 
 #----- Building graph -----#
 N1 = 300                #Nombre de noeuds pour w^1_ij
-N2 = 200
+N2 = 50
 T = y_train.shape[0]    #Nombre de noeuds pour w^2_ij
 K = 2                   # Nombre de classe à la sortie
 
 Nraw_Xtrain, Ncol_Xtrain = X_train.shape #Pour faciliter les notations
 
 print("\x1b[0;30;47m RMSPropOptimizer \x1b[0m")
+start = time.time()
 
 sess = tf.InteractiveSession()
 #   1-- Weihts and Bias 
@@ -101,7 +104,9 @@ y_ = tf.matmul(z3, w4) + b4
 cost = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=y_, labels=t))
 
 #   4-- We train the model and foresee to analyse prediction
-train_op = tf.train.RMSPropOptimizer(lr, decay=0.99, momentum= 0.9).minimize(cost)
+train_op = tf.train.RMSPropOptimizer(lr, decay=0.99, momentum=0.9).minimize(cost)
+# momentum helps the NN when Gradient is stuck in a local minima
+# In this case, it is a gain of time
 predict_op = tf.argmax(y_,1)
 
 #   5-- We prepare tf to run
@@ -109,7 +114,7 @@ costs = []
 max_epoch, err, epoch = 30, 1, 0
 
 batch_sz = find_divisor(Nraw_Xtrain)[-3]
-print batch_sz
+#print batch_sz
 
 n_batches= Nraw_Xtrain // batch_sz
 y_train_ind = y2indicator(y_train, K)
@@ -143,5 +148,8 @@ perc = res["True"]/float(res["True"] + res["False"])
 print("{}".format(perc))
 
 sess.close()
+end = time.time()
+
+print ("Running Time : {}".format(end-start))
 #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
