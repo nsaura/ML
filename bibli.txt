@@ -7,6 +7,7 @@ Liens wiki:     https://fr.wikipedia.org/wiki/Apprentissage_automatique
                 https://en.wikipedia.org/wiki/Latent_variable
                 https://en.wikipedia.org/wiki/Independent_and_identically_distributed_random_variables
                 https://en.wikipedia.org/wiki/Cross-validation_(statistics)
+		https://en.wikipedia.org/wiki/Decision_tree_learning
                 
 JB  	:       https://machinelearningmastery.com/overfitting-and-underfitting-with-machine-learning-algorithms/
 
