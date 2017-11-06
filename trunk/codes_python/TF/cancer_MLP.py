@@ -9,6 +9,7 @@ import matplotlib.cm as cm
 
 from sklearn.model_selection    import  train_test_split
 from sklearn.datasets           import  load_breast_cancer
+from sklearn.preprocessing      import  MinMaxScaler
 cancer = load_breast_cancer()
 
 
@@ -16,7 +17,7 @@ cancer = load_breast_cancer()
 #dsets = reload(dsets)
 
 import tensorflow as tf
-#from tensorflow.contrib.keras.layers import LeakyReLU
+
 
 def y2indicator(y, T):
     N = len(y)
@@ -43,12 +44,16 @@ X, y = cancer.data, cancer.target
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, random_state=42)
 
+scaler = MinMaxScaler().fit(X_train)
+
+X_train, X_test = scaler.transform(X_train), scaler.transform(X_test)
+
 # y_train labels known
 
 print("\x1b[0;30;47m GradientDescentOptimizer \x1b[0m")
 
 #----- Building graph -----#
-N1 = 300                #Nombre de noeuds pour w^1_ij
+N1 = 100                #Nombre de noeuds pour w^1_ij
 N2 = 200
 T = y_train.shape[0]    #Nombre de noeuds pour w^2_ij
 K = 2                   # Nombre de classe à la sortie
@@ -82,9 +87,9 @@ b3 = tf.Variable(b3_init.astype(np.float32))
 #   3-- define the model 
 ## Remind a nn consists in several nodes that transformed linear expressions into non-linear.
 ## Here we use relu fonction ( max(0,w.x) )
-z1 = tf.nn.relu( tf.matmul(x, w1) + b1) 
-z2 = tf.nn.relu( tf.matmul(z1, w2) + b2)
-y_ = tf.matmul(z2, w3) + b3 
+z1 = tf.nn.leaky_relu( tf.matmul(x, w1) + b1) 
+z2 = tf.nn.leaky_relu( tf.matmul(z1, w2) + b2)
+y_ = tf.nn.tanh(tf.matmul(z2, w3) + b3 )
 
 cost = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=y_, labels=t))
 
@@ -125,12 +130,13 @@ print(correct_prediction.eval(feed_dict={x:X_test, t:y_test_ind}))
 
 R = correct_prediction.eval(feed_dict={x:X_test, t:y_test_ind})
 
-print("{}".format({k:v for k,v in zip (["False","True"], np.bincount(R))}))
+dd = {k:v for k,v in zip (["N","O"], np.bincount(R))}
+
+print ("Taux de bonne réponse : {:.2f}%".format((dd['O']/ (dd['N'] + dd['O']))))
+
+# Taux de bonne réponse : 0.91
+# En jouant un peu, on peu atteindre les 0.98
+
 #plt.ion()
 #plt.plot(costs)
 #plt.show()
-        
-
-
-
-
