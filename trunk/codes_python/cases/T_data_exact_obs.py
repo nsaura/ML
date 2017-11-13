@@ -63,11 +63,11 @@ T_inf_lst = [i*5 for i in xrange(1, 11)]
 
 T_init, T_nNext_lst = [], []
 
-verbose = True
+verbose = False
 for T_inf in T_inf_lst :
 
-    T_n =  list(map(lambda x : -4*T_inf*x*(x-1), line_z[1:N_discr-1])) # Profil de température initiale
-    T_n_2 = list(map(lambda x : -4*T_inf*x*(x-1), line_z[1:N_discr-1])) # Profil de température initiale
+    T_n =  map(lambda x : -4*T_inf*x*(x-1), line_z[1:N_discr-1])) # Profil de température initiale
+    T_n_2 = map(lambda x : -4*T_inf*x*(x-1), line_z[1:N_discr-1])) # Profil de température initiale
     
     T_init.append(T_n)
     #T_n =  list(map(lambda x : T_inf, line_z[1:N_discr-1])) # Profil de température initiale
@@ -115,7 +115,7 @@ for T_inf in T_inf_lst :
     df.to_csv("./data/T_inf_{}.csv".format(T_inf), index=False, header=True)
     
     df_2 = pd.DataFrame(T_nNext_2)
-    df_2.to_csv("./data/prior_T_inf{}".format(T_inf), index=False, header=True)
+    df_2.to_csv("./data/prior_T_inf_{}.csv".format(T_inf), index=False, header=True)
     
     if verbose == True :
         plt.plot(line_z[1:N_discr-1], T_nNext, label='Convergence Exact -- {}'.format(T_inf))
