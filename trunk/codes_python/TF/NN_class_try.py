@@ -137,14 +137,17 @@ class Neural_Network():
                     wkey = "w%d" %(i)
                     bkey = "b%d" %(i)
                     Z[curr_zkey] = act( tf.matmul(Z[prev_zkey], self.w_tf_d[wkey] )  + self.b_tf_d[bkey] ) 
-                print curr_zkey
                 self.y_pred_model = tf.matmul(Z[curr_zkey], self.w_tf_d[self.wlastkey]) + self.b_tf_d[self.blastkey]
+                
+                
         if Z == {}:
             raise AttributeError ("\"{}\" activation function is unknown.\nActivation function must be one of {}".format(activation, act_func_lst))
+        
         ### We constructed operations 
+        print("Z's construits")
         self.Z = Z
         
-    def error_computations(err_eval) :
+    def error_computation(self, err_eval) :
         ### Now we compute error based on different available models
         ### We just begin with cross_entropy. Specified way of computation may be required 
         ### for particular error functions 
@@ -153,8 +156,13 @@ class Neural_Network():
         #####   To be continued.
         #####   Must read and cite articles or documentations related to error func
         for str_err, err_eval in zip(error_lst_fct, [tf.nn.softmax_cross_entropy_with_logits, tf.square]) :
-            if str_err ==err_eval :
-                loss = tf.reduce_sum()
+            if str_err == error_lst_fct :
+                self.loss = tf.reduce_sum(err_eval(logits=self.y_pred_model, label=self.t))
+        print ("Fonction d\'erreur construite (uniquement pour cross_entropy)")
+        
+    def optimisation(self):
+        ## Once again, we must look at different optimizers existing in TF
+        print("Optimisation à construire") 
 ###-------------------------------------------------------------------------------
 
 ###-------------------------------------------------------------------------------
@@ -168,6 +176,9 @@ if __name__=="__main__":
     TF.build_graph()
     TF.tf_variables()
     TF.feed_forward("relu")
+    TF.error_computation("cross_entropy")
+    
+    TF.optimisation()
     
     
     

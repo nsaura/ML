@@ -77,6 +77,7 @@ b3_init = np.random.randn(N2)
 w4_init = np.random.randn(N2, K) / np.sqrt(N2)
 b4_init = np.random.randn(K)
 
+
 #   2-- TF variables and expressions
 x = tf.placeholder(tf.float32, (None, Ncol_Xtrain))
 t = tf.placeholder(tf.float32, (None, K))
@@ -99,6 +100,7 @@ b4 = tf.Variable(b4_init.astype(np.float32))
 z1 = tf.nn.relu( tf.matmul(x, w1) + b1) 
 z2 = tf.nn.relu( tf.matmul(z1, w2) + b2)
 z3 = tf.nn.relu( tf.matmul(z2, w3) + b3)
+
 y_ = tf.matmul(z3, w4) + b4
 
 cost = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=y_, labels=t))

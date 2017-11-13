@@ -82,6 +82,16 @@ knn = KNeighborsClassifier(n_neighbors=1).fit(X_train_pca, y_train)
 print("Test set accuracy nn-1 {}".format(knn.score(X_test_pca, y_test)))
 #31% on a gagné 10 points
 
+print("pca.components_.shape : {}".format(pca.components_.shape))
+
+verbose2 = True 
+if verbose2 == True :
+    fig, axes = plt.subplots(3,5, figsize=(15,12), 
+                            subplot_kw={'xticks': (), 'yticks': ()})
+
+    for i, (component, ax) in enumerate(zip(pca.components_, axes.ravel())) :
+        ax.imshow(component.reshape(image_shape), cmap='viridis')
+        ax.set_title("{} component".format(i+1))
 
 
 
