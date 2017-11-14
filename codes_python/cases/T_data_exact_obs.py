@@ -112,11 +112,15 @@ for T_inf in T_inf_lst :
             
         T_nNext_lst.append(T_nNext)
     
+        path_abs = os.path.abspath(os.path.curdir)
+        pf_obs = os.path.join(path_abs, 'data', 'obs_T_inf_{}_{}.csv'.format(T_inf, it))
+        pf_prior = os.path.join(path_abs, 'data', 'prior_T_inf_{}_{}.csv'.format(T_inf, it))
+
         df = pd.DataFrame(T_nNext)
-        df.to_csv("./data/T_inf_{}_{}.csv".format(T_inf, it), index=False, header=True)
+        df.to_csv(pf_obs, index=False, header=True)
     
         df_2 = pd.DataFrame(T_nNext_2)
-        df_2.to_csv("./data/prior_T_inf_{}_{}.csv".format(T_inf, it), index=False, header=True)
+        df_2.to_csv(pf_prior, index=False, header=True)
     
         if verbose == True :
             plt.plot(line_z[1:N_discr-1], T_nNext, label='Convergence Exact -- {}'.format(T_inf))
