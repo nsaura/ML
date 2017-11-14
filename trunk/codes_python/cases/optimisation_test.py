@@ -39,8 +39,9 @@ for i, (T_inf, prior_s) in enumerate(zip(T_inf_lst, prior_sigma)) :
     #i : xrange(len(T_inf_lst), T_inf = T_inf_lst[i]
     
     # Initialize appropriate pathfile for exact solution and modelled (which has discrepancy)
-    pathfile_ex = os.path.join('./data', 'T_inf_{}.csv'.format(T_inf))
-    pathfile_mod = os.path.join('./data', 'prior_T_inf_{}.csv'.format(T_inf))
+    path_abs = os.path.abspath(os.path.curdir)
+    pathfile_ex = os.path.join(path_abs, 'data', 'T_inf_{}.csv'.format(T_inf))
+    pathfile_mod = os.path.join(path_abs, 'data', 'prior_T_inf_{}.csv'.format(T_inf))
     
     # Compute covariance from data 
     T_temp = pd.read_csv(pathfile_ex).get_values()
