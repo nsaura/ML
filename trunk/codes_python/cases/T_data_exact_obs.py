@@ -55,7 +55,7 @@ A_diag = np.diag(np.transpose([(1+( 2.0)*dt/dz**2*kappa) for i in range(N_discr-
 
 A = A_diag + M1 + P1 #Construction de la matrice des coefficients
 
-lst_gauss = [tab_normal(0,0.1,N_discr-2)[0] for i in xrange(10) ] # Quadrillement du bruit
+lst_gauss = [tab_normal(0,0.1,N_discr-2)[0] for i in xrange(50) ] # Quadrillement du bruit
 
 T_inf_lst = [i*5 for i in xrange(1, 11)]
 
@@ -113,6 +113,10 @@ for T_inf in T_inf_lst :
         T_nNext_lst.append(T_nNext)
     
         path_abs = os.path.abspath(os.path.curdir)
+        
+        if os.path.exists(os.path.join(path_abs, "data")) == False :
+            os.mkdir(os.path.join(path_abs, "data"))
+        
         pf_obs = os.path.join(path_abs, 'data', 'obs_T_inf_{}_{}.csv'.format(T_inf, it))
         pf_prior = os.path.join(path_abs, 'data', 'prior_T_inf_{}_{}.csv'.format(T_inf, it))
 
