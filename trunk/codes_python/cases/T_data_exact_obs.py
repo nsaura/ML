@@ -36,7 +36,7 @@ plt.close('all')
 def tab_normal(mu, sigma, length) :
     return sigma * np.random.randn(length) + mu, (sigma * np.random.randn(length) + mu).mean() , (sigma * np.random.randn(length) + mu).std()
 
-np.random.seed(500) # To keep the same random generator
+np.random.seed(1000) # To keep the same random generator
 z_init, z_final = 0., 1.
 N_discr = 33
 kappa=0.1
