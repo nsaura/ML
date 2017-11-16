@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 import csv, os, sys, warnings
 
 from scipy import optimize as op
+
+from itertools import cycle
+import matplotlib.cm as cm
+
+
 ### Problem Constants and modules which will be converted into self when creating the class
 ##### Modules
 #-----------------
@@ -39,7 +44,11 @@ def h_beta(beta, T_inf, A, N_discr= 33, noise= 'none') :
         warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \x1b[0m".format(err, tol))
     return T_nNext 
 #-----------------
-
+def true_beta(T, noise ,T_inf, N_discr, h=0.5, eps_0 = 5.*10**(-4)) :  
+    
+    beta = [ 1./eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i]) + noise[i] ) *10**(-4) + h/eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in xrange(N_discr-2)]
+    return np.asarray(beta)
+#-----------------
 #####--------------------------------------------------------------------------
 
 ##### Constants
@@ -109,6 +118,7 @@ for i, (T_inf, prior_s) in enumerate(zip(T_inf_lst, prior_sigma)) :
 T_inf = 50 ## Begin with that
 
 
+#for T_inf in T_inf_lst :
 sT_inf = str(T_inf)
 beta_prior = np.asarray([1 for i in xrange(N_discr-2)])
 
@@ -122,15 +132,72 @@ J = lambda beta : 0.5*  (
                 np.linalg.inv(cov_prior) ) , (beta - beta_prior) )   
                         ) ## Fonction de coût
 
-beta_opti = op.fmin_bfgs(J, beta_prior)
+optimizer_dict, optimizer_betamap, optimizer_vec = dict(), dict(), dict()
 
-opti = op.minimize(J, beta_prior)
-beta_opti_2 = opti.x
-Hess_inv = beta_opti.hess_inv 
+hess_dict = dict()
+
+#    opti_bfgs[sT_inf] = op.fmin_bfgs(J, beta_prior)
+# BFGS : quasi Newton method that approximate the Hessian on the fly
+optimizer_dict["bfgs" + sT_inf]     =   op.minimize(J, beta_prior, method="BFGS")
+
+# Low rank hessian version sitd between BFGS and CG 
+optimizer_dict["l-bfgs-b" + sT_inf] =   op.minimize(J, beta_prior, method="L-BFGS-B")
+
+# Conjugate gradient use twe last value of the gradient to reduce jumps refering to the classical gradient descent algorithm
+
+## Les méthodes suivantes ne permettent pas de calculer la hessienne
+#optimizer_dict["CG" + sT_inf]       =   op.minimize(J, beta_prior, method="CG")
+#    
+## Newton method : based on the calculus of the gradient and the Hessian.
+##optimizer_dict["Newton-CG" + sT_inf] =  op.minimize(J, beta_prior, method="Newton-CG")   
+
+## Nelder-mead : robust to noise usefull for exp. data point. Generalization of dichotomy
+#optimizer_dict["Nelder-Mead" + sT_inf]       =   op.minimize(J, beta_prior, method="Nelder-Mead")
+
+for item in zip(optimizer_dict.items()) :
+    optimizer_betamap[item[0][0]] = item[0][1].x
+
+#hess_inv_dict[sT_inf] = opti_.hess_inv
+        
 
 #beta_opti = op.fmin_bfgs(J, beta_prior)
 
-plt.figure()
-plt.plot(line_z, curr_d, label='T_inf {} OBS'.format(T_inf))
-plt.plot(line_z, h_beta(beta_opti, T_inf, A), label='T_inf {} opti'.format(T_inf))
-plt.legend()
+pb_lst = []
+s= np.asarray([i for i in tab_normal(0,1,N_discr-2)[0]])
+for k,v in zip(optimizer_dict.keys(), optimizer_dict.values()) :
+    if k == 'l-bfgs-b50' :
+        hess_dict[k] = v.hess_inv(optimizer_betamap[k])
+        print hess_dict[k]
+    else :
+        try :
+            hess_dict[k] = v.hess_inv
+            
+        except AttributeError :
+            pb_lst.append(k)
+#            hess_dict[k] = np.dot(v.jac.T, v.jac) # Ressort une seule variable car la jacobienne ressortie est déjà évoluée au point qui minimise l'erreur
+            pass
+    R = np.linalg.cholesky(hess_dict[k])
+    optimizer_vec[k] = optimizer_betamap[k] + np.dot(R, s)
+    
+colors = cm.rainbow(np.linspace(0, 1, len(optimizer_dict.keys())))
+fig, axes = plt.subplots(1,2,figsize=(30,10))
+
+for item_vec, c in zip(optimizer_vec.items(), colors) :
+    axes[0].plot(line_z, item_vec[1], label="beta %s" %(item_vec[0]), color=c, marker='o', linestyle='none')
+    
+    axes[1].plot(line_z, h_beta(item_vec[1], T_inf, A), label="h_beta %s" %(item_vec[0]), color=c, marker='+', linestyle='none')
+
+            
+axes[0].plot(line_z, true_beta(curr_d, noise, T_inf, N_discr), label='Beta True T_inf {}'.format(T_inf))    
+axes[1].plot(line_z, curr_d, label='T_obs T_inf = {}'.format(T_inf))
+
+axes[0].set_title("Comparaison des betas optimises et beta Duraisamy")
+
+axes[1].set_title("Champs de temperature avec beta optimise et observe")
+
+axes[0].legend(loc='best', fontsize = 10, ncol=2)
+axes[1].legend(loc='best', fontsize = 10, ncol=2)
+
+#plt.plot(line_z, curr_d, label='T_inf {} OBS'.format(T_inf))
+#plt.plot(line_z, h_beta(beta_opti, T_inf, A), label='T_inf {} opti'.format(T_inf))
+#plt.legend()
