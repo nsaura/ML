@@ -176,7 +176,11 @@ for k,v in zip(optimizer_dict.keys(), optimizer_dict.values()) :
             pb_lst.append(k)
 #            hess_dict[k] = np.dot(v.jac.T, v.jac) # Ressort une seule variable car la jacobienne ressortie est déjà évoluée au point qui minimise l'erreur
             pass
-    R = np.linalg.cholesky(hess_dict[k])
+    try :
+        R = np.linalg.cholesky(hess_dict[k])
+    except np.linalg.LinAlgError :    
+        pass
+    
     optimizer_vec[k] = optimizer_betamap[k] + np.dot(R, s)
     
 colors = cm.rainbow(np.linspace(0, 1, len(optimizer_dict.keys())))
@@ -187,12 +191,14 @@ for item_vec, c in zip(optimizer_vec.items(), colors) :
     
     axes[1].plot(line_z, h_beta(item_vec[1], T_inf, A), label="h_beta %s" %(item_vec[0]), color=c, marker='+', linestyle='none')
 
-            
+axes[0].plot(line_z, optimizer_betamap['bfgs50'], label='betamap-bfgs')            
 axes[0].plot(line_z, true_beta(curr_d, noise, T_inf, N_discr), label='Beta True T_inf {}'.format(T_inf))    
+axes[1].plot(line_z, h_beta(optimizer_betamap['bfgs50'], T_inf, A), label='H_Beta Betamap bfgs', marker='o', linestyle='none')
 axes[1].plot(line_z, curr_d, label='T_obs T_inf = {}'.format(T_inf))
 
-axes[0].set_title("Comparaison des betas optimises et beta Duraisamy")
 
+
+axes[0].set_title("Comparaison des betas optimises et beta Duraisamy")
 axes[1].set_title("Champs de temperature avec beta optimise et observe")
 
 axes[0].legend(loc='best', fontsize = 10, ncol=2)
