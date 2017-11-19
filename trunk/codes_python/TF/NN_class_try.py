@@ -8,8 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-import csv
-import os.path as os
+import os, csv
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
@@ -17,6 +16,41 @@ import tensorflow as tf
 class Neural_Network():
 ###-------------------------------------------------------------------------------
     def __init__(self, lr, N_={}, max_epoch=10, pathfile="",**kwargs) :
+        inputs = dict()
+        for kway in kwargs :
+            inputs[kway] = kwargs[kway]
+
+        ## We check if the file indexed by "pathfile" variable exists
+        ## Otherwise, we create it
+        
+        if os.path.isfile(pathfile) == False :
+            try :
+                N_hidden_layer = kwargs["N_hidden_layer"]
+                print N_hidden_layer, type(N_hidden_layer)
+    
+            except KeyError:
+                raise KeyError ("You have to create an initializer file or to define N_hidden_layer when creating Neural_Network object ")
+    
+            try : 
+                layers_sizes = kwargs["layers_sizes"]
+                print layers_sizes, type(layers_sizes)
+                if len(layers_sizes) is not N_hidden_layer + 2 :  
+                    raise ValueError("ValueError : layers should have the length of N_hidden_layer + 2 since it contains the number of sites of the input, hidden and output layers ")
+
+            except :
+                raise KeyError("You have to create an initializer file or to give layers as an argument when constructing the Neural_Network object.")
+            
+            line = 0 
+            row = "N%d=%d\n" %(line, layers_sizes[line])
+            f = open(pathfile, "w")
+            while line < len(layers_sizes) - 1 :
+                f.write(row)
+                line += 1
+                row = "N%d=%d\n" %(line, layers_sizes[line])
+                
+            f.write("K=%d\n" %(layers_sizes[line]))
+            f.close()
+        
         if len(N_.keys())  == 0 :
             try :
                 f = csv.reader(open(pathfile, "r"), delimiter="=")
@@ -29,10 +63,6 @@ class Neural_Network():
 #        n_values_type = [type(i)==type(int) for i in N_.values()]
 #        if n_values_type == False : 
 #            N_ = dict((k,int(v)) for k,v in N_.interitems())
-        
-        inputs = dict()
-        for kway in kwargs :
-            inputs[kway] = kwargs[kway]
         
         self.wlastkey = "wlast"
         self.blastkey = "blast"
@@ -94,7 +124,7 @@ class Neural_Network():
                 w_dict[self.wlastkey] = np.random.randn(self.N_[prev_key], self.N_["K"]) / self.N_[prev_key]
                 biases_d[self.blastkey] = np.zeros(self.N_["K"])
                 err = True
-            jj +=1
+            jj += 1
 
         self.w_dict = w_dict
         self.biases_d = biases_d
@@ -169,7 +199,7 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 if __name__=="__main__":
     
-    TF = Neural_Network(0.0004, model="", pathfile="test.csv")
+    TF = Neural_Network(0.0004, model="", pathfile="test.csv", N_hidden_layer=3, layers_sizes = [5, 100, 100, 200, 50])
     from sklearn.datasets import load_breast_cancer
     cancer = load_breast_cancer()
     TF.train_and_split(cancer.data, cancer.target)
