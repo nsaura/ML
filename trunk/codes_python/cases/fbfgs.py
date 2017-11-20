@@ -19,7 +19,7 @@ def tab_normal(mu, sigma, length) :
     return sigma * np.random.randn(length) + mu, (sigma * np.random.randn(length) + mu).mean() , (sigma * np.random.randn(length) + mu).std()
 #-----------------
 #-----------------
-def h_beta(beta, T_inf, A, N_discr= 33, noise= 'none') :
+def h_beta(beta, T_inf, A, N_discr= 50, noise= 'none') :
     err, tol, compteur, compteur_max = 1., 1e-3, 0, 1000
     T_n = map(lambda x : -4*T_inf*x*(x-1), line_z)
     T_nNext = T_n
@@ -52,15 +52,15 @@ def true_beta(T, noise ,T_inf, N_discr, h=0.5, eps_0 = 5.*10**(-4)) :
 #####--------------------------------------------------------------------------
 
 ##### Constants
-N_discr = 33
+N_discr = 50
 z_init, z_final = 0., 1.
 dt, dz =  0.001, np.abs(z_init-z_final)/float(N_discr)
 
 line_z = np.linspace(z_init, z_final, N_discr)[1:N_discr-1]
 
-kappa, h = 0.1, 0.5
+kappa, h = 1.0, 0.5
 
-T_inf_lst = [i*5 for i in xrange(1, 11)]
+T_inf_lst = [i*5 for i in xrange(10, 11)]
 
 ## Matrice pour la résolution
 A_diag = np.diag(np.transpose([(1+( 2.0)*dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
@@ -87,6 +87,7 @@ for i, (T_inf, prior_s) in enumerate(zip(T_inf_lst, prior_sigma)) :
     #i : xrange(len(T_inf_lst), T_inf = T_inf_lst[i]
     T_obs, T_prior = [], []     
     T_sum = np.zeros((N_discr-2))
+    sT_inf = "T_inf_"+str(T_inf)
     for it in xrange(0,10) :
     
     # Initialize appropriate pathfile for exact solution and modelled (which has discrepancy)
@@ -107,103 +108,89 @@ for i, (T_inf, prior_s) in enumerate(zip(T_inf_lst, prior_sigma)) :
     
         # Compute prior cov for each prior sigma given in the article
 #    TT = np.asarray(np.sum([T_obs[i]/float(len(T_obs)) for i in xrange(len(T_obs))]))
-    T_obs_mean[str(T_inf)] = T_sum
+    T_obs_mean[sT_inf] = T_sum
     std_mean_obs    =   np.mean(np.asarray([np.std(T_obs[i]) for i in xrange(len(T_obs))]))
     std_mean_prior  =   np.mean(np.asarray([np.std(T_prior[i]) for i in xrange(len(T_prior))]))
         
-    cov_obs_dict[str(T_inf)]    =   np.diag([std_mean_obs**2 for j in xrange(N_discr-2)])
-    cov_prior_dict[str(T_inf)]  =   np.diag([prior_s**2 for j in xrange(N_discr-2)])
-    cov_prior_prior[str(T_inf)] =   np.diag([std_mean_prior**2 for j in xrange(N_discr-2)])
+    cov_obs_dict[sT_inf]    =   np.diag([std_mean_obs**2 for j in xrange(N_discr-2)])
+    cov_prior_dict[sT_inf]  =   np.diag([prior_s**2 for j in xrange(N_discr-2)])
+    cov_prior_prior[sT_inf] =   np.diag([std_mean_prior**2 for j in xrange(N_discr-2)])
 
-T_inf = 50 ## Begin with that
-
-
-#for T_inf in T_inf_lst :
-sT_inf = str(T_inf)
-beta_prior = np.asarray([1 for i in xrange(N_discr-2)])
-
-curr_d  =   T_obs_mean[sT_inf] 
-cov_m,  cov_prior   =   cov_obs_dict[sT_inf],    cov_prior_dict[sT_inf]
-
-J = lambda beta : 0.5*  ( 
-              np.dot( np.dot(np.transpose(curr_d - h_beta(beta, T_inf, A)),
-                np.linalg.inv(cov_m)) , (curr_d - h_beta(beta, T_inf, A) )  )  
-            + np.dot( np.dot(np.transpose(beta - beta_prior), 
-                np.linalg.inv(cov_prior) ) , (beta - beta_prior) )   
-                        ) ## Fonction de coût
 
 optimizer_dict, optimizer_betamap, optimizer_vec = dict(), dict(), dict()
+hess_dict, cholesky_dict = dict(), dict()
 
-hess_dict = dict()
+s = np.asarray(tab_normal(0,1,N_discr-2)[0])
 
-#    opti_bfgs[sT_inf] = op.fmin_bfgs(J, beta_prior)
-# BFGS : quasi Newton method that approximate the Hessian on the fly
-optimizer_dict["bfgs" + sT_inf]     =   op.minimize(J, beta_prior, method="BFGS")
+for T_inf in T_inf_lst :
+    sT_inf = "T_inf_"+str(T_inf)
+    print "{} ".format(sT_inf)
+    beta_prior = np.asarray([1 for i in xrange(N_discr-2)])
 
-# Low rank hessian version sitd between BFGS and CG 
-optimizer_dict["l-bfgs-b" + sT_inf] =   op.minimize(J, beta_prior, method="L-BFGS-B")
+    curr_d  =   T_obs_mean[sT_inf] 
+    cov_m,  cov_prior   =   cov_obs_dict[sT_inf],    cov_prior_dict[sT_inf]
 
-# Conjugate gradient use twe last value of the gradient to reduce jumps refering to the classical gradient descent algorithm
+    J = lambda beta : 0.5*  ( 
+                  np.dot( np.dot(np.transpose(curr_d - h_beta(beta, T_inf, A)),
+                    np.linalg.inv(cov_m)) , (curr_d - h_beta(beta, T_inf, A) )  )  
+                + np.dot( np.dot(np.transpose(beta - beta_prior), 
+                    np.linalg.inv(cov_prior) ) , (beta - beta_prior) )   
+                            ) ## Fonction de coût
 
-## Les méthodes suivantes ne permettent pas de calculer la hessienne
-#optimizer_dict["CG" + sT_inf]       =   op.minimize(J, beta_prior, method="CG")
-#    
-## Newton method : based on the calculus of the gradient and the Hessian.
-##optimizer_dict["Newton-CG" + sT_inf] =  op.minimize(J, beta_prior, method="Newton-CG")   
+    # BFGS : quasi Newton method that approximate the Hessian on the fly
+    optimizer_dict[sT_inf] = op.minimize(J, beta_prior, method="BFGS")
 
-## Nelder-mead : robust to noise usefull for exp. data point. Generalization of dichotomy
-#optimizer_dict["Nelder-Mead" + sT_inf]       =   op.minimize(J, beta_prior, method="Nelder-Mead")
+    optimizer_betamap[sT_inf] = optimizer_dict[sT_inf].x
+    hess_dict[sT_inf] = optimizer_dict[sT_inf].hess_inv
+    cholesky_dict[sT_inf] = np.linalg.cholesky(hess_dict[sT_inf])
 
-for item in zip(optimizer_dict.items()) :
-    optimizer_betamap[item[0][0]] = item[0][1].x
-
-#hess_inv_dict[sT_inf] = opti_.hess_inv
-        
-
-#beta_opti = op.fmin_bfgs(J, beta_prior)
-
-pb_lst = []
-s= np.asarray([i for i in tab_normal(0,1,N_discr-2)[0]])
-for k,v in zip(optimizer_dict.keys(), optimizer_dict.values()) :
-    if k == 'l-bfgs-b50' :
-        hess_dict[k] = v.hess_inv(optimizer_betamap[k])
-        print hess_dict[k]
-    else :
-        try :
-            hess_dict[k] = v.hess_inv
-            
-        except AttributeError :
-            pb_lst.append(k)
-#            hess_dict[k] = np.dot(v.jac.T, v.jac) # Ressort une seule variable car la jacobienne ressortie est déjà évoluée au point qui minimise l'erreur
-            pass
-    try :
-        R = np.linalg.cholesky(hess_dict[k])
-    except np.linalg.LinAlgError :    
-        pass
+    optimizer_vec[sT_inf] = optimizer_betamap[sT_inf] + np.dot(cholesky_dict[sT_inf].T, s)
     
-    optimizer_vec[k] = optimizer_betamap[k] + np.dot(R, s)
+    fig, axes = plt.subplots(1,2,figsize=(20,10))
+    colors = 'green', 'orange'
     
-colors = cm.rainbow(np.linspace(0, 1, len(optimizer_dict.keys())))
-fig, axes = plt.subplots(1,2,figsize=(30,10))
-
-for item_vec, c in zip(optimizer_vec.items(), colors) :
-    axes[0].plot(line_z, item_vec[1], label="beta %s" %(item_vec[0]), color=c, marker='o', linestyle='none')
+    axes[0].plot(line_z, optimizer_vec[sT_inf], label="Beta for {}".format(sT_inf), marker='o',
+                     linestyle='None', color=colors[0])
+    axes[0].plot(line_z, optimizer_betamap[sT_inf], label='Betamap for {}'.format(sT_inf),      
+                        marker='o', linestyle='None', color=colors[1])
+    axes[0].plot(line_z, true_beta(curr_d, noise, T_inf, N_discr), label = "True beta profile {}".format(sT_inf))
     
-    axes[1].plot(line_z, h_beta(item_vec[1], T_inf, A), label="h_beta %s" %(item_vec[0]), color=c, marker='+', linestyle='none')
+    axes[1].plot(line_z, h_beta(optimizer_vec[sT_inf], T_inf, A), label= "h_beta {}".format 
+                    (sT_inf), marker='o', linestyle='None', color=colors[0])
+    axes[1].plot(line_z, h_beta(optimizer_betamap[sT_inf], T_inf, A), 
+                    label= "h_betamap {}".format
+                    (sT_inf), marker='o', linestyle ='None', color=colors[1])
+    axes[1].plot(line_z, curr_d, label= "curr_d {}".format(sT_inf))
 
-axes[0].plot(line_z, optimizer_betamap['bfgs50'], label='betamap-bfgs')            
-axes[0].plot(line_z, true_beta(curr_d, noise, T_inf, N_discr), label='Beta True T_inf {}'.format(T_inf))    
-axes[1].plot(line_z, h_beta(optimizer_betamap['bfgs50'], T_inf, A), label='H_Beta Betamap bfgs', marker='o', linestyle='none')
-axes[1].plot(line_z, curr_d, label='T_obs T_inf = {}'.format(T_inf))
+    axes[0].set_title("Optimized beta and Duraisamy beta")
+    axes[1].set_title("Temperature field with optimized betas and true solution")
 
+    axes[0].legend(loc='best', fontsize = 10, ncol=2)
+    axes[1].legend(loc='best', fontsize = 10, ncol=2)
+    
+    plt.show()
 
+    sT_inf = "T_inf_"+str(T_inf)
+    df = pd.DataFrame(T_obs_mean[sT_inf]) # Curr_d
+    df.to_csv("./data/T_obs_mean_{}.csv".format(sT_inf), index=False, header=True)
+    
+    df = pd.DataFrame(optimizer_betamap[sT_inf])
+    df.to_csv("./data/betamap_{}.csv".format(sT_inf), index=False, header=True)
+    
+beta = dict()
+for i in range(10) :
+    T_inf = 50
+    sT_inf = "T_inf_"+str(T_inf)
+    s = tab_normal(0,1,N_discr-2)[0]
+    beta[sT_inf+str(i)] = optimizer_betamap[sT_inf] + np.dot(cholesky_dict[sT_inf], s)
+   
+T_inf = 50    
+colors = cm.rainbow(np.linspace(0, 1, 10))
+plt.figure()
+for i, c in enumerate(colors) :
+    # Initialize appropriate pathfile for exact solution and modelled (which has discrepancy)
+    plt.plot(line_z, T_prior[i], label='prior bruit {}'.format(i), color=c, marker='o', linestyle='None')
 
-axes[0].set_title("Comparaison des betas optimises et beta Duraisamy")
-axes[1].set_title("Champs de temperature avec beta optimise et observe")
-
-axes[0].legend(loc='best', fontsize = 10, ncol=2)
-axes[1].legend(loc='best', fontsize = 10, ncol=2)
-
-#plt.plot(line_z, curr_d, label='T_inf {} OBS'.format(T_inf))
-#plt.plot(line_z, h_beta(beta_opti, T_inf, A), label='T_inf {} opti'.format(T_inf))
-#plt.legend()
+plt.plot(line_z, curr_d, label='curr_d')
+plt.legend(loc='best')
+plt.show()
