@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import csv, os, sys, warnings
 
 from scipy import optimize as op
+import numdifftools as nd
 ### Problem Constants and modules which will be converted into self when creating the class
 ##### Modules
 #-----------------
@@ -119,52 +120,39 @@ err_mini, compteur_mini =   1., 0
 
 curr_beta = beta_for_mini = beta_prior
 
-while err_mini > tol_mini and compteur_mini < max_iter_mini :
-    compteur_mini += 1 
-    J = lambda beta : 0.5*  ( 
-                  np.dot( np.dot(np.transpose(curr_d - h_beta(beta, T_inf, A)),
-                    np.linalg.inv(cov_m)) , (curr_d - h_beta(beta, T_inf, A) )  )  
-                + np.dot( np.dot(np.transpose(beta - beta_prior), 
-                    np.linalg.inv(cov_prior) ) , (beta - beta_prior) )   
-                            ) ## Fonction de coût
-                            
-    curr_h_beta = h_beta(curr_beta, T_inf, A)
-    
-    #Construction des dérivées pour le problème adjoint
-    #### JE LES AI DIAGONALISÉS
-    dJ_dT = np.asarray([(curr_h_beta[i] - curr_d[i])/cov_prior[0,0] for i in xrange(N_discr-2)])
-    dR_dT = np.asarray([ 4*curr_h_beta[i]*curr_beta[i]*eps_0 for i in xrange(N_discr-2) ])
-    
-    psi     =   - dJ_dT/dR_dT 
-        
-    dR_dBeta = lambda curr_h_beta: np.asarray([-eps_0*(T_inf**4 - curr_h_beta[i]**4) for i in xrange(N_discr-2) ])
-    grad_J  = lambda dR_dB : - psi[i] * dR_dB[i]
-    
-    op.fmin_bfgs(grad_J, 1)
-    
-#    ## Implémentation de la recherche linéaire
-#    while np.linalg.norm(P_k, 2) > 0.1 and cc<cc_max :
-#        cc +=1
-#        print cc
-#        new_h_beta = h_beta(beta_for_mini, T_inf, A)
-#        P_k = grad_J(dR_dBeta(new_h_beta))
-#        
-#        JJ = lambda alpha : J(beta_for_mini + P_k*alpha)    
+#while err_mini > tol_mini and compteur_mini < max_iter_mini :
+compteur_mini += 1 
+J = lambda beta : 0.5*  ( 
+              np.dot( np.dot(np.transpose(curr_d - h_beta(beta, T_inf, A)),
+                np.linalg.inv(cov_m)) , (curr_d - h_beta(beta, T_inf, A) )  )  
+            + np.dot( np.dot(np.transpose(beta - beta_prior), 
+                np.linalg.inv(cov_prior) ) , (beta - beta_prior) )   
+                        ) ## Fonction de coût
+                        
+curr_h_beta = h_beta(curr_beta, T_inf, A)
 
-#        opti_ =  op.minimize(JJ, 4, method='L-BFGS-B')
-#        if opti_.success == False : 
-#            exc_type, exc_obj, exc_tb = sys.exc_info()
-#            raise Exception("\x1b[5;10;64mNon convergence of the optimization process (line {}) \n Case : T_inf = {} \t compteur_mini = {}\x1b[0m".format(exc_tb.tb_lineno, T_inf, compteur_mini)) 
-#        alpha_n = opti_.x
-#        
-#        beta_for_mini = curr_beta + alpha_n * P_k   
+#Construction des dérivées pour le problème adjoint
+dJ_dT = np.asarray([(curr_h_beta[i] - curr_d[i])/cov_prior[0,0] for i in xrange(N_discr-2)])
+dR_dT = np.asarray([ 4*curr_h_beta[i]*curr_beta[i]*eps_0 for i in xrange(N_discr-2) ])
+
+psi      =  - dJ_dT/dR_dT 
+lambda_dR_dBeta =  lambda curr_h_beta: np.asarray([-eps_0*(T_inf**4 - curr_h_beta[i]**4) for i in xrange(N_discr-2) ])
+dR_dBeta =  lambda_dR_dBeta(curr_h_beta)
+
+lambda_grad_J   =  lambda psi, dR_dB, i : np.asarray(- psi[i] * dR_dB[i] )
+Jprime = np.asarray([lambda_grad_J(psi, dR_dBeta, i) for i in xrange(N_discr-2)])
+
+
+op.fmin_bfgs(J, beta_prior, fprime = Jprime)
+#    
+#    op.fmin_bfgs(grad_J, 1)
         
     ## Incrémentations
-    curr_beta   = new_beta = curr_beta + alpha_n * P_k  
-    curr_h_beta =   h_beta(new_beta, T_inf, A) # To better understand
+#    curr_beta   = new_beta = curr_beta + alpha_n * P_k  
+#    curr_h_beta =   h_beta(new_beta, T_inf, A) # To better understand
 
-    err_mini = np.abs(J(new_beta))
-    print compteur_mini, err_mini
+err_mini = np.abs(J(new_beta))
+print compteur_mini, err_mini
 
     
 

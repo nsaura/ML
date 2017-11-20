@@ -38,8 +38,8 @@ def tab_normal(mu, sigma, length) :
 
 np.random.seed(1000) # To keep the same random generator
 z_init, z_final = 0., 1.
-N_discr = 33
-kappa=0.1
+N_discr = 50
+kappa=1.0
 
 line_z = np.linspace(z_init,z_final,N_discr)
 print(line_z[0])
@@ -57,8 +57,8 @@ A = A_diag + M1 + P1 #Construction de la matrice des coefficients
 
 lst_gauss = [tab_normal(0,0.1,N_discr-2)[0] for i in xrange(50) ] # Quadrillement du bruit
 
-T_inf_lst = [i*5 for i in xrange(1, 11)]
-
+#T_inf_lst = [i*5 for i in xrange(1, 11)]
+T_inf_lst = [50]
 #plt.figure()
 
 T_init, T_nNext_lst = [], []
