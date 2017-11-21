@@ -52,7 +52,7 @@ def true_beta(T, noise ,T_inf, N_discr, h=0.5, eps_0 = 5.*10**(-4)) :
 #####--------------------------------------------------------------------------
 
 ##### Constants
-N_discr = 50
+N_discr = 33
 z_init, z_final = 0., 1.
 dt, dz =  0.001, np.abs(z_init-z_final)/float(N_discr)
 
@@ -184,13 +184,13 @@ for i in range(10) :
     s = tab_normal(0,1,N_discr-2)[0]
     beta[sT_inf+str(i)] = optimizer_betamap[sT_inf] + np.dot(cholesky_dict[sT_inf], s)
    
-T_inf = 50    
-colors = cm.rainbow(np.linspace(0, 1, 10))
-plt.figure()
-for i, c in enumerate(colors) :
-    # Initialize appropriate pathfile for exact solution and modelled (which has discrepancy)
-    plt.plot(line_z, T_prior[i], label='prior bruit {}'.format(i), color=c, marker='o', linestyle='None')
+#T_inf = 50    
+#colors = cm.rainbow(np.linspace(0, 1, 10))
+#plt.figure()
+#for i, c in enumerate(colors) :
+#    # Initialize appropriate pathfile for exact solution and modelled (which has discrepancy)
+#    plt.plot(line_z, T_prior[i], label='prior bruit {}'.format(i), color=c, marker='o', linestyle='None')
 
-plt.plot(line_z, curr_d, label='curr_d')
-plt.legend(loc='best')
-plt.show()
+#plt.plot(line_z, curr_d, label='curr_d')
+#plt.legend(loc='best')
+#plt.show()
