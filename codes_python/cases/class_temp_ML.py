@@ -10,6 +10,8 @@ from scipy import optimize as op
 from itertools import cycle
 import matplotlib.cm as cm
 
+from numdifftools import Gradient, Jacobian
+
 
 def parser() :
     parser=argparse.ArgumentParser(description='You can initialize a case you want to study')
@@ -18,14 +20,21 @@ def parser() :
     parser.add_argument('--beta_prior', '-beta_prior', nargs='+', action='store', type=float, default=['init'],dest='beta_prior', help='beta_prior: first guess on the optimization solution\n')
     
     #digits
-    parser.add_argument('--N_discr', '-N_discr', action='store', type=int, default=33, dest='N_discr', help='Define the number of discretization points \n' )
-    parser.add_argument('--H', '-H', action='store', type=float, default=0.5, dest='h', help='Define the convection coefficient h \n' )
-    parser.add_argument('--delta_t', '-dt', action='store', type=float, default=0.001, dest='dt', help='Define the time step disctretization \n' )
-    parser.add_argument('--kappa', '-kappa', action='store', type=float, default=1.0, dest='kappa', help='Define the diffusivity number kappa \n' )
-    parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=10, dest='num_real', help='Define the number of realization of epsilon(T) you want to pick up \n' )
-    
+    parser.add_argument('--N_discr', '-N', action='store', type=int, default=33, dest='N_discr', 
+                        help='Define the number of discretization points \n' )
+    parser.add_argument('--H', '-H', action='store', type=float, default=0.5, dest='h', 
+                        help='Define the convection coefficient h \n' )
+    parser.add_argument('--delta_t', '-dt', action='store', type=float, default=0.001, dest='dt', 
+                        help='Define the time step disctretization \n' )
+    parser.add_argument('--kappa', '-kappa', action='store', type=float, default=1.0, dest='kappa', 
+                        help='Define the diffusivity number kappa \n' )
+    parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=10, dest='num_real', 
+                        help='Define the number of realization of epsilon(T) you want to pick up \n' )
+    parser.add_argument('--tolerance', '-tol', action='store', type=float, default=1e-5, dest='tol', 
+                        help='Define the tolerance on the optimization error \n' )
     #strings
-    parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', help='Define the directory where the data will be stored and read')
+    parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', 
+                        help='Define the directory where the data will be stored and read \n')
 #    parser.add_argument('--data', '-df', action='store', type=str, default='./SSO_Inj_AVF_UDFTHEO-data', dest='datafile', help='Define your datafile\'s path and name, initialized at %(default)s')
 #    parser.add_argument('--kind', '-k', action='store', type=str, default='cubic', dest='kind', help='Define the type of your interpolation : linear, cubic or quintic')
 #    parser.add_argument('--init_data', '-id', action='store', type=str, default='./init_simu.csv', dest='init_simudata', help='Define the simulation datafile\'s path and name, initialized at %(default)s')
@@ -33,9 +42,17 @@ def parser() :
 
 ##---------------------------------------------------------------
 class Temperature() :
-    def __init__ (self, T_inf_lst, N_discr, dt, H, kappa, datapath, num_real):
-        np.random.seed(1000)
-        plt.ion()
+    def __init__ (self, parser):
+        np.random.seed(1000) ; plt.ion()
+        
+        T_inf_lst = parser.T_inf_lst
+
+        N_discr,    kappa   =   parser.N_discr, parser.kappa,    
+        dt,         h       =   parser.dt,      parser.h
+        datapath            =   os.path.abspath(parser.datapath)
+        num_real,   tol     =   parser.num_real,parser.tol
+        
+        self.beta_prior = np.asarray([1 for i in xrange(parser.N_discr-2)]) if parser.beta_prior == ['init'] else parser.beta_prior
         
         try :
             self.len_T_lst = len(T_inf_lst) 
@@ -48,9 +65,9 @@ class Temperature() :
         
         self.T_inf_lst = T_inf_lst
         
-        
         z_init, z_final =   0.0, 1.0
         dz = np.abs(z_final - z_init) / float(N_discr)
+        
         ## Matrice pour la résolution
         A_diag = np.diag(np.transpose([(1+( 2.0)*dt/dz**2*kappa) for i in range(N_discr-2)])) 
         M1 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), -1) # Inferieure
@@ -64,15 +81,14 @@ class Temperature() :
         self.eps_0 = 5.*10**(-4)
         self.N_discr = N_discr
         self.kappa = kappa
+        self.tol = tol
         self.dt = dt        
-        self.h = H
+        self.h = h
         
-        datapath = os.path.abspath(datapath)
         if os.path.exists(datapath) == False :
             os.mkdir(datapath)
         
         self.datapath = datapath
-        
         self.stat_done = False
 ##---------------------------------------------------
     def set_T_inf (self, T_inf) :
@@ -116,7 +132,7 @@ class Temperature() :
                 (sigma * np.random.randn(length) + mu).std()
                ) 
 ##---------------------------------------------------   
-    def true_model(self) :
+    def obs_pri_model(self) :
         lst_gauss = [self.tab_normal(0,0.1,self.N_discr-2)[0] for i in xrange(self.num_real)]
         T_nNext_obs_lst, T_nNext_pri_lst, T_init = [], [], []
         
@@ -224,7 +240,7 @@ class Temperature() :
             
             self.stat_done = True
 ##---------------------------------------------------  
-    def optimization(self, beta_prior, verbose=False) :
+    def optimization(self, verbose=False) :
         if self.stat_done == False : self.get_prior_statistics()
         
         betamap, beta_final = dict(), dict()
@@ -241,18 +257,21 @@ class Temperature() :
             J = lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
                     np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
-                + np.dot( np.dot(np.transpose(beta - beta_prior), 
-                    np.linalg.inv(cov_prior) ) , (beta - beta_prior) )   
+                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
+                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) )   
                             ) ## Fonction de coût
                             
             # BFGS : quasi Newton method that approximate the Hessian on the fly
-            opti = op.minimize(J, beta_prior, method="BFGS", tol=1e-10)
+            opti = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol)
 
             betamap[sT_inf] =   opti.x
             hess[sT_inf]    =   opti.hess_inv
             cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
             
             self.opti = opti
+            
+            
+            print "Sucess state of the optimization {}".format(self.opti.success)
             
             beta_final[sT_inf]  =   betamap[sT_inf] + np.dot(cholesky[sT_inf].T, s)  
             
@@ -265,8 +284,8 @@ class Temperature() :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
                 maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
             
-            mins_list =  [mins["T_inf_" + str(50000+i)] for i in xrange(self.N_discr-2)]   
-            maxs_list =  [maxs["T_inf_" + str(50000+i)] for i in xrange(self.N_discr-2)]
+            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]   
+            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]
             
             if verbose == True :
                 fig, axes = plt.subplots(1,2,figsize=(20,10))
@@ -283,27 +302,30 @@ class Temperature() :
                                 (sT_inf), marker='o', linestyle ='None', color=colors[1])
                 axes[1].plot(self.line_z, curr_d, label= "curr_d {}".format(sT_inf))
 
-                axes[0].plot(self.line_z, mins_list, label='Valeurs minimums', marker='s', linestyle='none', color='magenta')
-                axes[0].plot(self.line_z, maxs_list, label='Valeurs maximums', marker='s', linestyle='none', color='black')
-                axes[0].set_title("Optimized beta and Duraisamy beta")
+                axes[0].plot(self.line_z, mins_lst, label='Valeurs minimums', marker='s', linestyle='none', color='magenta')
+                axes[0].plot(self.line_z, maxs_lst, label='Valeurs maximums', marker='s', linestyle='none', color='black')
+                
+                axes[0].fill_between(T.line_z, T.mins, T.maxs, facecolor= "0.2", alpha=0.4, interpolate=True)
+                
+                axes[0].set_title("Optimized beta and Duraisamy beta; tolerance={}".format(self.tol))
                 axes[1].set_title("Temperature field with optimized betas and true solution")
 
                 axes[0].legend(loc='best', fontsize = 10, ncol=2)
                 axes[1].legend(loc='best', fontsize = 10, ncol=2)
                 
-                
-                
                 plt.show()
+                
         self.betamap    =   betamap
         self.hess       =   hess
         self.cholseky   =   cholesky
         self.beta_final =   beta_final
-        self.mins       =   mins_list
-        self.maxs       =   maxs_list
+        self.mins_lst   =   mins_lst
+        self.maxs_lst   =   maxs_lst
         self.beta_var   =   beta_var
+        
 ##--------------------------------------------------- 
     def h_beta(self, beta, T_inf, noise= 'none') :
-        err, tol, compteur, compteur_max = 1., 1e-3, 0, 1000
+        err, tol, compteur, compteur_max = 1., 1e-3, 0, 5000
         T_n = map(lambda x : -4*T_inf*x*(x-1), self.line_z)
         T_nNext = T_n
         B_n = np.zeros((self.N_discr-2))
@@ -325,47 +347,181 @@ class Temperature() :
 ##---------------------------------------------------
     def true_beta(self, T, T_inf) : 
         return np.asarray(
-        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i]) + self.noise[i] ) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in xrange(self.N_discr-2)]
-                          )
+        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i]) + self.noise[i] ) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in xrange(self.N_discr-2)]        )
 ##---------------------------------------------------    
-    def subplot(self) : 
+    def backline_search(self, J_lambda, var_J_lambda, grad_var_J_lambda, incr=0.1) :
+        t = 1.
+        norm_grad_var_J_lambda = np.linalg.norm(grad_var_J_lambda, 2)**2
+        while J_lambda(var_J_lambda - t*grad_var_J_lambda) > (J_lambda(var_J_lambda) - t/2.0 * norm_grad_var_J_lambda) :
+            t *= incr
+        return t
+##--------------------------------------------------- 
+    def Next_hess(self, prev_hess, y_nN, s_nN ) :
+        rho_nN  =   np.dot(y_nN.T, s_nN)
+        n       =   prev_hess.shape[0]
+        Id      =   np.diag([1 for i in range(n)])
+        
+        H_nN    =   np.dot( np.dot(Id - np.dot(np.dot(rho_nN, y_nN), s_nN.T) ,prev_hess ), Id - np.dot(np.dot(rho_nN, s_nN), y_nN.T) ) + \
+                        np.dot(np.dot(rho_nN, s_nN), s_nN)
+                        
+        return H_nN
+##--------------------------------------------------- 
+    def minimization_with_first_guess(self) :
+        if self.stat_done == False : self.get_prior_statistics()
+
+        QN_BFGS_bmap,   QN_BFGS_bf        =   dict(),     dict()
+        QN_BFGS_hess,   QN_BFGS_cholesky  =   dict(),     dict()
+
+        mins,   maxs    =   dict(),     dict()
+        
+        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+        beta_QNBFGS_real = []
+        
         for T_inf in self.T_inf_lst :
-            sT_inf = "T_inf_" + str(T_inf)
-            curr_d = self.T_obs_mean[sT_inf]
-            fig, axes = plt.subplots(1,2,figsize=(20,10))
-            colors = 'green', 'orange'
-                    
-            axes[0].plot(self.line_z, self.beta_final[sT_inf], label = "Beta for {}".format(sT_inf), 
-                marker = 'o', linestyle = 'None', color = colors[0])
+            sT_inf  =   "T_inf_" + str(T_inf)
+            curr_d  =   self.T_obs_mean[sT_inf]
+            cov_m,  cov_prior   =   self.cov_obs_dict[sT_inf],    self.cov_pri_dict[sT_inf]
+            
+            J = lambda beta : 0.5*  ( 
+                  np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
+                    np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
+                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
+                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
+                                    )
+                                    
+            first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.1) ## Simplement pour avoir Hess_0 
+            for item in first_guess_opti.iteritems() : print item
+            
+            beta_n  =   first_guess_opti.x
+            H_n     =   first_guess_opti.hess_inv
+            g_n     =   first_guess_opti.jac
+            
+            err, tol = 1.0, 1e-10
+            cpt, cpt_max    =   0,  5000
+            while (np.abs(err) > tol) and (cpt<cpt_max) :
+                ## Incr
+                if cpt > 0 :
+                    H_n     =   H_nNext
+                    g_n     =   g_nNext 
+                    beta_n  =   beta_nNext      
                 
-            axes[0].plot(self.line_z, self.betamap[sT_inf], label = 'Betamap for {}'.format(sT_inf),      
-                 marker = 'o', linestyle = 'None', color = colors[1])
+                cpt += 1    
+                direction   =   np.dot(H_n, g_n)
+                alpha       =   self.backline_search(J, beta_n, g_n)
+                beta_nNext  =   beta_n + alpha*direction
+                
+                ## Estimation of H_nNext
+                g_nNext =   Gradient(J)(beta_nNext) # From numdifftools
+                print g_nNext
+                y_nNext =   g_nNext - g_n
+                s_nNext =   beta_nNext - beta_n
+                H_nNext =   self.Next_hess(H_n, y_nNext, s_nNext)
+                
+                err = np.linalg.norm(H_nNext - H_n, 2)
+                if cpt % 10 == 0: print "cpt = {} \t err = {:.5}".format(cpt, err) 
             
-            axes[0].plot(self.line_z, self.true_beta(curr_d, T_inf), label = "True beta profil {}".format(sT_inf))
+            print "beta_nNext = ", beta_nNext
+            print "J(beta_nNext) = ", J(beta_nNext) 
             
-            axes[1].plot(self.line_z, self.h_beta(self.beta_final[sT_inf], T_inf), 
-                label = "h_beta {}".format(sT_inf), marker = 'o', linestyle = 'None', color = colors[0])
-            axes[1].plot(self.line_z, self.h_beta(self.betamap[sT_inf], T_inf), 
-                label = "h_betamap {}".format(sT_inf), marker = 'o', linestyle = 'None', color = colors[1])
-            axes[1].plot(self.line_z, curr_d, label= "curr_d {}".format(sT_inf))
-
-            axes[0].set_title("Optimized beta and Duraisamy beta")
-            axes[1].set_title("Temperature field with optimized betas and true solution")
-
-            axes[0].legend(loc='best', fontsize = 10, ncol=2)
-            axes[1].legend(loc='best', fontsize = 10, ncol=2)
+            QN_BFGS_bmap[sT_inf]    =   beta_nNext
+            QN_BFGS_hess[sT_inf]    =   H_nNext
             
-            plt.show()
-##---------------------------------------------------    
+            QN_BFGS_cholesky[sT_inf]=   np.linalg.cholesky(H_nNext)
+            
+            QN_BFGS_bf[sT_inf]      =   QN_BFGS_bmap[sT_inf] + np.dot(np.linalg.cholesky(H_nNext), s)
+            
+            for i in xrange(249):
+                s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+                beta_QNBFGS_real.append(QN_BFGS_bmap[sT_inf] + np.dot(QN_BFGS_cholesky[sT_inf], s))
+            beta_QNBFGS_real.append(QN_BFGS_bf[sT_inf])
+            
+            for i in xrange(self.N_discr-2) :
+                mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_QNBFGS_real]))
+                maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_QNBFGS_real]))
+            
+            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]   
+            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]
+            
+        self.QN_BFGS_bmap   =   QN_BFGS_bmap
+        self.QN_BFGS_bf     =   QN_BFGS_bf
+        self.QN_BFGS_hess   =   QN_BFGS_hess
+        
+        self.QN_BFGS_cholesky   =   QN_BFGS_cholesky
+        self.QN_BFGS_mins_lst   =   mins_lst
+        self.QN_BFGS_maxs_lst   =   maxs_lst
+##---------------------------------------------------
+##---------------------------------------------------
+def subplot(T, method='QN_BFGS') : 
+    if method == "QN_BFGS"    :
+        dico_beta_map   =   T.QN_BFGS_bmap
+        dico_beta_fin   =   T.QN_BFGS_bf
+        
+        mins    =   T.QN_BFGS_mins_lst
+        maxs    =   T.QN_BFGS_maxs_lst
+        
+        titles = ["Hybrid optimization with QNBFGS: Beta comparaison", "Hybrid optimization with QNBFGS: Temperature fields"]
+    else :
+        dico_beta_map   =   T.betamap
+        dico_beta_fin   =   T.beta_final
 
+        mins    =   T.mins_lst
+        maxs    =   T.maxs_lst
+        
+        titles = ["Beta comparaison", "Temperature fields"]
+        
+    for T_inf in T.T_inf_lst :
+        sT_inf = "T_inf_" + str(T_inf)
+        curr_d = T.T_obs_mean[sT_inf]
+        fig, axes = plt.subplots(1,2,figsize=(20,10))
+        colors = 'green', 'orange'
+                
+        axes[0].plot(T.line_z, dico_beta_fin[sT_inf], label = "Beta for {}".format(sT_inf), 
+            marker = 'o', linestyle = 'None', color = colors[0])
+            
+        axes[0].plot(T.line_z, dico_beta_map[sT_inf], label = 'Betamap for {}'.format(sT_inf),      
+             marker = 'o', linestyle = 'None', color = colors[1])
+        
+        axes[0].plot(T.line_z, T.true_beta(curr_d, T_inf), label = "True beta profil {}".format(sT_inf))
+        
+        axes[1].plot(T.line_z, T.h_beta(dico_beta_fin[sT_inf], T_inf), 
+            label = "h_beta {}".format(sT_inf), marker = 'o', linestyle = 'None', color = colors[0])
+        axes[1].plot(T.line_z, T.h_beta(dico_beta_map[sT_inf], T_inf), 
+            label = "h_betamap {}".format(sT_inf), marker = 'o', linestyle = 'None', color = colors[1])
+        axes[1].plot(T.line_z, curr_d, label= "curr_d {}".format(sT_inf))
+        
+        axes[0].plot(T.line_z, mins, label='Valeurs minimums', marker='s', linestyle='none', color='magenta')
+        axes[0].plot(T.line_z, maxs, label='Valeurs maximums', marker='s', linestyle='none', color='black')
 
+        axes[0].fill_between(T.line_z, mins, maxs, facecolor= "0.2", alpha=0.4, interpolate=True)                
+#            for m,M in zip(self.mins_list, self.maxs_list) :
+#                axes[0].axvspan(m, M, facecolor="0.2", alpha = 0.5 )
+        
+        axes[0].set_title(titles[0])
+        axes[1].set_title(titles[1])
 
+        axes[0].legend(loc='best', fontsize = 10, ncol=2)
+        axes[1].legend(loc='best', fontsize = 10, ncol=2)
+        
+        plt.show()
+        
+        return axes
+##---------------------------------------------------##
 
+##---------------------------------------------------##
+##---------------------------------------------------##
+##---------------------------------------------------##        
 if __name__ == "__main__" :
 #    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
     parser = parser()
-    T = Temperature(parser.T_inf_lst, parser.N_discr, parser.dt, parser.h, parser.kappa, parser.datapath, parser.num_real)
-    beta_prior = np.asarray([1 for i in xrange(parser.N_discr-2)])
+    T = Temperature(parser)
+    try :
+        T.get_prior_statistics()
+    except ValueError :
+        T.obs_pri_model()
+        T.get_prior_statistics()
+#    T.optimization()
+#    
+#    subplot(T)
 
 #    print T.noise
     
