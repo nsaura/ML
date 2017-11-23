@@ -3,6 +3,7 @@
 
 import numpy as np
 import pandas as pd
+
 import matplotlib.pyplot as plt
 import csv, os, sys, warnings, argparse
 
@@ -39,7 +40,6 @@ def parser() :
 #    parser.add_argument('--kind', '-k', action='store', type=str, default='cubic', dest='kind', help='Define the type of your interpolation : linear, cubic or quintic')
 #    parser.add_argument('--init_data', '-id', action='store', type=str, default='./init_simu.csv', dest='init_simudata', help='Define the simulation datafile\'s path and name, initialized at %(default)s')
     return parser.parse_args()
-
 ##---------------------------------------------------------------
 class Temperature() :
     def __init__ (self, parser):
@@ -439,8 +439,9 @@ class Temperature() :
                 
                 cpt += 1    
                 direction   =   np.dot(H_n, g_n)
-#                alpha       =   self.backline_search(J, beta_n - direction, direction)
-                alpha  = 1e-2
+                alpha       =   self.backline_search(J, beta_n, direction)
+                print "alpha = ", alpha
+#                alpha  = 1e-2
                 beta_nNext  =   beta_n - alpha*direction
                 
                 alpha_lst.append(alpha)
@@ -448,16 +449,16 @@ class Temperature() :
                 
                 ## Estimation of H_nNext
                 g_nNext =   Gradient(J)(beta_nNext) # From numdifftools
-                print g_nNext
+                print "compteur = {}, Gradient dans la boucle minimization \n {}:".format(cpt, g_nNext)
                 y_nNext =   g_nNext - g_n
                 s_nNext =   beta_nNext - beta_n
                 H_nNext =   self.Next_hess(H_n, y_nNext, s_nNext)
                 
-                err = (J(beta_nNext) - J(beta_n))
+                err = (J(beta_nNext) - J(beta_n)) 
                 
                 err_hess = np.linalg.norm(H_nNext - H_n)
                 
-                if cpt % 10 == 0: print "cpt = {} \t err = {:.5}".format(cpt, err) 
+                print "cpt = {} \t err = {:.5}".format(cpt, err) 
 
             print "Compteur = %d \t err_j = %.12f \t err_Hess %.12f" % (cpt, err, err_hess)
             print "beta_nNext = ", beta_nNext
