@@ -279,8 +279,8 @@ class Temperature() :
         for T_inf in self.T_inf_lst :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
-            cov_m,  cov_prior   =   self.cov_obs_dict[sT_inf],    self.cov_pri_dict[sT_inf]
-#            cov_m,  cov_prior   =   self.full_cov_obs_dict[sT_inf], self.cov_pri_dict[sT_inf]
+#            cov_m,  cov_prior   =   self.cov_obs_dict[sT_inf],    self.cov_pri_dict[sT_inf]
+            cov_m,  cov_prior   =   self.full_cov_obs_dict[sT_inf], self.cov_pri_dict[sT_inf]
                       
             J = lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
@@ -407,8 +407,8 @@ class Temperature() :
         for T_inf in self.T_inf_lst :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
-            cov_m,  cov_prior   =   self.cov_obs_dict[sT_inf],    self.cov_pri_dict[sT_inf]
-#            cov_m,  cov_prior   =   self.full_cov_obs_dict[sT_inf], self.cov_pri_dict[sT_inf]
+#            cov_m,  cov_prior   =   self.cov_obs_dict[sT_inf],    self.cov_pri_dict[sT_inf]
+            cov_m,  cov_prior   =   self.full_cov_obs_dict[sT_inf], self.cov_pri_dict[sT_inf]
             J = lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
                     np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
@@ -558,11 +558,11 @@ if __name__ == "__main__" :
 #    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
     parser = parser()
     T = Temperature(parser)
-    try :
-        T.get_prior_statistics()
-    except ValueError :
-        T.obs_pri_model()
-        T.get_prior_statistics()
+#    try :
+#        T.get_prior_statistics()
+#    except ValueError :
+#        T.obs_pri_model()
+#        T.get_prior_statistics()
 #    T.optimization()
 #    
 #    subplot(T)
