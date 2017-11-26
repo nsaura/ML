@@ -188,7 +188,7 @@ class Temperature() :
         self.T_nNext_obs_lst    =   T_nNext_obs_lst
         self.T_nNext_pri_lst    =   T_nNext_pri_lst
 ##---------------------------------------------------   
-    def get_prior_statistics(self, prior_sigma = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]):
+    def get_prior_statistics(self, prior_sigma = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8],  cov_mod='diag'):
         cov_obs_dict    =   dict() 
         cov_pri_dict    =   dict()
         
@@ -267,7 +267,7 @@ class Temperature() :
             
             self.stat_done = True
 ##---------------------------------------------------  
-    def optimization(self, verbose=False) :
+    def optimization(self, verbose=False, cov_mod='diag') :
         if self.stat_done == False : self.get_prior_statistics()
         
         betamap, beta_final = dict(), dict()
@@ -279,9 +279,8 @@ class Temperature() :
         for T_inf in self.T_inf_lst :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
-#            cov_m,  cov_prior   =   self.cov_obs_dict[sT_inf],    self.cov_pri_dict[sT_inf]
-            cov_m,  cov_prior   =   self.full_cov_obs_dict[sT_inf], self.cov_pri_dict[sT_inf]
-                      
+            cov_prior   =   self.full_cov_obs_dict[sT_inf], self.cov_pri_dict[sT_inf]
+            cov_m = self.cov_obs_dict[sT_inf] if cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
             J = lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
                     np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
@@ -392,7 +391,10 @@ class Temperature() :
                         
         return H_nN
 ##--------------------------------------------------- 
-    def minimization_with_first_guess(self) :
+    def minimization_with_first_guess(self, cov_mod = "diag") :
+        if cov_mod not in ['full', 'diag'] :
+            raise AttributeError("cov_mod must be either diag or full")
+            
         if self.stat_done == False : self.get_prior_statistics()
 
         QN_BFGS_bmap,   QN_BFGS_bf        =   dict(),     dict()
@@ -407,8 +409,8 @@ class Temperature() :
         for T_inf in self.T_inf_lst :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
-#            cov_m,  cov_prior   =   self.cov_obs_dict[sT_inf],    self.cov_pri_dict[sT_inf]
-            cov_m,  cov_prior   =   self.full_cov_obs_dict[sT_inf], self.cov_pri_dict[sT_inf]
+            cov_m   =   self.cov_obs_dict[sT_inf] if cov_mod=='diag' else self.full_cov_obs_dict[sT_inf] 
+            cov_prior =  self.cov_pri_dict[sT_inf]
             J = lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
                     np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
@@ -423,6 +425,7 @@ class Temperature() :
             H_n     =   first_guess_opti.hess_inv
             g_n     =   first_guess_opti.jac
             
+            self.first_guess_opti = first_guess_opti
 #            beta_n =    self.beta_prior
 #            H_n    =    np.eye(self.N_discr-2)
 #            g_n    =    np.ones((self.N_discr-2,))
@@ -443,7 +446,7 @@ class Temperature() :
                 print "alpha = ", alpha
 #                alpha  = 1e-2
                 beta_nNext  =   beta_n - alpha*direction
-                
+                self.beta_nNext = beta_nNext
                 alpha_lst.append(alpha)
                 direction_lst.append(direction)
                 

@@ -43,7 +43,7 @@ for t_inf in T.T_inf_lst :
 for k in dict_discr.keys() :
     dict_discr[k] = np.asarray(dict_discr[k])
 
-plt.hist(dict_discr[key]-T.T_obs_mean['T_inf_50'][27], 30, label='Histogramme des temperature au point 27 shifte par la moyenne de toutes ces valeurs' )
+plt.hist(dict_discr["%d_27" %(t_inf)]-T.T_obs_mean['T_inf_50'][27], 30, label='Histogramme des temperature au point 27 shifte par la moyenne de toutes ces valeurs' )
 
 plt.figure("pdf au point %.2f" %(T.line_z[10]))
 plt.plot()
