@@ -13,6 +13,7 @@ import matplotlib.cm as cm
 from numdifftools import Gradient, Jacobian
 
 from scipy.stats import norm as norm 
+
 import class_temp_ML as ctml
 ctml = reload(ctml)
  
@@ -25,6 +26,10 @@ p = ctml.parser()
 T = ctml.Temperature(p)
 T.obs_pri_model()
 T.get_prior_statistics()
+
+print "cov_obs inversee \n \n  {} ".format(np.linalg.inv(T.full_cov_obs_dict["T_inf_50"]))
+
+#str(input("Pause ... enter any key")) 
 
 dict_discr = dict()
 for t_inf in T.T_inf_lst:
