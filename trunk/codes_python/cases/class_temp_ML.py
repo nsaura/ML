@@ -13,12 +13,19 @@ import matplotlib.cm as cm
 
 from numdifftools import Gradient, Jacobian
 
+## Import de la classe TF ##
+nnc_folder = os.path.abspath(os.path.dirname("../TF/NN_class_try.py"))
+sys.path.append(nnc_folder)
+import NN_class_try as NNC
+##------------------------##  
 
 def parser() :
     parser=argparse.ArgumentParser(description='You can initialize a case you want to study')
     #lists
-    parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=['all'],dest='T_inf_lst', help='List of different T_inf\n' )
-    parser.add_argument('--beta_prior', '-beta_prior', nargs='+', action='store', type=float, default=['init'],dest='beta_prior', help='beta_prior: first guess on the optimization solution\n')
+    parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=['all'],dest='T_inf_lst', 
+                        help='List of different T_inf\n' )
+    parser.add_argument('--beta_prior', '-beta_prior', nargs='+', action='store', 
+            type=float, default=['init'],dest='beta_prior', help='beta_prior: first guess on the optimization solution\n')
     
     #digits
     parser.add_argument('--N_discr', '-N', action='store', type=int, default=33, dest='N_discr', 
@@ -36,14 +43,17 @@ def parser() :
     #strings
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', 
                         help='Define the directory where the data will be stored and read \n')
-#    parser.add_argument('--data', '-df', action='store', type=str, default='./SSO_Inj_AVF_UDFTHEO-data', dest='datafile', help='Define your datafile\'s path and name, initialized at %(default)s')
-#    parser.add_argument('--kind', '-k', action='store', type=str, default='cubic', dest='kind', help='Define the type of your interpolation : linear, cubic or quintic')
-#    parser.add_argument('--init_data', '-id', action='store', type=str, default='./init_simu.csv', dest='init_simudata', help='Define the simulation datafile\'s path and name, initialized at %(default)s')
+    parser.add_argument('--covariance_model', '-cov_mod', action='store', type=str, default='diag', dest='cov_mod', 
+                        help='Define the covariance model \n')
+    
     return parser.parse_args()
 ##---------------------------------------------------------------
 class Temperature() :
     def __init__ (self, parser):
         np.random.seed(1000) ; plt.ion()
+        
+        if parser.cov_mod not in ['full', 'diag'] :
+            raise AttributeError("\x1b[7;1;255mcov_mod must be either diag or full\x1b[0m")
         
         T_inf_lst = parser.T_inf_lst
 
@@ -51,6 +61,7 @@ class Temperature() :
         dt,         h       =   parser.dt,      parser.h
         datapath            =   os.path.abspath(parser.datapath)
         num_real,   tol     =   parser.num_real,parser.tol
+        cov_mod             =   parser.cov_mod
         
         self.beta_prior = np.asarray([1 for i in xrange(parser.N_discr-2)]) if parser.beta_prior == ['init'] else parser.beta_prior
         
@@ -79,6 +90,7 @@ class Temperature() :
         self.line_z  = np.linspace(z_init, z_final, N_discr)[1:N_discr-1]
         self.num_real = num_real
         self.eps_0 = 5.*10**(-4)
+        self.cov_mod = cov_mod
         self.N_discr = N_discr
         self.kappa = kappa
         self.tol = tol
@@ -118,6 +130,8 @@ class Temperature() :
         print "T_inf_lst is now {}".format(self.T_inf_lst)
 ##---------------------------------------------------
     def pd_read_csv(self, filename) :
+        if os.path.splitext(filename)[-1] is not ".csv" :
+            filename = os.path.splitext(filename)[0] + ".csv"
         path = os.path.join(self.datapath, filename)
         data = pd.read_csv(path).get_values()            
         return data.reshape(data.shape[0])
@@ -127,11 +141,37 @@ class Temperature() :
         pd.DataFrame(data).to_csv(path, index=False, header= True)
 ##---------------------------------------------------
     def tab_normal(self, mu, sigma, length) :
-        return (sigma * np.random.randn(length) + mu, 
+        return ( sigma * np.random.randn(length) + mu, 
                 (sigma * np.random.randn(length) + mu).mean(), 
                 (sigma * np.random.randn(length) + mu).std()
                ) 
 ##---------------------------------------------------   
+    def h_beta(self, beta, T_inf, noise= 'none') :
+        err, tol, compteur, compteur_max = 1., 1e-3, 0, 5000
+        T_n = map(lambda x : -4*T_inf*x*(x-1), self.line_z)
+        T_nNext = T_n
+        B_n = np.zeros((self.N_discr-2))
+        
+        while (np.abs(err) > tol) and (compteur <= compteur_max) :
+            if compteur >= 1 :
+                T_n = T_nNext
+            compteur +=1 
+            
+            for i in xrange(self.N_discr-2) :
+                B_n[i] = T_n[i] + self.dt*(beta[i])*self.eps_0*(T_inf**4 - T_n[i]**4)
+            
+            T_nNext = np.dot(np.linalg.inv(self.A), np.transpose(B_n))
+            err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
+            if compteur == compteur_max :
+                warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \x1b[0m".format(err, tol))
+        
+        return T_nNext 
+##---------------------------------------------------
+    def true_beta(self, T, T_inf) : 
+        return np.asarray (
+        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i]) + self.noise[i] ) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in xrange(self.N_discr-2)]        
+                          )
+##---------------------------------------------------    
     def obs_pri_model(self) :
         lst_gauss = [self.tab_normal(0,0.1,self.N_discr-2)[0] for i in xrange(self.num_real)]
         T_nNext_obs_lst, T_nNext_pri_lst, T_init = [], [], []
@@ -182,13 +222,13 @@ class Temperature() :
             
                     err_obs = np.linalg.norm(T_nNext_obs - T_n_obs, 2)
                     err_pri = np.linalg.norm(T_nNext_pri - T_n_pri, 2)
-            print "calculus with T_inf {} completed".format(T_inf)
+            print "calculus with T_inf={} completed".format(T_inf)
         
         self.T_init             =   T_init    
         self.T_nNext_obs_lst    =   T_nNext_obs_lst
         self.T_nNext_pri_lst    =   T_nNext_pri_lst
 ##---------------------------------------------------   
-    def get_prior_statistics(self, prior_sigma = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8],  cov_mod='diag'):
+    def get_prior_statistics(self, prior_sigma = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]):
         cov_obs_dict    =   dict() 
         cov_pri_dict    =   dict()
         
@@ -230,7 +270,7 @@ class Temperature() :
             std_meshgrid_values     =   np.asarray([np.std(vals_obs_meshpoints[sT_inf+"_"+str(j)])  for j   in  xrange(self.N_discr-2)])
 #            mean_meshgrid_values[sT_inf]    =   np.asarray([np.mean(vals_obs_meshpoints[sT_inf+"_"+str(j)]) for j   in  xrange(self.N_discr-2)])
             
-            print mean_meshgrid_values
+#            print mean_meshgrid_values
             
             for it in xrange(self.num_real) :
                 obs_filename  =  'obs_T_inf_{}_{}.csv'.format(T_inf, it)
@@ -240,9 +280,8 @@ class Temperature() :
                     for jj in xrange(self.N_discr-2) : 
                         Sum[ii,jj] += (T_temp[ii] - T_obs_mean[sT_inf][ii]) * (T_temp[jj] - T_obs_mean[sT_inf][jj])/float(self.num_real)
             
-            print Sum
-            
             full_cov_obs_dict[sT_inf] = Sum            
+            print "cov_obs :\n{}".format(Sum)
             
             std_mean_prior          =   np.mean(np.asarray([np.std(T_prior[i]) for i in xrange(len(T_prior))]))
             cov_obs_dict[sT_inf]    =   np.diag([std_meshgrid_values[j]**2 for j in xrange(self.N_discr-2)])
@@ -267,7 +306,7 @@ class Temperature() :
             
             self.stat_done = True
 ##---------------------------------------------------  
-    def optimization(self, verbose=False, cov_mod='diag') :
+    def optimization(self, verbose=False) :
         if self.stat_done == False : self.get_prior_statistics()
         
         betamap, beta_final = dict(), dict()
@@ -280,7 +319,7 @@ class Temperature() :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
             cov_prior   =   self.full_cov_obs_dict[sT_inf], self.cov_pri_dict[sT_inf]
-            cov_m = self.cov_obs_dict[sT_inf] if cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
+            cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
             J = lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
                     np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
@@ -349,32 +388,7 @@ class Temperature() :
         self.beta_var   =   beta_var
         
 ##--------------------------------------------------- 
-    def h_beta(self, beta, T_inf, noise= 'none') :
-        err, tol, compteur, compteur_max = 1., 1e-3, 0, 5000
-        T_n = map(lambda x : -4*T_inf*x*(x-1), self.line_z)
-        T_nNext = T_n
-        B_n = np.zeros((self.N_discr-2))
-        
-        while (np.abs(err) > tol) and (compteur <= compteur_max) :
-            if compteur >= 1 :
-                T_n = T_nNext
-            compteur +=1 
-            
-            for i in xrange(self.N_discr-2) :
-                B_n[i] = T_n[i] + self.dt*(beta[i])*self.eps_0*(T_inf**4 - T_n[i]**4)
-            
-            T_nNext = np.dot(np.linalg.inv(self.A), np.transpose(B_n))
-            err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
-            if compteur == compteur_max :
-                warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \x1b[0m".format(err, tol))
-        
-        return T_nNext 
-##---------------------------------------------------
-    def true_beta(self, T, T_inf) : 
-        return np.asarray(
-        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i]) + self.noise[i] ) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in xrange(self.N_discr-2)]        )
-##---------------------------------------------------    
-    def backline_search(self, J_lambda, var_J_lambda, direction, incr=0.1) :
+    def backline_search(self, J_lambda, var_J_lambda, direction, incr=0.5) :
         t = 1.
         norm_direction = np.linalg.norm(direction, 2)**2
         while J_lambda(var_J_lambda - t*direction) > (J_lambda(var_J_lambda) - t/2.0 * norm_direction) :
@@ -388,13 +402,9 @@ class Temperature() :
         
         H_nN    =   np.dot( np.dot(Id - np.dot(np.dot(rho_nN, y_nN), s_nN.T) ,prev_hess ), Id - np.dot(np.dot(rho_nN, s_nN), y_nN.T) ) + \
                         np.dot(np.dot(rho_nN, s_nN), s_nN)
-                        
         return H_nN
 ##--------------------------------------------------- 
-    def minimization_with_first_guess(self, cov_mod = "diag") :
-        if cov_mod not in ['full', 'diag'] :
-            raise AttributeError("cov_mod must be either diag or full")
-            
+    def minimization_with_first_guess(self) :
         if self.stat_done == False : self.get_prior_statistics()
 
         QN_BFGS_bmap,   QN_BFGS_bf        =   dict(),     dict()
@@ -409,7 +419,7 @@ class Temperature() :
         for T_inf in self.T_inf_lst :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
-            cov_m   =   self.cov_obs_dict[sT_inf] if cov_mod=='diag' else self.full_cov_obs_dict[sT_inf] 
+            cov_m   =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf] 
             cov_prior =  self.cov_pri_dict[sT_inf]
             J = lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
@@ -430,7 +440,7 @@ class Temperature() :
 #            H_n    =    np.eye(self.N_discr-2)
 #            g_n    =    np.ones((self.N_discr-2,))
             
-            err, tol = 1.0, 1e-8
+            err, tol = 1.0, 1e-9
             cpt, cpt_max    =   0,  5000
             err_hess = 0.
             while (np.abs(err) > tol) and (cpt<cpt_max) :
@@ -474,7 +484,7 @@ class Temperature() :
             
             QN_BFGS_bf[sT_inf]      =   QN_BFGS_bmap[sT_inf] + np.dot(np.linalg.cholesky(H_nNext), s)
             
-            for i in xrange(249):
+            for i in xrange(100):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_QNBFGS_real.append(QN_BFGS_bmap[sT_inf] + np.dot(QN_BFGS_cholesky[sT_inf], s))
             beta_QNBFGS_real.append(QN_BFGS_bf[sT_inf])
@@ -494,9 +504,20 @@ class Temperature() :
         self.QN_BFGS_mins_lst   =   mins_lst
         self.QN_BFGS_maxs_lst   =   maxs_lst
         
-        self.alpha_lst = np.asarray(alpha_lst)
-        self.direction_lst = np.asarray(direction_lst)
+        self.alpha_lst      =   np.asarray(alpha_lst)
+        self.direction_lst  =   np.asarray(direction_lst)
 ##---------------------------------------------------
+def optimize_with_adjoint(self, beta_n, T_inf) :
+    curr_beta = beta_n
+    dR_dT = np.asarray([ 4*(curr_h_beta[i]**3)*curr_beta[i]*eps_0 for i in xrange(N_discr-2) ])
+    dJ_dT = np.asarray([(curr_h_beta[i] - curr_d[i])/cov_prior[0,0] for i in xrange(N_discr-2)])
+    dR_dBeta = np.asarray([-(T_inf**4-curr_h_beta[i]**4)*self.eps_0 for i in xrange(N_discr-2)])
+    
+    psi = np.asarray([- dJ_dT[i]/dR_dT[i] for i in xrange(self.N_discr-2)])
+    
+     
+    
+    
 ##---------------------------------------------------
 def subplot(T, method='QN_BFGS') : 
     if method == "QN_BFGS"    :
@@ -553,26 +574,22 @@ def subplot(T, method='QN_BFGS') :
         
         return axes
 ##---------------------------------------------------##
-
-##---------------------------------------------------##
 ##---------------------------------------------------##
 ##---------------------------------------------------##        
 if __name__ == "__main__" :
 #    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
     parser = parser()
     T = Temperature(parser)
-#    try :
-#        T.get_prior_statistics()
-#    except ValueError :
-#        T.obs_pri_model()
-#        T.get_prior_statistics()
-#    T.optimization()
-#    
-#    subplot(T)
+    
+#def ff() :
+#    x_ = y_ = np.linspace(-1, 4, 100)
+#    X, Y = np.meshgrid(x_, y_)
+#    c = ax.contour(X, Y, f_lmbda(X, Y), 50)
+#    ax.plot(x_opt[0], x_opt[1], 'r*', markersize=15)
+#    ax.set_xlabel(r"$x_1$", fontsize=18)
+#    ax.set_ylabel(r"$x_2$", fontsize=18)
+#    plt.colorbar(c, ax=ax)
 
-#    print T.noise
-    
-    
     
     
     
