@@ -507,17 +507,148 @@ class Temperature() :
         self.alpha_lst      =   np.asarray(alpha_lst)
         self.direction_lst  =   np.asarray(direction_lst)
 ##---------------------------------------------------
-def optimize_with_adjoint(self, beta_n, T_inf) :
-    curr_beta = beta_n
-    dR_dT = np.asarray([ 4*(curr_h_beta[i]**3)*curr_beta[i]*eps_0 for i in xrange(N_discr-2) ])
-    dJ_dT = np.asarray([(curr_h_beta[i] - curr_d[i])/cov_prior[0,0] for i in xrange(N_discr-2)])
-    dR_dBeta = np.asarray([-(T_inf**4-curr_h_beta[i]**4)*self.eps_0 for i in xrange(N_discr-2)])
-    
-    psi = np.asarray([- dJ_dT[i]/dR_dT[i] for i in xrange(self.N_discr-2)])
-    
-     
-    
-    
+    def _for_adjoint(self, beta_n, T_inf, curr_d, cov_prior ): 
+        if self.stat_done == False : self.get_prior_statistics()
+        sT_inf      =   "T_inf_%d" %(T_inf)
+        curr_d      =   self.T_obs_mean[sT_inf]
+        cov_m       =   self.cov_obs_dict[sT_inf]
+        cov_prior   =   self.cov_pri_dict[sT_inf]
+        
+        J = lambda beta : 0.5*  ( 
+                      np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
+                        np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
+                    + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
+                        np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
+                                 )
+        
+        alpha_lst,  direction_lst   =   [],     [] 
+        BFGS_bmap,   BFGS_bf        =   dict(), dict()
+        BFGS_hess,   BFGS_cholesky  =   dict(), dict()
+
+        mins,   maxs    =   dict(),     dict()
+        
+        sT_inf      =   "T_inf_%d" %(T_inf)
+        curr_d      =   self.T_obs_mean[sT_inf]
+        cov_m       =   self.cov_obs_dict[sT_inf]
+        cov_prior   =   self.cov_pri_dict[sT_inf]
+        
+        curr_h_beta =   self.h_beta(beta_n, T_inf)
+
+#        dR_dT   =   np.asarray( [ 4*(curr_h_beta[i]**3) * beta_n[i] * self.eps_0 for i in xrange(self.N_discr-2) ] )
+#        dJ_dT   =   np.asarray( [  (curr_h_beta[i] - curr_d[i]) / cov_prior[0,0] for i in xrange(self.N_discr-2) ] )
+#        dR_dBeta=   np.asarray( [  - (T_inf**4 - curr_h_beta[i]**4) * self.eps_0 for i in xrange(self.N_discr-2) ] )
+#                
+#        psi_n   =   np.asarray([ - dJ_dT[i] / dR_dT[i] for i in xrange(self.N_discr-2)]) # element wise
+#        g_n     =   np.asarray([ psi_n[i] *dR_dBeta[i] for i in xrange(self.N_discr-2)])
+        dR_dT = map(lambda beta : 4*(curr_h_beta**3) * beta_n * self.eps_0, curr_h_beta, beta_n)
+        dJ_dT   =   np.asarray( [  (curr_h_beta[i] - curr_d[i]) / cov_prior[0,0] for i in xrange(self.N_discr-2) ] )
+        dR_dBeta=   np.asarray( [  - (T_inf**4 - curr_h_beta[i]**4) * self.eps_0 for i in xrange(self.N_discr-2) ] )
+                
+        psi_n   =   np.asarray([ - dJ_dT[i] / dR_dT[i] for i in xrange(self.N_discr-2)]) # element wise
+
+        
+        grad_J = nd.Jacobian(psi)
+        
+        op.minimize(J, self.beta_prior, jac=grad_J(self.b))
+        
+##---------------------------------------------------
+    def adjoint_optimization(self, T_inf) :
+        if self.stat_done == False : self.get_prior_statistics()
+        
+        alpha_lst,  direction_lst   =   [],     [] 
+        BFGS_bmap,   BFGS_bf        =   dict(), dict()
+        BFGS_hess,   BFGS_cholesky  =   dict(), dict()
+
+        mins,   maxs    =   dict(),     dict()
+        
+        sT_inf      =   "T_inf_%d" %(T_inf)
+        curr_d      =   self.T_obs_mean[sT_inf]
+        cov_m       =   self.cov_obs_dict[sT_inf]
+        cov_prior   =   self.cov_pri_dict[sT_inf]
+        
+        J = lambda beta : 0.5*  ( 
+                      np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
+                        np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
+                    + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
+                        np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
+                                 )
+        cpt,    err,    cptMax, tol =   0,  1., 5000,  1e-3
+        dz  =   1. / (self.N_discr-1)
+        
+        s   =   np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+        
+        beta_n =   self.beta_prior
+        
+        g_n =   self._for_adjoint(beta_n, T_inf, curr_d, cov_prior)
+#        H_n =   np.linalg.inv(np.abs(np.random.rand(31,31)))
+        first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.1, options={"maxiter" :100} ) ## Simplement pour avoir Hess_0 
+        
+        print "comparaison des gradients : \n Adjoint : g_n = {} \t \t op.minimize : = first_guess_opti.jac {}".format(g_n, first_guess_opti.jac)
+        
+        aaa = str(input("Any Key : \n")) 
+        
+        while (np.abs(err) > tol) and (cpt < cptMax) :
+        # Intialisation : 
+            if cpt > 0 :
+                beta_n  =   beta_nNext 
+                H_n     =   H_nNext
+                g_n     =   g_nNext
+            
+            cpt += 1
+            direction   =   np.dot(H_n, g_n)
+            alpha       =   self.backline_search(J, beta_n, direction)
+            
+            alpha_lst.append(alpha)
+            direction_lst.append(direction)
+        #    print "alpha = ", alpha
+            
+            beta_nNext      =   beta_n - alpha*direction
+            self.beta_nNext =   beta_nNext
+            
+            g_nNext = self._for_adjoint(beta_nNext, T_inf, curr_d, cov_prior)
+            print "compteur = {}, \t Gradient dans la boucle minimization \n {}:".format(cpt, g_nNext)
+            y_nNext =   g_nNext - g_n
+            s_nNext =   beta_nNext - beta_n
+            H_nNext =   self.Next_hess(H_n, y_nNext, s_nNext)
+            
+            err = (J(beta_nNext) - J(beta_n)) 
+            err_hess = np.linalg.norm(H_nNext - H_n)
+            
+            print "cpt = {} \t err = {:.5}".format(cpt, err)
+            
+        print "Compteur     = %d \t err_j = %.12f \t err_Hess %.12f" % (cpt, err, err_hess)
+        print "Last Beta    = ", beta_nNext
+        print "Last J(beta) = ", J(beta_nNext) 
+        
+        BFGS_bmap[sT_inf]    =   beta_nNext
+        BFGS_hess[sT_inf]    =   H_nNext
+        
+        BFGS_cholesky[sT_inf]=   np.linalg.cholesky(H_nNext)
+        
+        BFGS_bf[sT_inf]      =   BFGS_bmap[sT_inf] + np.dot(BFGS_cholesky[sT_inf], s)
+        
+        for i in xrange(100):
+            s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+            beta_QNBFGS_real.append(QN_BFGS_bmap[sT_inf] + np.dot(QN_BFGS_cholesky[sT_inf], s))
+        beta_QNBFGS_real.append(QN_BFGS_bf[sT_inf])
+        
+        for i in xrange(self.N_discr-2) :
+            mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_QNBFGS_real]))
+            maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_QNBFGS_real]))
+        
+        mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]   
+        maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]
+            
+        BFGS_bmap   =   BFGS_bmap
+        BFGS_bf     =   BFGS_bf
+        BFGS_hess   =   BFGS_hess
+        
+        self.BFGS_cholesky   =   BFGS_cholesky
+        self.BFGS_mins_lst   =   mins_lst
+        self.BFGS_maxs_lst   =   maxs_lst
+        
+        self.alpha_lst      =   np.asarray(alpha_lst)
+        self.direction_lst  =   np.asarray(direction_lst)
 ##---------------------------------------------------
 def subplot(T, method='QN_BFGS') : 
     if method == "QN_BFGS"    :
@@ -581,15 +712,6 @@ if __name__ == "__main__" :
     parser = parser()
     T = Temperature(parser)
     
-#def ff() :
-#    x_ = y_ = np.linspace(-1, 4, 100)
-#    X, Y = np.meshgrid(x_, y_)
-#    c = ax.contour(X, Y, f_lmbda(X, Y), 50)
-#    ax.plot(x_opt[0], x_opt[1], 'r*', markersize=15)
-#    ax.set_xlabel(r"$x_1$", fontsize=18)
-#    ax.set_ylabel(r"$x_2$", fontsize=18)
-#    plt.colorbar(c, ax=ax)
-
     
     
     
