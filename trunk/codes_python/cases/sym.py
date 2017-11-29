@@ -8,10 +8,16 @@ import sympy as sy
 
 sy.init_printing()
 
+def func_XY_to_X_Y(f):
+    """
+    Wrapper for f(X) -> f(X[0], X[1])
+    """
+    return lambda X: np.array(f(X[0], X[1]))
+
 ## Introduction
 x   =   sy.Symbol('x')
 #print x.is_real # None
-y   =   sy.Symbol('y', real=True)    ## positive=True imaginary = True (à la place de real)   
+y   =   sy.Symbol('y', real=True)    ## positive=True imaginary = True (�  la place de real)   
 z   =   sy.Symbol("z", imaginary=True)
 n   =   sy.Symbol('n', integer=True) ## odd= True ou even=True etc
 
@@ -92,7 +98,7 @@ expr_func(np.asarray(xvalues)) ## Ne marche pas avec les listes
 f       =   sy.Function('f')(x)
 der_f   =   sy.diff(f,x) # f.diff(x)
 
-# Dérivées successives 
+# D�rivées successives 
 sy.diff(f, x, 2) # sy.diff(f, x, n) dérivées n-ième
 
 # Déviées partielles
