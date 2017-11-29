@@ -36,6 +36,7 @@ hbp =   T.h_beta(bp, 50)
 
 cov_obs     =   np.linalg.inv(T.cov_obs_dict["T_inf_50"])
 cov_prior   =   np.linalg(T.cov_pri_dict["T_inf_50"])
+
 J   =   lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - T.h_beta(beta, T_inf)),
                     np.linalg.inv(cov_m)) , (curr_d - T.h_beta(beta, T_inf) )  )  

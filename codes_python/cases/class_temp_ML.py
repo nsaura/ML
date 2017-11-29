@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
-import csv, os, sys, warnings, argparse
+import os, sys, warnings, argparse
 
 from scipy import optimize as op
 from itertools import cycle
 import matplotlib.cm as cm
 
-from numdifftools import Gradient, Jacobian
+import numdifftools as nd
 
 ## Import de la classe TF ##
 nnc_folder = os.path.abspath(os.path.dirname("../TF/NN_class_try.py"))
@@ -24,8 +24,6 @@ def parser() :
     #lists
     parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=['all'],dest='T_inf_lst', 
                         help='List of different T_inf\n' )
-    parser.add_argument('--beta_prior', '-beta_prior', nargs='+', action='store', 
-            type=float, default=['init'],dest='beta_prior', help='beta_prior: first guess on the optimization solution\n')
     
     #digits
     parser.add_argument('--N_discr', '-N', action='store', type=int, default=33, dest='N_discr', 
@@ -40,6 +38,11 @@ def parser() :
                         help='Define the number of realization of epsilon(T) you want to pick up \n' )
     parser.add_argument('--tolerance', '-tol', action='store', type=float, default=1e-5, dest='tol', 
                         help='Define the tolerance on the optimization error \n' )
+    
+    parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', 
+        default=1 ,dest='beta_prior', help='beta_prior: first guess on the optimization solution\n')
+   
+    
     #strings
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', 
                         help='Define the directory where the data will be stored and read \n')
@@ -63,7 +66,7 @@ class Temperature() :
         num_real,   tol     =   parser.num_real,parser.tol
         cov_mod             =   parser.cov_mod
         
-        self.beta_prior = np.asarray([1 for i in xrange(parser.N_discr-2)]) if parser.beta_prior == ['init'] else parser.beta_prior
+        self.beta_prior = np.asarray([parser.beta_prior for i in range(parser.N_discr-2)]) 
         
         try :
             self.len_T_lst = len(T_inf_lst) 
@@ -72,7 +75,7 @@ class Temperature() :
             self.len_T_lst = len(T_inf_lst) 
         
         if T_inf_lst == ['all'] :
-            T_inf_lst = [i*5 for i in xrange(1, 11)]
+            T_inf_lst = [i*5 for i in range(1, 11)]
         
         self.T_inf_lst = T_inf_lst
         
@@ -86,13 +89,16 @@ class Temperature() :
         self.A = A_diag + M1 + P1
         
         self.noise = self.tab_normal(0, 0.1, N_discr-2)[0]
+        self.prior_sigma = dict()
+        prior_sigma_lst = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]
+        for i, t in enumerate([i*5 for i in range(1, 11)]) :
+            self.prior_sigma["T_inf_%d" %(t)] = prior_sigma_lst[i]
         
         self.line_z  = np.linspace(z_init, z_final, N_discr)[1:N_discr-1]
         self.num_real = num_real
         self.eps_0 = 5.*10**(-4)
         self.cov_mod = cov_mod
         self.N_discr = N_discr
-        self.kappa = kappa
         self.tol = tol
         self.dt = dt        
         self.h = h
@@ -127,7 +133,7 @@ class Temperature() :
         
         self.T_inf_lst = T_inf
         
-        print "T_inf_lst is now {}".format(self.T_inf_lst)
+        print ("T_inf_lst is now {}".format(self.T_inf_lst))
 ##---------------------------------------------------
     def pd_read_csv(self, filename) :
         if os.path.splitext(filename)[-1] is not ".csv" :
@@ -146,34 +152,42 @@ class Temperature() :
                 (sigma * np.random.randn(length) + mu).std()
                ) 
 ##---------------------------------------------------   
-    def h_beta(self, beta, T_inf, noise= 'none') :
+    def h_beta(self, beta, T_inf, verbose=False,noise= 'none') :
         err, tol, compteur, compteur_max = 1., 1e-3, 0, 5000
         T_n = map(lambda x : -4*T_inf*x*(x-1), self.line_z)
         T_nNext = T_n
         B_n = np.zeros((self.N_discr-2))
-        
+        if verbose == True :
+            plt.figure()
         while (np.abs(err) > tol) and (compteur <= compteur_max) :
             if compteur >= 1 :
                 T_n = T_nNext
             compteur +=1 
             
-            for i in xrange(self.N_discr-2) :
+            for i in range(self.N_discr-2) :
                 B_n[i] = T_n[i] + self.dt*(beta[i])*self.eps_0*(T_inf**4 - T_n[i]**4)
             
             T_nNext = np.dot(np.linalg.inv(self.A), np.transpose(B_n))
             err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
+            
+            if verbose == True and compteur % 5 == 0 :
+                print err
+                plt.plot(self.line_z, T_nNext, label='tracer cpt %d' %(compteur))
             if compteur == compteur_max :
                 warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \x1b[0m".format(err, tol))
         
+        if verbose == True :
+            plt.plot(self.line_z, T_nNext, marker="o", linestyle='none')
+            plt.legend(loc="best", ncol=4)
         return T_nNext 
 ##---------------------------------------------------
     def true_beta(self, T, T_inf) : 
         return np.asarray (
-        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i]) + self.noise[i] ) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in xrange(self.N_discr-2)]        
+        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i]) + self.noise[i] ) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in range(self.N_discr-2)]        
                           )
 ##---------------------------------------------------    
     def obs_pri_model(self) :
-        lst_gauss = [self.tab_normal(0,0.1,self.N_discr-2)[0] for i in xrange(self.num_real)]
+        lst_gauss = [self.tab_normal(0,0.1,self.N_discr-2)[0] for i in range(self.num_real)]
         T_nNext_obs_lst, T_nNext_pri_lst, T_init = [], [], []
         
         for T_inf in self.T_inf_lst :
@@ -198,15 +212,13 @@ class Temperature() :
                     B_n_obs = T_n_obs
                     B_n_pri = T_n_pri
                      
-                    for i in xrange(1,self.N_discr-2) :
+                    for i in range(self.N_discr-2) :
                         B_n_obs[i] = T_n_obs[i] + self.dt*  (
                         ( 10**(-4) * ( 1.+5.*np.sin(3.*T_n_obs[i]*np.pi/200.) + 
                         np.exp(0.02*T_n_obs[i]) + bruit[i] ) ) *( T_inf**4 - T_n_obs[i]**4)
                          + self.h * (T_inf-T_n_obs[i])      )   
                         
-                        B_n_pri[i] = T_n_pri[i] + self.dt * (
-                        5 * 10**(-4) * (T_inf**4-T_n_pri[i]**4) * (1 + bruit[i])
-                                                            )
+                        B_n_pri[i] = T_n_pri[i] + self.dt * (5 * 10**(-4) * (T_inf**4-T_n_pri[i]**4) * (1 + bruit[i]))
                                                             
                     T_nNext_obs = np.dot(np.linalg.inv(self.A), np.transpose(B_n_obs))
                     T_nNext_pri = np.dot(np.linalg.inv(self.A), np.transpose(B_n_pri))
@@ -222,33 +234,33 @@ class Temperature() :
             
                     err_obs = np.linalg.norm(T_nNext_obs - T_n_obs, 2)
                     err_pri = np.linalg.norm(T_nNext_pri - T_n_pri, 2)
-            print "calculus with T_inf={} completed".format(T_inf)
+            print ("Calculus with T_inf={} completed".format(T_inf))
         
         self.T_init             =   T_init    
         self.T_nNext_obs_lst    =   T_nNext_obs_lst
         self.T_nNext_pri_lst    =   T_nNext_pri_lst
 ##---------------------------------------------------   
-    def get_prior_statistics(self, prior_sigma = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]):
+    def get_prior_statistics(self):
         cov_obs_dict    =   dict() 
         cov_pri_dict    =   dict()
         
-        mean_meshgrid_values=   dict()
+        mean_meshgrid_values=   dict()  
         full_cov_obs_dict   =   dict()        
         vals_obs_meshpoints =   dict()
         
         T_obs_mean  = dict()
         
         for t in self.T_inf_lst :
-            for j in xrange(self.N_discr-2) :
+            for j in range(self.N_discr-2) :
                 key = "T_inf_{}_{}".format(t, j)
                 vals_obs_meshpoints[key] =  []
         
-        for i, (T_inf, prior_s) in enumerate(zip(self.T_inf_lst, prior_sigma)) :
+        for i, T_inf in enumerate(self.T_inf_lst) :
             T_obs, T_prior = [], []     
             T_sum = np.zeros((self.N_discr-2))
             sT_inf = "T_inf_" + str(T_inf)
             
-            for it in xrange(self.num_real) :
+            for it in range(self.num_real) :
                 obs_filename  =  'obs_T_inf_{}_{}.csv'.format(T_inf, it)
                 pri_filename  =  'prior_T_inf_{}_{}.csv'.format(T_inf, it)
                 
@@ -257,7 +269,7 @@ class Temperature() :
                 T_sum += T_temp / float(self.num_real)
                 T_obs.append(T_temp)
                 
-                for j in xrange(self.N_discr-2) :
+                for j in range(self.N_discr-2) :
                     vals_obs_meshpoints[sT_inf+"_"+str(j)].append(T_temp[j])
                 
                 # We conserve the T_disc
@@ -267,31 +279,31 @@ class Temperature() :
             T_obs_mean[sT_inf] = T_sum # Joue aussi le rôle de moyenne pour la covariance
             
             Sum    =    np.zeros((self.N_discr-2, self.N_discr-2))   
-            std_meshgrid_values     =   np.asarray([np.std(vals_obs_meshpoints[sT_inf+"_"+str(j)])  for j   in  xrange(self.N_discr-2)])
-#            mean_meshgrid_values[sT_inf]    =   np.asarray([np.mean(vals_obs_meshpoints[sT_inf+"_"+str(j)]) for j   in  xrange(self.N_discr-2)])
+            std_meshgrid_values     =   np.asarray([np.std(vals_obs_meshpoints[sT_inf+"_"+str(j)])  for j   in  range(self.N_discr-2)])
+#            mean_meshgrid_values[sT_inf]    =   np.asarray([np.mean(vals_obs_meshpoints[sT_inf+"_"+str(j)]) for j   in  range(self.N_discr-2)])
             
 #            print mean_meshgrid_values
             
-            for it in xrange(self.num_real) :
+            for it in range(self.num_real) :
                 obs_filename  =  'obs_T_inf_{}_{}.csv'.format(T_inf, it)
                 T_temp = self.pd_read_csv(obs_filename)
                 
-                for ii in xrange(self.N_discr-2)  :
-                    for jj in xrange(self.N_discr-2) : 
+                for ii in range(self.N_discr-2)  :
+                    for jj in range(self.N_discr-2) : 
                         Sum[ii,jj] += (T_temp[ii] - T_obs_mean[sT_inf][ii]) * (T_temp[jj] - T_obs_mean[sT_inf][jj])/float(self.num_real)
             
             full_cov_obs_dict[sT_inf] = Sum            
-            print "cov_obs :\n{}".format(Sum)
+            print ("cov_obs :\n{}".format(Sum))
             
-            std_mean_prior          =   np.mean(np.asarray([np.std(T_prior[i]) for i in xrange(len(T_prior))]))
-            cov_obs_dict[sT_inf]    =   np.diag([std_meshgrid_values[j]**2 for j in xrange(self.N_discr-2)])
-            cov_pri_dict[sT_inf]    =   np.diag([prior_s**2 for j in xrange(self.N_discr-2)])
+            std_mean_prior          =   np.mean(np.asarray([np.std(T_prior[i]) for i in range(len(T_prior))]))
+            cov_obs_dict[sT_inf]    =   np.diag([std_meshgrid_values[j]**2 for j in range(self.N_discr-2)])
+            cov_pri_dict[sT_inf]    =   np.diag([self.prior_sigma[sT_inf]**2 for j in range(self.N_discr-2)])
             
 #            # Construction of full_cov_obs_dict
 #            full_cov = np.zeros((self.N_discr-2, self.N_discr-2))
 #            
-#            for ii in xrange(self.N_discr) :
-#                for jj in xrange(self.N_discr) :
+#            for ii in range(self.N_discr) :
+#                for jj in range(self.N_discr) :
 #                    full_cov[i,j] = np.mean((T_obs_mean[sT_inf][i] - mean_meshgrid_values[i])*(T_obs_mean[sT_inf][j] - mean_meshgrid_values[j]))
 #            
 #            full_cov_obs_dict[sT_inf] = full_cov
@@ -315,6 +327,7 @@ class Temperature() :
         mins, maxs = dict(), dict()
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
         beta_var = []
+        
         for T_inf in self.T_inf_lst :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
@@ -335,21 +348,21 @@ class Temperature() :
             cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
             
             self.opti = opti
-            print "Sucess state of the optimization {}".format(self.opti.success)
+            print ("Sucess state of the optimization {}".format(self.opti.success))
             
             beta_final[sT_inf]  =   betamap[sT_inf] + np.dot(cholesky[sT_inf], s)  
             
-            for i in xrange(249):
+            for i in range(249):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_var.append(betamap[sT_inf] + np.dot(cholesky[sT_inf], s))
             beta_var.append(beta_final[sT_inf])
             
-            for i in xrange(self.N_discr-2) :
+            for i in range(self.N_discr-2) :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
                 maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
             
-            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]   
-            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]
+            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
+            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
             
             if verbose == True :
                 fig, axes = plt.subplots(1,2,figsize=(20,10))
@@ -429,7 +442,7 @@ class Temperature() :
                                     )
                                     
             first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.1) ## Simplement pour avoir Hess_0 
-            for item in first_guess_opti.iteritems() : print item
+            for item in first_guess_opti.iteritems() : print (item)
             
             beta_n  =   first_guess_opti.x
             H_n     =   first_guess_opti.hess_inv
@@ -440,7 +453,7 @@ class Temperature() :
 #            H_n    =    np.eye(self.N_discr-2)
 #            g_n    =    np.ones((self.N_discr-2,))
             
-            err, tol = 1.0, 1e-9
+            err, tol = 1.0, 1e-7
             cpt, cpt_max    =   0,  5000
             err_hess = 0.
             while (np.abs(err) > tol) and (cpt<cpt_max) :
@@ -453,15 +466,15 @@ class Temperature() :
                 cpt += 1    
                 direction   =   np.dot(H_n, g_n)
                 alpha       =   self.backline_search(J, beta_n, direction)
-                print "alpha = ", alpha
+                print ("alpha = ", alpha)
 #                alpha  = 1e-2
                 beta_nNext  =   beta_n - alpha*direction
-                self.beta_nNext = beta_nNext
+                #self.beta_nNext = beta_nNext
                 alpha_lst.append(alpha)
                 direction_lst.append(direction)
                 
                 ## Estimation of H_nNext
-                g_nNext =   Gradient(J)(beta_nNext) # From numdifftools
+                g_nNext =   nd.Gradient(J)(beta_nNext) # From numdifftools
                 print "compteur = {}, Gradient dans la boucle minimization \n {}:".format(cpt, g_nNext)
                 y_nNext =   g_nNext - g_n
                 s_nNext =   beta_nNext - beta_n
@@ -471,11 +484,11 @@ class Temperature() :
                 
                 err_hess = np.linalg.norm(H_nNext - H_n)
                 
-                print "cpt = {} \t err = {:.5}".format(cpt, err) 
+                print ("cpt = {} \t err = {:.5}".format(cpt, err))
 
-            print "Compteur = %d \t err_j = %.12f \t err_Hess %.12f" % (cpt, err, err_hess)
-            print "beta_nNext = ", beta_nNext
-            print "J(beta_nNext) = ", J(beta_nNext) 
+            print ("Compteur = %d \t err_j = %.12f \t err_Hess %.12f" % (cpt, err, err_hess))
+            print ("beta_nNext = ", beta_nNext)
+            print ("J(beta_nNext) = ", J(beta_nNext) )
             
             QN_BFGS_bmap[sT_inf]    =   beta_nNext
             QN_BFGS_hess[sT_inf]    =   H_nNext
@@ -484,17 +497,17 @@ class Temperature() :
             
             QN_BFGS_bf[sT_inf]      =   QN_BFGS_bmap[sT_inf] + np.dot(np.linalg.cholesky(H_nNext), s)
             
-            for i in xrange(100):
+            for i in range(100):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_QNBFGS_real.append(QN_BFGS_bmap[sT_inf] + np.dot(QN_BFGS_cholesky[sT_inf], s))
             beta_QNBFGS_real.append(QN_BFGS_bf[sT_inf])
             
-            for i in xrange(self.N_discr-2) :
+            for i in range(self.N_discr-2) :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_QNBFGS_real]))
                 maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_QNBFGS_real]))
             
-            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]   
-            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]
+            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
+            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
             
         self.QN_BFGS_bmap   =   QN_BFGS_bmap
         self.QN_BFGS_bf     =   QN_BFGS_bf
@@ -507,7 +520,7 @@ class Temperature() :
         self.alpha_lst      =   np.asarray(alpha_lst)
         self.direction_lst  =   np.asarray(direction_lst)
 ##---------------------------------------------------
-    def _for_adjoint(self, beta_n, T_inf, curr_d, cov_prior ): 
+    def _for_adjoint(self, T_inf=50) : 
         if self.stat_done == False : self.get_prior_statistics()
         sT_inf      =   "T_inf_%d" %(T_inf)
         curr_d      =   self.T_obs_mean[sT_inf]
@@ -527,30 +540,49 @@ class Temperature() :
 
         mins,   maxs    =   dict(),     dict()
         
-        sT_inf      =   "T_inf_%d" %(T_inf)
-        curr_d      =   self.T_obs_mean[sT_inf]
-        cov_m       =   self.cov_obs_dict[sT_inf]
-        cov_prior   =   self.cov_pri_dict[sT_inf]
-        
-        curr_h_beta =   self.h_beta(beta_n, T_inf)
+#        curr_h_beta =   self.h_beta(self.beta_prior, T_inf)
 
-#        dR_dT   =   np.asarray( [ 4*(curr_h_beta[i]**3) * beta_n[i] * self.eps_0 for i in xrange(self.N_discr-2) ] )
-#        dJ_dT   =   np.asarray( [  (curr_h_beta[i] - curr_d[i]) / cov_prior[0,0] for i in xrange(self.N_discr-2) ] )
-#        dR_dBeta=   np.asarray( [  - (T_inf**4 - curr_h_beta[i]**4) * self.eps_0 for i in xrange(self.N_discr-2) ] )
-#                
-#        psi_n   =   np.asarray([ - dJ_dT[i] / dR_dT[i] for i in xrange(self.N_discr-2)]) # element wise
-#        g_n     =   np.asarray([ psi_n[i] *dR_dBeta[i] for i in xrange(self.N_discr-2)])
-        dR_dT = map(lambda beta : 4*(curr_h_beta**3) * beta_n * self.eps_0, curr_h_beta, beta_n)
-        dJ_dT   =   np.asarray( [  (curr_h_beta[i] - curr_d[i]) / cov_prior[0,0] for i in xrange(self.N_discr-2) ] )
-        dR_dBeta=   np.asarray( [  - (T_inf**4 - curr_h_beta[i]**4) * self.eps_0 for i in xrange(self.N_discr-2) ] )
-                
-        psi_n   =   np.asarray([ - dJ_dT[i] / dR_dT[i] for i in xrange(self.N_discr-2)]) # element wise
+        dR_dT = lambda beta : np.asarray( [ 4 * (self.h_beta(beta, T_inf)[i]**3) * beta[i] * T.eps_0 for i in range(self.N_discr - 2)])
+        dJ_dT = lambda beta : np.asarray([(self.h_beta(beta, T_inf)[i] - curr_d[i]) / cov_prior[0,0] for i in range(self.N_discr - 2) ] )
+        dR_dBeta = lambda beta : \
+                    np.asarray( [  - (T_inf**4 - self.h_beta(beta, T_inf)[i]**4) * T.eps_0 for i in range(self.N_discr - 2) ] )
+                        
+        psi = lambda beta : np.asarray(- dJ_dT(beta) / dR_dT(beta)) #
+        
+        beta_nPrev = np.zeros_like(self.beta_prior) 
+        beta_n = self.beta_prior
+        
+        g_nPrev = np.zeros((self.N_discr-2, self.N_discr-2))
 
+        cpt,    err,    cptMax, tol =   0,  1., 5000,  1e-7
+        print("beta_nPrev: \n {}".format(beta_n))
         
-        grad_J = nd.Jacobian(psi)
+        while np.abs(err) > tol and (cpt<cptMax) :
         
-        op.minimize(J, self.beta_prior, jac=grad_J(self.b))
+            self.g_n     =   -np.dot(psi(beta_n).T, np.diag(dR_dBeta(beta_n)) )   #dJ/dBeta
+            
+            self.N_n_nP  =   np.linalg.norm(self.g_n - g_nPrev, 2)
+            
+            self.gamma_n =   np.dot( (beta_n-beta_nPrev).T ,(self.g_n - g_nPrev) ) / self.N_n_nP
+            
+            beta_nNext = beta_n - self.gamma_n* self.g_n
+            
+            err = np.abs(J(beta_nNext) - J(beta_n))
+            
+            g_nPrev     =   self.g_n         # n-1   --> n
+            beta_nPrev  =   beta_n      # n-1   --> n
+            beta_n      =   beta_nNext  # n     --> n+1  
+            
+            print("cpt = {} \t err = {}".format(cpt, err))
+            print("beta_n: \n {}".format(beta_n))
+            
+            cpt +=1
+            
+            # n --> n+1 si non convergence, sort de la boucle sinon 
         
+        #self.Hess = np.dot(g_n.T, g_n)
+        self.sd_beta = beta_n
+        self.sd_grad = self.g_n
 ##---------------------------------------------------
     def adjoint_optimization(self, T_inf) :
         if self.stat_done == False : self.get_prior_statistics()
@@ -571,7 +603,7 @@ class Temperature() :
                         np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
                     + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
                         np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
-                                 )
+                                )
         cpt,    err,    cptMax, tol =   0,  1., 5000,  1e-3
         dz  =   1. / (self.N_discr-1)
         
@@ -583,7 +615,7 @@ class Temperature() :
 #        H_n =   np.linalg.inv(np.abs(np.random.rand(31,31)))
         first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.1, options={"maxiter" :100} ) ## Simplement pour avoir Hess_0 
         
-        print "comparaison des gradients : \n Adjoint : g_n = {} \t \t op.minimize : = first_guess_opti.jac {}".format(g_n, first_guess_opti.jac)
+        print ("comparaison des gradients : \n Adjoint : g_n = {} \t \t op.minimize : = first_guess_opti.jac {}".format(g_n, first_guess_opti.jac))
         
         aaa = str(input("Any Key : \n")) 
         
@@ -614,11 +646,11 @@ class Temperature() :
             err = (J(beta_nNext) - J(beta_n)) 
             err_hess = np.linalg.norm(H_nNext - H_n)
             
-            print "cpt = {} \t err = {:.5}".format(cpt, err)
+            print ("cpt = {} \t err = {:.5}".format(cpt, err))
             
-        print "Compteur     = %d \t err_j = %.12f \t err_Hess %.12f" % (cpt, err, err_hess)
-        print "Last Beta    = ", beta_nNext
-        print "Last J(beta) = ", J(beta_nNext) 
+        print ("Compteur     = %d \t err_j = %.12f \t err_Hess %.12f" % (cpt, err, err_hess))
+        print ("Last Beta    = ", beta_nNext)
+        print ("Last J(beta) = ", J(beta_nNext)) 
         
         BFGS_bmap[sT_inf]    =   beta_nNext
         BFGS_hess[sT_inf]    =   H_nNext
@@ -627,17 +659,17 @@ class Temperature() :
         
         BFGS_bf[sT_inf]      =   BFGS_bmap[sT_inf] + np.dot(BFGS_cholesky[sT_inf], s)
         
-        for i in xrange(100):
+        for i in range(100):
             s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
             beta_QNBFGS_real.append(QN_BFGS_bmap[sT_inf] + np.dot(QN_BFGS_cholesky[sT_inf], s))
         beta_QNBFGS_real.append(QN_BFGS_bf[sT_inf])
         
-        for i in xrange(self.N_discr-2) :
+        for i in range(self.N_discr-2) :
             mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_QNBFGS_real]))
             maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_QNBFGS_real]))
         
-        mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]   
-        maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in xrange(self.N_discr-2)]
+        mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
+        maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
             
         BFGS_bmap   =   BFGS_bmap
         BFGS_bf     =   BFGS_bf
@@ -711,7 +743,8 @@ if __name__ == "__main__" :
 #    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
     parser = parser()
     T = Temperature(parser)
+    T.obs_pri_model()
+    T.get_prior_statistics()
     
     
-    
-    
+     
