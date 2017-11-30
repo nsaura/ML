@@ -23,31 +23,31 @@ def parser() :
     parser=argparse.ArgumentParser(description='You can initialize a case you want to study')
     #lists
     parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=['all'],dest='T_inf_lst', 
-                        help='List of different T_inf\n' )
+                        help='List of different T_inf. Default : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]\n' )
     
     #digits
     parser.add_argument('--N_discr', '-N', action='store', type=int, default=33, dest='N_discr', 
-                        help='Define the number of discretization points \n' )
+                        help='Define the number of discretization points : default %(default)d \n' )
     parser.add_argument('--H', '-H', action='store', type=float, default=0.5, dest='h', 
                         help='Define the convection coefficient h \n' )
-    parser.add_argument('--delta_t', '-dt', action='store', type=float, default=0.001, dest='dt', 
-                        help='Define the time step disctretization \n' )
+    parser.add_argument('--delta_t', '-dt', action='store', type=float, default=0.005, dest='dt', 
+                        help='Define the time step disctretization. Default to %(default).5f \n' )
     parser.add_argument('--kappa', '-kappa', action='store', type=float, default=1.0, dest='kappa', 
-                        help='Define the diffusivity number kappa \n' )
+                        help='Define the diffusivity number kappa. Default to %(default).2f\n' )
     parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=10, dest='num_real', 
-                        help='Define the number of realization of epsilon(T) you want to pick up \n' )
+                        help='Define the number of realization of epsilon(T) you want to pick up. Default to %(default)d\n' )
     parser.add_argument('--tolerance', '-tol', action='store', type=float, default=1e-5, dest='tol', 
-                        help='Define the tolerance on the optimization error \n' )
+                        help='Define the tolerance on the optimization error. Default to %(default).8f \n' )
     
     parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', 
-        default=1 ,dest='beta_prior', help='beta_prior: first guess on the optimization solution\n')
+        default=1 ,dest='beta_prior', help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
    
     
     #strings
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', 
-                        help='Define the directory where the data will be stored and read \n')
+                        help='Define the directory where the data will be stored and read. Default to %(default)s \n')
     parser.add_argument('--covariance_model', '-cov_mod', action='store', type=str, default='diag', dest='cov_mod', 
-                        help='Define the covariance model \n')
+                        help='Define the covariance model. Default to %(default)s \n')
     
     return parser.parse_args()
 ##---------------------------------------------------------------
@@ -742,9 +742,10 @@ def subplot(T, method='QN_BFGS') :
 if __name__ == "__main__" :
 #    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
     parser = parser()
-    T = Temperature(parser)
-    T.obs_pri_model()
-    T.get_prior_statistics()
+    print parser
+#    T = Temperature(parser)
+#    T.obs_pri_model()
+#    T.get_prior_statistics()
     
     
      

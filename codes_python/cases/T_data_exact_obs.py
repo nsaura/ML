@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/opt/local/bin/python2.7
 # -*- coding: latin-1 -*-
 
 import numpy as np
@@ -39,26 +39,23 @@ def tab_normal(mu, sigma, length) :
 np.random.seed(1000) # To keep the same random generator
 z_init, z_final = 0., 1.
 
-N_discr = 100
-kappa=0.10
+N_discr = 50
+kappa=1.0
 line_z = np.linspace(z_init,z_final,N_discr)
 dz = np.abs(z_init-z_final)/float(N_discr)
-dt = 1e-9
-
-CFL = kappa * dt / dz **2
-print("CFL = %.8f" %(CFL))
+dt = 0.005
 
 h = 0.5 
 
-M1 = np.diag(np.transpose([dt/dz**2*kappa for i in range(N_discr-3)]), -1) # Extra inférieure
-P1 = np.diag(np.transpose([dt/dz**2*kappa for i in range(N_discr-3)]), 1)  # Extra supérieure
-A_diag1 = np.diag(np.transpose([(1- dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
+M1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1) # Extra inférieure
+P1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1)  # Extra supérieure
+A_diag1 = np.diag(np.transpose([(1+ dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
 
 A1 = A_diag1 + M1 + P1 #Construction de la matrice des coefficients
 
-M2 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), -1) # Extra inférieure
-P2 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), 1)  # Extra supérieure
-A_diag2 = np.diag(np.transpose([(1+ dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
+M2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1) # Extra inférieure
+P2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1)  # Extra supérieure
+A_diag2 = np.diag(np.transpose([(1-dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
 
 A2 = A_diag2 + M2 + P2 #Construction de la matrice des coefficients
 
@@ -85,26 +82,26 @@ for T_inf in T_inf_lst :
         T_nNext = T_n
         T_nNext_2 = T_n_2
     
-        tol = 1e-2
+        tol = 1e-4
         err, err_2, compteur = 1., 1.0, 0
         B_n = np.zeros((N_discr-2,1))
         B_n_2 = np.zeros((N_discr-2,1))
         
-        while (np.abs(err) > tol) and (compteur <800) and (np.abs(err_2) > tol):
+        while (np.abs(err) > tol) and (compteur <1800) and (np.abs(err_2) > tol):
             if compteur > 0 :
                 T_n = T_nNext
                 T_n_2 = T_nNext_2
             compteur += 1
     #        print(compteur)
             
-            
             T_n    =   np.dot(A2,T_n)
+#            T_n    =   A2@T_n
             T_n_2  =   np.dot(A2, T_n_2)
              
             for i in range(N_discr-2) :
-                B_n[i] = T_n[i]+dt*((10**(-4)*(1.+5.*np.sin(3.*T_n[i]*np.pi/200.) + np.exp(0.02*T_n[i]) + bruit[i]))*(T_inf**4-T_n[i]**4)+h*(T_inf-T_n[i]))
+                B_n[i] = T_n[i] +dt*((10**(-4)*(1.+5.*np.sin(3.*T_n[i]*np.pi/200.) + np.exp(0.02*T_n[i]) + bruit[i]))*(T_inf**4-T_n[i]**4)+h*(T_inf-T_n[i]))
                    
-                B_n_2[i] = T_n_2[i]+dt*5*10**(-4)*(T_inf**4-T_n_2[i]**4)*(1+bruit[i]) 
+                B_n_2[i] =T_n_2[i]+dt*5*10**(-4)*(T_inf**4-T_n_2[i]**4)*(1+bruit[i]) 
 
             T_nNext = np.dot(np.linalg.inv(A1), B_n)
             T_nNext_2 = np.dot(np.linalg.inv(A1), B_n_2)
@@ -131,9 +128,10 @@ for T_inf in T_inf_lst :
         if verbose == True :
             plt.plot(line_z[1:N_discr-1], T_nNext, label='Convergence Exact -- {}'.format(T_inf))
             plt.plot(line_z[1:N_discr-1], T_nNext_2, label='Convergence Prior  -- {}'.format(T_inf), linestyle='--', marker='s', markerfacecolor='none', markersize=7 )
-            plt.legend(loc='best', ncol=2, fontsize=7)
+#            plt.legend(loc='best', ncol=2, fontsize=7)
             plt.title("Comparaison pour kappa = %.3f" %(kappa))
-    print ("T_inf = {} finie".format(T_inf))
-    
-
-
+            plt.savefig('foo.png')
+            plt.show()
+    print ("T_inf = {} ".format(T_inf))
+    print ("Err = {} ".format(err))
+    print ("Iterations = {} ".format(compteur))
