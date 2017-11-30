@@ -83,12 +83,22 @@ class Temperature() :
         dz = np.abs(z_final - z_init) / float(N_discr)
         
         ## Matrice pour la résolution
-        A_diag = np.diag(np.transpose([(1+( 2.0)*dt/dz**2*kappa) for i in range(N_discr-2)])) 
-        M1 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), -1) # Inferieure
-        P1 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), 1)  # Superieure 
-        self.A = A_diag + M1 + P1
+        M1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1) # Extra inférieure
+        P1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1)  # Extra supérieure
+        A_diag1 = np.diag(np.transpose([(1+ dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
+
+        self.A1 = A_diag1 + M1 + P1 #Construction de la matrice des coefficients
+        
+        
+        M2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1) # Extra inférieure
+        P2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1)  # Extra supérieure
+        A_diag2 = np.diag(np.transpose([(1-dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
+
+        self.A2 = A_diag2 + M2 + P2 #Construction de la matrice des coefficients
         
         self.noise = self.tab_normal(0, 0.1, N_discr-2)[0]
+        self.lst_gauss = [self.tab_normal(0,0.1,N_discr-2)[0] for i in range(num_real)]
+        
         self.prior_sigma = dict()
         prior_sigma_lst = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]
         for i, t in enumerate([i*5 for i in range(1, 11)]) :
@@ -153,32 +163,41 @@ class Temperature() :
                ) 
 ##---------------------------------------------------   
     def h_beta(self, beta, T_inf, verbose=False,noise= 'none') :
-        err, tol, compteur, compteur_max = 1., 1e-3, 0, 5000
+        
         T_n = map(lambda x : -4*T_inf*x*(x-1), self.line_z)
-        T_nNext = T_n
         B_n = np.zeros((self.N_discr-2))
+        T_nNext = T_n
+        
+        err, tol, compteur, compteur_max = 1., 1e-4, 0, 5000
         if verbose == True :
             plt.figure()
+            
         while (np.abs(err) > tol) and (compteur <= compteur_max) :
-            if compteur >= 1 :
+            if compteur > 0 :
                 T_n = T_nNext
             compteur +=1 
             
-            for i in range(self.N_discr-2) :
-                B_n[i] = T_n[i] + self.dt*(beta[i])*self.eps_0*(T_inf**4 - T_n[i]**4)
+            T_n_tmp = np.dot(self.A2, T_n)
             
-            T_nNext = np.dot(np.linalg.inv(self.A), np.transpose(B_n))
+            for i in range(self.N_discr-2) :
+                B_n[i] = T_n_tmp[i] + self.dt*(beta[i])*self.eps_0*(T_inf**4 - T_n[i]**4)
+            
+            T_nNext = np.dot(np.linalg.inv(self.A1), B_n)
             err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
             
             if verbose == True and compteur % 5 == 0 :
                 print err
                 plt.plot(self.line_z, T_nNext, label='tracer cpt %d' %(compteur))
+            
             if compteur == compteur_max :
                 warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \x1b[0m".format(err, tol))
         
         if verbose == True :
             plt.plot(self.line_z, T_nNext, marker="o", linestyle='none')
             plt.legend(loc="best", ncol=4)
+        
+        print ("Err = {} ".format(err))
+        
         return T_nNext 
 ##---------------------------------------------------
     def true_beta(self, T, T_inf) : 
@@ -187,11 +206,11 @@ class Temperature() :
                           )
 ##---------------------------------------------------    
     def obs_pri_model(self) :
-        lst_gauss = [self.tab_normal(0,0.1,self.N_discr-2)[0] for i in range(self.num_real)]
+        
         T_nNext_obs_lst, T_nNext_pri_lst, T_init = [], [], []
         
         for T_inf in self.T_inf_lst :
-            for it, bruit in enumerate(lst_gauss) :
+            for it, bruit in enumerate(self.lst_gauss) :
                 # Obs and Prior Temperature field initializations
                 T_n_obs =  map(lambda x : -4*T_inf*x*(x-1), self.line_z) 
                 T_n_pri =  map(lambda x : -4*T_inf*x*(x-1), self.line_z) 
@@ -200,8 +219,12 @@ class Temperature() :
                 T_nNext_obs = T_n_obs
                 T_nNext_pri = T_n_pri
             
-                tol ,err_obs, err_pri, compteur = 1e-2, 1.0, 1.0, 0
-
+                tol ,err_obs, err_pri, compteur = 1e-4, 1.0, 1.0, 0
+                B_n_obs     =   np.zeros((self.N_discr-2, 1))
+                B_n_pri     =   np.zeros((self.N_discr-2, 1))
+                T_n_obs_tmp =   np.zeros((self.N_discr-2, 1))
+                T_n_pri_tmp =   np.zeros((self.N_discr-2, 1))
+                
                 while (np.abs(err_obs) > tol) and (compteur <800) and (np.abs(err_pri) > tol):
                     if compteur > 0 :
                         T_n_obs = T_nNext_obs
@@ -209,19 +232,19 @@ class Temperature() :
                     compteur += 1
                     
                     # B_n = np.zeros((N_discr,1))
-                    B_n_obs = T_n_obs
-                    B_n_pri = T_n_pri
+                    T_n_obs_tmp = np.dot(self.A2, T_n_obs) 
+                    T_n_pri_tmp = np.dot(self.A2, T_n_pri)
                      
                     for i in range(self.N_discr-2) :
-                        B_n_obs[i] = T_n_obs[i] + self.dt*  (
+                        B_n_obs[i] = T_n_obs_tmp[i] + self.dt*  (
                         ( 10**(-4) * ( 1.+5.*np.sin(3.*T_n_obs[i]*np.pi/200.) + 
                         np.exp(0.02*T_n_obs[i]) + bruit[i] ) ) *( T_inf**4 - T_n_obs[i]**4)
                          + self.h * (T_inf-T_n_obs[i])      )   
                         
-                        B_n_pri[i] = T_n_pri[i] + self.dt * (5 * 10**(-4) * (T_inf**4-T_n_pri[i]**4) * (1 + bruit[i]))
+                        B_n_pri[i] = T_n_pri_tmp[i] + self.dt * (5 * 10**(-4) * (T_inf**4-T_n_pri[i]**4) * (1 + bruit[i]))
                                                             
-                    T_nNext_obs = np.dot(np.linalg.inv(self.A), np.transpose(B_n_obs))
-                    T_nNext_pri = np.dot(np.linalg.inv(self.A), np.transpose(B_n_pri))
+                    T_nNext_obs = np.dot(np.linalg.inv(self.A1), B_n_obs)
+                    T_nNext_pri = np.dot(np.linalg.inv(self.A1), B_n_pri)
                     
                     T_nNext_obs_lst.append(T_nNext_obs)
                     T_nNext_pri_lst.append(T_nNext_pri)
@@ -234,7 +257,11 @@ class Temperature() :
             
                     err_obs = np.linalg.norm(T_nNext_obs - T_n_obs, 2)
                     err_pri = np.linalg.norm(T_nNext_pri - T_n_pri, 2)
-            print ("Calculus with T_inf={} completed".format(T_inf))
+            
+            print ("Calculus with T_inf={} completed. Convergence status :".format(T_inf))
+            print ("Err_obs = {} ".format(err_obs))    
+            print ("Err_pri = {} ".format(err_pri))
+            print ("Iterations = {} ".format(compteur))
         
         self.T_init             =   T_init    
         self.T_nNext_obs_lst    =   T_nNext_obs_lst
@@ -522,6 +549,7 @@ class Temperature() :
 ##---------------------------------------------------
     def _for_adjoint(self, T_inf=50) : 
         if self.stat_done == False : self.get_prior_statistics()
+        
         sT_inf      =   "T_inf_%d" %(T_inf)
         curr_d      =   self.T_obs_mean[sT_inf]
         cov_m       =   self.cov_obs_dict[sT_inf]
@@ -743,9 +771,9 @@ if __name__ == "__main__" :
 #    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
     parser = parser()
     print parser
-#    T = Temperature(parser)
-#    T.obs_pri_model()
-#    T.get_prior_statistics()
+    T = Temperature(parser)
+    T.obs_pri_model()
+    T.get_prior_statistics()
     
     
      
