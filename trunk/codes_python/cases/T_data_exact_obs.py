@@ -38,25 +38,28 @@ def tab_normal(mu, sigma, length) :
 
 np.random.seed(1000) # To keep the same random generator
 z_init, z_final = 0., 1.
+
 N_discr = 50
 kappa=1
-
-
 line_z = np.linspace(z_init,z_final,N_discr)
-print(line_z[0])
-
 dz = np.abs(z_init-z_final)/float(N_discr)
 dt = 0.001
 
 h = 0.5 
 
-M1 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), -1) # Extra inférieure
-P1 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), 1)  # Extra supérieure
-A_diag = np.diag(np.transpose([(1+( 2.0)*dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
+M1 = np.diag(np.transpose([dt/dz**2*kappa for i in range(N_discr-3)]), -1) # Extra inférieure
+P1 = np.diag(np.transpose([dt/dz**2*kappa for i in range(N_discr-3)]), 1)  # Extra supérieure
+A_diag1 = np.diag(np.transpose([(1- dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
 
-A = A_diag + M1 + P1 #Construction de la matrice des coefficients
+A1 = A_diag1 + M1 + P1 #Construction de la matrice des coefficients
 
-lst_gauss = [tab_normal(0,0.1,N_discr-2)[0] for i in xrange(50) ] # Quadrillement du bruit
+M2 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), -1) # Extra inférieure
+P2 = np.diag(np.transpose([-dt/dz**2*kappa for i in range(N_discr-3)]), 1)  # Extra supérieure
+A_diag2 = np.diag(np.transpose([(1+ dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
+
+A2 = A_diag2 + M2 + P2 #Construction de la matrice des coefficients
+
+lst_gauss = [tab_normal(0,0.1,N_discr-2)[0] for i in range(50) ] # Quadrillement du bruit
 
 #T_inf_lst = [i*5 for i in xrange(1, 11)]
 T_inf_lst = [50]
@@ -68,28 +71,22 @@ verbose = True
 
 for T_inf in T_inf_lst :
     for it, bruit in enumerate(lst_gauss) :
-        T_n =  map(lambda x : -4*T_inf*x*(x-1), line_z[1:N_discr-1]) # Profil de température initiale
-        T_n_2 = map(lambda x : -4*T_inf*x*(x-1), line_z[1:N_discr-1]) # Profil de température initiale
-    
+        T_n =  np.asarray(map(lambda x : -4*T_inf*x*(x-1), line_z[1:N_discr-1]))  # Profil de température initiale
+        T_n_2 = np.asarray(map(lambda x : -4*T_inf*x*(x-1), line_z[1:N_discr-1])) # Profil de température initiale
+#        
+#        T_n     =   T_n.reshape(N_discr-2, -1)
+#        T_n_2   =   T_n_2.reshape(N_discr-2, -1)
+        
         T_init.append(T_n)
-    #T_n =  list(map(lambda x : T_inf, line_z[1:N_discr-1])) # Profil de température initiale
-
-#    print(T_n)
-    #print('line')
-    #print(line_z)
-#    if verbose == True :
-#        plt.plot(line_z[1:N_discr-1], T_n, label='T_inf = %.2f,  Init sans bruit' %(T_inf))  
-#        plt.plot(line_z[1:N_discr-1], T_n + gauss_z, label='T_inf = %.2f,  Init avec bruit' %(T_inf))
-
-    #T_nNext = np.zeros((N_discr,1))
-    #T_n = np.zeros((N_discr,1))
 
         T_nNext = T_n
         T_nNext_2 = T_n_2
     
         tol = 1e-2
         err, err_2, compteur = 1., 1.0, 0
-
+        B_n = np.zeros((N_discr-2,1))
+        B_n_2 = np.zeros((N_discr-2,1))
+        
         while (np.abs(err) > tol) and (compteur <800) and (np.abs(err_2) > tol):
             if compteur > 0 :
                 T_n = T_nNext
@@ -97,17 +94,17 @@ for T_inf in T_inf_lst :
             compteur += 1
     #        print(compteur)
             
-            #    B_n = np.zeros((N_discr,1))
-            B_n    =   T_n
-            B_n_2  =   T_n_2
+            
+            T_n    =   np.dot(A2,T_n)
+            T_n_2  =   np.dot(A2, T_n_2)
              
             for i in range(N_discr-2) :
-                B_n[i] = np.dot(A,T_n[i])+dt*((10**(-4)*(1.+5.*np.sin(3.*T_n[i]*np.pi/200.) + np.exp(0.02*T_n[i]) + bruit[i]))*(T_inf**4-T_n[i]**4)+h*(T_inf-T_n[i]))
+                B_n[i] = T_n[i]+dt*((10**(-4)*(1.+5.*np.sin(3.*T_n[i]*np.pi/200.) + np.exp(0.02*T_n[i]) + bruit[i]))*(T_inf**4-T_n[i]**4)+h*(T_inf-T_n[i]))
                    
-                B_n_2[i] = np.dot(A,T_n_2[i])+dt*5*10**(-4)*(T_inf**4-T_n_2[i]**4)*(1+bruit[i]) 
+                B_n_2[i] = T_n_2[i]+dt*5*10**(-4)*(T_inf**4-T_n_2[i]**4)*(1+bruit[i]) 
 
-            T_nNext = np.dot(np.linalg.inv(A), np.transpose(B_n))
-            T_nNext_2 = np.dot(np.linalg.inv(A), np.transpose(B_n_2))
+            T_nNext = np.dot(np.linalg.inv(A1), B_n)
+            T_nNext_2 = np.dot(np.linalg.inv(A1), B_n_2)
             
             err = np.linalg.norm(T_nNext - T_n, 2)
             err_2 = np.linalg.norm(T_nNext_2 - T_n_2, 2)
@@ -133,7 +130,7 @@ for T_inf in T_inf_lst :
             plt.plot(line_z[1:N_discr-1], T_nNext_2, label='Convergence Prior  -- {}'.format(T_inf), linestyle='--', marker='s', markerfacecolor='none', markersize=7 )
             plt.legend(loc='best', ncol=2, fontsize=7)
             plt.title("Comparaison pour kappa = %.3f" %(kappa))
-    print "T_inf = {} finie".format(T_inf)
+    print ("T_inf = {} finie".format(T_inf))
     
 
 
