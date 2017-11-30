@@ -39,11 +39,14 @@ def tab_normal(mu, sigma, length) :
 np.random.seed(1000) # To keep the same random generator
 z_init, z_final = 0., 1.
 
-N_discr = 50
-kappa=1
+N_discr = 100
+kappa=0.10
 line_z = np.linspace(z_init,z_final,N_discr)
 dz = np.abs(z_init-z_final)/float(N_discr)
-dt = 0.001
+dt = 1e-9
+
+CFL = kappa * dt / dz **2
+print("CFL = %.8f" %(CFL))
 
 h = 0.5 
 
