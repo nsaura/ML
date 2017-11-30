@@ -102,9 +102,9 @@ for T_inf in T_inf_lst :
             B_n_2  =   T_n_2
              
             for i in range(N_discr-2) :
-                B_n[i] = T_n[i]+dt*((10**(-4)*(1.+5.*np.sin(3.*T_n[i]*np.pi/200.) + np.exp(0.02*T_n[i]) + bruit[i]))*(T_inf**4-T_n[i]**4)+h*(T_inf-T_n[i]))
+                B_n[i] = np.dot(A,T_n[i])+dt*((10**(-4)*(1.+5.*np.sin(3.*T_n[i]*np.pi/200.) + np.exp(0.02*T_n[i]) + bruit[i]))*(T_inf**4-T_n[i]**4)+h*(T_inf-T_n[i]))
                    
-                B_n_2[i] = T_n_2[i]+dt*5*10**(-4)*(T_inf**4-T_n_2[i]**4)*(1+bruit[i]) 
+                B_n_2[i] = np.dot(A,T_n_2[i])+dt*5*10**(-4)*(T_inf**4-T_n_2[i]**4)*(1+bruit[i]) 
 
             T_nNext = np.dot(np.linalg.inv(A), np.transpose(B_n))
             T_nNext_2 = np.dot(np.linalg.inv(A), np.transpose(B_n_2))
@@ -132,7 +132,7 @@ for T_inf in T_inf_lst :
             plt.plot(line_z[1:N_discr-1], T_nNext, label='Convergence Exact -- {}'.format(T_inf))
             plt.plot(line_z[1:N_discr-1], T_nNext_2, label='Convergence Prior  -- {}'.format(T_inf), linestyle='--', marker='s', markerfacecolor='none', markersize=7 )
             plt.legend(loc='best', ncol=2, fontsize=7)
-    
+            plt.title("Comparaison pour kappa = %.3f" %(kappa))
     print "T_inf = {} finie".format(T_inf)
     
 
