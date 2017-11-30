@@ -39,7 +39,8 @@ def tab_normal(mu, sigma, length) :
 np.random.seed(1000) # To keep the same random generator
 z_init, z_final = 0., 1.
 N_discr = 50
-kappa=1.0
+kappa=1
+
 
 line_z = np.linspace(z_init,z_final,N_discr)
 print(line_z[0])
@@ -63,7 +64,7 @@ T_inf_lst = [50]
 
 T_init, T_nNext_lst = [], []
 
-verbose = False
+verbose = True
 
 for T_inf in T_inf_lst :
     for it, bruit in enumerate(lst_gauss) :
@@ -100,8 +101,9 @@ for T_inf in T_inf_lst :
             B_n    =   T_n
             B_n_2  =   T_n_2
              
-            for i in range(1,N_discr-2) :
-                B_n[i] = T_n[i]+dt*((10**(-4)*(1.+5.*np.sin(3.*T_n[i]*np.pi/200.) + np.exp(0.02*T_n[i]) + bruit[i]))*(T_inf**4-T_n[i]**4)+h*(T_inf-T_n[i]))   
+            for i in range(N_discr-2) :
+                B_n[i] = T_n[i]+dt*((10**(-4)*(1.+5.*np.sin(3.*T_n[i]*np.pi/200.) + np.exp(0.02*T_n[i]) + bruit[i]))*(T_inf**4-T_n[i]**4)+h*(T_inf-T_n[i]))
+                   
                 B_n_2[i] = T_n_2[i]+dt*5*10**(-4)*(T_inf**4-T_n_2[i]**4)*(1+bruit[i]) 
 
             T_nNext = np.dot(np.linalg.inv(A), np.transpose(B_n))
