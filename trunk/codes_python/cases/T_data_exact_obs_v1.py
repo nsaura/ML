@@ -39,8 +39,8 @@ def tab_normal(mu, sigma, length) :
 np.random.seed(1000) # To keep the same random generator
 z_init, z_final = 0., 1.
 
-N_discr = 50
-kappa=1.
+N_discr = 33
+kappa=10.
 line_z = np.linspace(z_init,z_final,N_discr)
 dz = np.abs(z_init-z_final)/float(N_discr)
 dt = 0.005
