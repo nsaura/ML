@@ -89,7 +89,6 @@ class Temperature() :
 
         self.A1 = A_diag1 + M1 + P1 #Construction de la matrice des coefficients
         
-        
         M2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1) # Extra inférieure
         P2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1)  # Extra supérieure
         A_diag2 = np.diag(np.transpose([(1-dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
@@ -196,7 +195,7 @@ class Temperature() :
             plt.plot(self.line_z, T_nNext, marker="o", linestyle='none')
             plt.legend(loc="best", ncol=4)
         
-        print ("Err = {} ".format(err))
+            print ("Err = {} ".format(err))
         
         return T_nNext 
 ##---------------------------------------------------
@@ -468,7 +467,7 @@ class Temperature() :
                     np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
                                     )
                                     
-            first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.1) ## Simplement pour avoir Hess_0 
+            first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.1, options={"disp" : True, "maxiter" : 10}) ## Simplement pour avoir Hess_0 
             for item in first_guess_opti.iteritems() : print (item)
             
             beta_n  =   first_guess_opti.x
@@ -492,6 +491,7 @@ class Temperature() :
                 
                 cpt += 1    
                 direction   =   np.dot(H_n, g_n)
+                print("direction:\n", direction)
                 alpha       =   self.backline_search(J, beta_n, direction)
                 print ("alpha = ", alpha)
 #                alpha  = 1e-2
@@ -570,31 +570,32 @@ class Temperature() :
         
 #        curr_h_beta =   self.h_beta(self.beta_prior, T_inf)
 
-        dR_dT = lambda beta : np.asarray( [ 4 * (self.h_beta(beta, T_inf)[i]**3) * beta[i] * T.eps_0 for i in range(self.N_discr - 2)])
+        dR_dT = lambda beta : np.asarray( [ - 4 * (self.h_beta(beta, T_inf)[i]**3) * beta[i] * T.eps_0 for i in range(self.N_discr - 2)])
         dJ_dT = lambda beta : np.asarray([(self.h_beta(beta, T_inf)[i] - curr_d[i]) / cov_prior[0,0] for i in range(self.N_discr - 2) ] )
         dR_dBeta = lambda beta : \
-                    np.asarray( [  - (T_inf**4 - self.h_beta(beta, T_inf)[i]**4) * T.eps_0 for i in range(self.N_discr - 2) ] )
+                    np.asarray( [  (T_inf**4 - self.h_beta(beta, T_inf)[i]**4) * T.eps_0 for i in range(self.N_discr - 2) ] )
                         
         psi = lambda beta : np.asarray(- dJ_dT(beta) / dR_dT(beta)) #
         
         beta_nPrev = np.zeros_like(self.beta_prior) 
         beta_n = self.beta_prior
         
-        g_nPrev = np.zeros((self.N_discr-2, self.N_discr-2))
+        g_nPrev = np.zeros((self.N_discr-2, 1))
 
         cpt,    err,    cptMax, tol =   0,  1., 5000,  1e-7
         print("beta_nPrev: \n {}".format(beta_n))
         
+        plt.figure()
+        print("psi(beta_prior) = {}) \n".format(psi(T.beta_prior)))
+        print("dR/dBeta(T.beta_prior) = {} \n".format(dR_dBeta(T.beta_prior)))
         while np.abs(err) > tol and (cpt<cptMax) :
         
-            self.g_n     =   -np.dot(psi(beta_n).T, np.diag(dR_dBeta(beta_n)) )   #dJ/dBeta
-            
+            self.g_n     =   -0.01*np.dot(psi(beta_n).T, np.diag(dR_dBeta(beta_n)) )   #dJ/dBeta
             self.N_n_nP  =   np.linalg.norm(self.g_n - g_nPrev, 2)
-            
             self.gamma_n =   np.dot( (beta_n-beta_nPrev).T ,(self.g_n - g_nPrev) ) / self.N_n_nP
+            plt.plot(self.line_z, beta_n, label="beta_n compteur %d" %(cpt))
             
             beta_nNext = beta_n - self.gamma_n* self.g_n
-            
             err = np.abs(J(beta_nNext) - J(beta_n))
             
             g_nPrev     =   self.g_n         # n-1   --> n
@@ -603,8 +604,14 @@ class Temperature() :
             
             print("cpt = {} \t err = {}".format(cpt, err))
             print("beta_n: \n {}".format(beta_n))
-            
+            print ("grad n : -np.dot(psi(beta_n).T, np.diag(dR_dBeta(beta_n)) ) = {}".format(self.g_n))
+            print ("Norme grad_n - grad_nPrev = {} \n gamma_n = {}".format(self.N_n_nP, self.gamma_n))
+            print("\n")
+            print("psi(beta_nNext = {} \n".format(psi(beta_nNext)))
+            print("dR/dBeta(beta_nNext) = {}".format(dR_dBeta(beta_nNext)))
             cpt +=1
+        plt.legend(loc="best")
+            
             
             # n --> n+1 si non convergence, sort de la boucle sinon 
         
@@ -643,7 +650,7 @@ class Temperature() :
 #        H_n =   np.linalg.inv(np.abs(np.random.rand(31,31)))
         first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.1, options={"maxiter" :100} ) ## Simplement pour avoir Hess_0 
         
-        print ("comparaison des gradients : \n Adjoint : g_n = {} \t \t op.minimize : = first_guess_opti.jac {}".format(g_n, first_guess_opti.jac))
+        print ("Comparaison des gradients : \n Adjoint : g_n = {} \t \t op.minimize : = first_guess_opti.jac {}".format(g_n, first_guess_opti.jac))
         
         aaa = str(input("Any Key : \n")) 
         
