@@ -98,7 +98,7 @@ class Temperature() :
         self.A2 = A_diag2 + M2 + P2 #Construction de la matrice des coefficients
         
         self.noise = self.tab_normal(0, 0.1, N_discr-2)[0]
-        self.lst_gauss = [self.tab_normal(0,1,N_discr-2)[0] for i in range(num_real)]
+        self.lst_gauss = [self.tab_normal(0,0.1,N_discr-2)[0] for i in range(num_real)]
         
         self.prior_sigma = dict()
         prior_sigma_lst = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]
@@ -237,7 +237,7 @@ class Temperature() :
                 T_n_obs_tmp =   np.zeros((self.N_discr-2, 1))
                 T_n_pri_tmp =   np.zeros((self.N_discr-2, 1))
                 
-                while (np.abs(err_obs) > tol) and (compteur <800) and (np.abs(err_pri) > tol):
+                while (np.abs(err_obs) > tol) and (compteur < 800) and (np.abs(err_pri) > tol):
                     if compteur > 0 :
                         T_n_obs = T_nNext_obs
                         T_n_pri = T_nNext_pri
@@ -279,7 +279,7 @@ class Temperature() :
         self.T_nNext_obs_lst    =   T_nNext_obs_lst
         self.T_nNext_pri_lst    =   T_nNext_pri_lst
 ##---------------------------------------------------   
-    def get_prior_statistics(self):
+    def get_prior_statistics(self, verbose = True):
         cov_obs_dict    =   dict() 
         cov_pri_dict    =   dict()
         
@@ -289,6 +289,9 @@ class Temperature() :
         
         T_obs_mean  = dict()
         self.J_los = dict()
+        
+        if verbose == True :
+            plt.figure("Check comparaison pri-obs-bruit")
         
         for t in self.T_inf_lst :
             for j in range(self.N_discr-2) :
@@ -315,14 +318,14 @@ class Temperature() :
                 # We conserve the T_disc
                 T_disc = self.pd_read_csv(pri_filename)
                 T_prior.append(T_disc)
+                if verbose == True :
+                    plt.plot(self.line_z, T_disc, label='pri real = %d' %(it), marker='o', linestyle='none')
+                    plt.plot(self.line_z, T_temp, label='obs real = %d' %(it))
 
             T_obs_mean[sT_inf] = T_sum # Joue aussi le rôle de moyenne pour la covariance
             
             Sum    =    np.zeros((self.N_discr-2, self.N_discr-2))   
             std_meshgrid_values     =   np.asarray([np.std(vals_obs_meshpoints[sT_inf+"_"+str(j)])  for j   in  range(self.N_discr-2)])
-#            mean_meshgrid_values[sT_inf]    =   np.asarray([np.mean(vals_obs_meshpoints[sT_inf+"_"+str(j)]) for j   in  range(self.N_discr-2)])
-            
-#            print mean_meshgrid_values
             
             for it in range(self.num_real) :
                 obs_filename  =  'obs_T_inf_{}_{}.csv'.format(T_inf, it)
@@ -331,6 +334,9 @@ class Temperature() :
                 for ii in range(self.N_discr-2)  :
                     for jj in range(self.N_discr-2) : 
                         Sum[ii,jj] += (T_temp[ii] - T_obs_mean[sT_inf][ii]) * (T_temp[jj] - T_obs_mean[sT_inf][jj])/float(self.num_real)
+            
+            if verbose == True :
+                plt.legend(loc='best', ncol=2, fontsize='small')
             
             full_cov_obs_dict[sT_inf] = Sum            
             print ("cov_obs :\n{}".format(Sum))
@@ -341,15 +347,7 @@ class Temperature() :
             
             self.J_los[sT_inf]      =   lambda beta : 0.5 * np.sum( [((self.h_beta(beta, T_inf)[i] - T_obs_mean[sT_inf][i]))**2 for i in range(self.N_discr-2)] ) /cov_obs_dict[sT_inf][0,0]
             print cov_pri_dict[sT_inf][0,0]
-#            # Construction of full_cov_obs_dict
-#            full_cov = np.zeros((self.N_discr-2, self.N_discr-2))
-#            
-#            for ii in range(self.N_discr) :
-#                for jj in range(self.N_discr) :
-#                    full_cov[i,j] = np.mean((T_obs_mean[sT_inf][i] - mean_meshgrid_values[i])*(T_obs_mean[sT_inf][j] - mean_meshgrid_values[j]))
-#            
-#            full_cov_obs_dict[sT_inf] = full_cov
-            #### Until Here
+
 
             self.cov_obs_dict   =   cov_obs_dict
             self.cov_pri_dict   =   cov_pri_dict
