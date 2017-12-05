@@ -40,7 +40,7 @@ np.random.seed(1000) # To keep the same random generator
 z_init, z_final = 0., 1.
 
 N_discr = 33
-kappa=10.
+kappa=1.
 line_z = np.linspace(z_init,z_final,N_discr)
 dz = np.abs(z_init-z_final)/float(N_discr)
 dt = 0.005
@@ -87,7 +87,7 @@ for T_inf in T_inf_lst :
         B_n = np.zeros((N_discr-2,1))
         B_n_2 = np.zeros((N_discr-2,1))
         
-        while (np.abs(err) > tol) and (compteur <800) and (np.abs(err_2) > tol):
+        while (np.abs(err) > tol) and (compteur < 800) and (np.abs(err_2) > tol):
             if compteur > 0 :
                 T_n = T_nNext
                 T_n_2 = T_nNext_2
