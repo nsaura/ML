@@ -102,6 +102,7 @@ class Temperature() :
         
         self.prior_sigma = dict()
         prior_sigma_lst = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]
+        
         for i, t in enumerate([i*5 for i in range(1, 11)]) :
             self.prior_sigma["T_inf_%d" %(t)] = prior_sigma_lst[i]
         
@@ -144,7 +145,16 @@ class Temperature() :
         
         self.T_inf_lst = T_inf
         
-        print ("T_inf_lst is now {}".format(self.T_inf_lst))
+        print("T_inf_lst is now \n {}".format(self.T_inf_lst))
+##---------------------------------------------------
+    def set_beta_prior(self, new_beta) :
+        """
+        Descr :
+        ----------
+        Method designed to change the beta_prior array without running back the whole program.
+        """
+        self.beta_prior = np.asarray([new_beta for i in range(self.N_discr-2)])
+        print("Beta prior is now \n {}".format(self.beta_prior))
 ##---------------------------------------------------
     def pd_read_csv(self, filename) :
         if os.path.splitext(filename)[-1] is not ".csv" :
@@ -169,7 +179,7 @@ class Temperature() :
         B_n = np.zeros((self.N_discr-2))
         T_nNext = T_n
         
-        err, tol, compteur, compteur_max = 1., 1e-3, 0, 1000
+        err, tol, compteur, compteur_max = 1., 1e-4, 0, 1500
         if verbose == True :
             plt.figure()
             
@@ -195,7 +205,7 @@ class Temperature() :
             err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
             
             if verbose == True and compteur % 5 == 0 :
-                print err
+                print (err)
                 plt.plot(self.line_z, T_nNext, label='tracer cpt %d' %(compteur))
             
             if compteur == compteur_max :
@@ -209,7 +219,7 @@ class Temperature() :
                 print ("Compteur = ", compteur)
         
         if verbose == True :
-            print "ok"
+            print("H_beta ok")
 #        time.sleep(1)
         return T_nNext 
 ##---------------------------------------------------
@@ -280,7 +290,7 @@ class Temperature() :
         self.T_nNext_obs_lst    =   T_nNext_obs_lst
         self.T_nNext_pri_lst    =   T_nNext_pri_lst
 ##---------------------------------------------------   
-    def get_prior_statistics(self, verbose = True):
+    def get_prior_statistics(self, verbose = False):
         cov_obs_dict    =   dict() 
         cov_pri_dict    =   dict()
         
@@ -339,9 +349,6 @@ class Temperature() :
                     for jj in range(self.N_discr-2) : 
                         Sum[ii,jj] += (T_temp[ii] - T_obs_mean[sT_inf][ii]) * (T_temp[jj] - T_obs_mean[sT_inf][jj])/float(self.num_real)
             
-            if verbose == True :
-                plt.legend(loc='best', ncol=2, fontsize='small')
-            
             full_cov_obs_dict[sT_inf] = Sum            
             print ("cov_obs :\n{}".format(Sum))
             
@@ -375,11 +382,13 @@ class Temperature() :
         beta_var = []
         
         for T_inf in self.T_inf_lst :
-            print T_inf
+            print ("Calculus for T_inf = %d" %(T_inf))
             sT_inf  =   "T_inf_" + str(T_inf)
+            
             curr_d  =   self.T_obs_mean[sT_inf]
             cov_prior   =  self.cov_pri_dict[sT_inf]
             cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
+            
             if verbose == True : 
                 print ("shapes to debug :")
                 print("shape of cov_m = {}".format(cov_m.shape) )
@@ -393,11 +402,10 @@ class Temperature() :
                     np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) )   
                                         ) ## Fonction de coût
                                         
-#            J = lambda beta : 0.5*np.sum([((self.h_beta(beta, T_inf)[i] - curr_d[i])/cov_prior[0,0])**2 for i in range(self.N_discr-2)])
-                            
-            # BFGS : quasi Newton method that approximate the Hessian on the fly
+            ## BFGS : quasi Newton method that approximate the Hessian on the fly
+
 #            print "J =" , self.J_los[sT_inf](self.beta_prior)
-            print "J =" , J(self.beta_prior)
+            print ("J =" , J(self.beta_prior))
             opti = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol, options={"disp" : True})
 
             betamap[sT_inf] =   opti.x
@@ -421,34 +429,6 @@ class Temperature() :
             mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
             maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
             
-            if verbose == True :
-                fig, axes = plt.subplots(1,2,figsize=(20,10))
-                colors = 'green', 'orange'
-                
-                axes[0].plot(self.line_z, beta_final[sT_inf], label="Beta for {}".format(sT_inf), marker='o',
-                                 linestyle='None', color=colors[0])
-                axes[0].plot(self.line_z, betamap[sT_inf], label='Betamap for {}'.format(sT_inf),      
-                             marker='o', linestyle='None', color=colors[1])
-                axes[0].plot(self.line_z, self.true_beta(curr_d, T_inf), label = "True beta profil {}".format(sT_inf))
-                axes[1].plot(self.line_z, self.h_beta(beta_final[sT_inf], T_inf), label= "h_beta {}".format 
-                                (sT_inf), marker='o', linestyle='None', color=colors[0])
-                axes[1].plot(self.line_z, self.h_beta(betamap[sT_inf], T_inf), label= "h_betamap {}".format
-                                (sT_inf), marker='o', linestyle ='None', color=colors[1])
-                axes[1].plot(self.line_z, curr_d, label= "curr_d {}".format(sT_inf))
-
-                axes[0].plot(self.line_z, mins_lst, label='Valeurs minimums', marker='s', linestyle='none', color='magenta')
-                axes[0].plot(self.line_z, maxs_lst, label='Valeurs maximums', marker='s', linestyle='none', color='black')
-                
-                axes[0].fill_between(T.line_z, T.mins, T.maxs, facecolor= "0.2", alpha=0.4, interpolate=True)
-                
-                axes[0].set_title("Optimized beta and Duraisamy beta; tolerance={}".format(self.tol))
-                axes[1].set_title("Temperature field with optimized betas and true solution")
-
-                axes[0].legend(loc='best', fontsize = 10, ncol=2)
-                axes[1].legend(loc='best', fontsize = 10, ncol=2)
-                
-                plt.show()
-                
         self.betamap    =   betamap
         self.hess       =   hess
         self.cholseky   =   cholesky
@@ -533,7 +513,7 @@ class Temperature() :
                 
                 ## Estimation of H_nNext
                 g_nNext =   nd.Gradient(self.J_los[sT_inf])(beta_nNext) # From numdifftools
-                print "compteur = {}, Gradient dans la boucle minimization \n {}:".format(cpt, g_nNext)
+                print ("compteur = {}, Gradient dans la boucle minimization \n {}:".format(cpt, g_nNext))
                 y_nNext =   g_nNext - g_n
                 s_nNext =   beta_nNext - beta_n
                 H_nNext =   self.Next_hess(H_n, y_nNext, s_nNext)
@@ -577,21 +557,20 @@ class Temperature() :
         
         self.alpha_lst      =   np.asarray(alpha_lst)
         self.direction_lst  =   np.asarray(direction_lst)
-    
-###
+##---------------------------------------------------    
     def DR_DT(self, beta, T_inf) :
         return  -4* np.diag((self.h_beta(beta, T_inf)**3 * beta * T.eps_0))
-###
+##---------------------------------------------------
     def DJ_DT(self, beta, T_inf) :
         sT_inf = "T_inf_%d" %(T_inf)
         curr_d = self.T_obs_mean[sT_inf]
         cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]        
         return (self.h_beta(beta, T_inf) - curr_d) / np.sqrt(cov_m[0,0])
-###
+##---------------------------------------------------
     def DR_DBETA(self, beta, T_inf):
         print ("DR_DBETA -- h_beta**4 =\n {} \n T_inf**4 = {}".format(self.h_beta(beta, T_inf)**4, T_inf**4))
         return (T_inf**4 - self.h_beta(beta, T_inf)**4) * T.eps_0
-###
+##---------------------------------------------------
     def PSI(self,beta, T_inf) :
         return -np.dot(np.linalg.inv(self.DR_DT(beta, T_inf)), self.DJ_DT(beta, T_inf))
                 
@@ -828,11 +807,12 @@ def subplot(T, method='QN_BFGS') :
 if __name__ == "__main__" :
 #    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
     parser = parser()
-    print parser
+    print (parser)
     T = Temperature(parser)
     T.obs_pri_model()
     T.get_prior_statistics()
 #    T.optimization(verbose=True)
 
 #run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.5 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
+#run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.3 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
 
