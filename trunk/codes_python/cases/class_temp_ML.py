@@ -473,14 +473,15 @@ class Temperature() :
             curr_d  =   self.T_obs_mean[sT_inf]
             cov_m   =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf] 
             cov_prior =  self.cov_pri_dict[sT_inf]
-#            J = lambda beta : 0.5*  ( 
-#                  np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
-#                    np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
-#                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
-#                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
-#                                    )
+            J = lambda beta : 0.5*  ( 
+                  np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
+                    np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
+                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
+                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
+                                    )
                                     
-            first_guess_opti =  op.minimize(self.J_los[sT_inf], self.beta_prior, method="BFGS", tol=0.1, options={"disp" : True, "maxiter" : 10}) ## Simplement pour avoir Hess_0 
+#            first_guess_opti =  op.minimize(self.J_los[sT_inf], self.beta_prior, method="BFGS", tol=0.1, options={"disp" : True, "maxiter" : 10}) ## Simplement pour avoir Hess_0 
+            first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.01, options={"disp" : True, "maxiter" : 10}) ## Simplement pour avoir Hess_0 
             for item in first_guess_opti.iteritems() : print (item)
             
             beta_n  =   first_guess_opti.x
@@ -488,12 +489,9 @@ class Temperature() :
             g_n     =   first_guess_opti.jac
             
             self.first_guess_opti = first_guess_opti
-#            beta_n =    self.beta_prior
-#            H_n    =    np.eye(self.N_discr-2)
-#            g_n    =    np.ones((self.N_discr-2,))
             
-            err, tol = 1.0, 1e-7
-            cpt, cpt_max    =   0,  5000
+            err, tol = 1.0, 1e-2
+            cpt, cpt_max    =   0,  100
             err_hess = 0.
             while (np.abs(err) > tol) and (cpt<cpt_max) :
                 ## Incr
@@ -505,7 +503,8 @@ class Temperature() :
                 cpt += 1    
                 direction   =   np.dot(H_n, g_n)
                 print("direction:\n", direction)
-                alpha       =   self.backline_search(self.J_los[sT_inf], beta_n, direction)
+#                alpha = op.line_search(J, g_n, beta_n, )
+                alpha       =   self.backline_search(J, beta_n, direction)
                 print ("alpha = ", alpha)
 #                alpha  = 1e-2
                 beta_nNext  =   beta_n - alpha*direction
@@ -514,13 +513,13 @@ class Temperature() :
                 direction_lst.append(direction)
                 
                 ## Estimation of H_nNext
-                g_nNext =   nd.Gradient(self.J_los[sT_inf])(beta_nNext) # From numdifftools
+                g_nNext =   nd.Gradient(J)(beta_nNext) # From numdifftools
                 print ("compteur = {}, Gradient dans la boucle minimization \n {}:".format(cpt, g_nNext))
                 y_nNext =   g_nNext - g_n
                 s_nNext =   beta_nNext - beta_n
                 H_nNext =   self.Next_hess(H_n, y_nNext, s_nNext)
                 
-                err = (self.J_los[sT_inf](beta_nNext) - self.J_los[sT_inf](beta_n)) 
+                err = (J(beta_nNext) - J(beta_n)) 
                 
                 err_hess = np.linalg.norm(H_nNext - H_n)
                 
