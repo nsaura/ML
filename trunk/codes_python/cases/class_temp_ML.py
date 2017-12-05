@@ -301,7 +301,7 @@ class Temperature() :
         full_cov_obs_dict   =   dict()        
         vals_obs_meshpoints =   dict()
         
-        T_obs_mean  = dict()
+        T_obs_mean, condi  = dict(),    dict()
         self.J_los = dict()
         
         if verbose == True :
@@ -349,25 +349,27 @@ class Temperature() :
                     for jj in range(self.N_discr-2) : 
                         Sum[ii,jj] += (T_temp[ii] - T_obs_mean[sT_inf][ii]) * (T_temp[jj] - T_obs_mean[sT_inf][jj])/float(self.num_real)
             
-            full_cov_obs_dict[sT_inf] = Sum            
+            full_cov_obs_dict[sT_inf] = Sum 
+            condi['full' + sT_inf] = np.linalg.norm(Sum)*np.linalg.norm(np.linalg.inv(Sum)))
             print ("cov_obs :\n{}".format(Sum))
             
             std_mean_prior          =   np.mean(np.asarray([np.std(T_prior[i]) for i in range(len(T_prior))]))
             cov_obs_dict[sT_inf]    =   np.diag([std_meshgrid_values[j]**2 for j in range(self.N_discr-2)])
             cov_pri_dict[sT_inf]    =   np.diag([self.prior_sigma[sT_inf]**2 for j in range(self.N_discr-2)])
             
+            condi['diag' + sT_inf] = np.linalg.norm(cov_obs_dict[sT_inf])*np.linalg.norm(np.linalg.inv(cov_obs_dict[sT_inf]))
+            
             self.J_los[sT_inf]      =   lambda beta : 0.5 * np.sum( [((self.h_beta(beta, T_inf)[i] - T_obs_mean[sT_inf][i]))**2 for i in range(self.N_discr-2)] ) /cov_obs_dict[sT_inf][0,0]
             print cov_pri_dict[sT_inf][0,0]
-
-
+            
+            
+            
             self.cov_obs_dict   =   cov_obs_dict
             self.cov_pri_dict   =   cov_pri_dict
             self.T_obs_mean     =   T_obs_mean
             
             self.vals_obs_meshpoints    =   vals_obs_meshpoints
             self.full_cov_obs_dict      =   full_cov_obs_dict
-            
-            
             
             self.stat_done = True
 ##---------------------------------------------------  
