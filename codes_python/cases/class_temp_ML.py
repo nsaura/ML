@@ -639,7 +639,7 @@ class Temperature() :
         print("dR/dBeta(T.beta_prior) = {} \n".format(self.DR_DBETA(self.beta_prior, T_inf)))
         while np.abs(err) > tol and (cpt<cptMax) :
         
-            self.g_n     =   -0.000001*np.dot(self.PSI(beta_n, T_inf).T, np.diag(self.DR_DBETA(beta_n,T_inf)) )   #dJ/dBeta
+            self.g_n     =   -np.dot(self.PSI(beta_n, T_inf).T, np.diag(self.DR_DBETA(beta_n,T_inf)) )   #dJ/dBeta
 #            self.g_n     =   nd.Gradient(J)(beta_n) + np.dot(self.PSI(beta_n, T_inf).T, np.diag(self.DR_DBETA(beta_n,T_inf)) )   dJ/dBeta            
 #            self.g_n     =   nd.Gradient(self.J_los[sT_inf])(beta_n) + np.dot(self.PSI(beta_n, T_inf).T, np.diag(self.DR_DBETA(beta_n,T_inf)) )   ##dJ/dBeta                        
             self.N_n_nP  =   np.linalg.norm(self.g_n - g_nPrev, 2)
@@ -833,3 +833,6 @@ if __name__ == "__main__" :
     T.obs_pri_model()
     T.get_prior_statistics()
 #    T.optimization(verbose=True)
+
+#run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.5 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
+
