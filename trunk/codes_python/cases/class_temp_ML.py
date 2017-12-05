@@ -163,7 +163,7 @@ class Temperature() :
                 (sigma * np.random.randn(length) + mu).std()
                ) 
 ##---------------------------------------------------   
-    def h_beta(self, beta, T_inf, verbose=False, noise= 'none') :
+    def h_beta(self, beta, T_inf, verbose=False) :
         
         T_n = map(lambda x : -4*T_inf*x*(x-1), self.line_z)
         B_n = np.zeros((self.N_discr-2))
@@ -188,7 +188,8 @@ class Temperature() :
                     print "B_n = ", B_n
                     print "T_n = ", T_n
                     print "T_N_tmp = ", T_n_tmp
-                    raise Exception ("Check")                
+                    raise Exception ("Check")    
+                                
             T_nNext = np.dot(np.linalg.inv(self.A1), B_n)
             
             err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
@@ -198,8 +199,8 @@ class Temperature() :
                 plt.plot(self.line_z, T_nNext, label='tracer cpt %d' %(compteur))
             
             if compteur == compteur_max :
-                warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \x1b[0m".format(err, tol))
-                time.sleep(2.5)
+                warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \t \x1b[0m".format(err, tol))
+#                time.sleep(2.5)
 #        if verbose == True :
 #        plt.plot(self.line_z, T_nNext, marker="o", linestyle='none')
 #        plt.legend(loc="best", ncol=4)
@@ -282,6 +283,9 @@ class Temperature() :
     def get_prior_statistics(self, verbose = True):
         cov_obs_dict    =   dict() 
         cov_pri_dict    =   dict()
+        
+        if self.num_real > 50 :
+            verbose == False
         
         mean_meshgrid_values=   dict()  
         full_cov_obs_dict   =   dict()        
@@ -376,24 +380,25 @@ class Temperature() :
             curr_d  =   self.T_obs_mean[sT_inf]
             cov_prior   =  self.cov_pri_dict[sT_inf]
             cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
-            
-            print ("shapes to debug :")
-            print("shape of cov_m = {}".format(cov_m.shape) )
-            print("shape of cov_p = {}".format(cov_prior.shape) )
-            print("shape of curr_d = {}".format(curr_d.shape) )
-            
-#            J = lambda beta : 0.5*  ( 
-#                  np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
-#                    np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
-#                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
-#                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) )   
-#                                        ) ## Fonction de coût
-#                                        
+            if verbose == True : 
+                print ("shapes to debug :")
+                print("shape of cov_m = {}".format(cov_m.shape) )
+                print("shape of cov_p = {}".format(cov_prior.shape) )
+                print("shape of curr_d = {}".format(curr_d.shape) )
+                
+            J = lambda beta : 0.5*  ( 
+                  np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
+                    np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
+                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
+                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) )   
+                                        ) ## Fonction de coût
+                                        
 #            J = lambda beta : 0.5*np.sum([((self.h_beta(beta, T_inf)[i] - curr_d[i])/cov_prior[0,0])**2 for i in range(self.N_discr-2)])
                             
             # BFGS : quasi Newton method that approximate the Hessian on the fly
-            print "J=" , self.J_los[sT_inf](self.beta_prior)
-            opti = op.minimize(self.J_los[sT_inf], self.beta_prior, method="BFGS", tol=self.tol, options={"disp" : True})
+#            print "J =" , self.J_los[sT_inf](self.beta_prior)
+            print "J =" , J(self.beta_prior)
+            opti = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol, options={"disp" : True})
 
             betamap[sT_inf] =   opti.x
             hess[sT_inf]    =   opti.hess_inv
