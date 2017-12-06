@@ -40,10 +40,11 @@ def parser() :
                         help='Define the number of realization of epsilon(T) you want to pick up. Default to %(default)d\n' )
     parser.add_argument('--tolerance', '-tol', action='store', type=float, default=1e-5, dest='tol', 
                         help='Define the tolerance on the optimization error. Default to %(default).8f \n' )
+    parser.add_argument('--QN_tolerance', '-QN_tol', action='store', type=float, default=1e-5, dest='QN_tol', 
+                        help='Define the tolerance on the QN_BFGS error (hybrid). Default to %(default).8f \n' )
     
     parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', 
         default=1 ,dest='beta_prior', help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
-   
     
     #strings
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', 
@@ -55,6 +56,12 @@ def parser() :
 ##---------------------------------------------------------------
 class Temperature() :
     def __init__ (self, parser):
+        """
+        This object has been made to solve optimization problem. Several methods are available and tested : _for_adjoint, optimization and minimization_with_first_guess. 
+        It contains several attributes and initialiazed with a parser. 
+        
+        See parser 
+        """
         np.random.seed(1000) ; plt.ion()
         
         if parser.cov_mod not in ['full', 'diag'] :
@@ -66,7 +73,7 @@ class Temperature() :
         dt,         h       =   parser.dt,      parser.h
         datapath            =   os.path.abspath(parser.datapath)
         num_real,   tol     =   parser.num_real,parser.tol
-        cov_mod             =   parser.cov_mod
+        cov_mod,    QN_tol  =   parser.cov_mod, parser.QN_tol
         
         self.beta_prior = np.asarray([parser.beta_prior for i in range(parser.N_discr-2)]) 
         
@@ -111,9 +118,12 @@ class Temperature() :
         self.eps_0 = 5.*10**(-4)
         self.cov_mod = cov_mod
         self.N_discr = N_discr
+        self.QN_tol = QN_tol  
         self.tol = tol
         self.dt = dt        
         self.h = h
+        
+        self.QN_done, self.optimize, self._adj =    False,  False,  False
         
         if os.path.exists(datapath) == False :
             os.mkdir(datapath)
@@ -225,7 +235,7 @@ class Temperature() :
 ##---------------------------------------------------
     def true_beta(self, T, T_inf) : 
         return np.asarray (
-        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i]) + self.noise[i] ) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in range(self.N_discr-2)]        
+        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i])) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in range(self.N_discr-2)]        
                           )
 ##---------------------------------------------------    
     def obs_pri_model(self) :
@@ -380,6 +390,7 @@ class Temperature() :
         hess, cholesky = dict(), dict()
         
         mins, maxs = dict(), dict()
+        sigma_post_dict = dict()
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
         beta_var = []
         
@@ -408,14 +419,14 @@ class Temperature() :
 
 #            print "J =" , self.J_los[sT_inf](self.beta_prior)
             print ("J =" , J(self.beta_prior))
-            opti = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol, options={"disp" : True})
+            opti_obj = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol, options={"disp" : True})
 
-            betamap[sT_inf] =   opti.x
-            hess[sT_inf]    =   opti.hess_inv
+            betamap[sT_inf] =   opti_obj.x
+            hess[sT_inf]    =   opti_obj.hess_inv
             cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
             
-            self.opti = opti
-            print ("Sucess state of the optimization {}".format(self.opti.success))
+            self.opti_obj   =   opti_obj
+            print ("Sucess state of the optimization {}".format(self.opti_obj.success))
             
             beta_final[sT_inf]  =   betamap[sT_inf] + np.dot(cholesky[sT_inf], s)  
             
@@ -423,11 +434,12 @@ class Temperature() :
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_var.append(betamap[sT_inf] + np.dot(cholesky[sT_inf], s))
             beta_var.append(beta_final[sT_inf])
-            
+            sigma_post = []
             for i in range(self.N_discr-2) :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
                 maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
-            
+                sigma_post.append(np.std([j[i] for j in beta_var])) 
+            sigma_post_dict[sT_inf] = sigma_post 
             mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
             maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
             
@@ -438,7 +450,9 @@ class Temperature() :
         self.mins_lst   =   mins_lst
         self.maxs_lst   =   maxs_lst
         self.beta_var   =   beta_var
+        self.optimize   =   True
         
+        self.sigma_post_dict = sigma_post_dict
 ##--------------------------------------------------- 
     def backline_search(self, J_lambda, var_J_lambda, direction, incr=0.5) :
         t = 1.
@@ -465,14 +479,17 @@ class Temperature() :
         mins,   maxs    =   dict(),     dict()
         
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-        beta_QNBFGS_real = []
-        alpha_lst = []
-        direction_lst =[]
+        
+        beta_QNBFGS_real =  []
+        alpha_lst       =   []
+        direction_lst   =   []
+        
         for T_inf in self.T_inf_lst :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
             cov_m   =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf] 
             cov_prior =  self.cov_pri_dict[sT_inf]
+            
             J = lambda beta : 0.5*  ( 
                   np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
                     np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
@@ -488,12 +505,11 @@ class Temperature() :
             H_n     =   first_guess_opti.hess_inv
             g_n     =   first_guess_opti.jac
             
-            self.first_guess_opti = first_guess_opti
+            self.first_guess_opti   =   first_guess_opti
             
-            err, tol = 1.0, 1e-2
-            cpt, cpt_max    =   0,  100
-            err_hess = 0.
-            while (np.abs(err) > tol) and (cpt<cpt_max) :
+            err_hess,   err =   0., 1.0
+            cpt,        cpt_max     =   0,  100
+            while (np.abs(err) > self.QN_tol) and (cpt<cpt_max) :
                 ## Incr
                 if cpt > 0 :
                     H_n     =   H_nNext
@@ -501,33 +517,32 @@ class Temperature() :
                     beta_n  =   beta_nNext      
                 
                 cpt += 1    
-                direction   =   np.dot(H_n, g_n)
-                print("direction:\n", direction)
-#                alpha = op.line_search(J, g_n, beta_n, )
+                direction   =   np.dot(H_n, g_n) ; print("direction:\n", direction)
+
                 alpha       =   self.backline_search(J, beta_n, direction)
                 print ("alpha = ", alpha)
-#                alpha  = 1e-2
+
                 beta_nNext  =   beta_n - alpha*direction
-                #self.beta_nNext = beta_nNext
+
                 alpha_lst.append(alpha)
                 direction_lst.append(direction)
                 
                 ## Estimation of H_nNext
                 g_nNext =   nd.Gradient(J)(beta_nNext) # From numdifftools
-                print ("compteur = {}, Gradient dans la boucle minimization \n {}:".format(cpt, g_nNext))
+                print ("compteur = {}, Gradient dans la boucle minimization: \n {}".format(cpt, g_nNext))
                 y_nNext =   g_nNext - g_n
                 s_nNext =   beta_nNext - beta_n
                 H_nNext =   self.Next_hess(H_n, y_nNext, s_nNext)
                 
-                err = (J(beta_nNext) - J(beta_n)) 
+                err     =   (J(beta_nNext) - J(beta_n)) 
                 
-                err_hess = np.linalg.norm(H_nNext - H_n)
+                err_hess=  np.linalg.norm(H_nNext - H_n)
                 
                 print ("cpt = {} \t err = {:.5}".format(cpt, err))
 
             print ("Compteur = %d \t err_j = %.12f \t err_Hess %.12f" % (cpt, err, err_hess))
             print ("beta_nNext = ", beta_nNext)
-            print ("J(beta_nNext) = ", self.J_los[sT_inf](beta_nNext) )
+            print ("J(beta_nNext) = ", J(beta_nNext) )
             
             QN_BFGS_bmap[sT_inf]    =   beta_nNext
             QN_BFGS_hess[sT_inf]    =   H_nNext
@@ -537,16 +552,17 @@ class Temperature() :
             QN_BFGS_bf[sT_inf]      =   QN_BFGS_bmap[sT_inf] + np.dot(np.linalg.cholesky(H_nNext), s)
             
             for i in range(100):
-                s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+                s   =   np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_QNBFGS_real.append(QN_BFGS_bmap[sT_inf] + np.dot(QN_BFGS_cholesky[sT_inf], s))
+            
             beta_QNBFGS_real.append(QN_BFGS_bf[sT_inf])
             
             for i in range(self.N_discr-2) :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_QNBFGS_real]))
                 maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_QNBFGS_real]))
             
-            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
-            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
+            mins_lst    =   [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
+            maxs_lst    =   [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
             
         self.QN_BFGS_bmap   =   QN_BFGS_bmap
         self.QN_BFGS_bf     =   QN_BFGS_bf
@@ -558,6 +574,8 @@ class Temperature() :
         
         self.alpha_lst      =   np.asarray(alpha_lst)
         self.direction_lst  =   np.asarray(direction_lst)
+        
+        self.QN_done = True
 ##---------------------------------------------------    
     def DR_DT(self, beta, T_inf) :
         return  -4* np.diag((self.h_beta(beta, T_inf)**3 * beta * T.eps_0))
@@ -658,7 +676,7 @@ def subplot(T, method='QN_BFGS') :
         mins    =   T.QN_BFGS_mins_lst
         maxs    =   T.QN_BFGS_maxs_lst
         
-        titles = ["Hybrid optimization with QNBFGS: Beta comparaison", "Hybrid optimization with QNBFGS: Temperature fields"]
+        titles = ["QNBFGS: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "QNBFGS: Temperature fields"]
     else :
         dico_beta_map   =   T.betamap
         dico_beta_fin   =   T.beta_final
@@ -666,7 +684,7 @@ def subplot(T, method='QN_BFGS') :
         mins    =   T.mins_lst
         maxs    =   T.maxs_lst
         
-        titles = ["Beta comparaison", "Temperature fields"]
+        titles = ["Beta comparaison (bp = {}, , cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
         
     for T_inf in T.T_inf_lst :
         sT_inf = "T_inf_" + str(T_inf)
@@ -702,8 +720,46 @@ def subplot(T, method='QN_BFGS') :
         axes[1].legend(loc='best', fontsize = 10, ncol=2)
         
         plt.show()
+    
+    if T.QN_done == True and T.optimize == True :
+        # Main plot
+        fig = plt.figure(figsize=(8, 4))
+        ax = fig.add_axes([0.1, 0.15, 0.8, 0.8], axisbg="#f5f5f5")
+        ax.plot(T.line_z, T.betamap[sT_inf], label="Optimization Betamap for {}".format(sT_inf), linestyle='none', marker='o', color='magenta')
+        ax.plot(T.line_z, T.QN_BFGS_bmap[sT_inf], label="QN_BFGS Betamap for {}".format(sT_inf), linestyle='none', marker='+', color='yellow')
+        ax.plot(T.line_z, T.true_beta(curr_d, T_inf), label = "True beta profil {}".format(sT_inf), color='orange')
+        
+        ax.fill_between(T.line_z, T.QN_BFGS_mins_lst, T.QN_BFGS_maxs_lst, facecolor= "1", alpha=0.4, interpolate=True, hatch='\\', color="cyan", label="QN_BFGS uncertainty")
+        ax.fill_between(T.line_z,  T.mins_lst, T.maxs_lst, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label="Optimization uncertainty")
+        
+        import matplotlib as mpl
+        x0, x1 = 0.3, 0.7
+        dz = 1./(N_discr-1)
+        ind0, ind1 = int(x0/dz), int(x1/dz)
+        ## Les deux lignes pointillees
+        ax.axvline(x0, ymin = 1, ymax=1.6, color="black", linestyle=":")  
+        ax.axvline(x1, ymin = 1, ymax=1.6, color="black", linestyle=":")
+
+        #Ajout de la figure
+        ax1 = fig.add_axes([0.05, 0.05, 0.4, 0.32], axisbg='#f8f8f8') 
+        ax1.set_ylim(1.2,1.6)
+        #[beg_horz, beg_vertical, end_horiz, end_vertical]
+        ##
+        x = np.linspace(x0, x1, len(T.line_z[ind0:ind1]))
+        ax1.plot(x, T.betamap[sT_inf][ind0:ind1], linestyle='none', marker='o', color='magenta')
+        ax1.plot(x, T.QN_BFGS_bmap[sT_inf][ind0:ind1], linestyle='none', marker='+', color='yellow')
+        ax1.plot(x, T.true_beta(curr_d, T_inf)[ind0:ind1], color='orange')
+        
+#        ax1.fill_between(x, T.QN_BFGS_mins_lst[ind0:ind1], T.QN_BFGS_maxs_lst[ind0:ind1], facecolor= "1", alpha=0.2, interpolate=True, hatch='\\', color="cyan")
+        ax1.fill_between(x,  T.mins_lst[ind0:ind1], T.maxs_lst[ind0:ind1], facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black")
+        
+        ax.set_title("Beta comparison between Optimisation and QN_BFGS (hybrid) method")
+        ax.set_xlabel("z")
+        ax.set_ylabel("beta\'s")
+        ax.legend(loc="best", fontsize = 13, ncol=2)
         
         return axes
+        
 ##---------------------------------------------------##
 ##---------------------------------------------------##
 ##---------------------------------------------------##        
