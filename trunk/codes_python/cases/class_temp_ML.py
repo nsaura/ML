@@ -584,7 +584,7 @@ class Temperature() :
         sT_inf = "T_inf_%d" %(T_inf)
         curr_d = self.T_obs_mean[sT_inf]
         cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]        
-        return (self.h_beta(beta, T_inf) - curr_d) / np.sqrt(cov_m[0,0])
+        return (self.h_beta(beta, T_inf) - curr_d) / (cov_m[0,0])
 ##---------------------------------------------------
     def DR_DBETA(self, beta, T_inf):
         print ("DR_DBETA -- h_beta**4 =\n {} \n T_inf**4 = {}".format(self.h_beta(beta, T_inf)**4, T_inf**4))
@@ -772,6 +772,17 @@ if __name__ == "__main__" :
     T.get_prior_statistics()
 #    T.optimization(verbose=True)
 
+## run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
+
+#plt.figure()
+#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's' linestyle='none')
+#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
+#plt.semilogy(T.line_z, T.sigma_post_dict["T_inf_50"], label="Post")
+#plt.semilogy(T.line_z, [0.8 for i in range(T.N_discr-2)], label="base")
+#plt.legend()
+
 #run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.5 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
 #run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.3 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
 #run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1.7 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
+
+
