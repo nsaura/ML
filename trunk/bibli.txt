@@ -16,3 +16,6 @@ mdpdanech :	http://mdpdanech.free.fr/PDF-rap/pb-malpose.pdf
 sdshare1  :	https://fr.slideshare.net/pcarmich/apprentissage-automatique-rgression-ridge-et-lasso
 
 SVM 	:	https://www.math.univ-toulouse.fr/~besse/Wikistat/pdf/st-m-app-svm.pdf
+
+Medium	:	https://medium.com/towards-data-science/applied-deep-learning-part-3-autoencoders-1c083af4d798
+
