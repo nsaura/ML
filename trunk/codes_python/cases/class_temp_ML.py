@@ -367,7 +367,7 @@ class Temperature() :
             cov_obs_dict[sT_inf]    =   np.diag([std_meshgrid_values[j]**2 for j in range(self.N_discr-2)])
             cov_pri_dict[sT_inf]    =   np.diag([self.prior_sigma[sT_inf]**2 for j in range(self.N_discr-2)])
             
-            condi['diag' + sT_inf] = np.linalg.norm(cov_obs_dict[sT_inf])*np.linalg.norm(np.linalg.inv(cov_obs_dict[sT_inf]))
+            condi['diag' + sT_inf]  =   np.linalg.norm(cov_obs_dict[sT_inf])*np.linalg.norm(np.linalg.inv(cov_obs_dict[sT_inf]))
             
             self.J_los[sT_inf]      =   lambda beta : 0.5 * np.sum( [((self.h_beta(beta, T_inf)[i] - T_obs_mean[sT_inf][i]))**2 for i in range(self.N_discr-2)] ) /cov_obs_dict[sT_inf][0,0]
             print cov_pri_dict[sT_inf][0,0]
@@ -434,11 +434,13 @@ class Temperature() :
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_var.append(betamap[sT_inf] + np.dot(cholesky[sT_inf], s))
             beta_var.append(beta_final[sT_inf])
+            
             sigma_post = []
             for i in range(self.N_discr-2) :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
                 maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
                 sigma_post.append(np.std([j[i] for j in beta_var])) 
+            
             sigma_post_dict[sT_inf] = sigma_post 
             mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
             maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
@@ -483,7 +485,7 @@ class Temperature() :
         beta_QNBFGS_real =  []
         alpha_lst       =   []
         direction_lst   =   []
-        
+        QN_BFGS_sigma_post_dict = dict()
         for T_inf in self.T_inf_lst :
             sT_inf  =   "T_inf_" + str(T_inf)
             curr_d  =   self.T_obs_mean[sT_inf]
@@ -554,13 +556,16 @@ class Temperature() :
             for i in range(100):
                 s   =   np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_QNBFGS_real.append(QN_BFGS_bmap[sT_inf] + np.dot(QN_BFGS_cholesky[sT_inf], s))
-            
+                
             beta_QNBFGS_real.append(QN_BFGS_bf[sT_inf])
             
+            sigma_post = []
             for i in range(self.N_discr-2) :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_QNBFGS_real]))
                 maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_QNBFGS_real]))
-            
+                sigma_post.append(np.std([j[i] for j in beta_QNBFGS_real])) 
+
+            QN_BFGS_sigma_post_dict[sT_inf] = sigma_post 
             mins_lst    =   [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
             maxs_lst    =   [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
             
@@ -574,6 +579,8 @@ class Temperature() :
         
         self.alpha_lst      =   np.asarray(alpha_lst)
         self.direction_lst  =   np.asarray(direction_lst)
+        
+        self.QN_BFGS_sigma_post_dict = QN_BFGS_sigma_post_dict
         
         self.QN_done = True
 ##---------------------------------------------------    
