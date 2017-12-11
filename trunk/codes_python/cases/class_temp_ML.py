@@ -722,19 +722,23 @@ class Temperature() :
                 print ("grad_j[{}] = {}".format(p, grad_j[p]))
 
             grad_j = np.diag(np.asarray(grad_j))
+            self.grad_j = grad_j
+            self.Hess_inv = np.linalg.inv( np.dot( self.grad_j.T, self.grad_j ) )
+            R = np.linalg.cholesky(self.Hess_inv)
             
             GRAD_J  =   np.diag(g_n)
-            f_I     =   [( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) for p in range(self.N_discr-2)]
+            f_I     =   np.asarray([( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) for p in range(self.N_discr-2)])
             F       =   np.diag(f_I)
             JAC_T   =   1/2. * np.dot( np.linalg.inv(F), GRAD_J )
             
+            JAC_T = np.zeros((self.N_discr-2,self.N_discr-2))
+            
+            for i in range(self.N_discr-2):
+                JAC_T[i,i] = GRAD_J[i,i] / F[i,i]
+            
+            
             H_INV   =   np.linalg.inv(np.dot(JAC_T, JAC_T.T))
             RR      =   np.linalg.cholesky(H_INV)
-            
-            self.grad_j = grad_j
-            self.Hess_inv = np.linalg.inv( np.dot( self.grad_j.T, self.grad_j ) )
-            
-            R = np.linalg.cholesky(self.Hess_inv)
             
             adj_grad[sT_inf]    =   g_n
             adj_bmap[sT_inf]    =   beta_n
