@@ -668,9 +668,9 @@ class Temperature() :
             beta_n = self.beta_prior
             
             g_nPrev = np.zeros((self.N_discr-2, 1))
-            tol = 1e-8 if self.cov_mod == "full" else 1e-6
+            tol = 1e-8 if self.cov_mod == "full" else 1e-2
             
-            cpt,    err,    cptMax =   0,  1., 10000
+            cpt,    err,    cptMax =   0,  1., 50
             print("beta_nPrev: \n {}".format(beta_n))
             
             plt.figure()
@@ -708,50 +708,54 @@ class Temperature() :
                 # n --> n+1 si non convergence, sort de la boucle sinon 
                 cpt +=1
             
-            grad_j = []
-            dr_dbeta = self.DR_DBETA(beta_n, T_inf)
             hbeta =  self.h_beta(beta_n, T_inf, verbose=False)
-            dr_dt = np.diag(self.DR_DT(beta_n, T_inf))
             
-            for p in range(self.N_discr-2) :
-                f_I     =   ( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p])
-                df_I_dT =   1. / np.sqrt(sigmas[p])
-                phi_I_T =  -df_I_dT / dr_dt[p]
-                grad_j.append(phi_I_T * dr_dbeta[p])
+            f = np.diag([( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) for p in range(self.N_discr-2)])
+            df_I_dT =   1. / np.sqrt(sigmas[p])
 
-                print ("grad_j[{}] = {}".format(p, grad_j[p]))
+            phi_t = - np.dot( df_I_dT, np.linalg.inv(self.DR_DT(beta_n, T_inf)) )
+            
+            grad_j  = np.dot( phi_t, self.DR_DBETA(beta_n, T_inf) )
+            jac_j   =   np.diag(grad_j)
+#            for p in range(self.N_discr-2) :
+#                f_I     =   ( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p])
+#                df_I_dT =   1. / np.sqrt(sigmas[p])
+#                phi_I_T =  -df_I_dT / dr_dt[p]
+#                grad_j.append(phi_I_T * dr_dbeta[p])
 
-            grad_j = np.diag(np.asarray(grad_j))
-            self.grad_j = grad_j
-            self.Hess_inv = np.linalg.inv( np.dot( self.grad_j.T, self.grad_j ) )
+#                print ("grad_j[{}] = {}".format(p, grad_j[p]))
+
+#            grad_j = np.diag(np.asarray(grad_j))
+#            self.grad_j = grad_j
+            self.Hess_inv = np.linalg.inv( np.dot( jac_j.T, jac_j ) )
             R = np.linalg.cholesky(self.Hess_inv)
             
-            GRAD_J  =   np.diag(g_n)
-            f_I     =   np.asarray([( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) for p in range(self.N_discr-2)])
-            F       =   np.diag(f_I)
-            JAC_T   =   1/2. * np.dot( np.linalg.inv(F), GRAD_J )
-            
-            JAC_T = np.zeros((self.N_discr-2,self.N_discr-2))
-            
-            for i in range(self.N_discr-2):
-                JAC_T[i,i] = GRAD_J[i,i] / F[i,i]
-            
-            
-            H_INV   =   np.linalg.inv(np.dot(JAC_T, JAC_T.T))
-            RR      =   np.linalg.cholesky(H_INV)
+#            GRAD_J  =   np.diag(g_n)
+#            f_I     =   np.asarray([( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) for p in range(self.N_discr-2)])
+#            F       =   np.diag(f_I)
+##            JAC_T   =   1/2. * np.dot( np.linalg.inv(F), GRAD_J )
+#            
+#            JAC_T   = np.zeros((self.N_discr-2,self.N_discr-2))
+#            
+#            for i in range(self.N_discr-2):
+#                JAC_T[i,i] = 0.5 * GRAD_J[i,i] / F[i,i]
+#            
+#            
+#            H_INV   =   np.linalg.inv(np.dot(JAC_T, JAC_T.T))
+#            RR      =   np.linalg.cholesky(H_INV)
             
             adj_grad[sT_inf]    =   g_n
             adj_bmap[sT_inf]    =   beta_n
             adj_gamma[sT_inf]   =   gamma_n
             
-            adj_hessinv[sT_inf] =   np.linalg.inv( np.dot( np.diag(g_n).T, np.diag(g_n) ) ) ## H-1 = (Jac.T * Jac) -1
+#            adj_hessinv[sT_inf] =   np.linalg.inv( np.dot( np.diag(g_n).T, np.diag(g_n) ) ) ## H-1 = (Jac.T * Jac) -1
             
             adj_bmap[sT_inf]    =   beta_n
-            adj_bf[sT_inf]      =   adj_bmap[sT_inf] + np.dot(RR, s)
+            adj_bf[sT_inf]      =   adj_bmap[sT_inf] + np.dot(R, s)
             
             for i in range(249):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-                beta_var.append( adj_bmap[sT_inf] + np.dot(RR, s) )
+                beta_var.append( adj_bmap[sT_inf] + np.dot(R, s) )
             
             beta_var.append(adj_bf[sT_inf]) # Pour faire 250
             
