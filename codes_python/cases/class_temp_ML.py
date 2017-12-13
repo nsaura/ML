@@ -595,7 +595,7 @@ class Temperature() :
     def DR_DT(self, beta, T_inf) :
         M1 = np.diag([(self.N_discr-1)**2 for i in range(self.N_discr-3)], -1) # Extra inférieure
         P1 = np.diag([(self.N_discr-1)**2 for i in range(self.N_discr-3)], +1)  # Extra supérieure
-        A_diag1 = -4* np.diag((self.h_beta(beta, T_inf)**3 * beta * T.eps_0))-np.diag([2*(self.N_discr-1)**2 for i in range(self.N_discr-2) ]) # Diagonale
+        A_diag1 = -4* np.diag((self.h_beta(beta, T_inf)**3 * beta * self.eps_0))-np.diag([2*(self.N_discr-1)**2 for i in range(self.N_discr-2) ]) # Diagonale
         result = A_diag1 + M1 + P1
 #        print ("Temperature in function DR_DT = \ {}".format(self.h_beta(beta, T_inf)))
 #        print("DR_DT =\n {} ".format(result))
@@ -625,7 +625,7 @@ class Temperature() :
 ##---------------------------------------------------
     def DR_DBETA(self, beta, T_inf):
 #        print ("DR_DBETA in function -- h_beta**4 =\n {} \n T_inf**4 = {}".format((T_inf**4 - self.h_beta(beta, T_inf)**4) * T.eps_0, T_inf**4))
-        return (T_inf**4 - self.h_beta(beta, T_inf)**4) * T.eps_0
+        return (T_inf**4 - self.h_beta(beta, T_inf)**4) * self.eps_0
 ##---------------------------------------------------
     def PSI(self,beta, T_inf) :
         result = -np.dot(np.linalg.inv(self.DR_DT(beta, T_inf)), self.DJ_DT(beta, T_inf))
@@ -637,7 +637,7 @@ class Temperature() :
     def adjoint_optimization(self) : 
         if self.stat_done == False : self.get_prior_statistics() 
         
-        sigmas = np.diag(self.cov_obs_dict["T_inf_50"])
+        sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
         
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
         
@@ -668,9 +668,9 @@ class Temperature() :
             beta_n = self.beta_prior
             
             g_nPrev = np.zeros((self.N_discr-2, 1))
-            tol = 1e-8 if self.cov_mod == "full" else 1e-2
+            tol = 1e-8 if self.cov_mod == "full" else 1e-5
             
-            cpt,    err,    cptMax =   0,  1., 50
+            cpt,    err,    cptMax =   0,  1., 7
             print("beta_nPrev: \n {}".format(beta_n))
             
             plt.figure()
@@ -708,10 +708,12 @@ class Temperature() :
                 # n --> n+1 si non convergence, sort de la boucle sinon 
                 cpt +=1
             
+            self.last_beta = beta_n
+            
             hbeta =  self.h_beta(beta_n, T_inf, verbose=False)
             
-            f = np.diag([( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) for p in range(self.N_discr-2)])
-            df_I_dT =   1. / np.sqrt(sigmas[p])
+            f = np.diag([( hbeta[p] - curr_d[p] ) / sigmas[p] for p in range(self.N_discr-2)])
+            df_I_dT =   1. / sigmas[p]
 
             phi_t = - np.dot( df_I_dT, np.linalg.inv(self.DR_DT(beta_n, T_inf)) )
             
@@ -728,7 +730,7 @@ class Temperature() :
 #            grad_j = np.diag(np.asarray(grad_j))
 #            self.grad_j = grad_j
             self.Hess_inv = np.linalg.inv( np.dot( jac_j.T, jac_j ) )
-            R = np.linalg.cholesky(self.Hess_inv)
+            RFI = np.linalg.cholesky(self.Hess_inv)
             
 #            GRAD_J  =   np.diag(g_n)
 #            f_I     =   np.asarray([( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) for p in range(self.N_discr-2)])
@@ -743,6 +745,38 @@ class Temperature() :
 #            
 #            H_INV   =   np.linalg.inv(np.dot(JAC_T, JAC_T.T))
 #            RR      =   np.linalg.cholesky(H_INV)
+            cov_obs =   cov_m
+            cov_pri =   cov_prior
+            h_beta  =   self.h_beta(self.last_beta, 50)
+            beta_n  =   self.last_beta
+
+            dR_dT   =   self.DR_DT(beta_n, 50)
+            dR_dBeta=   self.DR_DBETA(beta_n, 50)
+
+            nu      =   - np.dot( np.diag(dR_dBeta), np.linalg.inv(dR_dT) )
+            psi     =   self.PSI(beta_n, 50)
+
+            nu_diag = np.diag(np.diag(nu))
+
+            M_1 =   np.diag( [- 4*psi[m]*self.eps_0*h_beta[m]**3 for m in range(self.N_discr-2)] )
+            M_2 =   np.dot( nu_diag, np.linalg.inv(cov_obs) )
+            M_3 =   -12 * np.dot( nu[m,m], np.diag([psi[m]*beta_n[m]*self.eps_0*h_beta[m]**2 
+                      for m in range (self.N_discr-2)]) )
+
+            M_4 =   np.linalg.inv(self.DR_DT(beta_n, 50)) 
+
+            Mu  =   np.dot( -M_1 - M_2 - M_3 , M_4 )
+            
+            H_1 =   np.linalg.inv(cov_pri.T)
+            H_2 =   np.dot(Mu, np.diag( [self.eps_0*(50**4 - h_beta[j]**4) for j in range(self.N_discr-2)] ) )
+            H_3 =   - 4 * np.dot(nu, np.diag([self.eps_0*psi[j]*h_beta[j]**3 for j in range(self.N_discr-2)])) 
+
+            H   =   H_1 + H_2 + H_3 
+
+            H_inv = np.linalg.inv(H)
+            
+            H_inv = 0.5*(H_inv + H_inv.T)
+            R = np.linalg.cholesky(H_inv)
             
             adj_grad[sT_inf]    =   g_n
             adj_bmap[sT_inf]    =   beta_n
@@ -751,11 +785,11 @@ class Temperature() :
 #            adj_hessinv[sT_inf] =   np.linalg.inv( np.dot( np.diag(g_n).T, np.diag(g_n) ) ) ## H-1 = (Jac.T * Jac) -1
             
             adj_bmap[sT_inf]    =   beta_n
-            adj_bf[sT_inf]      =   adj_bmap[sT_inf] + np.dot(R, s)
+            adj_bf[sT_inf]      =   adj_bmap[sT_inf] + np.dot(RFI, s)
             
             for i in range(249):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-                beta_var.append( adj_bmap[sT_inf] + np.dot(R, s) )
+                beta_var.append( adj_bmap[sT_inf] + np.dot(RFI, s) )
             
             beta_var.append(adj_bf[sT_inf]) # Pour faire 250
             
