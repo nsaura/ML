@@ -11,7 +11,7 @@ from scipy import optimize as op
 from itertools import cycle
 import matplotlib.cm as cm
 
-#import numdifftools as nd
+import numdifftools as nd
 
 import time
 
@@ -30,6 +30,9 @@ def parser() :
     #digits
     parser.add_argument('--N_discr', '-N', action='store', type=int, default=33, dest='N_discr', 
                         help='Define the number of discretization points : default %(default)d \n' )
+    parser.add_argument('--compteur_max_adjoint', '-cptmax', action='store', type=int, default=50, dest='cpt_max_adj', 
+                        help='Define compteur_max for adjoint method : default %(default)d \n' )
+
     parser.add_argument('--H', '-H', action='store', type=float, default=0.5, dest='h', 
                         help='Define the convection coefficient h \n' )
     parser.add_argument('--delta_t', '-dt', action='store', type=float, default=0.005, dest='dt', 
@@ -74,6 +77,7 @@ class Temperature() :
         datapath            =   os.path.abspath(parser.datapath)
         num_real,   tol     =   parser.num_real,parser.tol
         cov_mod,    QN_tol  =   parser.cov_mod, parser.QN_tol
+        cpt_max_adj         =   parser.cpt_max_adj
         
         self.beta_prior = np.asarray([parser.beta_prior for i in range(parser.N_discr-2)]) 
         
@@ -114,6 +118,7 @@ class Temperature() :
             self.prior_sigma["T_inf_%d" %(t)] = prior_sigma_lst[i]
         
         self.line_z  = np.linspace(z_init, z_final, N_discr)[1:N_discr-1]
+        self.cpt_max_adj = cpt_max_adj
         self.num_real = num_real
         self.eps_0 = 5.*10**(-4)
         self.cov_mod = cov_mod
@@ -174,6 +179,15 @@ class Temperature() :
         """
         self.cov_mod = new_cov_mod
         print("cov_mod is now \n {}".format(self.cov_mod))
+##---------------------------------------------------        
+    def set_cpt_max_adj(self, new_compteur) :
+        """
+        Descr :
+        ----------
+        Method designed to change the adjoint maximal increment value without running back the whole program.
+        """
+        self.cpt_max_adj = new_compteur
+        print("cpt_max_adj is now \n {}".format(self.cpt_max_adj))
 ##---------------------------------------------------
     def pd_read_csv(self, filename) :
         if os.path.splitext(filename)[-1] is not ".csv" :
@@ -670,7 +684,7 @@ class Temperature() :
             g_nPrev = np.zeros((self.N_discr-2, 1))
             tol = 1e-8 if self.cov_mod == "full" else 1e-5
             
-            cpt,    err,    cptMax =   0,  1., 7
+            cpt,    err,    cptMax =   0,  1., self.cpt_max_adj
             print("beta_nPrev: \n {}".format(beta_n))
             
             plt.figure()
@@ -843,7 +857,7 @@ def subplot(T, method='adjoint') :
 
         mins    =   T.mins_lst
         maxs    =   T.maxs_lst
-        titles = ["Beta comparaison (bp = {},  cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
+        titles = ["Opti: Beta comparaison (bp = {},  cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
 
     if method in {"",  "adjoint" }:
         dico_beta_map   =   T.adj_bmap
@@ -938,28 +952,28 @@ def subplot(T, method='adjoint') :
         ax.fill_between(T.line_z, T.adj_mins, T.adj_maxs, facecolor= "1", alpha=0.4, interpolate=True, hatch='\\', color="cyan", label="Adjoint uncertainty")
         ax.fill_between(T.line_z,  T.mins_lst, T.maxs_lst, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label="Optimization uncertainty")
         
-        import matplotlib as mpl
-        x0, x1 = 0.3, 0.7
-        dz = 1./(T.N_discr-1)
-        ind0, ind1 = int(x0/dz), int(x1/dz)
-        ## Les deux lignes pointillees
-        ax.axvline(x0, ymin = 1, ymax=1.6, color="black", linestyle=":")  
-        ax.axvline(x1, ymin = 1, ymax=1.6, color="black", linestyle=":")
+#        import matplotlib as mpl
+#        x0, x1 = 0.3, 0.7
+#        dz = 1./(T.N_discr-1)
+#        ind0, ind1 = int(x0/dz), int(x1/dz)
+#        ## Les deux lignes pointillees
+#        ax.axvline(x0, ymin = 1, ymax=1.6, color="black", linestyle=":")  
+#        ax.axvline(x1, ymin = 1, ymax=1.6, color="black", linestyle=":")
 
-        #Ajout de la figure
-        ax1 = fig.add_axes([0.05, 0.05, 0.4, 0.32], axisbg='#f8f8f8') 
-        ax1.set_ylim(1.2,1.6)
-        #[beg_horz, beg_vertical, end_horiz, end_vertical]
-        ##
-        x = np.linspace(x0, x1, len(T.line_z[ind0:ind1]))
-        ax1.plot(x, T.betamap[sT_inf][ind0:ind1], linestyle='none', marker='o', color='magenta')
-        ax1.plot(x, T.adj_bmap[sT_inf][ind0:ind1], linestyle='none', marker='+', color='yellow')
-        ax1.plot(x, T.true_beta(curr_d, T_inf)[ind0:ind1], color='orange')
-        
-#        ax1.fill_between(x, T.QN_BFGS_mins_lst[ind0:ind1], T.QN_BFGS_maxs_lst[ind0:ind1], facecolor= "1", alpha=0.2, interpolate=True, hatch='\\', color="cyan")
-        ax1.fill_between(x,  T.mins_lst[ind0:ind1], T.maxs_lst[ind0:ind1], facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black")
-        
-        ax.set_title("Beta comparison between Optimisation and QN_BFGS (hybrid) method")
+#        #Ajout de la figure
+#        ax1 = fig.add_axes([0.05, 0.05, 0.4, 0.32], axisbg='#f8f8f8') 
+#        ax1.set_ylim(1.2,1.6)
+#        #[beg_horz, beg_vertical, end_horiz, end_vertical]
+#        ##
+#        x = np.linspace(x0, x1, len(T.line_z[ind0:ind1]))
+#        ax1.plot(x, T.betamap[sT_inf][ind0:ind1], linestyle='none', marker='o', color='magenta')
+#        ax1.plot(x, T.adj_bmap[sT_inf][ind0:ind1], linestyle='none', marker='+', color='yellow')
+#        ax1.plot(x, T.true_beta(curr_d, T_inf)[ind0:ind1], color='orange')
+#        
+##        ax1.fill_between(x, T.QN_BFGS_mins_lst[ind0:ind1], T.QN_BFGS_maxs_lst[ind0:ind1], facecolor= "1", alpha=0.2, interpolate=True, hatch='\\', color="cyan")
+#        ax1.fill_between(x,  T.mins_lst[ind0:ind1], T.maxs_lst[ind0:ind1], facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black")
+#        
+        ax.set_title("Beta comparison between Optimisation and Adjoint")
         ax.set_xlabel("z")
         ax.set_ylabel("beta\'s")
         ax.legend(loc="best", fontsize = 13, ncol=2)
