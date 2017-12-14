@@ -1,0 +1,203 @@
+\documentclass[a4paper,12pt]{article} 
+\usepackage[utf8x]{inputenc}
+\usepackage[french]{babel}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}		 			% Inclusion des figures 
+\usepackage{textcomp}
+\usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
+\usepackage{multicol}					% Pour utiliser \hfill
+\usepackage{ifthen}
+\usepackage{tabularx}	 				% Gestion avancée des tableaux
+%\usepackage{cleveref}
+
+\usepackage{enumitem}
+\usepackage{wrapfig}
+%\usepackage[squaren]{SIunits}
+%\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
+\usepackage[linkcolor=DarkRed,colorlinks=true, citecolor= DarkGreen, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage{listings}					% Pour citer du code
+\usepackage[justification=centering]{caption}
+\usepackage{sistyle} 
+\usepackage{numprint}
+\usepackage{wrapfig}
+\usepackage{cite}	
+\usepackage{url} 					% Pour citer les sites internet dans la
+%\usepackage{cleveref}
+\usepackage{setspace}
+
+\usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
+
+\newcommand{\bepar}[1]{
+	\left( #1 \right)  
+}
+
+\newcommand{\becro}[1]{
+	\left[ #1 \right]  
+}
+
+\newcommand{\rbk}[1]{\color{red}\textit{#1} \color{black}  
+}
+
+\usepackage{listings}					% Pour citer du code
+%%%%%%%%%%%%%%%%%%%
+%%% Élément pour citer des codes %%%
+\lstset{
+language=Python,
+basicstyle=\ttfamily\bfseries\small, %
+identifierstyle=\bfseries\color{black}, %
+keywordstyle=\color{blue}, %
+stringstyle=\color{black!90}, %
+commentstyle=\it\color{black!70}, %
+columns=flexible, %
+tabsize=4, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, % %
+numberstyle=\small, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b,
+otherkeywords={cross_val_score},
+keywords=[0]{cv},
+keywordstyle=[0]{\color{red}},
+}
+%%%%%%%%%%%%%%%%%%%%%
+\title{\color{red}Notes Machine Learning \color{black}}%%%%%%%%%%%%%%%%%%%%
+\date{}
+\usepackage{multicol}
+\usepackage{etoolbox}
+\patchcmd{\thebibliography}{\section*{\refname}}
+    {\begin{multicols}{2}[\section*{\refname}]}{}{}
+\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
+
+
+\usepackage{geometry}
+\geometry{hmargin=2cm, vmargin=2cm}
+
+%%%%%%%%%%%%%%%%%%%%
+%%% Couleurs %%%
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{midblue}{named}{MidnightBlue}
+\xdefinecolor{dsb}{named}{DarkSlateGray}
+\xdefinecolor{dgreen}{named}{DarkGreen}
+
+%%% 	Raccourcis 	%%%
+\newcommand{\keps}{$k-\varepsilon$}
+\newcommand\bk{\color{black}}
+\newcommand\brick{\color{brick}}
+\newcommand\navy{\color{navy}}
+\newcommand\midblue{\color{midblue}}
+\newcommand\dsb{\color{dsb}}
+\newcommand{\dgreen}{\color{dgreen}}
+
+%%%%%%%% Cigles
+\newcommand{\rap}{par rapport }
+\newcommand{\cad}{c'est-à-dire}
+
+%%%%%%%% Autres
+
+%%%%%%%%%%%%%%%%%%%
+% Syntax: \colorboxed[<color model>]{<color specification>}{<math formula>}
+\newcommand*{\colorboxed}{}
+\def\colorboxed#1#{%
+  \colorboxedAux{#1}%
+}
+\newcommand*{\colorboxedAux}[3]{%
+  % #1: optional argument for color model
+  % #2: color specification
+  % #3: formula
+  \begingroup
+    \colorlet{cb@saved}{.}%
+    \color#1{#2}%
+    \boxed{%
+      \color{cb@saved}%
+      #3%
+    }%
+  \endgroup
+}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\textbf{Nathaniel} \brick \textbf{\textsc{Saura}}}
+\rhead{\markright}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\numberwithin{equation}{section} %%%% To count the equation like Section.Number
+\begin{document}
+\maketitle
+\subsection*{Classification}
+\subsubsection*{	1 -- Binaires}
+\navy \paragraph*{LogisticRegression} :\bk \\
+\indent Mesure la similitude entre une donnée et les classes avec une norme euclidienne.\\
+Utilise la fonction logistique $f$ qui associe à toute entrée, valeur comprise entre 0 et 1.\\
+Lors du training, sont déterminées les valeurs de $a$ et $b$ qui apparaissent dans le calcul de la «probabilité d'appartenance» d'une donnée à une des deux classes : $P = f\bepar{a+bx}$\\
+
+\noindent Lors du training, on peut pénaliser \cad $ $ décomplexifier le training set pour améliorer les prédictions. Cette amélioration est due au fait qu'en pénalisant, on empêche le modèle de prendre en compte le bruit dans les données, les exceptions ou les particularités.
+
+\subsection*{Évaluer son modèle : Cross Validation (CV)}
+\subsubsection*{1 -- CV et Stratification (SCV)}
+\textit{k-fold cross-validation} : k nombre de partitions voulues. Ces partitions ont approximativement la même taille et sont appelées \textit{folds}. À chque «tour», on reserve $1$ partition pour le test et on consacre les $k-1$ partitions restantes pour le training.
+À chacun de ces cas, on calcule le score sur le test set. Pour avoir une meilleure idée de la capacité de production du modèle qu'avec model.score ou model.predict\_proba, on pourra prendre la moyenne des scores des différents \textit{folds}.
+\begin{lstlisting}
+	scores = cross_val_score(logreg, iris.data, iris.target, cv=5)	
+	Cross validation scores : [ 1., 0.96666667, 0.93333333, 0.9, 1. ]	
+	Average cross-validation score : 0.96
+\end{lstlisting}
+
+\noindent Cette méthode permet d'avoir une meilleure vue d'ensemble de la base de données puisque l'on a accès aux différents scores des \textit{folds}.
+Cela nous renseigne aussi sur la sensitivité du modèle (overfitting) et sur les meilleurs ou pires scénarii possibles.\\
+On optimise l'utilisation des données puisqu'on n'est plus limité au 80-20 du train\_test\_split.\\
+Évidemment, le coût de calcul est aussi plus élevé. \\
+Pour les classifier, il est recommandé d'utiliser la stratification puisqu'elle préserve les proportions des différentes classes pour la découpe de \textit{folds} et donc augmente la capacité de généralisation du modèle. Pour les problèmes de regression, cela n'a pas de sens.\\
+
+\subsubsection*{2 -- KFold CV}
+On peut ensuite construire une cross validation pour mieux contrôler ce qu'il se passe pendant la séparation.
+On utilise le \textit{splitter} Kfold. Ces trois arguments sont \color{red}\textit{n\_splits} \bk qui correspond au nombre de \textit{folds} voulu, \color{red} \textit{shuffle} \bk qui est un booléen et \color{red}\textit{random\_state} \bk qu'on fixera à zéro pour avoir des résultats reproductibles. On initialsera \color{red} cv \bk à kfold :
+\begin{lstlisting}
+from sklearn.model_selection import KFold
+kfold = KFold(n_splits=3, shuffle=True, random_state=0)
+scores = cross_val_score(logreg, iris.data, iris.target, cv=kfold)
+Cross validation - KFold embedded scores : [ 0.9   0.96  0.96]
+\end{lstlisting}
+
+\subsubsection*{3 -- Suffle Split CV (SSCV)}
+On définit \rbk{train\_size} et \rbk{test\_size} respectivement la taille des éléments du training et de celle de ceux du test. On splitera en \rbk{n\_splits} la base de données et on sélectionnera aléatoirement \rbk{train\_size} élements du split comme étant la training  et les \rbk{test\_size} comme étant réservé pour le test.\\
+On pourra éventuellement réitérer cette procédure. On pourra également ne considérer qu'une partie de la base de données.
+\begin{lstlisting}
+from sklearn.model_selection import ShuffleSplit
+SSCV	=   ShuffleSplit(test_size = 0.5, train_size = 0.5, n_splits = 10)
+SSCV scores : 
+[ 0.96        0.90666667  0.96        0.94666667  0.77333333  0.98666667
+  0.89333333  0.96        0.93333333  0.96      ]
+
+\end{lstlisting}
+
+\subsubsection*{4 -- Groupe - CV (GCV)}
+Méthode utilisée lorsqu'un groupe de données est fortement corrélé par exemple reconnaissance des sentiments à partir de visages identiques représentant différentes émotions ou bien dans le \textit{speech recognition}, plusieurs messages mais parfois voix identique.\\
+Dans ce genre cas, utiliser la SCV peut s'avérer être une mauvaise idée. Le modèle pourrait chercher à comparer les \textit{visages} et non les sentiments.\\
+Pour capter les sentiments, il faut s'assurer que dans le training set se trouvent les visages \textit{différents} exprimant la \textit{même} émotion.\\
+
+\noindent Le \textsc{gcv} s'utilise grâce à un tableau indiquant la classe à laquelle les éléments appartiennent. De cette façon, nous sommes sûrs d'apprendre la bonne information.
+\begin{lstlisting}
+	from sklearn.model_selection import GroupKFold	
+	#Assume the first three, second four etc belong to the same group :
+	groups = [0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 3]
+	scores = cross_val_score(logreg, X, y, groups, cv=GroupKFold(n_splits=3))
+			[ 0.75        0.8         0.66666667]\end{lstlisting}
+
+\subsection*{Optimiser son modèle : Grid Search (GS)}
+Pour améliorer la capacité de généralisation d'un modèle, il faut ajuster ses paramètres. Selon la dataset et selon le modèle, ajustement différent.\\
+Le \textit{grid search} consiste à parcourir les paramètres du modèle afin de trouver la meilleur combinaison de paramètres possible. \\
+On peut alors procéder de deux façons : «à la main» ou utilisant méthode sklearn.
+\subsubsection*{1 -- Simple Grid Search}
+\noindent \color{green!40!black!70} \textbf{\textit{Exemple :}} \bk \\
+SVM : Séparation à vaste marge contient un argument $\gamma$ qui établit la marge maximale et $C$ qui va caractériser la pénalisation.\\
+On peut alors boucler sur des valeurs de $\gamma$ et sur $C$, calculer le score du modèle et retenir le meilleur score avec les meilleurs paramètres. On peut rapidement se retrouver à faire un overfitting.\\
+Une façon d'éviter ce problème est de \textit{re-splitter} les données. \\
+C'est important de garder un validation test en plus d'un test set.
+\end{document}
