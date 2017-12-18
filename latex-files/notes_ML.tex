@@ -93,6 +93,7 @@ keywordstyle=[0]{\color{red}},
 \newcommand\midblue{\color{midblue}}
 \newcommand\dsb{\color{dsb}}
 \newcommand{\dgreen}{\color{dgreen}}
+\newcommand\red{\color{red}}
 
 %%%%%%%% Cigles
 \newcommand{\rap}{par rapport }
@@ -130,17 +131,18 @@ keywordstyle=[0]{\color{red}},
 \numberwithin{equation}{section} %%%% To count the equation like Section.Number
 \begin{document}
 \maketitle
-\subsection*{Classification}
-\subsubsection*{	1 -- Binaires}
+\section{Notes}
+\brick \subsection{Classification}\bk
+\subsubsection{Binaires}
 \navy \paragraph*{LogisticRegression} :\bk \\
 \indent Mesure la similitude entre une donnée et les classes avec une norme euclidienne.\\
 Utilise la fonction logistique $f$ qui associe à toute entrée, valeur comprise entre 0 et 1.\\
 Lors du training, sont déterminées les valeurs de $a$ et $b$ qui apparaissent dans le calcul de la «probabilité d'appartenance» d'une donnée à une des deux classes : $P = f\bepar{a+bx}$\\
 
 \noindent Lors du training, on peut pénaliser \cad $ $ décomplexifier le training set pour améliorer les prédictions. Cette amélioration est due au fait qu'en pénalisant, on empêche le modèle de prendre en compte le bruit dans les données, les exceptions ou les particularités.
-
-\subsection*{Évaluer son modèle : Cross Validation (CV)}
-\subsubsection*{1 -- CV et Stratification (SCV)}
+\subsubsection{Regression}
+\brick \subsection{Évaluer son modèle : Cross Validation (CV)} \bk
+\subsubsection{CV et Stratification (SCV)}
 \textit{k-fold cross-validation} : k nombre de partitions voulues. Ces partitions ont approximativement la même taille et sont appelées \textit{folds}. À chque «tour», on reserve $1$ partition pour le test et on consacre les $k-1$ partitions restantes pour le training.
 À chacun de ces cas, on calcule le score sur le test set. Pour avoir une meilleure idée de la capacité de production du modèle qu'avec model.score ou model.predict\_proba, on pourra prendre la moyenne des scores des différents \textit{folds}.
 \begin{lstlisting}
@@ -155,7 +157,7 @@ On optimise l'utilisation des données puisqu'on n'est plus limité au 80-20 du 
 Évidemment, le coût de calcul est aussi plus élevé. \\
 Pour les classifier, il est recommandé d'utiliser la stratification puisqu'elle préserve les proportions des différentes classes pour la découpe de \textit{folds} et donc augmente la capacité de généralisation du modèle. Pour les problèmes de regression, cela n'a pas de sens.\\
 
-\subsubsection*{2 -- KFold CV}
+\subsubsection{KFold CV}
 On peut ensuite construire une cross validation pour mieux contrôler ce qu'il se passe pendant la séparation.
 On utilise le \textit{splitter} Kfold. Ces trois arguments sont \color{red}\textit{n\_splits} \bk qui correspond au nombre de \textit{folds} voulu, \color{red} \textit{shuffle} \bk qui est un booléen et \color{red}\textit{random\_state} \bk qu'on fixera à zéro pour avoir des résultats reproductibles. On initialsera \color{red} cv \bk à kfold :
 \begin{lstlisting}
@@ -165,7 +167,7 @@ scores = cross_val_score(logreg, iris.data, iris.target, cv=kfold)
 Cross validation - KFold embedded scores : [ 0.9   0.96  0.96]
 \end{lstlisting}
 
-\subsubsection*{3 -- Suffle Split CV (SSCV)}
+\subsubsection{Suffle Split CV (SSCV)}
 On définit \rbk{train\_size} et \rbk{test\_size} respectivement la taille des éléments du training et de celle de ceux du test. On splitera en \rbk{n\_splits} la base de données et on sélectionnera aléatoirement \rbk{train\_size} élements du split comme étant la training  et les \rbk{test\_size} comme étant réservé pour le test.\\
 On pourra éventuellement réitérer cette procédure. On pourra également ne considérer qu'une partie de la base de données.
 \begin{lstlisting}
@@ -177,7 +179,7 @@ SSCV scores :
 
 \end{lstlisting}
 
-\subsubsection*{4 -- Groupe - CV (GCV)}
+\subsubsection{Groupe - CV (GCV)}
 Méthode utilisée lorsqu'un groupe de données est fortement corrélé par exemple reconnaissance des sentiments à partir de visages identiques représentant différentes émotions ou bien dans le \textit{speech recognition}, plusieurs messages mais parfois voix identique.\\
 Dans ce genre cas, utiliser la SCV peut s'avérer être une mauvaise idée. Le modèle pourrait chercher à comparer les \textit{visages} et non les sentiments.\\
 Pour capter les sentiments, il faut s'assurer que dans le training set se trouvent les visages \textit{différents} exprimant la \textit{même} émotion.\\
@@ -190,14 +192,66 @@ Pour capter les sentiments, il faut s'assurer que dans le training set se trouve
 	scores = cross_val_score(logreg, X, y, groups, cv=GroupKFold(n_splits=3))
 			[ 0.75        0.8         0.66666667]\end{lstlisting}
 
-\subsection*{Optimiser son modèle : Grid Search (GS)}
+\brick \subsection{Optimiser son modèle : Grid Search (GS) et NestedCV} \bk
 Pour améliorer la capacité de généralisation d'un modèle, il faut ajuster ses paramètres. Selon la dataset et selon le modèle, ajustement différent.\\
 Le \textit{grid search} consiste à parcourir les paramètres du modèle afin de trouver la meilleur combinaison de paramètres possible. \\
 On peut alors procéder de deux façons : «à la main» ou utilisant méthode sklearn.
-\subsubsection*{1 -- Simple Grid Search}
+\subsubsection{Simple Grid Search}
 \noindent \color{green!40!black!70} \textbf{\textit{Exemple :}} \bk \\
 SVM : Séparation à vaste marge contient un argument $\gamma$ qui établit la marge maximale et $C$ qui va caractériser la pénalisation.\\
 On peut alors boucler sur des valeurs de $\gamma$ et sur $C$, calculer le score du modèle et retenir le meilleur score avec les meilleurs paramètres. On peut rapidement se retrouver à faire un overfitting.\\
 Une façon d'éviter ce problème est de \textit{re-splitter} les données. \\
-C'est important de garder un validation test en plus d'un test set.
+C'est important de garder un validation test en plus d'un test set.\\
+
+\subsubsection{GridSearchCV}
+On peut définir les paramètres que l'on veut tester dans un dictionnaire dont les clés sont les paramètres du modèles que l'on optimiser, les valeurs sont les valeurs de ces derniers que l'on veut considérer.
+\begin{lstlisting}
+param_grid = {'C': C_list,
+               'gamma': gamma_list }
+\end{lstlisting}
+Lors de l'appelle du module \textit{GridSearchCV}, on rajoutera alors  param\_grid dans les arguments. C'est la seule fois que l'on appelle ce dictionnaire.
+\begin{lstlisting}
+from sklearn.model_selection import GridSearchCV
+grid_search =   GridSearchCV(SVC(), param_grid, cv=5) # Objet a entrainer et evaluer
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+grid_search.fit(X_train, y_train)
+grid_search.score(X_test, y_test)
+	score: 0.973684210526 
+\end{lstlisting}
+Cette méthode se créera également un ensemble de validation comme discuté.\\
+On peut également accéder aux paramètres ayant menant aux meilleurs résultats mais également l'estimateur lui même avec respectivement \red \textit{grid\_search.best\_params\_}  \bk et \red \textit{grid\_search.best\_estimator\_}\bk: 
+\begin{lstlisting}
+#Best params
+{'C': 100, 'gamma': 0.01}
+
+#Best estimator :
+SVC(C=100, cache_size=200, class_weight=None, coef0=0.0,
+  decision_function_shape='ovr', degree=3, gamma=0.01, kernel='rbf',
+  max_iter=-1, probability=False, random_state=None, shrinking=True,
+  tol=0.001, verbose=False)
+
+\end{lstlisting}
+
+\noindent Ces opérations peuvent rapidement devenir coûteuse. Il faut donc bien choisir quelles gammes explorer.\\
+Dans certains des cas, il est possible que certains modèles ou plutôt certains noyaux de certains modèles nécessitent plus d'arguments que d'autres.\\
+Le \textit{search\_grid} peut alors défini comme une liste de dictionnaires, et on spécifiera à la main les arguments et leurs valeurs selon les noyaux.\\
+Enfin, on pourra spécifier une autre CV dans l'arguments \rbk{cv}. Par défault, GridSearchCV prend du KFoldCV stratifié en classification et du KFoldCV en régression. On pourra cependant lui spécifier un Shuffe Spit ou autre.\\
+Enfin, on pourra paralléliser cette recherche en modifiant la valeur de l'argument \rbk{n\_job}; l'initialiser à -1 mobilisera tous les processeurs disponibles.
+
+\subsubsection{NestedCV}
+La \rbk {Nested} CV permet de réduire la dépendance entre split et résultats, en réitérant un certain nombre de fois, et de manière différente, le splitting des données.\\
+Sur chacun de ces split, on lance un \rbk{grid sreach} afin de catcher les meilleurs paramètres.\\
+En fin de programme, on calcule la moyenne des scores optimaux pour les CV successives.
+On pourra s'inspirer de la fonction \rbk{nested\_cv} and dataasets\_mglearn provenant de \textit{Introduction to Machine Learning with Python}.
+
+\pagebreak 
+
+\section{Vocabulaires \& Notions}
+\begin{itemize}
+\item[--] \textbf{Homoscédasticité} : Une des hypothèses fondamentales de la régression linéaire. \\
+Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
+\item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \ne j$.
+\end{itemize}
+
 \end{document}

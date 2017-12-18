@@ -482,4 +482,55 @@ def plot_feature_importances(model, dataset) :
     plt.xlabel("Feature importances")
     plt.ylabel("Feature")
 ##---###    
+def heatmap(values, xlabel, ylabel, xticklabels, yticklabels, cmap=None,
+            vmin=None, vmax=None, ax=None, fmt="%0.2f"):
+    """ Function which displays the score linked to 2 list of parameters. The color scale goes from black to yellow as the score linked to those two parameters is great. 
+    Te latter score is printed in the middle of each box in order to grasp immediately the meaning of the data.  
+    """
+    if ax is None:
+        ax = plt.gca()
+    # plot the mean cross-validation scores
+    img = ax.pcolor(values, cmap=cmap, vmin=vmin, vmax=vmax)
+    img.update_scalarmappable()
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_xticks(np.arange(len(xticklabels)) + .5)
+    ax.set_yticks(np.arange(len(yticklabels)) + .5)
+    ax.set_xticklabels(xticklabels)
+    ax.set_yticklabels(yticklabels)
+    ax.set_aspect(1)
 
+    for p, color, value in zip(img.get_paths(), img.get_facecolors(),
+                               img.get_array()):
+        x, y = p.vertices[:-2, :].mean(0)
+        if np.mean(color[:3]) > 0.5:
+            c = 'k'
+        else:
+            c = 'w'
+        ax.text(x, y, fmt % value, color=c, ha="center", va="center")
+    return img
+###---###  
+def nested_cv(X, y, inner_cv, outer_cv, Classifier, parameter_grid):
+    outer_scores = []
+    for training_samples, test_samples in outer_cv.split(X,y): #Première  série de split
+        best_parms = {}
+        best_score = -np.inf
+        for parameters in parameter_grid : # Prend un ensemble de paramètres
+            cv_scores = []
+            for inner_train, inner_test in inner_cv.split(
+                                            X[training_samples], y[training_samples]) :
+                # On découpe le training sample extérieur
+                clf = Classifier(**parameters)
+                clf.fit(X[inner_train], y[inner_train])
+                score = clf.score(X[inner_test], y[inner_test])
+                cv_scores.append(score)
+            mean_score = np.mean(cv_scores) # On prend la moyenne des scores du inner_cv split
+            if mean_score > best_score :
+                best_score = mean_score
+                best_parms = parameters
+    
+        clf = Classifier(**best_parms).fit(X[training_samples], y[training_samples])
+        outer_scores.append(clf.score(X[test_samples], y[test_samples]))
+        # On évalue, le classifier sur le test set, avec les meilleurs paramètres issus de 
+        # l'inner split 
+    return np.array(outer_scores)
