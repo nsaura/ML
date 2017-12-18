@@ -1,0 +1,251 @@
+\documentclass[a4paper,12pt]{article} 
+\usepackage[utf8x]{inputenc}
+\usepackage[french]{babel}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}		 			% Inclusion des figures 
+\usepackage{textcomp}
+\usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
+\usepackage{multicol}					% Pour utiliser \hfill
+\usepackage{ifthen}
+\usepackage{tabularx}	 				% Gestion avancée des tableaux
+%\usepackage{cleveref}
+
+\usepackage{enumitem}
+\usepackage{wrapfig}
+%\usepackage[squaren]{SIunits}
+%\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
+\usepackage[linkcolor=DarkRed,colorlinks=true, citecolor= DarkGreen, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage{listings}					% Pour citer du code
+\usepackage[justification=centering]{caption}
+\usepackage{sistyle} 
+\usepackage{numprint}
+\usepackage{wrapfig}
+\usepackage{cite}	
+\usepackage{url} 					% Pour citer les sites internet dans la
+%\usepackage{cleveref}
+\usepackage{setspace}
+
+\usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
+
+\newcommand{\bepar}[1]{
+	\left( #1 \right)  
+}
+
+\newcommand{\becro}[1]{
+	\left[ #1 \right]  
+}
+
+\newcommand{\rbk}[1]{\color{red}\textit{#1} \color{black}  
+}
+
+\newcommand{\parfracD}[3]{
+	\frac{\partial^2 #1}{\partial #2 \partial #3}
+}
+\newcommand{\parfrac}[2]{
+	\frac{\partial #1}{\partial #2}
+}
+\newcommand{\kro}[2]{
+\delta_{#1,#2}
+}
+\usepackage{listings}					% Pour citer du code
+%%%%%%%%%%%%%%%%%%%
+%%% Élément pour citer des codes %%%
+\lstset{
+language=Python,
+basicstyle=\ttfamily\bfseries\small, %
+identifierstyle=\bfseries\color{black}, %
+keywordstyle=\color{blue}, %
+stringstyle=\color{black!90}, %
+commentstyle=\it\color{black!70}, %
+columns=flexible, %
+tabsize=4, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, % %
+numberstyle=\small, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b,
+otherkeywords={cross_val_score},
+keywords=[0]{cv},
+keywordstyle=[0]{\color{red}},
+}
+%%%%%%%%%%%%%%%%%%%%%
+\title{\color{red}Notes sur calculs \color{black}}%%%%%%%%%%%%%%%%%%%%
+\date{}
+\usepackage{multicol}
+\usepackage{etoolbox}
+\patchcmd{\thebibliography}{\section*{\refname}}
+    {\begin{multicols}{2}[\section*{\refname}]}{}{}
+\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
+
+
+\usepackage{geometry}
+\geometry{hmargin=2cm, vmargin=2cm}
+
+%%%%%%%%%%%%%%%%%%%%
+%%% Couleurs %%%
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{midblue}{named}{MidnightBlue}
+\xdefinecolor{dsb}{named}{DarkSlateGray}
+\xdefinecolor{dgreen}{named}{DarkGreen}
+
+%%% 	Raccourcis 	%%%
+\newcommand{\keps}{$k-\varepsilon$}
+\newcommand\bk{\color{black}}
+\newcommand\brick{\color{brick}}
+\newcommand\navy{\color{navy}}
+\newcommand\midblue{\color{midblue}}
+\newcommand\dsb{\color{dsb}}
+\newcommand{\dgreen}{\color{dgreen}}
+\newcommand\red{\color{red}}
+
+%%%%%%%% Cigles
+\newcommand{\rap}{par rapport }
+\newcommand{\cad}{c'est-à-dire}
+\newcommand{\epsz}{\varepsilon_0}
+\newcommand{\tinf}{T^4_{\text{inf}}}
+\newcommand{\CP}[2]{C^{-1}_{\text{pri}_{\, \mathbf{#1, #2}}}}
+\newcommand{\CO}[2]{C^{-1}_{\text{obs}_{\, \mathbf{#1, #2}}}}
+\newcommand{\BP}[1]{\beta_{\text{P}_#1}}
+
+%%%%%%%% Autres
+
+%%%%%%%%%%%%%%%%%%%
+% Syntax: \colorboxed[<color model>]{<color specification>}{<math formula>}
+\newcommand*{\colorboxed}{}
+\def\colorboxed#1#{%
+  \colorboxedAux{#1}%
+}
+\newcommand*{\colorboxedAux}[3]{%
+  % #1: optional argument for color model
+  % #2: color specification
+  % #3: formula
+  \begingroup
+    \colorlet{cb@saved}{.}%
+    \color#1{#2}%
+    \boxed{%
+      \color{cb@saved}%
+      #3%
+    }%
+  \endgroup
+}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\textbf{Nathaniel} \brick \textbf{\textsc{Saura}}}
+\rhead{\markright}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\numberwithin{equation}{section} %%%% To count the equation like Section.Number
+
+\begin{document}
+\section{Hessienne} 
+\begin{equation}
+H_{i,j} = \parfracD{\mathcal{J}}{\beta_i}{\beta_j} + \navy \psi_m\parfracD{\mathcal{R}_m}{\beta_i }{\beta_j} \bk+ \mu_{i,m}\frac{\partial \mathcal{R}_m}{\partial \beta_j} + \navy \nu_{i,m}\parfracD{\mathcal{J}}{T_n}{\beta_j} \bk+ \nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{\beta_j} \label{hijf}
+\end{equation} 
+Avec :
+\begin{equation}
+\nu_{i,n}\frac{\partial \mathcal{R}_m}{\partial T_n} = - \frac{\partial \mathcal{R}_m}{\partial \beta_i} \label{nu}
+\end{equation}
+Et :
+\begin{equation}
+\mu_{i,m}\frac{\partial \mathcal{R}_m}{\partial T_k} = - \bepar{ \navy \parfracD{\mathcal{J}}{\beta_i}{T_k} + \bk \psi_m \parfracD{\mathcal{R}_m}{\beta_i}{T_k} + \nu_{i,n} \parfracD{\mathcal{J}}{T_n}{T_k} + \nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{T_k} } \label{muim}
+\end{equation}
+
+\begin{center} 
+- - - - -
+\end{center}
+
+\noindent On établit les identités suivantes pour $\mathcal{R}_m$:
+
+\begin{equation}
+\parfrac{\mathcal{R}_m}{\beta_i} = \kro{m}{j}\bepar{\tinf - T_m^4}\epsz \label{rm_b}
+\end{equation}
+Donc \navy
+\begin{equation}
+ \parfracD{\mathcal{R}_m}{\beta_i}{\beta_j} = 0 \label{rm_bb}
+\end{equation}\bk
+Et
+\begin{equation}
+\parfracD{\mathcal{R}_m}{\beta_i}{T_k} = -4\epsz T_m^3 \kro{m}{i}\, \kro{m}{k}
+\end{equation}
+
+\noindent Enfin :
+\begin{equation}
+\parfrac{\mathcal{R}_m}{T_k} = \bepar{\frac{\kro{m+1}{k} - 2\kro{m}{k} + \kro{m-1}{k}}{\Delta z^2}} -4 \beta_m(z)\epsz T_m^3 \, \kro{m}{k} \label{r_t}
+\end{equation}
+Donc : 
+\begin{equation}
+\parfracD{\mathcal{R}_m}{T_n}{T_k} = -12\, \epsz \beta_m(z) T_m^2 \kro{m}{n}\, \kro{m}{k} \label{r_tt}
+\end{equation}
+
+\begin{center} 
+- - - - -
+\end{center}
+
+\noindent On établit les identités suivantes pour $\mathcal{J}$:
+
+\begin{equation}
+\parfrac{\mathcal{J}}{\beta_j} = \CP{j}{k}\bepar{\beta_k - \BP{k}} \label{j_b}
+\end{equation}
+Donc
+\begin{equation}
+\parfracD{\mathcal{J}}{\beta_i}{\beta_j}  = \CP{j}{k} \kro{i}{k} \label{j_bb}
+\end{equation}
+Et : \navy
+\begin{equation}
+\parfracD{\mathcal{J}}{T_j}{\beta_n} = 0 \label{j_tb} 
+\end{equation}\bk
+
+\begin{equation}
+\parfrac{\mathcal{J}}{T_k} = \CO{k}{j}\bepar{T_j - d_j} \label{j_t}
+\end{equation}
+Donc
+\begin{equation}
+\parfracD{\mathcal{J}}{T_k}{T_n} = \CO{i}{k}\kro{n}{i} \label{j_tt}
+\end{equation}
+
+\pagebreak
+
+\noindent On utilise ces résultats pour exprimer chacun des termes des équations \eqref{hijf} , \eqref{nu} et  \eqref{muim}.\\
+On commence avec les termes de $\mu$. Le premier est nulle conformément à \eqref{j_tb}. Donc : \\
+\begin{equation}
+\psi_m \parfracD{\mathcal{R}_m}{\beta_i}{T_k} = -4\, \epsz \psi_m T_m^3 \kro{k}{m} \, \kro{n}{m}
+\end{equation}
+Puis 
+\begin{equation}
+\nu_{i,n} \parfracD{\mathcal{J}}{T_n}{T_k} = \nu_{i,n}\, \CO{i}{k}\kro{n}{i} = \nu_{i,i}\, \CO{i}{k}
+\end{equation}
+Et enfin
+\begin{align}
+\nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{T_k} &= \nu_{i,n} \psi_m \bepar{-12\, \epsz \beta_m T_m^2 \kro{m}{k}\, \kro{m}{n}} \\
+& = -12\, \epsz\, \nu_{i,m} \psi_m \beta_m T_m^2 \kro{m}{k}
+\end{align}
+
+\noindent On continue avec les termes de la Hessienne : le deuxième et le quatrième sont nuls conformément aux équations \eqref{rm_bb} et \eqref{j_tb}. On calcule :
+\begin{equation}
+\parfracD{\mathcal{J}}{\beta_i}{\beta_j} = \CP{j}{k} \kro{i}{k} = \CP{j}{i}
+\end{equation}
+Puis 
+\begin{align}
+\mu_{i,m}\frac{\partial \mathcal{R}_m}{\partial \beta_j} &= \mu_{i,m}\, \epsz\bepar{\tinf - T_m^4}\, \kro{j}{m} \\
+&= \mu_{i,j}\, \epsz\bepar{\tinf - T_j^4}
+\end{align}
+Et enfin,
+\begin{align}
+\nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{\beta_j} &= -4\, \epsz\, \nu_{i,n}\psi_m T_m^3\, \kro{m}{j} \,\kro{m}{n} \\
+&= -4\, \epsz\, \nu_{i,j}\psi_j T^3_j\, \kro{j}{j}
+\end{align}
+
+\noindent On finit avec le calcule du terme $\nu_{i,n}$ à partir de l'équation \eqref{nu}
+\begin{align}
+\nu_{i,n} \bepar{ \bepar{\frac{\kro{m+1}{n} - 2\, \kro{m}{n} + \kro{m-1}{n}}{\Delta z^2}} -4T_m^3\, \epsz\, \kro{m}{n}} = -\epsz\bepar{\tinf-T_m^4}\kro{i}{m}
+\end{align}
+D'un point de vue matricielle, le membre de gauche est une matrice tridiagonale, celle de droite est diagonale ayant pour diagonale le vecteur $\Theta = T_m^4  \,\, \forall m \in \left[1, N\_{\text{discr} -2} \right]$ shifté de $\tinf$ et modulé par $\epsz$.
+\end{document}
