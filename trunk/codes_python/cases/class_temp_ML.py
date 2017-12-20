@@ -448,7 +448,8 @@ class Temperature() :
 #            print "J =" , self.J_los[sT_inf](self.beta_prior)
             print ("J =" , J(self.beta_prior))
             opti_obj = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol, options={"disp" : True})
-
+            
+            print("grad_optimization:\n{}".format(opti_obj.jac))
             betamap[sT_inf] =   opti_obj.x
             hess[sT_inf]    =   opti_obj.hess_inv
             cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
@@ -658,7 +659,7 @@ class Temperature() :
             cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]
             cov_pri     =   self.cov_pri_dict[sT_inf]
             
-            sup_g_list  =   []
+            sup_g_lst  =   []
             
             J = lambda beta : 0.5*  ( 
                           np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
@@ -702,7 +703,7 @@ class Temperature() :
                 err         =   np.abs(J(beta_nNext) - J(beta_n))
                 sup_grad    =   np.linalg.norm(g_n, np.inf)
                 
-                sup_g_list.append(sup_grad)
+                sup_g_lst.append(sup_grad)
                 
                 g_nPrev     =   g_n         # n-1   --> n
                 beta_nPrev  =   beta_n      # n-1   --> n
@@ -724,7 +725,7 @@ class Temperature() :
             self.last_beta = beta_n
             
             plt.figure("evolution Sup g")
-            plt.plot(range(cpt), sup_g_list, marker='o', linestyle='none')
+            plt.plot(range(cpt), sup_g_lst, marker='o', linestyle='none')
             
             hbeta =  self.h_beta(beta_n, T_inf, verbose=False)
             
@@ -761,6 +762,13 @@ class Temperature() :
             H_INV   =   np.linalg.inv(np.dot(JAC_T, JAC_T.T))
             
             RR      =   np.linalg.cholesky(H_INV)
+            
+            HH = np.linalg.inv(self.H_formule(beta_n, cov_obs, cov_pri, 50))
+            print("HH eign: \n{}".format(np.linalg.eig(HH)[0]))
+            
+            print('det(HH) ={}'.format(np.linalg.det(HH)))
+            
+            RRR = np.linalg.cholesky(HH)
             
 #            dR_dT   =   self.DR_DT(beta_n, T_inf)
 #            dR_dBeta=   self.DR_DBETA(beta_n, T_inf)
@@ -800,11 +808,11 @@ class Temperature() :
 #            adj_hessinv[sT_inf] =   np.linalg.inv( np.dot( np.diag(g_n).T, np.diag(g_n) ) ) ## H-1 = (Jac.T * Jac) -1
             
             adj_bmap[sT_inf]    =   beta_n
-            adj_bf[sT_inf]      =   adj_bmap[sT_inf] + np.dot(RR, s)
+            adj_bf[sT_inf]      =   adj_bmap[sT_inf] + np.dot(RRR, s)
             
             for i in range(249):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-                beta_var.append( adj_bmap[sT_inf] + np.dot(RR, s) )
+                beta_var.append( adj_bmap[sT_inf] + np.dot(RRR, s) )
             
             beta_var.append(adj_bf[sT_inf]) # Pour faire 250
             
@@ -839,7 +847,7 @@ class Temperature() :
         self.adj_mins   =   mins_lst
         
         self.adj_sigma_post     =   adj_sigma_post
-        self.sup_g_list = sup_g_list
+        self.sup_g_lst = sup_g_lst
 ###---------------------------------------------------
     def H_formule(self, beta, cov_obs, cov_pri, T_inf):
             dR_dT   =   self.DR_DT(beta, T_inf)
@@ -874,10 +882,14 @@ class Temperature() :
         
         Id      =   np.eye(self.N_discr-2)
         
-        H_nN_inv    =   np.dot( np.dot(Id - np.dot( (rho_nN * y_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1, -1) ) ,prev_hess_inv ), Id - np.dot((rho_nN * s_nN).reshape(self.N_discr-2,-1), y_nN.reshape(1,-1)) ) + \
-                        np.dot((rho_nN * s_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1,-1))
-        print( "np.dot\n{}".format( np.dot( (rho_nN * y_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1,-1)) ) )
-        return H_nN_inv
+        A1 = Id - rho_nN * s_nN[:, np.newaxis] * y_nN[np.newaxis, :]
+        A2 = Id - rho_nN * y_nN[:, np.newaxis] * s_nN[np.newaxis, :]
+        
+        return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* s_nN[:, np.newaxis] * s_nN[np.newaxis, :])
+        
+#        H_nN_inv    =   np.dot( np.dot(Id - np.dot( (rho_nN * y_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1, -1) ) ,prev_hess_inv ), Id - np.dot((rho_nN * s_nN).reshape(self.N_discr-2,-1), y_nN.reshape(1,-1)) ) + np.dot((rho_nN * s_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1,-1))
+#        print( "np.dot\n{}".format( np.dot( (rho_nN * y_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1,-1)) ) )
+#        return H_nN_inv
 ##---------------------------------------------------
     def search_alpha(self, func, func_prime, curr_beta, alpha=1.) :
 #        https://projecteuclid.org/download/pdf_1/euclid.pjm/1102995080 Corollaire 2
@@ -953,12 +965,19 @@ class Temperature() :
 
             cpt, cptMax =0, self.cpt_max_adj
             
+            sup_g_lst = []
             
             # Initialisation
             beta_n  =   self.beta_prior
             beta_nPrev  =   np.zeros_like(self.beta_prior)
             g_nPrev =   np.zeros_like(self.beta_prior)
             g_n     =   np.dot(self.PSI(beta_n, T_inf), np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)  #dJ/dBeta
+            
+            g_sup = np.linalg.norm(g_n, np.inf)
+            sup_g_lst.append(np.linalg.norm(g_n, np.inf))
+            
+            print ("Sup grad : {}".format(np.linalg.norm(g_n, np.inf)))
+
             H_n_inv =   np.eye(self.N_discr-2)
                             
             fig, ax = plt.subplots(1,2,figsize=(13,7))
@@ -969,7 +988,8 @@ class Temperature() :
             dir_lst =   []
             
 #            while err_beta > tol and (cpt<cptMax) and err_hess>1e-5 : #and np.abs(err_j) > 1e-4 :
-            while (cpt<cptMax) and err_hess>1e-5 and np.abs(err_j)>1e-7 :
+#            while (cpt<cptMax) and err_hess>1e-5 and np.abs(err_j)>1e-7 and g_sup > 1e-7  :
+            while (cpt<cptMax) and g_sup > 1e-7  :
                 if cpt > 0 :
                     ## Incrementation   
                     beta_nPrev  =   beta_n             
@@ -979,6 +999,11 @@ class Temperature() :
                    
                     g_nPrev =   g_n
                     g_n     =   g_nNext
+                    g_sup   =   np.linalg.norm(g_n, np.inf)
+                    sup_g_lst.append(g_sup)
+                    
+                    print ("Sup grad : {}".format(g_sup))
+
                     ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
 
                     H_n_inv   =   H_nNext_inv
@@ -986,8 +1011,6 @@ class Temperature() :
                     print("grad n = {}".format(g_n))                            
                     print("beta_n = \n  {} ".format(beta_n))
                     print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, err_beta, err_hess))
-                
-                cpt +=  1
                 
                 ## Routine
                 d_n     =   np.dot(H_n_inv, g_n) 
@@ -997,7 +1020,7 @@ class Temperature() :
                 alpha = self.search_alpha(J, g_n, beta_n) #if cpt <10 else  0.01
                 print("alpha for cpt {}: {}".format(cpt, alpha))
                 
-                dbeta_n =  alpha*d_n               
+                dbeta_n =  alpha*d_n if cpt >0 else -1./2              
                 
                 N_n_nP  =   np.linalg.norm(g_n - g_nPrev, 2)
                 gamma_n =   np.dot( (beta_n-beta_nPrev).T ,(g_n - g_nPrev) ) / N_n_nP**2
@@ -1036,7 +1059,7 @@ class Temperature() :
 #                    
 #                beta_nNext = beta_n + dbeta
                 print("\n")
-
+                cpt +=  1    
                 # n --> n+1 si non convergence, sort de la boucle sinon 
             H_last  =   H_nNext_inv
             g_last  =   g_nNext
@@ -1071,6 +1094,9 @@ class Temperature() :
             bfgs_maxs_lst =  [bfgs_adj_maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
             
             plt.legend(loc="best")
+            
+            plt.figure("sup_g_lst vs iteration")
+            plt.plot(range(cpt), sup_g_lst)
             
             fiig, axxes = plt.subplots(2,2,figsize=(8,8))
             axxes[0][0].set_title("alpha vs iterations ")
