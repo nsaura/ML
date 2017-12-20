@@ -447,7 +447,10 @@ class Temperature() :
 
 #            print "J =" , self.J_los[sT_inf](self.beta_prior)
             print ("J =" , J(self.beta_prior))
-            opti_obj = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol, options={"disp" : True})
+#            np.dot(self.PSI(beta_n, T_inf), np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)
+            grad_J = lambda beta : np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            
+            opti_obj = op.minimize(J, self.beta_prior, jac=grad_J, method="BFGS", tol=self.tol, options={"disp" : True})
             
             print("grad_optimization:\n{}".format(opti_obj.jac))
             betamap[sT_inf] =   opti_obj.x
@@ -1287,16 +1290,16 @@ if __name__ == "__main__" :
     T = Temperature(parser)
     T.obs_pri_model()
     T.get_prior_statistics()
-#    T.optimization(verbose=True)
+    T.optimization()
 
 ## run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
 
-#plt.figure()
-#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
-#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
-#plt.semilogy(T.line_z, T.sigma_post_dict["T_inf_50"], label="Post")
-#plt.semilogy(T.line_z, [0.8 for i in range(T.N_discr-2)], label="base")
-#plt.legend()
+plt.figure()
+plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
+plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
+plt.semilogy(T.line_z, T.sigma_post_dict["T_inf_50"], label="Post")
+plt.semilogy(T.line_z, [0.8 for i in range(T.N_discr-2)], label="base")
+plt.legend()
 
 #run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.5 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
 #run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.3 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
