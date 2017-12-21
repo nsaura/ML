@@ -1039,7 +1039,7 @@ class Temperature() :
                 s_nNext =   (beta_nNext - beta_n)
                 y_nNext =   g_nNext - g_n
                 
-                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext) if cpt == 0 else self.Next_hess_further(H_n_inv, y_nNext, s_nNext)
+                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext) #if cpt == 0 else self.Next_hess_further(H_n_inv, y_nNext, s_nNext)
                 
                 print("Hess:\n{}".format(H_nNext_inv))
                 
@@ -1134,6 +1134,20 @@ class Temperature() :
         self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
 ###---------------------------------------------------
 ###---------------------------------------------------
+#def _approx_fprime_helper(xk, f, epsilon, args=(), f0=None):
+#    """
+#    See ``approx_fprime``.  An optional initial function value arg is added.
+#    """
+#    if f0 is None:
+#        f0 = f(*((xk,) + args))
+#    grad = numpy.zeros((len(xk),), float)
+#    ei = numpy.zeros((len(xk),), float)
+#    for k in range(len(xk)):
+#        ei[k] = 1.0
+#        d = epsilon * ei
+#        grad[k] = (f(*((xk + d,) + args)) - f0) / d[k]
+#        ei[k] = 0.0
+#    return grad
 def subplot(T, method='adj_bfgs') : 
     if method == "QN_BFGS"    :
         dico_beta_map   =   T.QN_BFGS_bmap
