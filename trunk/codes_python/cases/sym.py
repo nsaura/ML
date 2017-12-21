@@ -122,7 +122,7 @@ d   =   sy.Derivative(sy.exp(sy.cos(x)), x)
 ddd =   d.doit()
 
 ### Faire une figure avec un zoom
-figure = False
+figure = True
 if figure == True :
     import matplotlib as mpl
     import matplotlib.pyplot as plt
