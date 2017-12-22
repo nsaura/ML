@@ -53,7 +53,7 @@ g_J =   lambda x : 2*x + 4*(x+4)**3 + 2*(x**2*np.cos(x**2) - np.sin(x**2))/x**4
 #plt.plot(np.arange(-1,1,0.01), J(np.arange(-1,1,0.01)))
 
 x_init = np.asarray([4 for i in range(dim)])
-
+J_lst, alpha_lst = [], []
 H_n = np.eye(dim)
 sup_g, cpt, cptmax = np.linalg.norm(g_J(x_init), np.inf), 0, 200
 
@@ -62,7 +62,9 @@ g_n =   g_J(x_init)
 
 plt.figure("Erreur du gradient ")
 plt.scatter(cpt, sup_g)
-while cpt<cptmax and sup_g > 1e-8 :
+
+J_lst.append(J(x_n))
+while cpt<cptmax and sup_g > 1e-10 :
     if cpt > 0 :
         g_n =   g_nN
         x_n =   x_nN
@@ -70,7 +72,8 @@ while cpt<cptmax and sup_g > 1e-8 :
     
     d_n     =   np.dot(H_n, g_n)
     print "d_n = ", d_n
-    alpha   =   search_alpha(J, g_n, x_n)   
+    alpha   =   search_alpha(J, g_n, x_n) 
+    alpha_lst.append(alpha)  
     print "alpha = ", alpha
     x_nN    =   x_n - alpha*d_n
     print "x_nN = ", x_nN
@@ -79,12 +82,13 @@ while cpt<cptmax and sup_g > 1e-8 :
     s_nN    =   x_nN - x_n
     y_nN    =   g_nN  - g_n
     
-    if np.linalg.norm(s_nN) ==0 or np.linalg.norm(y_nN) == 0 : break
+    if np.linalg.norm(s_nN) ==0 or np.linalg.norm(y_nN) == 0 : print"out";  break
     
     H_nN    =   Next_hess(H_n, y_nN, s_nN, dim)
     
     sup_g   =   np.linalg.norm(g_J(x_n), np.inf)
     cpt    +=   1
+    J_lst.append(J(x_nN))
     plt.scatter(cpt, sup_g)
 
 print "Fin de la routine bfgs recode"
@@ -96,4 +100,10 @@ print("Fin de la routine python")
 plt.figure("Val abs des differences des deux methodes")
 plt.plot(range(dim), np.abs(x_nN - opti.x))
 plt.ylabel("np.abs(x_nN - python_opti.x)")
+
+plt.figure("trace de J(x_n)")
+plt.plot(range(cpt+1), J_lst)
+
+plt.figure("Evolution de alpha")
+plt.plot(range(cpt+1), alpha_lst)
 
