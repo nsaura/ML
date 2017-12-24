@@ -38,7 +38,7 @@ def search_alpha(func, func_prime, curr_beta, alpha=1.) :
         
     return alpha_m(mm)
 
-dim = 50
+dim = 8
 
 func = lambda x: (x)**2 + (x+4)**4 + np.sinc(x**2) +7
 
@@ -52,16 +52,25 @@ g_J =   lambda x : 2*x + 4*(x+4)**3 + 2*(x**2*np.cos(x**2) - np.sin(x**2))/x**4
 
 #plt.plot(np.arange(-1,1,0.01), J(np.arange(-1,1,0.01)))
 
-x_init = np.asarray([4 for i in range(dim)])
+x_init = np.asarray([4 for i in range(dim)], dtype=np.float)
+x_init[0], x_init[6] = 0.1, 1.7
 J_lst, alpha_lst = [], []
 H_n = np.eye(dim)
-sup_g, cpt, cptmax = np.linalg.norm(g_J(x_init), np.inf), 0, 200
+sup_g, cpt, cptmax = np.linalg.norm(g_J(x_init), np.inf), 0, 100
 
 x_n =   x_init
 g_n =   g_J(x_init)
 
+x_evol_compo = dict()
+if dim < 10 :
+    for i in range(dim) :
+        x_evol_compo["compo %d" %(i)] = []
+
 plt.figure("Erreur du gradient ")
 plt.scatter(cpt, sup_g)
+
+for j,k in enumerate(x_evol_compo.keys()) :
+    x_evol_compo[k].append(x_init[j])
 
 J_lst.append(J(x_n))
 while cpt<cptmax and sup_g > 1e-10 :
@@ -76,6 +85,11 @@ while cpt<cptmax and sup_g > 1e-10 :
     alpha_lst.append(alpha)  
     print "alpha = ", alpha
     x_nN    =   x_n - alpha*d_n
+    
+    if dim < 10 :
+        for j,k in enumerate(x_evol_compo.keys()) :
+            x_evol_compo[k].append(x_nN[j])
+    
     print "x_nN = ", x_nN
     g_nN    =   g_J(x_nN)
     print "g_nN = ", g_nN
@@ -105,5 +119,12 @@ plt.figure("trace de J(x_n)")
 plt.plot(range(cpt+1), J_lst)
 
 plt.figure("Evolution de alpha")
-plt.plot(range(cpt+1), alpha_lst)
+plt.plot(range(len(alpha_lst)), alpha_lst)
+
+if dim < 10 :
+    fig, axes = plt.subplots(2, dim/2, figsize = (15, 10))
+    for i, (ax, item) in enumerate(zip(axes.ravel(), x_evol_compo.iteritems())) :
+        ax.set_title("k = %s" %(item[0]))
+        ax.scatter(range(cpt+1), item[1])
+        
 
