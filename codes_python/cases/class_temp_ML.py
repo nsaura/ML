@@ -963,17 +963,17 @@ class Temperature() :
                             np.linalg.inv(cov_obs)) , (curr_d - self.h_beta(beta, T_inf) )  )  
                         + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
                             np.linalg.inv(cov_pri) ) , (beta - self.beta_prior) ) 
-                                    )
+                                    ) ## écriture validée
+                                    
             err_beta = err_hess = err_j = 1            
-
-            cpt, cptMax =0, self.cpt_max_adj
+            cpt, cptMax =   0, self.cpt_max_adj
             
             sup_g_lst = []
             
             # Initialisation
+#            beta_nPrev  =   np.zeros_like(self.beta_prior)
+#            g_nPrev =   np.zeros_like(self.beta_prior)
             beta_n  =   self.beta_prior
-            beta_nPrev  =   np.zeros_like(self.beta_prior)
-            g_nPrev =   np.zeros_like(self.beta_prior)
             g_n     =   np.dot(self.PSI(beta_n, T_inf), np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)  #dJ/dBeta
             
             g_sup = np.linalg.norm(g_n, np.inf)
@@ -1071,8 +1071,16 @@ class Temperature() :
             beta_last=  beta_nNext
             ax[0].plot(self.line_z, beta_last, label="beta_n last")
             
-            R   =   np.linalg.cholesky(H_last)
-            
+            try :
+                R   =   np.linalg.cholesky(H_last)
+            except numpy.linalg.linalg.LinAlgError :
+                print(" Erreur : Matrix not positive definite...\n det H_last = {}, \nVal propres = \n{}".format(np.linalg.det(H_last), np.linalg.eig(H_last)[0]))
+                H_last = 0.5*(H_last.T + H_last)
+                
+                try :
+                    R   =   np.linalg.cholesky(H_last)
+                except numpy.linalg.linalg.LinAlgError :
+                    os.exit("Toujours le meme probleme")
             bfgs_adj_bmap[sT_inf]   =   beta_last
             bfgs_adj_grad[sT_inf]   =   g_last
                         
@@ -1304,16 +1312,16 @@ if __name__ == "__main__" :
     T = Temperature(parser)
     T.obs_pri_model()
     T.get_prior_statistics()
-    T.optimization()
+#    T.optimization()
 
 ## run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
 
-plt.figure()
-plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
-plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
-plt.semilogy(T.line_z, T.sigma_post_dict["T_inf_50"], label="Post")
-plt.semilogy(T.line_z, [0.8 for i in range(T.N_discr-2)], label="base")
-plt.legend()
+#plt.figure()
+#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
+#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
+#plt.semilogy(T.line_z, T.sigma_post_dict["T_inf_50"], label="Post")
+#plt.semilogy(T.line_z, [0.8 for i in range(T.N_discr-2)], label="base")
+#plt.legend()
 
 #run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.5 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
 #run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.3 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
