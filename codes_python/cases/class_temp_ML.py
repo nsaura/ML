@@ -860,14 +860,17 @@ class Temperature() :
 #        print( "np.dot\n{}".format( np.dot( (rho_nN * y_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1,-1)) ) )
 #        return H_nN_inv
 ##---------------------------------------------------
-    def search_alpha(self, func, func_prime, curr_beta, alpha=1.) :
+    def search_alpha(self, func, func_prime, curr_beta, err_grad, alpha=1.) :
 #        https://projecteuclid.org/download/pdf_1/euclid.pjm/1102995080 Corollaire 2
 #        alpha_m = lambda m : float(alpha) / (2**(m-1))
 #       Deuxieme test avec https://en.wikipedia.org/wiki/Backtracking_line_search 
-        mm, cptmax = 1, 50
+        
+        cptmax = 18 if err_grad > 1e3 else 50
+        mm = 1
         while ((func(curr_beta - alpha*func_prime)) <= \
-                 func(curr_beta) -0.5*alpha * np.linalg.norm(func_prime)**2 ) == False and mm < cptmax:
+                 func(curr_beta) - 0.5*alpha * np.linalg.norm(func_prime)**2 ) == False and mm < cptmax:
             alpha *=0.25
+            mm += 1
 #            print mm
         
         return alpha
@@ -1028,7 +1031,7 @@ class Temperature() :
                 dir_lst.append(np.linalg.norm(d_n, 2))
                 print("d_n :\n {}".format(d_n))
                 
-                alpha = self.search_alpha(J, g_n, beta_n) #if cpt <10 else  0.01
+                alpha = self.search_alpha(J, g_n, beta_n, g_sup) #if cpt <10 else  0.01
 #                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, strong = True, verbose=False ,alpha=1.)
                 print("alpha for cpt {}: {}".format(cpt, alpha))
                 
