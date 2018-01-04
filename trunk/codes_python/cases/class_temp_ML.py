@@ -266,7 +266,6 @@ class Temperature() :
                           )
 ##---------------------------------------------------    
     def obs_pri_model(self) :
-        
         T_nNext_obs_lst, T_nNext_pri_lst, T_init = [], [], []
         
         for T_inf in self.T_inf_lst :
@@ -766,7 +765,7 @@ class Temperature() :
             
             RR      =   np.linalg.cholesky(H_INV)
             
-            HH = np.linalg.inv(self.H_formule(beta_n, cov_obs, cov_pri, 50))
+            HH = np.linalg.inv(self.H_formule(beta_n, cov_pri, 50))
             print("HH eign: \n{}".format(np.linalg.eig(HH)[0]))
             
             print('det(HH) ={}'.format(np.linalg.det(HH)))
@@ -821,7 +820,7 @@ class Temperature() :
         self.adj_sigma_post     =   adj_sigma_post
         self.sup_g_lst = sup_g_lst
 ###---------------------------------------------------
-    def H_formule(self, beta, cov_obs, cov_pri, T_inf):
+    def H_formule(self, beta, cov_pri, T_inf):
             dR_dT   =   self.DR_DT(beta, T_inf)
             dR_dBeta=   self.DR_DBETA(beta, T_inf)
             h_beta  =   self.h_beta(beta, T_inf)
@@ -844,21 +843,6 @@ class Temperature() :
             H   =   H_1 + H_2 + H_3 
             
             return H
-##--------------------------------------------------- 
-    def Next_hess(self, prev_hess_inv, y_nN, s_nN ) :
-        rho_nN  =   1./np.dot(y_nN.T, s_nN)
-        print rho_nN
-        
-        Id      =   np.eye(self.N_discr-2)
-        
-        A1 = Id - rho_nN * s_nN[:, np.newaxis] * y_nN[np.newaxis, :]
-        A2 = Id - rho_nN * y_nN[:, np.newaxis] * s_nN[np.newaxis, :]
-        
-        return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* s_nN[:, np.newaxis] * s_nN[np.newaxis, :])
-        
-#        H_nN_inv    =   np.dot( np.dot(Id - np.dot( (rho_nN * y_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1, -1) ) ,prev_hess_inv ), Id - np.dot((rho_nN * s_nN).reshape(self.N_discr-2,-1), y_nN.reshape(1,-1)) ) + np.dot((rho_nN * s_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1,-1))
-#        print( "np.dot\n{}".format( np.dot( (rho_nN * y_nN).reshape(self.N_discr-2,-1), s_nN.reshape(1,-1)) ) )
-#        return H_nN_inv
 ##---------------------------------------------------
     def search_alpha(self, func, func_prime, curr_beta, err_grad, alpha=1.) :
 #        https://projecteuclid.org/download/pdf_1/euclid.pjm/1102995080 Corollaire 2
@@ -875,8 +859,27 @@ class Temperature() :
         
         return alpha
 ##---------------------------------------------------
+    def Next_hess(self, prev_hess_inv, y_nN, s_nN) :
+        """
+        Procedure close to the scipy's one 
+        """
+        # Comme Scipy
+        rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) != 0 else 1./1e-5
+        print rho_nN
+        
+        Id      =   np.eye(self.N_discr-2)
+        
+        A1 = Id - rho_nN * s_nN[:, np.newaxis] * y_nN[np.newaxis, :]
+        A2 = Id - rho_nN * y_nN[:, np.newaxis] * s_nN[np.newaxis, :]
+        
+        return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* s_nN[:, np.newaxis] * s_nN[np.newaxis, :])
+##---------------------------------------------------        
     def Next_hess_further(self, prev_hess_inv, y_nN, s_nN):
-        #https://en.wikipedia.org/wiki/Broyden%E2%80%93Fletcher%E2%80%93Goldfarb%E2%80%93Shanno_algorithm
+        """
+        Formula from https://en.wikipedia.org/wiki/Broyden%E2%80%93Fletcher%E2%80%93Goldfarb%E2%80%93Shanno_algorithm
+        Didn't find it anywhere else. Must check it out
+        """
+        
         d = self.N_discr-2
         scal_1  =   np.dot(s_nN.T, y_nN)
         scal_2  =   np.dot(np.dot(y_nN.T, prev_hess_inv), y_nN)
@@ -892,42 +895,48 @@ class Temperature() :
         return T_1 + T_2 - T_3
 ##---------------------------------------------------            
     def Next_hess_further_scd(self, prev_hess_inv, y_nN, s_nN):
-        #https://arxiv.org/pdf/1704.00116.pdf
-        d = self.N_discr-2
-        fac_1   =   (np.dot(prev_hess_inv, s_nN)).reshape(d,1)  # vecteur colonne
-        fac_2   =   np.dot(s_nN.reshape(1,-1), prev_hess_inv)   # vecteur ligne
+        #https://arxiv.org/pdf/1704.00116.pdf 
+        # Nocedal_Wright_Numerical_optimization_v2
         
-        scal_1  =   np.dot(np.dot(s_nN, prev_hess_inv), s_nN)
-        scal_2  =   np.dot(s_nN, y_nN)
-
+        d = self.N_discr-2
+        fac_1   =   (np.dot(prev_hess_inv, s_nN))[:, np.newaxis]  # vecteur colonne
+        fac_2   =   np.dot(s_nN[np.newaxis, :], prev_hess_inv)    # vecteur ligne
+        
+#        print ("fac_1 =\n{} \nfac_2 =\n{}".format(fac_1, fac_2)) 
+        
+        scal_1  =   np.dot(np.dot(s_nN[np.newaxis, :], prev_hess_inv), s_nN[:, np.newaxis])
+        scal_2  =   np.dot(y_nN[np.newaxis, :], s_nN[:, np.newaxis])
+        
+        scal_1, scal_2  =   scal_1[0,0], scal_2[0,0]
+#        print ("scal_1 = {}\t scal_2 = {}".format(scal_1, scal_2))
+        
         T_1 =   prev_hess_inv
         T_2 =   np.dot(fac_1, fac_2) / scal_1
-        T_3 =   np.dot(y_nN.reshape(d,1), y_nN.reshape(1,-1)) / scal_2
-                
+        T_3 =   np.dot(y_nN[:, np.newaxis], y_nN[np.newaxis, :]) / scal_2
+#        print("Shapes :\n T_1 : {} \t T_2 : {} \t T_3 : {}".format(T_1.shape,\
+#                                                                   T_2.shape,\
+#                                                                   T_3.shape))
         return T_1 - T_2 + T_3
+##---------------------------------------------------   
+#    def goldstein(self, )
 ##---------------------------------------------------                
-    def wolf_conditions(self, f, df, xk, dk, strong=True, verbose=False, c1=1e-4, c2=0.1, alpha=0.1):
+    def wolf_conditions(self, f, df, xk, dk, strong=True, verbose=False, c1=1e-4, c2=0.9, alpha=0.1):
         fk  =   f(xk)
-        print ('f(xk) = {}'.format(f(xk)))
-        
+#        print ('f(xk) = {}'.format(f(xk)))
 
         if (- np.linalg.norm(dk, 2) < 0) == False :
             sys.exit("La direction doit etre negative \"Gradient descent\"")
-        
         dfk =   df(xk)
 #        dfk =   np.asarray(dfk).reshape(1,-1)
-        print ('dfkf(xk) = {}'.format(dfk))        
+#        print ('dfkf(xk) = {}'.format(dfk))        
         dfpk=   lambda a_n : df(xk + a_n*dk)
-        
-        
         t1  =   lambda a_n : (f(xk + a_n * dk)) <= (fk + c1 * a_n * np.dot(dfk, dk))    
 
         if strong == True :
             t2 = lambda a_n : (np.linalg.norm(np.dot(dfpk(a_n), dk))) <= \
-                                (c2 * np.linalg.norm(np.dot(dfk, dk)))  
+                              (c2*np.linalg.norm(np.dot(dfk, dk)))
         else :
             t2 = lambda a_n : (np.dot(dfpk(a_n), dk)) >= (c2 * np.dot(dfk, dk))
-        
         cpt = 0
         
 #        if strong== True :  
@@ -949,6 +958,7 @@ class Temperature() :
     def adjoint_bfgs(self, cpt_inter=5) : 
         if self.stat_done == False : self.get_prior_statistics() 
         
+        self.debug = dict()
         sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
         
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
@@ -974,7 +984,10 @@ class Temperature() :
                         + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
                             np.linalg.inv(cov_pri) ) , (beta - self.beta_prior) ) 
                                     ) ## écriture validée
-                                    
+#            Jiz = [J(self.beta_prior+i/10.) for i in np.arange(50)]
+#            plt.plot(1+np.arange(50)/10., Jiz)
+#            plt.show()
+#            
             err_beta = err_hess = err_j = 1            
             cpt, cptMax =   0, self.cpt_max_adj
             
@@ -990,15 +1003,16 @@ class Temperature() :
             g_sup = np.linalg.norm(g_n, np.inf)
             sup_g_lst.append(np.linalg.norm(g_n, np.inf))
             
-            print ("Sup grad : {}".format(np.linalg.norm(g_n, np.inf)))
+            print ("\x1b[1;37;44Sup grad : {}[0m".format(np.linalg.norm(g_n, np.inf)))
 
             H_n_inv =   np.eye(self.N_discr-2)
+            self.debug["first_hess"] = H_n_inv
                             
             fig, ax = plt.subplots(1,2,figsize=(13,7))
             ax[0].plot(self.line_z, beta_n, label="beta_prior")
             ax[1].plot(self.line_z, g_n, label="gradient prior")
             
-            alpha_lst, err_hess_lst, err_beta_lst = [], [], []
+            self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
             dir_lst =   []
             
 #            while err_beta > tol and (cpt<cptMax) and err_hess>1e-5 : #and np.abs(err_j) > 1e-4 :
@@ -1009,7 +1023,7 @@ class Temperature() :
                     beta_nPrev  =   beta_n             
                     beta_n  =   beta_nNext
                     ax[0].plot(self.line_z, beta_n, label="beta cpt%d" %(cpt))
-                    print ("beta cpt{}:\n{}".format(cpt,beta_n))
+                    print ("beta cpt {}:\n{}".format(cpt,beta_n))
                    
                     g_nPrev =   g_n
                     g_n     =   g_nNext
@@ -1031,8 +1045,12 @@ class Temperature() :
                 dir_lst.append(np.linalg.norm(d_n, 2))
                 print("d_n :\n {}".format(d_n))
                 
-                alpha = self.search_alpha(J, g_n, beta_n, g_sup) #if cpt <10 else  0.01
-#                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, strong = True, verbose=False ,alpha=1.)
+                test = np.dot(d_n[np.newaxis, :], g_n)[0]
+                
+                if test > 0 : d_n = -d_n
+                
+#                alpha = self.search_alpha(J, g_n, beta_n, g_sup) #if cpt <10 else  0.01
+                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, strong = False, verbose=False ,alpha=1.)
                 print("alpha for cpt {}: {}".format(cpt, alpha))
                 
                 dbeta_n =  alpha*d_n              
@@ -1041,9 +1059,9 @@ class Temperature() :
 #                gamma_n =   np.dot( (beta_n-beta_nPrev).T ,(g_n - g_nPrev) ) / N_n_nP**2
 #                dbeta   =   gamma_n * g_n
                     
-#                if cpt < cpt_inter :
+                if cpt < cpt_inter :
 ##                    dbeta = dbeta/10000000
-#                    dbeta_n /= 10
+                    dbeta_n /= 10
                 
                 beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
 
@@ -1052,20 +1070,22 @@ class Temperature() :
                 if np.linalg.norm(s_nNext,2) < 1e-8 : break
                 y_nNext =   g_nNext - g_n
                 
-                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext) #if cpt == 0 else self.Next_hess_further(H_n_inv, y_nNext, s_nNext)
+                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
+                
+                self.debug["curr_hess"] = H_nNext_inv
                 
                 print("Hess:\n{}".format(H_nNext_inv))
                 
-                err_beta=   np.linalg.norm(beta_nNext - beta_n, 2)
+                err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
                 print("err_beta = {} cpt = {}".format(err_beta, cpt))
                 
-                err_j   =   J(beta_nNext) - J(beta_n)
+                err_j    =   J(beta_nNext) - J(beta_n)
                 print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
                 
-                err_hess=   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
+                err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
                 print ("err_hess = {}".format(err_hess))
                 
-                alpha_lst.append(alpha)
+                self.alpha_lst.append(alpha)
                 err_hess_lst.append(err_hess) 
                 err_beta_lst.append(err_beta)
                 
@@ -1079,6 +1099,7 @@ class Temperature() :
                 # n --> n+1 si non convergence, sort de la boucle sinon 
             H_last  =   H_nNext_inv
             g_last  =   g_nNext
+            
             ax[1].plot(self.line_z, g_last, label="gradient last")
 
             beta_last=  beta_nNext
@@ -1127,7 +1148,7 @@ class Temperature() :
             
             fiig, axxes = plt.subplots(2,2,figsize=(8,8))
             axxes[0][0].set_title("alpha vs iterations ")
-            axxes[0][0].plot(range(cpt), alpha_lst, marker='o', linestyle='none', markersize=8)
+            axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o', linestyle='none', markersize=8)
             axxes[0][0].set_xlabel("Iterations")
             axxes[0][0].set_ylabel("alpha")
             
