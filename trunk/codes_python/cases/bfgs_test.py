@@ -84,9 +84,9 @@ def wolf_conditions(f, df, xk, dk, it, strong=True, verbose = False,c1 = 1e-4, c
     cpt = 0
     if it < 10 :
         cptmax = 80
-    if (it >=10 and it<200) :
+    elif (it >=10 and it<200) :
         cptmax = 80
-    if (it >=200 and it<1000)  :
+    if (it >=200)  :
         cptmax = 50 
 
 #    if iteration > 1   
@@ -132,7 +132,7 @@ x_init = np.asarray([4 for i in range(dim)], dtype=np.float)
 x_init[0], x_init[6] = 0.1, 1.7
 J_lst, alpha_lst = [], []
 H_n = np.eye(dim)
-sup_g, cpt, cptmax = np.linalg.norm(g_J(x_init), np.inf), 0, 1000
+sup_g, cpt, cptmax = np.linalg.norm(g_J(x_init), np.inf), 0, 1500
 
 x_n =   x_init
 g_n =   g_J(x_init)
@@ -149,7 +149,7 @@ for j,k in enumerate(x_evol_compo.keys()) :
     x_evol_compo[k].append(x_init[j])
 
 J_lst.append(J(x_n))
-while cpt<cptmax*5 and sup_g > 1e-10 :
+while cpt<cptmax*2 and sup_g > 1e-10 :
     if cpt > 0 :
         g_n =   g_nN
         x_n =   x_nN
