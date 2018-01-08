@@ -114,9 +114,11 @@ def wolf_conditions(f, df, xk, dk, it, strong=True, verbose = False,c1 = 1e-4, c
     if verbose == True : print  ("t1 = {} \t t2 = {}".format(t1(alpha), t2(alpha)))
     return alpha
     
+
+#def goldstein()
 dim = 8
 
-func = lambda x: (x)**2 + (x+4)**4 + np.sinc(x**2) +7
+func = lambda x: (x)**2 + (x+4)**4 + np.sinc(x**2) + 7
 
 xx = np.linspace(-7, 3, 1000)
 
@@ -159,7 +161,8 @@ while cpt<cptmax*2 and sup_g > 1e-10 :
     print "d_n = \n", d_n
 #    alpha   =   search_alpha(J, g_n, x_n) 
 #    wolf_conditions(f, df, xk, dk, strong=True ,c1 = 1e-4, c2 = 0.1, alpha=0.1):
-    alpha = wolf_conditions(J, g_J, x_n, d_n, cpt, strong = True, verbose=False ,alpha=1., c2=0.9)
+    alpha = wolf_conditions(func, g_J, x_n, d_n, cpt, strong = True,\
+         verbose=False ,alpha=1., c2=0.9)
 #    if alpha < 1e-5 and sup_g > 10 :
 #        alpha *=1e5
     alpha_lst.append(alpha)  
@@ -174,9 +177,9 @@ while cpt<cptmax*2 and sup_g > 1e-10 :
     g_nN    =   g_J(x_nN)
     print "g_nN = ", g_nN
     s_nN    =   x_nN - x_n
-    y_nN    =   g_nN  - g_n
+    y_nN    =   g_nN - g_n
     
-    if np.linalg.norm(s_nN) ==0 or np.linalg.norm(y_nN) == 0 : print"out";  break
+    if np.linalg.norm(s_nN) ==0 or np.linalg.norm(y_nN) == 0 : print("out");  break
     
     H_nN    =   Next_hess_further_scd(H_n, y_nN, s_nN)
     
@@ -206,3 +209,4 @@ if dim < 10 :
     for i, (ax, item) in enumerate(zip(axes.ravel(), x_evol_compo.iteritems())) :
         ax.set_title("k = %s" %(item[0]))
         ax.scatter(range(cpt+1), item[1])
+        
