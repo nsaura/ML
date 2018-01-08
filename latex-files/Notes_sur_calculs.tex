@@ -112,7 +112,8 @@ keywordstyle=[0]{\color{red}},
 \newcommand{\CP}[2]{C^{-1}_{\text{pri}_{\, \mathbf{#1, #2}}}}
 \newcommand{\CO}[2]{C^{-1}_{\text{obs}_{\, \mathbf{#1, #2}}}}
 \newcommand{\BP}[1]{\beta_{\text{P}_#1}}
-
+\newcommand{\Jj}{\mathcal{J}}
+\newcommand{\Rr}{\mathcal{R}}
 %%%%%%%% Autres
 
 %%%%%%%%%%%%%%%%%%%
@@ -145,9 +146,10 @@ keywordstyle=[0]{\color{red}},
 \numberwithin{equation}{section} %%%% To count the equation like Section.Number
 
 \begin{document}
-\section{Hessienne} 
+\section{Sur l'erreur de la formule 14 p.762}
+\noindent On a :
 \begin{equation}
-H_{i,j} = \parfracD{\mathcal{J}}{\beta_i}{\beta_j} + \navy \psi_m\parfracD{\mathcal{R}_m}{\beta_i }{\beta_j} \bk+ \mu_{i,m}\frac{\partial \mathcal{R}_m}{\partial \beta_j} + \navy \nu_{i,m}\parfracD{\mathcal{J}}{T_n}{\beta_j} \bk+ \nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{\beta_j} \label{hijf}
+H_{i,j} = \parfracD{\mathcal{J}}{\beta_i}{\beta_j} + \navy \psi_m\parfracD{\mathcal{R}_m}{\beta_i }{\beta_j} \bk+ \mu_{i,m}\frac{\partial \mathcal{R}_m}{\partial \beta_j} + \red \nu_{i,m}\parfracD{\mathcal{J}}{T_n}{\beta_j} + \nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{\beta_j} \bk \label{hijf}
 \end{equation} 
 Avec :
 \begin{equation}
@@ -156,6 +158,51 @@ Avec :
 Et :
 \begin{equation}
 \mu_{i,m}\frac{\partial \mathcal{R}_m}{\partial T_k} = - \bepar{ \navy \parfracD{\mathcal{J}}{\beta_i}{T_k} + \bk \psi_m \parfracD{\mathcal{R}_m}{\beta_i}{T_k} + \nu_{i,n} \parfracD{\mathcal{J}}{T_n}{T_k} + \nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{T_k} } \label{muim}
+\end{equation}
+
+\noindent Pour retrouver cette équation on va se servir de deux équations :
+\begin{equation}
+\frac{d\mathcal{J}}{d\beta_j} = \parfrac{\mathcal{J}}{\beta_j} + \psi^T \parfrac{\mathcal{R}_m}{\beta_j} \label{eq1}
+\end{equation}
+\begin{equation}
+\psi^T\, \parfrac{\mathcal{R}_m}{T_k} = -\, \parfrac{\mathcal{J}}{T_k} \label{eq2}
+\end{equation}
+On dérive alors \eqref{eq1} par rapport à $\beta_i$ pour obtenir la hessienne au point $i,j$:
+\begin{equation}
+H_{i,j} = \parfracD{\Jj}{\beta_i}{\beta_j} + 
+\parfrac{\psi_m}{\beta_i} \parfrac{\Rr_m}{\beta_j} + \psi_m\, \parfracD{\Rr_m}{\beta_i}{T_k} \label{hess}
+\end{equation}
+On utilise alors \eqref{eq2} que l'on dérive par rapport à $\beta_i$
+\begin{equation}
+\parfrac{\psi_m}{\beta_i}\, \parfrac{\Rr_m}{T_k} + \psi_m\, \parfracD{\Rr_m}{\beta_i}{T_k} = -\, \parfracD{\Jj}{\beta_i}{T_k}
+\end{equation}
+On peut donc exprimer $\displaystyle \parfrac{\psi_m}{\beta_i}$ :
+\begin{equation}
+\parfrac{\psi_m}{\beta_i} = -\, \bepar{\parfracD{\Jj}{\beta_i}{T_k} + \psi_m\, \parfracD{\Rr_m}{\beta_i}{T_k}}\bepar{\parfrac{\Rr_m}{T_k}}^{-1}
+\end{equation}
+\begin{equation}
+H_{i,j} = \parfracD{\Jj}{\beta_i}{\beta_j} -\, \bepar{\parfracD{\Jj}{\beta_i}{T_k} + \psi_m\, \parfracD{\Rr_m}{\beta_i}{T_k}}\bepar{\parfrac{\Rr_m}{T_k}}^{-1} \parfrac{\Rr_m}{\beta_j} + \psi_m\, \parfracD{\Rr_m}{\beta_i}{T_k}
+\end{equation}
+On peut poser 
+\begin{equation}
+\mu_{i,m} \parfrac{\Rr_m}{T_k} = - \parfracD{\Jj}{\beta_i}{T_k} - \psi_m \parfracD{\Rr_m}{\beta_i}{T_k} -\nu_{i,n} \parfracD{\Jj}{T_n}{T_k} - \nu_{i,n}\psi_m \,\parfracD{\Rr_m}{T_n}{T_k} \label{muu}
+\end{equation}
+Avec $\nu$ défini par \eqref{nu}.\\
+Les auteurs ont injecté \eqref{muu} dans \eqref{hijf} et ont rajouté les termes en rouge pour compenser. Cependant, les termes $ \displaystyle \nu_{i,n} \parfracD{\Jj}{T_n}{T_k} \text{ et } \nu_{i,n}\psi_m \parfracD{\Rr_m}{T_n}{T_k}$ne sont pas compensés et appraissent comme des termes en trop.
+
+\pagebreak
+
+\section{Hessienne} 
+\begin{equation}
+H_{i,j} = \parfracD{\mathcal{J}}{\beta_i}{\beta_j} + \navy \psi_m\parfracD{\mathcal{R}_m}{\beta_i }{\beta_j} \bk+ \mu_{i,m}\frac{\partial \mathcal{R}_m}{\partial \beta_j} + \navy \nu_{i,m}\parfracD{\mathcal{J}}{T_n}{\beta_j} \bk+ \nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{\beta_j} 
+\end{equation} 
+Avec :
+\begin{equation}
+\nu_{i,n}\frac{\partial \mathcal{R}_m}{\partial T_n} = - \frac{\partial \mathcal{R}_m}{\partial \beta_i} 
+\end{equation}
+Et :
+\begin{equation}
+\mu_{i,m}\frac{\partial \mathcal{R}_m}{\partial T_k} = - \bepar{ \navy \parfracD{\mathcal{J}}{\beta_i}{T_k} + \bk \psi_m \parfracD{\mathcal{R}_m}{\beta_i}{T_k} + \nu_{i,n} \parfracD{\mathcal{J}}{T_n}{T_k} + \nu_{i,n} \psi_m \parfracD{\mathcal{R}_m}{T_n}{T_k} }
 \end{equation}
 
 \begin{center} 
