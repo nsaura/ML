@@ -920,40 +920,55 @@ class Temperature() :
 ##---------------------------------------------------   
 #    def goldstein(self, )
 ##---------------------------------------------------                
-    def wolf_conditions(self, f, df, xk, dk, strong=True, verbose=False, c1=1e-4, c2=0.9, alpha=0.1):
+    def wolf_conditions(self, f, df, xk, dk, it, strong=True, verbose = False,c1 = 1e-4, c2 = 0.9 , alpha=1.):
         fk  =   f(xk)
-#        print ('f(xk) = {}'.format(f(xk)))
-
-        if (- np.linalg.norm(dk, 2) < 0) == False :
-            sys.exit("La direction doit etre negative \"Gradient descent\"")
+        dk_c=   dk
+        
+        if (np.dot(dk, df(xk)) < 0) == False :
+            sys.exit("La direction doit etre negative \"Gradient descent\"\nErreur apparue cpt = %d"%(it))
+        
         dfk =   df(xk)
-#        dfk =   np.asarray(dfk).reshape(1,-1)
-#        print ('dfkf(xk) = {}'.format(dfk))        
+        dfk = np.asarray(dfk).reshape(1,-1)[0]
+        
         dfpk=   lambda a_n : df(xk + a_n*dk)
-        t1  =   lambda a_n : (f(xk + a_n * dk)) <= (fk + c1 * a_n * np.dot(dfk, dk))    
+        
+        t1  =   lambda a_n : (f(xk + a_n * dk_c)) <= (fk + c1 * a_n * np.dot(dfk, dk_c)) #Armijo condition
 
         if strong == True :
-            t2 = lambda a_n : (np.linalg.norm(np.dot(dfpk(a_n), dk))) <= \
-                              (c2*np.linalg.norm(np.dot(dfk, dk)))
+            t2 = lambda a_n : (np.linalg.norm(np.dot(np.asarray(dfpk(a_n)).reshape(1,-1), dk_c))) <= \
+                                (c2 * np.linalg.norm(np.dot(dfk, dk_c)))  
         else :
-            t2 = lambda a_n : (np.dot(dfpk(a_n), dk)) >= (c2 * np.dot(dfk, dk))
+            t2 = lambda a_n : (np.dot(np.asarray(dfpk(a_n)).reshape(1,-1), dk_c)) >= (c2 * np.dot(dfk, dk_c))
+        
         cpt = 0
+#        if it < 10 :
+#            cptmax = 150
+#        if (it >=10 and it<200) :
+#            cptmax = 80
+#        if (it >=200 and it<1000)  :
+#            cptmax = 50 
+        cptmax = 150
         
-#        if strong== True :  
-        while (t1(alpha)==False or t2(alpha) == False ) and cpt < 100 :
-            cpt +=  1
-            if cpt % 10 ==0 and verbose == True:
-                print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
-            alpha *= 0.8
+        if it > 50 and it <=100 :
+            cptmax = 140
         
-#        else :
-#            while (t1(alpha) or False in t2(alpha)) and cpt < 100 :
-#                cpt +=  1
-#                if cpt % 10 ==0 and verbose== True :
-#                    print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
-#                alpha *= 0.5
+        if it > 100 :
+            cptmax = 130
+        if strong== True :  
+            while (t1(alpha) == False or t2(alpha) == False ) and cpt < cptmax :
+                cpt +=  1
+                if cpt % 10 ==0 and verbose == True:
+                    print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
+                alpha *= 0.85
+        
+        else :
+            while (t1(alpha) == False or t2(alpha) == False) and cpt < cptmax :
+                cpt +=  1
+                if cpt % 10 ==0 and verbose== True :
+                    print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
+                alpha *= 0.85
         if verbose == True : print  ("t1 = {} \t t2 = {}".format(t1(alpha), t2(alpha)))
-        return alpha 
+        return alpha
 ##---------------------------------------------------                    
     def adjoint_bfgs(self, cpt_inter=5) : 
         if self.stat_done == False : self.get_prior_statistics() 
@@ -1003,7 +1018,7 @@ class Temperature() :
             g_sup = np.linalg.norm(g_n, np.inf)
             sup_g_lst.append(np.linalg.norm(g_n, np.inf))
             
-            print ("\x1b[1;37;44Sup grad : {}[0m".format(np.linalg.norm(g_n, np.inf)))
+            print ("\x1b[1;37;44 Sup grad : %d \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
 
             H_n_inv =   np.eye(self.N_discr-2)
             self.debug["first_hess"] = H_n_inv
@@ -1050,7 +1065,9 @@ class Temperature() :
                 if test > 0 : d_n = -d_n
                 
 #                alpha = self.search_alpha(J, g_n, beta_n, g_sup) #if cpt <10 else  0.01
-                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, strong = False, verbose=False ,alpha=1.)
+                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, cpt, strong = False, verbose=False ,alpha=1.)
+                if cpt > 100 and g_sup > 6000 :
+                    alpha = 1e-7
                 print("alpha for cpt {}: {}".format(cpt, alpha))
                 
                 dbeta_n =  alpha*d_n              
@@ -1070,7 +1087,8 @@ class Temperature() :
                 if np.linalg.norm(s_nNext,2) < 1e-8 : break
                 y_nNext =   g_nNext - g_n
                 
-                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
+                H_nNext_inv = self.Next_hess_further_scd(H_n_inv, y_nNext, s_nNext)
+#                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
                 
                 self.debug["curr_hess"] = H_nNext_inv
                 
