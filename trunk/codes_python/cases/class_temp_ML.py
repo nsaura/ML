@@ -666,7 +666,7 @@ class Temperature() :
                         np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)  
                 
                 diff_grad = g_n - g_nPrev
-                norm_dg  =   np.linalg.norm(diff, grad, 2)
+                norm_dg  =   np.linalg.norm(diff_grad, 2)
 
                 gamma_n =   np.dot( (beta_n-beta_nPrev).T, (diff_grad) ) / norm_dg**2
                 
