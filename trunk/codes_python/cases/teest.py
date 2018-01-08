@@ -135,24 +135,32 @@ grad_J = lambda beta : np.dot(PSI(beta), np.diag(DR_DBETA(beta))) + DJ_DBETA(bet
 
 J_lst, alpha_lst = [], []
 sup_g, cpt, cptmax = np.linalg.norm(grad_J(beta_prior), np.inf), 0, 100
-
+H_n = np.eye(48)
 g_n = grad_J(beta_prior)
 
 errr = 1.
 while np.abs(errr) > 1e-5 :
     if cpt > 0 :
         g_n =   g_nN
+        H_n =   H_nN
         beta_n  =   beta_nN
 
     cpt += 1
-    d_n = -g_n
-    alpha = op.linesearch.scalar_search_wolfe2(J, grad_J, beta_n, d_n)
-    print "alpha = {}".format(alpha)
+    d_n =  np.dot(H_n, g_n)
+    print d_n
+    J_new = lambda alpha : J(beta_n + alpha * d_n)
+    GJ_new= lambda alpha : grad_J(beta_n + alpha * d_n)
+    
+    alpha = op.linesearch.line_search_wolfe2(J_new, GJ_new, beta_n, d_n)[0]
+
+    print "alpha = {}".format(alpha,)
     
     beta_nN = beta_n + alpha*d_n
+    print beta_nN
     
     g_nN    =   grad_J(beta_nN)
     s_nN    =   beta_nN - beta_n
     y_nN    =   g_nN  - g_n
+    H_nN    =   Next_hess(H_n, y_nN, s_nN, 48)
     errr    =   np.linalg.norm(grad_J(beta_nN), np.inf)
 

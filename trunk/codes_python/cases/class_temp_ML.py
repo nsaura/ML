@@ -409,8 +409,17 @@ class Temperature() :
             self.full_cov_obs_dict      =   full_cov_obs_dict
             
             self.stat_done = True
-##---------------------------------------------------  
+##--------------------------------------------------- -##
+######                                            ######
+######        Routines pour l'optimisation        ######
+######                                            ######
+##----------------------------------------------------## 
     def optimization(self, verbose=False) :
+        """
+        Fonction utilisant la fonction op.minimize de scipy. La méthode utilisée est BFGS.
+        La dérivée est calculée à partir de la méthode utilisant les adjoints.
+        """
+        
         if self.stat_done == False : self.get_prior_statistics()
         
         betamap, beta_final = dict(), dict()
@@ -430,7 +439,7 @@ class Temperature() :
             cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
             
             if verbose == True : 
-                print ("shapes to debug :")
+                print("shapes to debug :")
                 print("shape of cov_m = {}".format(cov_m.shape) )
                 print("shape of cov_p = {}".format(cov_prior.shape) )
                 print("shape of curr_d = {}".format(curr_d.shape) )
@@ -441,15 +450,13 @@ class Temperature() :
                 + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
                     np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) )   
                                         ) ## Fonction de coût
-                                        
-            ## BFGS : quasi Newton method that approximate the Hessian on the fly
 
-#            print "J =" , self.J_los[sT_inf](self.beta_prior)
             print ("J = {}".format(J(self.beta_prior)))
-#            np.dot(self.PSI(beta_n, T_inf), np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)
+
             grad_J = lambda beta : np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
             
-            opti_obj = op.minimize(J, self.beta_prior, jac=grad_J, method="BFGS", tol=self.tol, options={"disp" : True, "maxiter" : 200})
+            opti_obj = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol,\
+                       options={"disp" : True, "maxiter" : 200})
             
             print("grad_optimization:\n{}".format(opti_obj.jac))
             betamap[sT_inf] =   opti_obj.x
@@ -484,15 +491,15 @@ class Temperature() :
         self.optimize   =   True
         
         self.sigma_post_dict = sigma_post_dict
-##--------------------------------------------------- 
-    def backline_search(self, J_lambda, var_J_lambda, direction, incr=0.01) :
-        t = 1.
-        norm_direction = np.linalg.norm(direction, 2)**2
-        while J_lambda(var_J_lambda - t*direction) > (J_lambda(var_J_lambda) - t/2.0 * norm_direction) :
-            t *= incr
-        return t
-##--------------------------------------------------- 
+##----------------------------------------------------## 
     def minimization_with_first_guess(self) :
+        """
+        Méthode utilisant les dérivations automatiques de la bibliothèque numdifftools pour le 
+        gradient.
+        Utilise la routine op.minimize(method='bfgs') pour un first guess de la hessienne.
+        Puis incrémente.
+        Méthode qui peut être supprimée.
+        """
         if self.stat_done == False : self.get_prior_statistics()
 
         QN_BFGS_bmap,   QN_BFGS_bf        =   dict(),     dict()
@@ -597,49 +604,14 @@ class Temperature() :
         
         self.QN_done = True
 ##---------------------------------------------------    
-    def DR_DT(self, beta, T_inf) :
-        M1 = np.diag([(self.N_discr-1)**2 for i in range(self.N_discr-3)], -1) # Extra inférieure
-        P1 = np.diag([(self.N_discr-1)**2 for i in range(self.N_discr-3)], +1)  # Extra supérieure
-        A_diag1 = -4* np.diag((self.h_beta(beta, T_inf)**3 * beta * self.eps_0))-np.diag([2*(self.N_discr-1)**2 for i in range(self.N_discr-2) ]) # Diagonale
-        result = A_diag1 + M1 + P1
-#        print ("Temperature in function DR_DT = \ {}".format(self.h_beta(beta, T_inf)))
-#        print("DR_DT =\n {} ".format(result))
-        return  result
-        
-        
-##---------------------------------------------------
-    def DJ_DT(self, beta, T_inf) :
-        sT_inf = "T_inf_%d" %(T_inf)
-        curr_d = self.T_obs_mean[sT_inf]
-        cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]        
-#        print(" Cov = \n {} ".format(cov_m))        
-#        return (self.h_beta(beta, T_inf) - curr_d) / (cov_m[0,0])
-        result = np.dot(np.linalg.inv(cov_m), self.h_beta(beta, T_inf) - curr_d) 
-#        print("inv_cov \ {} ".format(np.linalg.inv(cov_m)))
-#        print("DJ_DT =\n {} ".format(result))
-#        return ( np.dot(np.linalg.inv(cov_m),self.h_beta(beta, T_inf) - curr_d)  )      
-        return result     
-
-##---------------------------------------------------
-    def DJ_DBETA(self, beta, T_inf):
-        sT_inf = "T_inf_%d" %(T_inf)
-        cov_prior   =   self.cov_pri_dict[sT_inf]
-        result = np.dot( np.linalg.inv(cov_prior), beta - self.beta_prior )
-        return result
-    
-##---------------------------------------------------
-    def DR_DBETA(self, beta, T_inf):
-#        print ("DR_DBETA in function -- h_beta**4 =\n {} \n T_inf**4 = {}".format((T_inf**4 - self.h_beta(beta, T_inf)**4) * T.eps_0, T_inf**4))
-        return (T_inf**4 - self.h_beta(beta, T_inf)**4) * self.eps_0
-##---------------------------------------------------
-    def PSI(self,beta, T_inf) :
-#        result = -np.dot(np.linalg.inv(self.DR_DT(beta, T_inf)), self.DJ_DT(beta, T_inf))
-        result = -np.dot(self.DJ_DT(beta, T_inf) , np.linalg.inv(self.DR_DT(beta, T_inf)).T )
-#        print("PSI in function = \n{}".format( result))
-#        return -np.dot(np.linalg.inv(self.DR_DT(beta, T_inf)), self.DJ_DT(beta, T_inf))
-        return result
-##---------------------------------------------------
     def adjoint_optimization(self) : 
+        """
+        Méthodes utilisant l'algorithme de steepest descent pour résoudre le problème d
+        \'optimisation. La hessienne n'est donc pas calculée pendant les itérations.
+
+        La covariance a posteriori est calculée à partir d\'une application de la méthode des 
+        adjoints sur les fonctions \" h(beta_i) - d_i / sigma_ i\". 
+        """
         if self.stat_done == False : self.get_prior_statistics() 
         
         sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
@@ -658,7 +630,9 @@ class Temperature() :
         for T_inf in self.T_inf_lst :
             sT_inf      =   "T_inf_%d" %(T_inf)
             curr_d      =   self.T_obs_mean[sT_inf]
-            cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]
+            cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
+                                        self.full_cov_obs_dict[sT_inf]
+            
             cov_pri     =   self.cov_pri_dict[sT_inf]
             
             sup_g_lst  =   []
@@ -683,20 +657,24 @@ class Temperature() :
             
             plt.figure()
             print("psi(beta_prior) = {}) \n".format(psi))
-            print("dR/dBeta(T.beta_prior) = {} \n".format(self.DR_DBETA(self.beta_prior, T_inf)))
+            print("dR/dBeta(T.beta_prior) = {} \n".format(
+                     self.DR_DBETA(self.beta_prior, T_inf)))
             
             while (cpt<cptMax) and sup_grad>1e-4 :
-            
-                g_n  = + np.dot(self.PSI(beta_n, T_inf), np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)  #dJ/dBeta
-                N_n_nP  =   np.linalg.norm(g_n - g_nPrev, 2)
+                #dJ/dBeta    
+                g_n  = + np.dot(self.PSI(beta_n, T_inf), \
+                        np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)  
+                
+                diff_grad = g_n - g_nPrev
+                norm_dg  =   np.linalg.norm(diff, grad, 2)
 
-                gamma_n =   np.dot( (beta_n-beta_nPrev).T ,(g_n - g_nPrev) ) / N_n_nP**2
+                gamma_n =   np.dot( (beta_n-beta_nPrev).T, (diff_grad) ) / norm_dg**2
                 
     #            print("gamma_n =  {} \n N_n_n_p = {} \n".format(self.gamma_n,self.N_n_nP ))
                 
                 plt.plot(self.line_z, beta_n, label="beta_n compteur %d" %(cpt))
                 
-                dbeta = -gamma_n* g_n
+                dbeta = -gamma_n* g_n # Steepest direction, < 0
                 if cpt < 2 :
                     dbeta = dbeta/10000000
                     
@@ -707,25 +685,26 @@ class Temperature() :
                 
                 sup_g_lst.append(sup_grad)
                 
+                # Incrementation
                 g_nPrev     =   g_n         # n-1   --> n
                 beta_nPrev  =   beta_n      # n-1   --> n
                 beta_n      =   beta_nNext  # n     --> n+1  
        
                 print("\n")
 
-                print ("grad n = {}".format(g_n))                            
-                print("dbeta_n = \n {}  ".format(dbeta))
+                print("grad n = {}".format(g_n))                            
+                print("dbeta_n = \n {} ".format(dbeta))
                 print("beta_n = \n  {} ".format(beta_n))
-                print("cpt = {} \t ".format(cpt))
+                print("cpt = {}".format(cpt))
                 print("err = {}".format(err))
                 print("Sup g_n = {}".format(sup_grad))
 
-                print ("Norme grad_n - grad_nPrev = {} \n gamma_n = {}".format(N_n_nP, gamma_n))
+                print ("Norme grad_n - grad_nPrev = {} \n gamma_n = {}".format(norm_dg,\
+                                                                               gamma_n))
                 # n --> n+1 si non convergence, sort de la boucle sinon 
                 cpt +=1
             
             self.last_beta = beta_n
-            
             plt.figure("evolution Sup g")
             plt.plot(range(cpt), sup_g_lst, marker='o', linestyle='none')
             
@@ -752,7 +731,8 @@ class Temperature() :
             RFI = np.linalg.cholesky(self.Hess_inv)
             
             GRAD_J  =   np.diag(g_n)
-            f_I     =   np.asarray([( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) for p in range(self.N_discr-2)])
+            f_I     =   np.asarray([ ( hbeta[p] - curr_d[p] ) / np.sqrt(sigmas[p]) \
+                                     for p in range(self.N_discr-2) ] )
             F       =   np.diag(f_I)
 #            JAC_T   =   1/2. * np.dot( np.linalg.inv(F), GRAD_J )
             
@@ -803,15 +783,12 @@ class Temperature() :
         plt.figure()
         plt.plot(self.line_z, self.h_beta(beta_n, T_inf), label="beta_n compteur %d" %(cpt))
 
-        
-        #self.Hess = np.dot(g_n.T, g_n)
         self.adj_bf     =   adj_bf
         self.adj_bmap   =   adj_bmap
         self.adj_grad   =   adj_grad
         self.adj_gamma  =   adj_gamma
         
         self.adj_hessinv=   adj_hessinv
-        
                 
         self.adjoint    =   True
         self.adj_maxs   =   maxs_lst
@@ -819,158 +796,11 @@ class Temperature() :
         
         self.adj_sigma_post     =   adj_sigma_post
         self.sup_g_lst = sup_g_lst
-###---------------------------------------------------
-    def H_formule(self, beta, cov_pri, T_inf):
-            dR_dT   =   self.DR_DT(beta, T_inf)
-            dR_dBeta=   self.DR_DBETA(beta, T_inf)
-            h_beta  =   self.h_beta(beta, T_inf)
-            
-            nu      =   - np.dot( np.diag(dR_dBeta), np.linalg.inv(dR_dT) )
-            psi     =   self.PSI(beta, T_inf)
-
-            nu_diag = np.diag(np.diag(nu))
-
-            M_1 =   np.diag( [- 4*psi[m]*self.eps_0*h_beta[m]**3 for m in range(self.N_discr-2)] )
-
-            M_4 =   np.linalg.inv(dR_dT) 
-
-            Mu  =   np.dot( -M_1 , M_4 )
-            
-            H_1 =   np.linalg.inv(cov_pri.T)
-            H_2 =   np.dot(Mu, np.diag( [self.eps_0*(T_inf**4 - h_beta[j]**4) for j in range(self.N_discr-2)] ) )
-            H_3 =   - 4 * np.dot(nu, np.diag([self.eps_0*psi[j]*h_beta[j]**3 for j in range(self.N_discr-2)])) 
-
-            H   =   H_1 + H_2 + H_3 
-            
-            return H
-##---------------------------------------------------
-    def search_alpha(self, func, func_prime, curr_beta, err_grad, alpha=1.) :
-#        https://projecteuclid.org/download/pdf_1/euclid.pjm/1102995080 Corollaire 2
-#        alpha_m = lambda m : float(alpha) / (2**(m-1))
-#       Deuxieme test avec https://en.wikipedia.org/wiki/Backtracking_line_search 
-        
-        cptmax = 18 if err_grad > 1e3 else 50
-        mm = 1
-        while ((func(curr_beta - alpha*func_prime)) <= \
-                 func(curr_beta) - 0.5*alpha * np.linalg.norm(func_prime)**2 ) == False and mm < cptmax:
-            alpha *=0.25
-            mm += 1
-#            print mm
-        
-        return alpha
-##---------------------------------------------------
-    def Next_hess(self, prev_hess_inv, y_nN, s_nN) :
-        """
-        Procedure close to the scipy's one 
-        """
-        # Comme Scipy
-        rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) != 0 else 1./1e-5
-        print rho_nN
-        
-        Id      =   np.eye(self.N_discr-2)
-        
-        A1 = Id - rho_nN * s_nN[:, np.newaxis] * y_nN[np.newaxis, :]
-        A2 = Id - rho_nN * y_nN[:, np.newaxis] * s_nN[np.newaxis, :]
-        
-        return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* s_nN[:, np.newaxis] * s_nN[np.newaxis, :])
-##---------------------------------------------------        
-    def Next_hess_further(self, prev_hess_inv, y_nN, s_nN):
-        """
-        Formula from https://en.wikipedia.org/wiki/Broyden%E2%80%93Fletcher%E2%80%93Goldfarb%E2%80%93Shanno_algorithm
-        Didn't find it anywhere else. Must check it out
-        """
-        
-        d = self.N_discr-2
-        scal_1  =   np.dot(s_nN.T, y_nN)
-        scal_2  =   np.dot(np.dot(y_nN.T, prev_hess_inv), y_nN)
-
-        M_1 =   np.dot(s_nN.reshape(d,-1), s_nN.reshape(1,-1))
-        M_2 =   np.dot( (np.dot(prev_hess_inv, y_nN)).reshape(d,-1),s_nN.reshape(1,-1) )
-        M_3 =   np.dot( np.dot(s_nN.reshape(d,-1), y_nN.reshape(1,-1)), prev_hess_inv )
-        
-        T_1 =   prev_hess_inv
-        T_2 =   (scal_1 + scal_2) * M_1 / scal_1**2
-        T_3 =   (M_2 + M_3) / scal_1
-                
-        return T_1 + T_2 - T_3
-##---------------------------------------------------            
-    def Next_hess_further_scd(self, prev_hess_inv, y_nN, s_nN):
-        #https://arxiv.org/pdf/1704.00116.pdf 
-        # Nocedal_Wright_Numerical_optimization_v2
-        
-        d = self.N_discr-2
-        fac_1   =   (np.dot(prev_hess_inv, s_nN))[:, np.newaxis]  # vecteur colonne
-        fac_2   =   np.dot(s_nN[np.newaxis, :], prev_hess_inv)    # vecteur ligne
-        
-#        print ("fac_1 =\n{} \nfac_2 =\n{}".format(fac_1, fac_2)) 
-        
-        scal_1  =   np.dot(np.dot(s_nN[np.newaxis, :], prev_hess_inv), s_nN[:, np.newaxis])
-        scal_2  =   np.dot(y_nN[np.newaxis, :], s_nN[:, np.newaxis])
-        
-        scal_1, scal_2  =   scal_1[0,0], scal_2[0,0]
-#        print ("scal_1 = {}\t scal_2 = {}".format(scal_1, scal_2))
-        
-        T_1 =   prev_hess_inv
-        T_2 =   np.dot(fac_1, fac_2) / scal_1
-        T_3 =   np.dot(y_nN[:, np.newaxis], y_nN[np.newaxis, :]) / scal_2
-#        print("Shapes :\n T_1 : {} \t T_2 : {} \t T_3 : {}".format(T_1.shape,\
-#                                                                   T_2.shape,\
-#                                                                   T_3.shape))
-        return T_1 - T_2 + T_3
-##---------------------------------------------------   
-#    def goldstein(self, )
-##---------------------------------------------------                
-    def wolf_conditions(self, f, df, xk, dk, it, strong=True, verbose = False,c1 = 1e-4, c2 = 0.9 , alpha=1.):
-        fk  =   f(xk)
-        dk_c=   dk
-        
-        if (np.dot(dk, df(xk)) < 0) == False :
-            sys.exit("La direction doit etre negative \"Gradient descent\"\nErreur apparue cpt = %d"%(it))
-        
-        dfk =   df(xk)
-        dfk = np.asarray(dfk).reshape(1,-1)[0]
-        
-        dfpk=   lambda a_n : df(xk + a_n*dk)
-        
-        t1  =   lambda a_n : (f(xk + a_n * dk_c)) <= (fk + c1 * a_n * np.dot(dfk, dk_c)) #Armijo condition
-
-        if strong == True :
-            t2 = lambda a_n : (np.linalg.norm(np.dot(np.asarray(dfpk(a_n)).reshape(1,-1), dk_c))) <= \
-                                (c2 * np.linalg.norm(np.dot(dfk, dk_c)))  
-        else :
-            t2 = lambda a_n : (np.dot(np.asarray(dfpk(a_n)).reshape(1,-1), dk_c)) >= (c2 * np.dot(dfk, dk_c))
-        
-        cpt = 0
-#        if it < 10 :
-#            cptmax = 150
-#        if (it >=10 and it<200) :
-#            cptmax = 80
-#        if (it >=200 and it<1000)  :
-#            cptmax = 50 
-        cptmax = 150
-        
-        if it > 50 and it <=100 :
-            cptmax = 140
-        
-        if it > 100 :
-            cptmax = 130
-        if strong== True :  
-            while (t1(alpha) == False or t2(alpha) == False ) and cpt < cptmax :
-                cpt +=  1
-                if cpt % 10 ==0 and verbose == True:
-                    print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
-                alpha *= 0.85
-        
-        else :
-            while (t1(alpha) == False or t2(alpha) == False) and cpt < cptmax :
-                cpt +=  1
-                if cpt % 10 ==0 and verbose== True :
-                    print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
-                alpha *= 0.85
-        if verbose == True : print  ("t1 = {} \t t2 = {}".format(t1(alpha), t2(alpha)))
-        return alpha
-##---------------------------------------------------                    
+##----------------------------------------------------##        
     def adjoint_bfgs(self, cpt_inter=5) : 
+        """
+        
+        """
         if self.stat_done == False : self.get_prior_statistics() 
         
         self.debug = dict()
@@ -990,7 +820,9 @@ class Temperature() :
         for T_inf in self.T_inf_lst :
             sT_inf      =   "T_inf_%d" %(T_inf)
             curr_d      =   self.T_obs_mean[sT_inf]
-            cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]
+            cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
+                            self.full_cov_obs_dict[sT_inf]
+            
             cov_pri     =   self.cov_pri_dict[sT_inf]
             
             J = lambda beta : 0.5*  ( 
@@ -1011,26 +843,28 @@ class Temperature() :
             # Initialisation
 #            beta_nPrev  =   np.zeros_like(self.beta_prior)
 #            g_nPrev =   np.zeros_like(self.beta_prior)
+    
+            #dJ/dBeta 
             beta_n  =   self.beta_prior
-            g_J     =   lambda beta_n : np.dot(self.PSI(beta_n, T_inf), np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)  #dJ/dBeta 
+            g_J     =   lambda beta_n : np.dot(self.PSI(beta_n, T_inf),\
+                          np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)  
             g_n     =   g_J(beta_n)
             
             g_sup = np.linalg.norm(g_n, np.inf)
             sup_g_lst.append(np.linalg.norm(g_n, np.inf))
             
-            print ("\x1b[1;37;44 Sup grad : %d \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
+            print ("\x1b[1;37;44 Sup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
 
             H_n_inv =   np.eye(self.N_discr-2)
             self.debug["first_hess"] = H_n_inv
                             
             fig, ax = plt.subplots(1,2,figsize=(13,7))
             ax[0].plot(self.line_z, beta_n, label="beta_prior")
-            ax[1].plot(self.line_z, g_n, label="gradient prior")
+            ax[1].plot(self.line_z, g_n,    label="gradient prior")
             
             self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
             dir_lst =   []
             
-#            while err_beta > tol and (cpt<cptMax) and err_hess>1e-5 : #and np.abs(err_j) > 1e-4 :
 #            while (cpt<cptMax) and err_hess>1e-5 and np.abs(err_j)>1e-7 and g_sup > 1e-7  :
             while (cpt<cptMax) and g_sup > 1e-7  :
                 if cpt > 0 :
@@ -1053,19 +887,25 @@ class Temperature() :
                     
                     print("grad n = {}".format(g_n))                            
                     print("beta_n = \n  {} ".format(beta_n))
-                    print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, err_beta, err_hess))
+                    print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
+                                                           err_beta, err_hess) )
                 
-                ## Routine
-                d_n     =   - np.dot(H_n_inv, g_n) 
+                ##-- Routine --##
+                d_n     =   - np.dot(H_n_inv, g_n)
+
+                test = -np.dot(g_n[np.newaxis, :], np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]
+                 
                 dir_lst.append(np.linalg.norm(d_n, 2))
                 print("d_n :\n {}".format(d_n))
+                print("d_n descent direction : {}".format(test < 0))
                 
-                test = np.dot(d_n[np.newaxis, :], g_n)[0]
-                
-                if test > 0 : d_n = -d_n
+#                test = np.dot(d_n[np.newaxis, :], g_n)[0]
+#                
+#                if test > 0 : d_n = -d_n
                 
 #                alpha = self.search_alpha(J, g_n, beta_n, g_sup) #if cpt <10 else  0.01
-                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, cpt, strong = False, verbose=False ,alpha=1.)
+                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, cpt, strong = False,\
+                                            verbose=False ,alpha=1.)
                 if cpt > 100 and g_sup > 6000 :
                     alpha = 1e-7
                 print("alpha for cpt {}: {}".format(cpt, alpha))
@@ -1087,8 +927,8 @@ class Temperature() :
                 if np.linalg.norm(s_nNext,2) < 1e-8 : break
                 y_nNext =   g_nNext - g_n
                 
-                H_nNext_inv = self.Next_hess_further_scd(H_n_inv, y_nNext, s_nNext)
-#                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
+#                H_nNext_inv = self.Next_hess_further_scd(H_n_inv, y_nNext, s_nNext)
+                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
                 
                 self.debug["curr_hess"] = H_nNext_inv
                 
@@ -1129,7 +969,7 @@ class Temperature() :
                 print("HH eign: \n{}".format(np.linalg.eig(H_last)[0]))
             
                 print('det(HH) ={}'.format(np.linalg.det(H_last)))
-                print(" Erreur : Matrix not positive definite...\n det H_last = {}, \nVal propres = \n{}".format(np.linalg.det(H_last), np.linalg.eig(H_last)[0]))
+                print("Erreur : Matrix not positive definite. Symetrisation:")
                 H_last = 0.5*(H_last.T + H_last)
                 
                 try :
@@ -1195,8 +1035,241 @@ class Temperature() :
         self.bfgs_adj_mins   =   bfgs_mins_lst
         
         self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
-###---------------------------------------------------
-###---------------------------------------------------
+###---------------------------------------------------##
+###---------------------------------------------------##
+######                                            ######
+######    Fonctions pour calculer la Hessienne    ######
+######                                            ######
+##----------------------------------------------------##
+##----------------------------------------------------## 
+    def Next_hess(self, prev_hess_inv, y_nN, s_nN) :
+        """
+        Procedure close to the scipy's one 
+        """
+        # Comme Scipy
+        rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) != 0 else 1./1e-5
+        print rho_nN
+        
+        Id      =   np.eye(self.N_discr-2)
+        
+        A1 = Id - rho_nN * s_nN[:, np.newaxis] * y_nN[np.newaxis, :]
+        A2 = Id - rho_nN * y_nN[:, np.newaxis] * s_nN[np.newaxis, :]
+        
+        return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* s_nN[:, np.newaxis] * s_nN[np.newaxis, :])
+##----------------------------------------------------##        
+    def Next_hess_further(self, prev_hess_inv, y_nN, s_nN):
+        """
+        Formula from https://en.wikipedia.org/wiki/Broyden%E2%80%93Fletcher%E2%80%93Goldfarb%E2%80%93Shanno_algorithm
+        Didn't find it anywhere else. Must check it out
+        """
+        
+        d = self.N_discr-2
+        scal_1  =   np.dot(s_nN.T, y_nN)
+        scal_2  =   np.dot(np.dot(y_nN.T, prev_hess_inv), y_nN)
+
+        M_1 =   np.dot(s_nN.reshape(d,-1), s_nN.reshape(1,-1))
+        M_2 =   np.dot( (np.dot(prev_hess_inv, y_nN)).reshape(d,-1),s_nN.reshape(1,-1) )
+        M_3 =   np.dot( np.dot(s_nN.reshape(d,-1), y_nN.reshape(1,-1)), prev_hess_inv )
+        
+        T_1 =   prev_hess_inv
+        T_2 =   (scal_1 + scal_2) * M_1 / scal_1**2
+        T_3 =   (M_2 + M_3) / scal_1
+                
+        return T_1 + T_2 - T_3
+##----------------------------------------------------##    
+    def Next_hess_further_scd(self, prev_hess_inv, y_nN, s_nN):
+        #https://arxiv.org/pdf/1704.00116.pdf 
+        # Nocedal_Wright_Numerical_optimization_v2
+        
+        d = self.N_discr-2
+        fac_1   =   (np.dot(prev_hess_inv, s_nN))[:, np.newaxis]  # vecteur colonne
+        fac_2   =   np.dot(s_nN[np.newaxis, :], prev_hess_inv)    # vecteur ligne
+        
+#        print ("fac_1 =\n{} \nfac_2 =\n{}".format(fac_1, fac_2)) 
+        
+        scal_1  =   np.dot(np.dot(s_nN[np.newaxis, :], prev_hess_inv), s_nN[:, np.newaxis])
+        scal_2  =   np.dot(y_nN[np.newaxis, :], s_nN[:, np.newaxis])
+        
+        scal_1, scal_2  =   scal_1[0,0], scal_2[0,0]
+#        print ("scal_1 = {}\t scal_2 = {}".format(scal_1, scal_2))
+        
+        T_1 =   prev_hess_inv
+        T_2 =   np.dot(fac_1, fac_2) / scal_1
+        T_3 =   np.dot(y_nN[:, np.newaxis], y_nN[np.newaxis, :]) / scal_2
+#        print("Shapes :\n T_1 : {} \t T_2 : {} \t T_3 : {}".format(T_1.shape,\
+#                                                                   T_2.shape,\
+#                                                                   T_3.shape))
+        return T_1 - T_2 + T_3
+##----------------------------------------------------##
+    def H_formule(self, beta, cov_pri, T_inf):
+        dR_dT   =   self.DR_DT(beta, T_inf)
+        dR_dBeta=   self.DR_DBETA(beta, T_inf)
+        h_beta  =   self.h_beta(beta, T_inf)
+        
+        nu      =   - np.dot( np.diag(dR_dBeta), np.linalg.inv(dR_dT) )
+        psi     =   self.PSI(beta, T_inf)
+
+        nu_diag = np.diag(np.diag(nu))
+
+        M_1 =   np.diag( [- 4*psi[m]*self.eps_0*h_beta[m]**3 for m in range(self.N_discr-2)] )
+
+        M_4 =   np.linalg.inv(dR_dT) 
+
+        Mu  =   np.dot( -M_1 , M_4 )
+        
+        H_1 =   np.linalg.inv(cov_pri.T)
+        H_2 =   np.dot(Mu, np.diag( [self.eps_0*(T_inf**4 - h_beta[j]**4) for j in range(self.N_discr-2)] ) )
+        H_3 =   - 4 * np.dot(nu, np.diag([self.eps_0*psi[j]*h_beta[j]**3 for j in range(self.N_discr-2)])) 
+
+        H   =   H_1 + H_2 + H_3 
+        
+        return np.linalg.inv(H)
+##----------------------------------------------------##
+##----------------------------------------------------##
+######                                            ######
+######        Routines pour le Line Search        ######
+######                                            ######
+##----------------------------------------------------## 
+##----------------------------------------------------##
+    def search_alpha(self, func, func_prime, curr_beta, err_grad, alpha=1.) :
+#        https://projecteuclid.org/download/pdf_1/euclid.pjm/1102995080 Corollaire 2
+#        alpha_m = lambda m : float(alpha) / (2**(m-1))
+#       Deuxieme test avec https://en.wikipedia.org/wiki/Backtracking_line_search 
+        
+        cptmax = 18 if err_grad > 1e3 else 50
+        mm = 1
+        while ((func(curr_beta - alpha*func_prime)) <= \
+                 func(curr_beta) - 0.5*alpha * np.linalg.norm(func_prime)**2 ) == False and mm < cptmax:
+            alpha *=0.25
+            mm += 1
+        
+        return alpha
+##----------------------------------------------------## 
+    def backline_search(self, J_lambda, var_J_lambda, direction, incr=0.01) :
+        t = 1.
+        norm_direction = np.linalg.norm(direction, 2)**2
+        while J_lambda(var_J_lambda - t*direction) > (J_lambda(var_J_lambda) - t/2.0 * norm_direction) :
+            t *= incr
+        return t  
+##----------------------------------------------------##   
+#    def goldstein(self, )   
+##----------------------------------------------------## 
+    def wolf_conditions(self, f, df, xk, dk, it, strong=True, verbose = False,c1 = 1e-4, c2 = 0.9 , alpha=1.):
+        fk  =   f(xk)
+        dk_c=   dk
+        
+        if (np.dot(dk, df(xk)) < 0) == False :
+            warnings.warn("La direction doit etre negative \"Gradient descent\"\nErreur apparue cpt = %d"%(it))
+        
+        dfk =   df(xk)
+        dfk = np.asarray(dfk).reshape(1,-1)[0]
+        
+        dfpk=   lambda a_n : df(xk + a_n*dk)
+        
+        #Armijo condition
+        t1  =   lambda a_n : (f(xk + a_n * dk_c)) <= (fk + c1 * a_n * np.dot(dfk, dk_c)) 
+        
+        #Curvature condition    
+        if strong == True :
+            t2 = lambda a_n : (np.linalg.norm(np.dot(np.asarray(dfpk(a_n)).reshape(1,-1), dk_c))) <= \
+                                (c2 * np.linalg.norm(np.dot(dfk, dk_c)))  
+        else :
+            t2 = lambda a_n : (np.dot(np.asarray(dfpk(a_n)).reshape(1,-1), dk_c)) >= (c2 * np.dot(dfk, dk_c))
+        
+        cpt = 0
+#        if it < 10 :
+#            cptmax = 150
+#        if (it >=10 and it<200) :
+#            cptmax = 80
+#        if (it >=200 and it<1000)  :
+#            cptmax = 50 
+        cptmax = 100
+        
+        if it > 50 and it <=100 :
+            cptmax = 70
+        
+        if it > 100 :
+            cptmax = 50
+        if strong== True :  
+            while (t1(alpha) == False or t2(alpha) == False ) and cpt < cptmax :
+                cpt +=  1
+                if cpt % 10 ==0 and verbose == True:
+                    print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
+                alpha *= 0.85
+        
+        else :
+            while (t1(alpha) == False or t2(alpha) == False) and cpt < cptmax :
+                cpt +=  1
+                if cpt % 10 ==0 and verbose== True :
+                    print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
+                alpha *= 0.85
+        if verbose == True : print  ("t1 = {} \t t2 = {}".format(t1(alpha), t2(alpha)))
+        return alpha
+##----------------------------------------------------##   
+##----------------------------------------------------##              
+######                                            ######
+######     Fonctions auxillaires de la classe     ######
+######                                            ######
+##----------------------------------------------------##
+##----------------------------------------------------## 
+    def positive_definite_test(self, matrix, matrix_name="H_inv", verbose = False):
+        test = True
+        mat_det =   np.linalg.det(matrix)     
+        mat_eigvalue    =   np.linalg.eig(matrix)[0]
+        
+        if False in [k<0 for k in mat_eigvalue] or mat_det < 0 :
+            print ("{} is not positive definite".format(matrix_name))
+            
+            if verbose == True :
+                print("{} eigenvalues : \n{}".format(matrix_name, mat_eigvalue))
+                print("{} determinant : {}".format(matrix_name, mat_det))
+            test = False
+        
+        return test
+##----------------------------------------------------##
+    def DR_DT(self, beta, T_inf) :
+        M1 = np.diag([(self.N_discr-1)**2 for i in range(self.N_discr-3)], -1) # Extra inférieure
+        P1 = np.diag([(self.N_discr-1)**2 for i in range(self.N_discr-3)], +1)  # Extra supérieure
+        A_diag1 = -4* np.diag((self.h_beta(beta, T_inf)**3 * beta * self.eps_0))-np.diag([2*(self.N_discr-1)**2 for i in range(self.N_discr-2) ]) # Diagonale
+        result = A_diag1 + M1 + P1
+#        print ("Temperature in function DR_DT = \ {}".format(self.h_beta(beta, T_inf)))
+#        print("DR_DT =\n {} ".format(result))
+        return  result
+##----------------------------------------------------##
+    def DJ_DT(self, beta, T_inf) :
+        sT_inf = "T_inf_%d" %(T_inf)
+        curr_d = self.T_obs_mean[sT_inf]
+        cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]        
+#        print(" Cov = \n {} ".format(cov_m))        
+#        return (self.h_beta(beta, T_inf) - curr_d) / (cov_m[0,0])
+        result = np.dot(np.linalg.inv(cov_m), self.h_beta(beta, T_inf) - curr_d) 
+#        print("inv_cov \ {} ".format(np.linalg.inv(cov_m)))
+#        print("DJ_DT =\n {} ".format(result))
+#        return ( np.dot(np.linalg.inv(cov_m),self.h_beta(beta, T_inf) - curr_d)  )      
+        return result     
+##----------------------------------------------------##
+    def DJ_DBETA(self, beta, T_inf):
+        sT_inf = "T_inf_%d" %(T_inf)
+        cov_prior   =   self.cov_pri_dict[sT_inf]
+        result = np.dot( np.linalg.inv(cov_prior), beta - self.beta_prior )
+        return result
+    
+##----------------------------------------------------##
+    def DR_DBETA(self, beta, T_inf):
+#        print ("DR_DBETA in function -- h_beta**4 =\n {} \n T_inf**4 = {}".format((T_inf**4 - self.h_beta(beta, T_inf)**4) * T.eps_0, T_inf**4))
+        return (T_inf**4 - self.h_beta(beta, T_inf)**4) * self.eps_0
+##----------------------------------------------------##
+    def PSI(self,beta, T_inf) :
+#        result = -np.dot(np.linalg.inv(self.DR_DT(beta, T_inf)), self.DJ_DT(beta, T_inf))
+        result = -np.dot(self.DJ_DT(beta, T_inf) , np.linalg.inv(self.DR_DT(beta, T_inf)).T )
+#        print("PSI in function = \n{}".format( result))
+#        return -np.dot(np.linalg.inv(self.DR_DT(beta, T_inf)), self.DJ_DT(beta, T_inf))
+        return result
+##----------------------------------------------------##
+##----------------------------------------------------##
+##
+#
+## Autres fonctions en dehors de la classe ##
 def subplot(T, method='adj_bfgs') : 
     if method == "QN_BFGS"    :
         dico_beta_map   =   T.QN_BFGS_bmap
