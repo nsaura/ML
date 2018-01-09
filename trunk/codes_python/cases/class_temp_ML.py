@@ -431,34 +431,32 @@ class Temperature() :
         beta_var = []
         
         for T_inf in self.T_inf_lst :
-            print ("Calculus for T_inf = %d" %(T_inf))
+            print ("Calcule pour T_inf = %d" %(T_inf))
             sT_inf  =   "T_inf_" + str(T_inf)
             
             curr_d  =   self.T_obs_mean[sT_inf]
             cov_prior   =  self.cov_pri_dict[sT_inf]
             cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
             
-            if verbose == True : 
-                print("shapes to debug :")
-                print("shape of cov_m = {}".format(cov_m.shape) )
-                print("shape of cov_p = {}".format(cov_prior.shape) )
-                print("shape of curr_d = {}".format(curr_d.shape) )
-                
-            J = lambda beta : 0.5*  ( 
-                  np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
-                    np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
-                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
-                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) )   
-                                        ) ## Fonction de coût
-
-            print ("J = {}".format(J(self.beta_prior)))
-
-            grad_J = lambda beta : np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            inv_cov_pri =   np.linalg.inv(cov_prior)  
+            inv_cov_obs =   np.linalg.inv(cov_m)
             
-            opti_obj = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol,\
+            J_1 =   lambda beta :\
+            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T),inv_cov_obs, (curr_d - self.h_beta(beta, T_inf)))
+            
+            J_2 =   lambda beta :\
+            0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
+                                        )
+            J = lambda beta : J_1(beta) + J_2(beta)  ## Fonction de coût
+            
+            print ("J(beta_prior) = {}".format(J(self.beta_prior)))
+
+            grad_J = lambda beta :\
+            np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            
+            opti_obj = op.minimize(J, self.beta_prior, jac=grad_J, method="BFGS", tol=self.tol,\
                        options={"disp" : True, "maxiter" : 200})
             
-            print("grad_optimization:\n{}".format(opti_obj.jac))
             betamap[sT_inf] =   opti_obj.x
             hess[sT_inf]    =   opti_obj.hess_inv
             cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
@@ -492,6 +490,92 @@ class Temperature() :
         
         self.sigma_post_dict = sigma_post_dict
 ##----------------------------------------------------## 
+##----------------------------------------------------##
+    def optimization_2(self, verbose=False) :
+        """
+        Fonction utilisant la fonction op.minimize de scipy. La méthode utilisée est BFGS.
+        La dérivée est calculée à partir de la méthode utilisant les adjoints.
+        """
+        
+        if self.stat_done == False : self.get_prior_statistics()
+        
+        betamap, beta_final = dict(), dict()
+        hess, cholesky = dict(), dict()
+        
+        mins, maxs = dict(), dict()
+        sigma_post_dict = dict()
+        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+        beta_var = []
+        
+        for T_inf in self.T_inf_lst :
+            print ("Calculus for T_inf = %d" %(T_inf))
+            sT_inf  =   "T_inf_" + str(T_inf)
+            
+            curr_d  =   self.T_obs_mean[sT_inf]
+            cov_prior   =  self.cov_pri_dict[sT_inf]
+            cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
+            
+            if verbose == True : 
+                print("shapes to debug :")
+                print("shape of cov_m = {}".format(cov_m.shape) )
+                print("shape of cov_p = {}".format(cov_prior.shape) )
+                print("shape of curr_d = {}".format(curr_d.shape) )
+                
+            J = lambda beta : np.dot((self.h_beta(beta, T_inf) - curr_d).T, (self.h_beta(beta, T_inf) - curr_d))
+
+            print ("J = {}".format(J(self.beta_prior)))
+
+            grad_J = lambda beta : 2. * (self.h_beta(beta, T_inf) - curr_d)
+            
+            opti_obj = op.minimize(J, self.beta_prior, jac=grad_J, method="BFGS", tol=self.tol,\
+                       options={"disp" : True, "maxiter" : 60})
+            
+            print("grad_optimization:\n{}".format(opti_obj.jac))
+            betamap[sT_inf] =   opti_obj.x
+#            hbeta =  self.h_beta(betamap[sT_inf], T_inf, verbose=False)
+            
+#            f = np.diag([( hbeta[p] - curr_d[p] ) / sigmas[p] for p in range(self.N_discr-2)])
+#            df_I_dT =   1. / sigmas[p]
+
+#            phi_t = - np.dot( df_I_dT, np.linalg.inv(self.DR_DT(beta_n, T_inf)) )
+#            
+#            grad_j  = np.dot( phi_t, self.DR_DBETA(beta_n, T_inf) )
+#            jac_j   =   np.diag(grad_j)
+#            hess[sT_inf] = np.linalg.inv( 2.*np.eye(self.N_discr-2)  )
+#            hess[sT_inf] = self.H_formule(betamap[sT_inf], cov_prior, T_inf)
+            hess[sT_inf]    =   opti_obj.hess_inv
+            cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
+            
+            self.opti_obj   =   opti_obj
+            print ("Sucess state of the optimization {}".format(self.opti_obj.success))
+            
+            beta_final[sT_inf]  =   betamap[sT_inf] + np.dot(cholesky[sT_inf], s)  
+            
+            for i in range(249):
+                s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+                beta_var.append(betamap[sT_inf] + np.dot(cholesky[sT_inf], s))
+            beta_var.append(beta_final[sT_inf])
+            sigma_post = []
+            for i in range(self.N_discr-2) :
+                mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
+                maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
+                sigma_post.append(np.std([j[i] for j in beta_var])) 
+            sigma_post_dict[sT_inf] = sigma_post 
+            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
+            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
+            
+        self.betamap    =   betamap
+        self.hess       =   hess
+        self.cholseky   =   cholesky
+        self.beta_final =   beta_final
+        self.mins_lst   =   mins_lst
+        self.maxs_lst   =   maxs_lst
+        self.beta_var   =   beta_var
+        self.optimize   =   True
+        
+        self.sigma_post_dict = sigma_post_dict
+##----------------------------------------------------##
+##----------------------------------------------------##
     def minimization_with_first_guess(self) :
         """
         Méthode utilisant les dérivations automatiques de la bibliothèque numdifftools pour le 
