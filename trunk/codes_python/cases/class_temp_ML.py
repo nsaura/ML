@@ -58,7 +58,7 @@ def parser() :
     return parser.parse_args()
 ##---------------------------------------------------------------
 class Temperature() :
-    def __init__ (self, parser):
+    def __init__ (self, parser, sigma_bruit):
         """
         This object has been made to solve optimization problem. Several methods are available and tested : _for_adjoint, optimization and minimization_with_first_guess. 
         It contains several attributes and initialiazed with a parser. 
@@ -108,8 +108,9 @@ class Temperature() :
 
         self.A2 = A_diag2 + M2 + P2 #Construction de la matrice des coefficients
         
-        self.noise = self.tab_normal(0, 0.1, N_discr-2)[0]
-        self.lst_gauss = [self.tab_normal(0,0.01,N_discr-2)[0] for i in range(num_real)]
+        self.noise = self.tab_normal(0, sigma_bruit, N_discr-2)[0]
+        print("Sigma bruit = {}".format(sigma_bruit))
+        self.lst_gauss = [self.tab_normal(0,sigma_bruit,N_discr-2)[0] for i in range(num_real)]
         
         self.prior_sigma = dict()
         prior_sigma_lst = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]
@@ -938,10 +939,10 @@ class Temperature() :
                 s_nNext =   (beta_nNext - beta_n)
                 y_nNext =   g_nNext - g_n
                 
-#                if np.linalg.norm(s_nNext,2) < 1e-8 : 
-#                    print("s_nNext = {}".format(s_nNext))
-#                    break
-#                
+                if np.linalg.norm(s_nNext,2) < 1e-10 : 
+                    print("s_nNext = {}".format(s_nNext))
+                    break
+                
                 if cpt == 0 :
                     fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
                     fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
@@ -1515,7 +1516,7 @@ if __name__ == "__main__" :
     parser = parser()
     print (parser)
     
-    T = Temperature(parser)
+    T = Temperature(parser, 0.1)
     T.obs_pri_model()
     T.get_prior_statistics()
 
