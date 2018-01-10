@@ -659,15 +659,22 @@ class Temperature() :
                 s_nNext =   (beta_nNext - beta_n)
                 y_nNext =   g_nNext - g_n
                 
-                if np.linalg.norm(s_nNext,2) < 1e-8 : 
+                if np.linalg.norm(s_nNext,2) < 1e-9 : 
                     print("s_nNext = {}".format(s_nNext))
                     break
                 
+                ## Ça arrange un peu la hessienne
+                if cpt == 0 :
+                    fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
+                    fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
+                    
+                    H_n_inv *= fac_H
+#                    
                 H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
 #                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
                 
                 self.debug["curr_hess"] = H_nNext_inv
-                print("Hess:\n{}".format(H_nNext_inv))
+#                print("Hess:\n{}".format(H_nNext_inv))
                 
                 err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
                 print("err_beta = {} cpt = {}".format(err_beta, cpt))
@@ -902,9 +909,9 @@ class Temperature() :
         while (cond(alpha) == False) and cpt< cptmax :
             alpha   *=  rho
             cpt     +=  1
-            print cond(alpha)
+            print (alpha,  cond(alpha))
         print ("alpha = {}\t cpt = {}".format(alpha, cpt))
-        return alpha
+        return max(alpha, 1e-9)
 ##----------------------------------------------------##   
 #    def goldstein(self, )   
 ##----------------------------------------------------## 
@@ -1031,6 +1038,11 @@ class Temperature() :
 ##----------------------------------------------------## 
 ## Autres fonctions en dehors de la classe ##
 def subplot(T, method='adj_bfgs') : 
+    """
+    Fonction pour comparer les beta. 
+    Afficher les max et min des différents tirages 
+    Comparer l'approximation de la température avec beta_final et la température exacte
+    """
     if method == "QN_BFGS"    :
         dico_beta_map   =   T.QN_BFGS_bmap
         dico_beta_fin   =   T.QN_BFGS_bf
@@ -1175,30 +1187,82 @@ def subplot(T, method='adj_bfgs') :
         ax.set_ylabel("beta\'s")
         ax.legend(loc="best", fontsize = 13, ncol=2)
         return axes
+##---------------------------------------------------##
+##---------------------------------------------------##
+def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
+    """
+    Fonction pour comparer les sigma posterior
+    """
+    if method in {"optimization", "Optimization", "opti"}:
+        sigma_post = T.sigma_post_dict
+        title = "Optimization sigma posterior comparison"
+
+    if method in {"",  "adjoint" }:
+        sigma_post = T.adj_sigma_post
         
+        title = "Adjoint (Steepest D) sigma posterior comparison"
+    
+    if method=="adj_bfgs":
+        sigma_post = T.bfgs_adj_sigma_post
+        
+        title = "Adjoint (BFGS) sigma posterior comparison"        
+
+    print ("Title = %s" %(title))
+
+    if len(T.T_inf_lst) == 1:    
+        sT_inf = "T_inf_"+str(T.T_inf_lst[0])            
+        try :
+            base_sigma  =   np.asarray([base[0] for i in range(T.N_discr-2)])
+            exp_sigma   =   np.asarray([exp[0] for i in range(T.N_discr-2)], dtype=np.float)
+        except TypeError :
+            base, exp = [base], [exp]
+            base_sigma  =   np.asarray([base[0] for i in range(T.N_discr-2)])
+            exp_sigma   =   np.asarray([exp[0] for i in range(T.N_discr-2)], dtype=np.float)
+
+        plt.figure()
+        plt.title(title + sT_inf)
+        plt.semilogy(T.line_z, exp_sigma, label='Expected sigma', marker = 'o', linestyle='none')
+        plt.semilogy(T.line_z, sigma_post[sT_inf], label="Sigma posterior")
+        plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
+        plt.legend()        
+        plt.show()
+    
+    else :
+        for i, t in enumerate(T.T_inf_lst) :
+            sT_inf = "T_inf_"+str(t)
+            
+            base_sigma  =   np.asarray([base[i] for i in range(T.N_discr-2)])
+            exp_sigma   =   np.asarray([exp[i] for i in range(T.N_discr-2)])
+            
+            plt.figure()
+            plt.title(title + sT_inf)
+            plt.semilogy(T.line_z, exp_sigma, label='Expected Sigma', marker = '^', linestyle='none')
+            plt.semilogy(T.line_z, sigma_post[sT_inf], label="Sigma posterior")
+            plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
+            plt.legend()
+            plt.show()
 ##---------------------------------------------------##
+##---------------------------------------------------##     
 ##---------------------------------------------------##
+
 ##---------------------------------------------------##        
 if __name__ == "__main__" :
-#    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
+    
     parser = parser()
     print (parser)
+    
     T = Temperature(parser)
     T.obs_pri_model()
     T.get_prior_statistics()
-#    T.optimization()
 
-## run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
+########
+#              
+##----------------------------------------------------##
+##----------------------------------------------------##
+######                                            ######
+######      Cas testés avec meilleurs outputs     ######
+######                                            ######
+##----------------------------------------------------## 
+##----------------------------------------------------##
 
-#plt.figure()
-#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
-#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
-#plt.semilogy(T.line_z, T.sigma_post_dict["T_inf_50"], label="Post")
-#plt.semilogy(T.line_z, [0.8 for i in range(T.N_discr-2)], label="base")
-#plt.legend()
-
-#run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.5 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
-#run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.3 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
-#run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1.7 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
-
-
+#run temp_class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'full' -N 33 -dt 1e-4 -cptmax 500
