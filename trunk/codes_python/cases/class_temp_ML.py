@@ -109,7 +109,7 @@ class Temperature() :
         self.A2 = A_diag2 + M2 + P2 #Construction de la matrice des coefficients
         
         self.noise = self.tab_normal(0, 0.1, N_discr-2)[0]
-        self.lst_gauss = [self.tab_normal(0,0.1,N_discr-2)[0] for i in range(num_real)]
+        self.lst_gauss = [self.tab_normal(0,0.01,N_discr-2)[0] for i in range(num_real)]
         
         self.prior_sigma = dict()
         prior_sigma_lst = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]
@@ -455,12 +455,11 @@ class Temperature() :
             np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
             
             opti_obj = op.minimize(J, self.beta_prior, jac=grad_J, method="BFGS", tol=self.tol,\
-                       options={"disp" : True, "maxiter" : 200})
+                       options={"disp" : True, "maxiter" : 500})
             
             betamap[sT_inf] =   opti_obj.x
-#            hess[sT_inf]    =   opti_obj.hess_inv
+            hess[sT_inf]    =   opti_obj.hess_inv
             self.opti_obj   =   opti_obj
-            hess[sT_inf]    =   nd.Hessian(J)(betamap[sT_inf])
             cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
                             
             print ("Sucess state of the optimization {}".format(self.opti_obj.success))
@@ -491,91 +490,6 @@ class Temperature() :
         
         self.sigma_post_dict = sigma_post_dict
 ##----------------------------------------------------## 
-##----------------------------------------------------##
-    def optimization_2(self, verbose=False) :
-        """
-        Fonction utilisant la fonction op.minimize de scipy. La méthode utilisée est BFGS.
-        La dérivée est calculée à partir de la méthode utilisant les adjoints.
-        """
-        
-        if self.stat_done == False : self.get_prior_statistics()
-        
-        betamap, beta_final = dict(), dict()
-        hess, cholesky = dict(), dict()
-        
-        mins, maxs = dict(), dict()
-        sigma_post_dict = dict()
-        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-        beta_var = []
-        
-        for T_inf in self.T_inf_lst :
-            print ("Calculus for T_inf = %d" %(T_inf))
-            sT_inf  =   "T_inf_" + str(T_inf)
-            
-            curr_d  =   self.T_obs_mean[sT_inf]
-            cov_prior   =  self.cov_pri_dict[sT_inf]
-            cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf]           
-            
-            if verbose == True : 
-                print("shapes to debug :")
-                print("shape of cov_m = {}".format(cov_m.shape) )
-                print("shape of cov_p = {}".format(cov_prior.shape) )
-                print("shape of curr_d = {}".format(curr_d.shape) )
-                
-            J = lambda beta : np.dot((self.h_beta(beta, T_inf) - curr_d).T, (self.h_beta(beta, T_inf) - curr_d))
-
-            print ("J = {}".format(J(self.beta_prior)))
-
-            grad_J = lambda beta : 2. * (self.h_beta(beta, T_inf) - curr_d)
-            
-            opti_obj = op.minimize(J, self.beta_prior, jac=grad_J, method="BFGS", tol=self.tol,\
-                       options={"disp" : True, "maxiter" : 60})
-            
-            print("grad_optimization:\n{}".format(opti_obj.jac))
-            betamap[sT_inf] =   opti_obj.x
-#            hbeta =  self.h_beta(betamap[sT_inf], T_inf, verbose=False)
-            
-#            f = np.diag([( hbeta[p] - curr_d[p] ) / sigmas[p] for p in range(self.N_discr-2)])
-#            df_I_dT =   1. / sigmas[p]
-
-#            phi_t = - np.dot( df_I_dT, np.linalg.inv(self.DR_DT(beta_n, T_inf)) )
-#            
-#            grad_j  = np.dot( phi_t, self.DR_DBETA(beta_n, T_inf) )
-#            jac_j   =   np.diag(grad_j)
-#            hess[sT_inf] = np.linalg.inv( 2.*np.eye(self.N_discr-2)  )
-#            hess[sT_inf] = self.H_formule(betamap[sT_inf], cov_prior, T_inf)
-            hess[sT_inf]    =   opti_obj.hess_inv
-            cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
-            
-            self.opti_obj   =   opti_obj
-            print ("Sucess state of the optimization {}".format(self.opti_obj.success))
-            
-            beta_final[sT_inf]  =   betamap[sT_inf] + np.dot(cholesky[sT_inf], s)  
-            
-            for i in range(249):
-                s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-                beta_var.append(betamap[sT_inf] + np.dot(cholesky[sT_inf], s))
-            beta_var.append(beta_final[sT_inf])
-            sigma_post = []
-            for i in range(self.N_discr-2) :
-                mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
-                maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
-                sigma_post.append(np.std([j[i] for j in beta_var])) 
-            sigma_post_dict[sT_inf] = sigma_post 
-            mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
-            maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
-            
-        self.betamap    =   betamap
-        self.hess       =   hess
-        self.cholseky   =   cholesky
-        self.beta_final =   beta_final
-        self.mins_lst   =   mins_lst
-        self.maxs_lst   =   maxs_lst
-        self.beta_var   =   beta_var
-        self.optimize   =   True
-        
-        self.sigma_post_dict = sigma_post_dict
-##----------------------------------------------------##
 ##----------------------------------------------------##
     def minimization_with_first_guess(self) :
         """
@@ -1024,15 +938,21 @@ class Temperature() :
                 s_nNext =   (beta_nNext - beta_n)
                 y_nNext =   g_nNext - g_n
                 
-                if np.linalg.norm(s_nNext,2) < 1e-8 : 
-                    print("s_nNext = {}".format(s_nNext))
-                    break
-                
+#                if np.linalg.norm(s_nNext,2) < 1e-8 : 
+#                    print("s_nNext = {}".format(s_nNext))
+#                    break
+#                
+                if cpt == 0 :
+                    fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
+                    fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
+                    
+                    H_n_inv *= fac_H
+#                    
                 H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
 #                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
                 
                 self.debug["curr_hess"] = H_nNext_inv
-                print("Hess:\n{}".format(H_nNext_inv))
+#                print("Hess:\n{}".format(H_nNext_inv))
                 
                 err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
                 print("err_beta = {} cpt = {}".format(err_beta, cpt))
@@ -1076,7 +996,7 @@ class Temperature() :
                         
             bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s)
             
-            for i in range(49):
+            for i in range(249):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) )
             
@@ -1154,6 +1074,7 @@ class Temperature() :
         return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* s_nN[:, np.newaxis] * s_nN[np.newaxis, :])
 ##----------------------------------------------------##        
     def Next_hess_further(self, prev_hess_inv, y_nN, s_nN):
+        ## Trop lente
         """
         Formula from https://en.wikipedia.org/wiki/Broyden%E2%80%93Fletcher%E2%80%93Goldfarb%E2%80%93Shanno_algorithm
         Didn't find it anywhere else. Must check it out
@@ -1174,6 +1095,7 @@ class Temperature() :
         return T_1 + T_2 - T_3
 ##----------------------------------------------------##    
     def Next_hess_further_scd(self, prev_hess_inv, y_nN, s_nN):
+        # Cette fonction ne sembl pas marcher
         #https://arxiv.org/pdf/1704.00116.pdf 
         # Nocedal_Wright_Numerical_optimization_v2
         
@@ -1498,33 +1420,33 @@ def subplot(T, method='adj_bfgs') :
         fig = plt.figure(figsize=(8, 4))
         ax = fig.add_axes([0.1, 0.15, 0.8, 0.8], axisbg="#f5f5f5")
         ax.plot(T.line_z, T.betamap[sT_inf], label="Optimization Betamap for {}".format(sT_inf), linestyle='none', marker='o', color='magenta')
-        ax.plot(T.line_z, T.adj_bmap[sT_inf], label="Adjoint Betamap for {}".format(sT_inf), linestyle='none', marker='+', color='yellow')
+        ax.plot(T.line_z, T.bfgs_adj_bmap[sT_inf], label="Adjoint Betamap for {}".format(sT_inf), linestyle='none', marker='+', color='yellow')
         ax.plot(T.line_z, T.true_beta(curr_d, T_inf), label = "True beta profil {}".format(sT_inf), color='orange')
         
-        ax.fill_between(T.line_z, T.adj_mins, T.adj_maxs, facecolor= "1", alpha=0.4, interpolate=True, hatch='\\', color="cyan", label="Adjoint uncertainty")
+        ax.fill_between(T.line_z, T.bfgs_adj_mins, T.bfgs_adj_maxs, facecolor= "1", alpha=0.4, interpolate=True, hatch='\\', color="cyan", label="Adjoint uncertainty")
         ax.fill_between(T.line_z,  T.mins_lst, T.maxs_lst, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label="Optimization uncertainty")
         
-#        import matplotlib as mpl
-#        x0, x1 = 0.3, 0.7
-#        dz = 1./(T.N_discr-1)
-#        ind0, ind1 = int(x0/dz), int(x1/dz)
-#        ## Les deux lignes pointillees
-#        ax.axvline(x0, ymin = 1, ymax=1.6, color="black", linestyle=":")  
-#        ax.axvline(x1, ymin = 1, ymax=1.6, color="black", linestyle=":")
+        import matplotlib as mpl
+        x0, x1 = 0.3, 0.7
+        dz = 1./(T.N_discr-1)
+        ind0, ind1 = int(x0/dz), int(x1/dz)
+        ## Les deux lignes pointillees
+        ax.axvline(x0, ymin = 1, ymax=1.6, color="black", linestyle=":")  
+        ax.axvline(x1, ymin = 1, ymax=1.6, color="black", linestyle=":")
 
-#        #Ajout de la figure
-#        ax1 = fig.add_axes([0.05, 0.05, 0.4, 0.32], axisbg='#f8f8f8') 
-#        ax1.set_ylim(1.2,1.6)
-#        #[beg_horz, beg_vertical, end_horiz, end_vertical]
-#        ##
-#        x = np.linspace(x0, x1, len(T.line_z[ind0:ind1]))
-#        ax1.plot(x, T.betamap[sT_inf][ind0:ind1], linestyle='none', marker='o', color='magenta')
-#        ax1.plot(x, T.adj_bmap[sT_inf][ind0:ind1], linestyle='none', marker='+', color='yellow')
-#        ax1.plot(x, T.true_beta(curr_d, T_inf)[ind0:ind1], color='orange')
-#        
-##        ax1.fill_between(x, T.QN_BFGS_mins_lst[ind0:ind1], T.QN_BFGS_maxs_lst[ind0:ind1], facecolor= "1", alpha=0.2, interpolate=True, hatch='\\', color="cyan")
-#        ax1.fill_between(x,  T.mins_lst[ind0:ind1], T.maxs_lst[ind0:ind1], facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black")
-#        
+        #Ajout de la figure
+        ax1 = fig.add_axes([0.05, 0.05, 0.4, 0.32], axisbg='#f8f8f8') 
+        ax1.set_ylim(1.2,1.6)
+        #[beg_horz, beg_vertical, end_horiz, end_vertical]
+        ##
+        x = np.linspace(x0, x1, len(T.line_z[ind0:ind1]))
+        ax1.plot(x, T.betamap[sT_inf][ind0:ind1], linestyle='none', marker='o', color='magenta')
+        ax1.plot(x, T.T.bfgs_adj_bmap[sT_inf][ind0:ind1], linestyle='none', marker='+', color='yellow')
+        ax1.plot(x, T.true_beta(curr_d, T_inf)[ind0:ind1], color='orange')
+        
+#        ax1.fill_between(x, T.QN_BFGS_mins_lst[ind0:ind1], T.QN_BFGS_maxs_lst[ind0:ind1], facecolor= "1", alpha=0.2, interpolate=True, hatch='\\', color="cyan")
+        ax1.fill_between(x,  T.mins_lst[ind0:ind1], T.maxs_lst[ind0:ind1], facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black")
+        
         ax.set_title("Beta comparison between Optimisation and Adjoint")
         ax.set_xlabel("z")
         ax.set_ylabel("beta\'s")
@@ -1533,27 +1455,69 @@ def subplot(T, method='adj_bfgs') :
         
 ##---------------------------------------------------##
 ##---------------------------------------------------##
+def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
+    """
+    Fonction pour comparer les sigma posterior
+    """
+    if method in {"optimization", "Optimization", "opti"}:
+        sigma_post = T.sigma_post_dict
+        title = "Optimization sigma posterior comparison"
+
+    if method in {"",  "adjoint" }:
+        sigma_post = T.adj_sigma_post
+        
+        title = "Adjoint (Steepest D) sigma posterior comparison"
+    
+    if method=="adj_bfgs":
+        sigma_post = T.bfgs_adj_sigma_post
+        
+        title = "Adjoint (BFGS) sigma posterior comparison"        
+
+    print ("Title = %s" %(title))
+
+    if len(T.T_inf_lst) == 1:    
+        sT_inf = "T_inf_"+str(T.T_inf_lst[0])            
+        try :
+            base_sigma  =   np.asarray([base[0] for i in range(T.N_discr-2)])
+            exp_sigma   =   np.asarray([exp[0] for i in range(T.N_discr-2)], dtype=np.float)
+        except TypeError :
+            base, exp = [base], [exp]
+            base_sigma  =   np.asarray([base[0] for i in range(T.N_discr-2)])
+            exp_sigma   =   np.asarray([exp[0] for i in range(T.N_discr-2)], dtype=np.float)
+
+        plt.figure()
+        plt.title(title + sT_inf)
+        plt.semilogy(T.line_z, exp_sigma, label='Expected sigma', marker = 'o', linestyle='none')
+        plt.semilogy(T.line_z, sigma_post[sT_inf], label="Sigma posterior")
+        plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
+        plt.legend()        
+        plt.show()
+    
+    else :
+        for i, t in enumerate(T.T_inf_lst) :
+            sT_inf = "T_inf_"+str(t)
+            
+            base_sigma  =   np.asarray([base[i] for i in range(T.N_discr-2)])
+            exp_sigma   =   np.asarray([exp[i] for i in range(T.N_discr-2)])
+            
+            plt.figure()
+            plt.title(title + sT_inf)
+            plt.semilogy(T.line_z, exp_sigma, label='Expected Sigma', marker = '^', linestyle='none')
+            plt.semilogy(T.line_z, sigma_post[sT_inf], label="Sigma posterior")
+            plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
+            plt.legend()
+            plt.show()
+##---------------------------------------------------##  
+##---------------------------------------------------##
 ##---------------------------------------------------##        
 if __name__ == "__main__" :
-#    __init__ (self, T_inf_lst, N_discr, dt, h, kappa, datapath, num_real = )
+    
     parser = parser()
     print (parser)
+    
     T = Temperature(parser)
     T.obs_pri_model()
     T.get_prior_statistics()
-#    T.optimization()
 
 ## run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
-
-#plt.figure()
-#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
-#plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', marker = 's', linestyle='none')
-#plt.semilogy(T.line_z, T.sigma_post_dict["T_inf_50"], label="Post")
-#plt.semilogy(T.line_z, [0.8 for i in range(T.N_discr-2)], label="base")
-#plt.legend()
-
-#run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.5 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
-#run class_temp_ML.py -T_inf_lst 50 -kappa 10 -tol 1e-5 -beta_prior 1.3 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
-#run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1.7 -num_real 100 -cov_mod 'full' -N 50 -dt 1e-4
-
 
