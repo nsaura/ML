@@ -442,11 +442,11 @@ class Temperature() :
             inv_cov_obs =   np.linalg.inv(cov_m)
             
             J_1 =   lambda beta :\
-            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T),inv_cov_obs, (curr_d - self.h_beta(beta, T_inf)))
+            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
             
             J_2 =   lambda beta :\
             0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
-                                        )
+                                        
             J = lambda beta : J_1(beta) + J_2(beta)  ## Fonction de coût
             
             print ("J(beta_prior) = {}".format(J(self.beta_prior)))
@@ -458,10 +458,11 @@ class Temperature() :
                        options={"disp" : True, "maxiter" : 200})
             
             betamap[sT_inf] =   opti_obj.x
-            hess[sT_inf]    =   opti_obj.hess_inv
-            cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
-            
+#            hess[sT_inf]    =   opti_obj.hess_inv
             self.opti_obj   =   opti_obj
+            hess[sT_inf]    =   nd.Hessian(J)(betamap[sT_inf])
+            cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
+                            
             print ("Sucess state of the optimization {}".format(self.opti_obj.success))
             
             beta_final[sT_inf]  =   betamap[sT_inf] + np.dot(cholesky[sT_inf], s)  
@@ -909,30 +910,32 @@ class Temperature() :
             
             cov_pri     =   self.cov_pri_dict[sT_inf]
             
-            J = lambda beta : 0.5*  ( 
-                          np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
-                            np.linalg.inv(cov_obs)) , (curr_d - self.h_beta(beta, T_inf) )  )  
-                        + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
-                            np.linalg.inv(cov_pri) ) , (beta - self.beta_prior) ) 
-                                    ) ## écriture validée
-#            Jiz = [J(self.beta_prior+i/10.) for i in np.arange(50)]
-#            plt.plot(1+np.arange(50)/10., Jiz)
-#            plt.show()
-#            
+            inv_cov_pri =   np.linalg.inv(cov_pri)  
+            inv_cov_obs =   np.linalg.inv(cov_obs)
+            
+            J_1 =   lambda beta :\
+            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
+            
+            J_2 =   lambda beta :\
+            0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
+                                        
+            ## Fonction de coût
+            J = lambda beta : J_1(beta) + J_2(beta)  
+            
+            print ("J(beta_prior) = {}".format(J(self.beta_prior)))
+
+            grad_J = lambda beta :\
+            np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            
             err_beta = err_hess = err_j = 1            
             cpt, cptMax =   0, self.cpt_max_adj
             
             sup_g_lst = []
             
             # Initialisation
-#            beta_nPrev  =   np.zeros_like(self.beta_prior)
-#            g_nPrev =   np.zeros_like(self.beta_prior)
-    
             #dJ/dBeta 
             beta_n  =   self.beta_prior
-            g_J     =   lambda beta_n : np.dot(self.PSI(beta_n, T_inf),\
-                          np.diag(self.DR_DBETA(beta_n,T_inf)) ) + self.DJ_DBETA(beta_n,T_inf)  
-            g_n     =   g_J(beta_n)
+            g_n     =   grad_J(beta_n)
             
             g_sup = np.linalg.norm(g_n, np.inf)
             sup_g_lst.append(np.linalg.norm(g_n, np.inf))
@@ -949,10 +952,15 @@ class Temperature() :
             self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
             dir_lst =   []
             
-#            while (cpt<cptMax) and err_hess>1e-5 and np.abs(err_j)>1e-7 and g_sup > 1e-7  :
+            ######################
+            ##-- Optimisation --##
+            ######################
+            
             while (cpt<cptMax) and g_sup > 1e-7  :
                 if cpt > 0 :
-                    ## Incrementation   
+                ########################
+                ##-- Incrementation --##
+                ######################## 
                     beta_nPrev  =   beta_n             
                     beta_n  =   beta_nNext
                     ax[0].plot(self.line_z, beta_n, label="beta cpt%d" %(cpt))
@@ -973,49 +981,57 @@ class Temperature() :
                     print("beta_n = \n  {} ".format(beta_n))
                     print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
                                                            err_beta, err_hess) )
-                
+                test = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
+                                    np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]                
+                #################
                 ##-- Routine --##
+                #################
+                
+                ## Calcule de la direction 
                 d_n     =   - np.dot(H_n_inv, g_n)
+                test_   =   (test(H_n_inv) < 0)
+                print("d_n descent direction : {}".format(test_))    
+                            
+                if test_  == False :
+                    self.positive_definite_test(H_n_inv, verbose=False)
 
-                test = -np.dot(g_n[np.newaxis, :], np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]
-                 
+                    H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.)
+                    print("cpt = {}\t cholesky for MPD used.")
+                    print("new d_n descent direction : {}".format(test(H_n_inv) < 0))
+
+                    d_n     =   - np.dot(H_n_inv, g_n)  
+
                 dir_lst.append(np.linalg.norm(d_n, 2))
                 print("d_n :\n {}".format(d_n))
-                print("d_n descent direction : {}".format(test < 0))
                 
-#                test = np.dot(d_n[np.newaxis, :], g_n)[0]
-#                
-#                if test > 0 : d_n = -d_n
-                
+                ## Calcule de la longueur de pas 
 #                alpha = self.search_alpha(J, g_n, beta_n, g_sup) #if cpt <10 else  0.01
-                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, cpt, strong = False,\
-                                            verbose=False ,alpha=1.)
-                if cpt > 100 and g_sup > 6000 :
-                    alpha = 1e-7
+#                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, cpt, strong = False,\
+#                                            verbose=False ,alpha=1.)
+                alpha =  self.backline_search(J, g_n, beta_n, d_n, rho=0.01, c=1e-4)
                 print("alpha for cpt {}: {}".format(cpt, alpha))
+                              
+#                if cpt < cpt_inter :
+###                    dbeta = dbeta/10000000
+#                    dbeta_n /= 1000000
                 
-                dbeta_n =  alpha*d_n              
+                ## Calcule des termes n+1
                 
-#                N_n_nP  =   np.linalg.norm(g_n - g_nPrev, 2)
-#                gamma_n =   np.dot( (beta_n-beta_nPrev).T ,(g_n - g_nPrev) ) / N_n_nP**2
-#                dbeta   =   gamma_n * g_n
-                    
-                if cpt < cpt_inter :
-##                    dbeta = dbeta/10000000
-                    dbeta_n /= 10
-                
+                dbeta_n =  alpha*d_n
                 beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
 
-                g_nNext =   g_J(beta_nNext)
+                g_nNext =   grad_J(beta_nNext)
                 s_nNext =   (beta_nNext - beta_n)
-                if np.linalg.norm(s_nNext,2) < 1e-8 : break
                 y_nNext =   g_nNext - g_n
                 
-#                H_nNext_inv = self.Next_hess_further_scd(H_n_inv, y_nNext, s_nNext)
-                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
+                if np.linalg.norm(s_nNext,2) < 1e-8 : 
+                    print("s_nNext = {}".format(s_nNext))
+                    break
+                
+                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+#                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
                 
                 self.debug["curr_hess"] = H_nNext_inv
-                
                 print("Hess:\n{}".format(H_nNext_inv))
                 
                 err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
@@ -1031,14 +1047,14 @@ class Temperature() :
                 err_hess_lst.append(err_hess) 
                 err_beta_lst.append(err_beta)
                 
-#                dbeta = -gamma_n* g_n
-#                if cpt < 2 :
-#                    dbeta = dbeta/10000000
-#                    
-#                beta_nNext = beta_n + dbeta
                 print("\n")
                 cpt +=  1    
                 # n --> n+1 si non convergence, sort de la boucle sinon 
+            
+            ######################
+            ##-- Post Process --##
+            ######################
+            
             H_last  =   H_nNext_inv
             g_last  =   g_nNext
             
@@ -1050,24 +1066,17 @@ class Temperature() :
             try :
                 R   =   np.linalg.cholesky(H_last)
             except np.linalg.LinAlgError :
-                print("HH eign: \n{}".format(np.linalg.eig(H_last)[0]))
-            
-                print('det(HH) ={}'.format(np.linalg.det(H_last)))
-                print("Erreur : Matrix not positive definite. Symetrisation:")
-                H_last = 0.5*(H_last.T + H_last)
+                H_last = self.cholesky_for_MPD(H_last, fac = 5.)
+                R   =   H_last
+#                print("HH eign: \n{}".format(np.linalg.eig(H_last)[0]))
+#                print('det(HH) ={}'.format(np.linalg.det(H_last)))
                 
-                try :
-                    R   =   np.linalg.cholesky(H_last)
-                except np.linalg.LinAlgError :
-                    sys.exit("Apres symetrisation H_last = {}\nValp = {}\nDet = {}".format(H_last, np.linalg.eig(H_last)[0], np.linalg.det(H_last)))
             bfgs_adj_bmap[sT_inf]   =   beta_last
             bfgs_adj_grad[sT_inf]   =   g_last
                         
-#            adj_hessinv[sT_inf] =   np.linalg.inv( np.dot( np.diag(g_n).T, np.diag(g_n) ) ) ## H-1 = (Jac.T * Jac) -1
-            
             bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s)
             
-            for i in range(249):
+            for i in range(49):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) )
             
@@ -1085,30 +1094,33 @@ class Temperature() :
             
             plt.legend(loc="best")
             
-            plt.figure("sup_g_lst vs iteration")
-            plt.plot(range(cpt), sup_g_lst)
+            try :
+                plt.figure("sup_g_lst vs iteration")
+                plt.plot(range(cpt), sup_g_lst)
+                
+                fiig, axxes = plt.subplots(2,2,figsize=(8,8))
+                axxes[0][0].set_title("alpha vs iterations ")
+                axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o', linestyle='none', markersize=8)
+                axxes[0][0].set_xlabel("Iterations")
+                axxes[0][0].set_ylabel("alpha")
+                
+                axxes[0][1].set_title("err_hess vs iterations ")
+                axxes[0][1].plot(range(cpt), err_hess_lst, marker='s', linestyle='none', markersize=8)
+                axxes[0][1].set_xlabel("Iterations")
+                axxes[0][1].set_ylabel("norm(H_nNext_inv - H_n_inv, 2)")
+                
+                axxes[1][0].set_title("err_beta vs iterations ")
+                axxes[1][0].plot(range(cpt), err_beta_lst, marker='^', linestyle='none', markersize=8)
+                axxes[1][0].set_xlabel("Iterations")
+                axxes[1][0].set_ylabel("beta_nNext - beta_n")            
+                
+                axxes[1][1].set_title("||d_n|| vs iterations")
+                axxes[1][1].plot(range(cpt), dir_lst, marker='v', linestyle='none', markersize=8)
+                axxes[1][1].set_xlabel("Iteration")
+                axxes[1][1].set_ylabel("Direction")            
             
-            fiig, axxes = plt.subplots(2,2,figsize=(8,8))
-            axxes[0][0].set_title("alpha vs iterations ")
-            axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o', linestyle='none', markersize=8)
-            axxes[0][0].set_xlabel("Iterations")
-            axxes[0][0].set_ylabel("alpha")
-            
-            axxes[0][1].set_title("err_hess vs iterations ")
-            axxes[0][1].plot(range(cpt), err_hess_lst, marker='s', linestyle='none', markersize=8)
-            axxes[0][1].set_xlabel("Iterations")
-            axxes[0][1].set_ylabel("norm(H_nNext_inv - H_n_inv, 2)")
-            
-            axxes[1][0].set_title("err_beta vs iterations ")
-            axxes[1][0].plot(range(cpt), err_beta_lst, marker='^', linestyle='none', markersize=8)
-            axxes[1][0].set_xlabel("Iterations")
-            axxes[1][0].set_ylabel("beta_nNext - beta_n")            
-            
-            axxes[1][1].set_title("||d_n|| vs iterations")
-            axxes[1][1].plot(range(cpt), dir_lst, marker='v', linestyle='none', markersize=8)
-            axxes[1][1].set_xlabel("Iteration")
-            axxes[1][1].set_ylabel("Direction")            
-            
+            except ValueError :
+                break
         #self.Hess = np.dot(g_n.T, g_n)
         self.bfgs_adj_bf     =   bfgs_adj_bf
         self.bfgs_adj_bmap   =   bfgs_adj_bmap
@@ -1132,7 +1144,7 @@ class Temperature() :
         """
         # Comme Scipy
         rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) != 0 else 1./1e-5
-        print rho_nN
+        print("In Next Hess, check rho_nN = {}".format(rho_nN))
         
         Id      =   np.eye(self.N_discr-2)
         
@@ -1215,26 +1227,31 @@ class Temperature() :
 ######                                            ######
 ##----------------------------------------------------## 
 ##----------------------------------------------------##
-    def search_alpha(self, func, func_prime, curr_beta, err_grad, alpha=1.) :
-#        https://projecteuclid.org/download/pdf_1/euclid.pjm/1102995080 Corollaire 2
-#        alpha_m = lambda m : float(alpha) / (2**(m-1))
-#       Deuxieme test avec https://en.wikipedia.org/wiki/Backtracking_line_search 
-        
-        cptmax = 18 if err_grad > 1e3 else 50
-        mm = 1
-        while ((func(curr_beta - alpha*func_prime)) <= \
-                 func(curr_beta) - 0.5*alpha * np.linalg.norm(func_prime)**2 ) == False and mm < cptmax:
-            alpha *=0.25
-            mm += 1
-        
-        return alpha
+#    def search_alpha(self, func, func_prime, curr_beta, err_grad, alpha=1.) :
+##        https://projecteuclid.org/download/pdf_1/euclid.pjm/1102995080 Corollaire 2
+##        alpha_m = lambda m : float(alpha) / (2**(m-1))
+##       Deuxieme test avec https://en.wikipedia.org/wiki/Backtracking_line_search 
+#        
+#        cptmax = 18 if err_grad > 1e3 else 50
+#        mm = 1
+#        while ( (func(curr_beta - alpha*func_prime) ) <= \
+#                 func(curr_beta) - 0.5*alpha * np.linalg.norm(func_prime)**2 ) == False and mm < cptmax:
+#            alpha *=0.25
+#            mm += 1
+#        
+#        return alpha
 ##----------------------------------------------------## 
-    def backline_search(self, J_lambda, var_J_lambda, direction, incr=0.01) :
-        t = 1.
-        norm_direction = np.linalg.norm(direction, 2)**2
-        while J_lambda(var_J_lambda - t*direction) > (J_lambda(var_J_lambda) - t/2.0 * norm_direction) :
-            t *= incr
-        return t  
+    def backline_search(self, J, djk, xk, dk, rho=0.001, c=1e-2) :
+        alpha = 1.
+        cond = lambda alpha : (J(xk + alpha*dk)) <=\
+                (J(xk) + c * alpha * np.dot(djk.T, dk)) 
+        cpt, cptmax = 0, 5000
+        while (cond(alpha) == False) and cpt< cptmax :
+            alpha   *=  rho
+            cpt     +=  1
+            print cond(alpha)
+        print ("alpha = {}\t cpt = {}".format(alpha, cpt))
+        return alpha
 ##----------------------------------------------------##   
 #    def goldstein(self, )   
 ##----------------------------------------------------## 
@@ -1295,21 +1312,6 @@ class Temperature() :
 ######     Fonctions auxillaires de la classe     ######
 ######                                            ######
 ##----------------------------------------------------##
-##----------------------------------------------------## 
-    def positive_definite_test(self, matrix, matrix_name="H_inv", verbose = False):
-        test = True
-        mat_det =   np.linalg.det(matrix)     
-        mat_eigvalue    =   np.linalg.eig(matrix)[0]
-        
-        if False in [k<0 for k in mat_eigvalue] or mat_det < 0 :
-            print ("{} is not positive definite".format(matrix_name))
-            
-            if verbose == True :
-                print("{} eigenvalues : \n{}".format(matrix_name, mat_eigvalue))
-                print("{} determinant : {}".format(matrix_name, mat_det))
-            test = False
-        
-        return test
 ##----------------------------------------------------##
     def DR_DT(self, beta, T_inf) :
         M1 = np.diag([(self.N_discr-1)**2 for i in range(self.N_discr-3)], -1) # Extra inférieure
@@ -1350,6 +1352,35 @@ class Temperature() :
 #        return -np.dot(np.linalg.inv(self.DR_DT(beta, T_inf)), self.DJ_DT(beta, T_inf))
         return result
 ##----------------------------------------------------##
+    def positive_definite_test(self, matrix, matrix_name="H_inv", verbose = False):
+        test = True
+        mat_det =   np.linalg.det(matrix)     
+        mat_eigvalue    =   np.linalg.eig(matrix)[0]
+        
+        if False in [k<0 for k in mat_eigvalue] or mat_det < 0 :
+            print ("{} is not positive definite".format(matrix_name))
+            
+            if verbose == True :
+                print("{} eigenvalues : \n{}".format(matrix_name, mat_eigvalue))
+                print("{} determinant : {}".format(matrix_name, mat_det))
+            test = False
+        
+        return test
+##----------------------------------------------------##
+    def cholesky_for_MPD(self, matrix, rho=10**-3, fac=2.) :
+        diag = np.diag(matrix)
+        mindiag = min(diag)
+        if  mindiag > 0 :
+            tau = 0.
+        else :
+            tau = - mindiag + rho
+        while True :
+            try :
+                L = np.linalg.cholesky(matrix + tau * np.eye(matrix.shape[0]))
+                break
+            except np.linalg.LinAlgError :
+                tau = max(fac * tau, rho)
+        return L
 ##----------------------------------------------------##
 ##
 #
