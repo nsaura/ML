@@ -188,7 +188,7 @@ class Temperature() :
         Method designed to change the adjoint maximal increment value without running back the whole program.
         """
         self.cpt_max_adj = new_compteur
-        print("cpt_max_adj is now{}".format(self.cpt_max_adj))
+        print("cpt_max_adj is now {}".format(self.cpt_max_adj))
 ##---------------------------------------------------
     def pd_read_csv(self, filename) :
         if os.path.splitext(filename)[-1] is not ".csv" :
@@ -322,7 +322,7 @@ class Temperature() :
             print ("Calculus with T_inf={} completed. Convergence status :".format(T_inf))
             print ("\t Err_obs = {} ".format(err_obs))    
             print ("\t Err_pri = {} ".format(err_pri))
-            print ("\t sIterations = {} ".format(compteur))
+            print ("\t Iterations = {} ".format(compteur))
         
         self.T_init             =   T_init    
         self.T_nNext_obs_lst    =   T_nNext_obs_lst
@@ -571,7 +571,7 @@ class Temperature() :
             g_sup = np.linalg.norm(g_n, np.inf)
             sup_g_lst.append(np.linalg.norm(g_n, np.inf))
             
-            print ("\x1b[1;37;44 Sup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
+            print ("\x1b[1;37;44mSup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
 
             H_n_inv =   np.eye(self.N_discr-2)
             self.debug["first_hess"] = H_n_inv
@@ -602,7 +602,7 @@ class Temperature() :
                     g_sup   =   np.linalg.norm(g_n, np.inf)
                     sup_g_lst.append(g_sup)
                     
-                    print ("Sup grad : {}".format(g_sup))
+                    print ("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
 
                     ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
 
@@ -829,7 +829,7 @@ class Temperature() :
             
             plt.figure()
             print("psi(beta_prior) = {}) \n".format(psi))
-            print("dR/dBeta(T.beta_prior) = {} \n".format(
+            print("dR/dBeta(beta_prior) = {} \n".format(
                      self.DR_DBETA(self.beta_prior, T_inf)))
             
             while (cpt<cptMax) and sup_grad>1e-4 :
@@ -1073,7 +1073,7 @@ class Temperature() :
             cpt     +=  1
             print cond(alpha)
         print ("alpha = {}\t cpt = {}".format(alpha, cpt))
-        return alpha
+        return max(1e-10,alpha)
 ##----------------------------------------------------##   
 #    def goldstein(self, )   
 ##----------------------------------------------------## 
@@ -1415,9 +1415,9 @@ if __name__ == "__main__" :
     parser = parser()
     print (parser)
     
-    T = Temperature(parser, 0.1)
-    T.obs_pri_model()
-    T.get_prior_statistics()
+    Tt = Temperature(parser, 0.1)
+    Tt.obs_pri_model()
+    Tt.get_prior_statistics()
 
 ## run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
 

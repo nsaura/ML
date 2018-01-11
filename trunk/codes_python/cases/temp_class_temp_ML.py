@@ -95,18 +95,17 @@ class Temperature() :
         z_init, z_final =   0.0, 1.0
         dz = np.abs(z_final - z_init) / float(N_discr)
         
-        ## Matrice pour la résolution
-        M1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1) # Extra inférieure
-        P1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1)  # Extra supérieure
-        A_diag1 = np.diag(np.transpose([(1 + dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
+        ## Matrices des coefficients pour la résolution
+        INF1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1)
+        SUP1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1) 
+        A_diag1 = np.diag(np.transpose([(1 + dt/dz**2*kappa) for i in range(N_discr-2)])) 
 
-        self.A1 = A_diag1 + M1 + P1 #Construction de la matrice des coefficients
-        
-        M2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1) # Extra inférieure
-        P2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1)  # Extra supérieure
-        A_diag2 = np.diag(np.transpose([(1 - dt/dz**2*kappa) for i in range(N_discr-2)])) # Diagonale
+        INF2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1) 
+        SUP2 = np.diag(np.transpose([dt/dz**2*kappa/2 for i in range(N_discr-3)]), 1)
+        A_diag2 = np.diag(np.transpose([(1 - dt/dz**2*kappa) for i in range(N_discr-2)])) 
 
-        self.A2 = A_diag2 + M2 + P2 #Construction de la matrice des coefficients
+        self.A1 = A_diag1 + INF1 + SUP1
+        self.A2 = A_diag2 + INF2 + SUP2
         
         self.noise = self.tab_normal(0, 0.1, N_discr-2)[0]
         self.lst_gauss = [self.tab_normal(0,0.1,N_discr-2)[0] for i in range(num_real)]
@@ -634,7 +633,7 @@ class Temperature() :
             self.sigma_post_dict = sigma_post_dict
 ##----------------------------------------------------##
 ##----------------------------------------------------##        
-    def adjoint_bfgs(self, cpt_inter=5) : 
+    def adjoint_bfgs(self, inter_plot=False) : 
         """
         
         """
@@ -653,7 +652,7 @@ class Temperature() :
         
         bfgs_adj_sigma_post  = dict()
         beta_var = []
-        
+                
         for T_inf in self.T_inf_lst :
             sT_inf      =   "T_inf_%d" %(T_inf)
             curr_d      =   self.T_obs_mean[sT_inf]
@@ -662,31 +661,40 @@ class Temperature() :
             
             cov_pri     =   self.cov_pri_dict[sT_inf]
             
-            J = lambda beta : 0.5 * np.dot((self.h_beta(beta, T_inf) - curr_d).T, np.dot(np.linalg.inv(cov_obs),(self.h_beta(beta, T_inf) - curr_d)))
-            print ("J = {}".format(J(self.beta_prior)))
-
-            g_J = lambda beta : np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) )
-#            Jiz = [J(self.beta_prior+i/10.) for i in np.arange(50)]
-#            plt.plot(1+np.arange(50)/10., Jiz)
-#            plt.show()
-#            
+            inv_cov_pri =   np.linalg.inv(cov_pri)  
+            inv_cov_obs =   np.linalg.inv(cov_obs)
+            
+            J_1 =   lambda beta :\
+            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
+            
+            J_2 =   lambda beta :\
+            0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
+                                        
+            ## Fonction de coût
+            J = lambda beta : J_1(beta) + J_2(beta)  
+            
+            grad_J = lambda beta :\
+            np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            
             err_beta = err_hess = err_j = 1            
             cpt, cptMax =   0, self.cpt_max_adj
             
             sup_g_lst = []
-            
-            # Initialisation
-#            beta_nPrev  =   np.zeros_like(self.beta_prior)
-#            g_nPrev =   np.zeros_like(self.beta_prior)
-    
+            corr_chol = []
+            al2_lst  =   []
+                        
+            ########################
+            ##-- Initialisation --##
+            ########################
+
             #dJ/dBeta 
             beta_n  =   self.beta_prior
-            g_n     =   g_J(beta_n)
+            g_n     =   grad_J(beta_n)
             
             g_sup = np.linalg.norm(g_n, np.inf)
             sup_g_lst.append(np.linalg.norm(g_n, np.inf))
             
-            print ("\x1b[1;37;44 Sup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
+            print ("\x1b[1;37;44mSup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
 
             H_n_inv =   np.eye(self.N_discr-2)
             self.debug["first_hess"] = H_n_inv
@@ -715,9 +723,14 @@ class Temperature() :
                     g_nPrev =   g_n
                     g_n     =   g_nNext
                     g_sup   =   np.linalg.norm(g_n, np.inf)
+                    
+                    plt.figure("Evolution de l'erreur")
+                    plt.scatter(cpt, g_sup, c='black')
+                    if inter_plot == True :
+                        plt.pause(0.05)
                     sup_g_lst.append(g_sup)
                     
-                    print ("Sup grad : {}".format(g_sup))
+                    print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
 
                     ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
 
@@ -744,18 +757,19 @@ class Temperature() :
                     H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.)
                     print("cpt = {}\t cholesky for MPD used.")
                     print("new d_n descent direction : {}".format(test(H_n_inv) < 0))
-
+                    
                     d_n     =   - np.dot(H_n_inv, g_n)  
+                    
+                    corr_chol.append(cpt)
 
-                dir_lst.append(np.linalg.norm(d_n, 2))
                 print("d_n :\n {}".format(d_n))
                 
                 ## Calcule de la longueur de pas 
                 
-#                alpha = self.search_alpha(J, g_n, beta_n, g_sup) #if cpt <10 else  0.01
-#                alpha = self.wolf_conditions(J, g_J, beta_n, d_n, cpt, strong = False,\
-#                                            verbose=False ,alpha=1.)
-                alpha =  self.backline_search(J, g_n, beta_n, d_n, rho=0.01, c=1e-4)
+                alpha, al2_cor =  self.backline_search(J, grad_J, g_n, beta_n, d_n, rho=0.1, c=0.5)
+                if al2_cor == True :
+                    al2_lst.append(cpt)
+                
                 print("alpha for cpt {}: {}".format(cpt, alpha))
                               
 #                if cpt < cpt_inter :
@@ -765,13 +779,14 @@ class Temperature() :
                 ## Calcule des termes n+1
                 
                 dbeta_n =  alpha*d_n
+                print ("Pas pour cpt = {}: dbeta_n = {}".format(cpt, dbeta_n))
                 beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
 
-                g_nNext =   g_J(beta_nNext)
+                g_nNext =   grad_J(beta_nNext)
                 s_nNext =   (beta_nNext - beta_n)
                 y_nNext =   g_nNext - g_n
                 
-                if np.linalg.norm(s_nNext,2) < 1e-9 : 
+                if np.linalg.norm(s_nNext,2) < 1e-10 : 
                     print("s_nNext = {}".format(s_nNext))
                     break
                 
@@ -800,6 +815,7 @@ class Temperature() :
                 self.alpha_lst.append(alpha)
                 err_hess_lst.append(err_hess) 
                 err_beta_lst.append(err_beta)
+                dir_lst.append(np.linalg.norm(d_n, 2))
                 
                 print("\n")
                 cpt +=  1    
@@ -811,10 +827,14 @@ class Temperature() :
             
             H_last  =   H_nNext_inv
             g_last  =   g_nNext
+            beta_last=  beta_nNext
+            d_n_last = d_n
+            
+            print ("Final Sup_g = {}\nFinal beta = {}\nFinal direction {}".format(g_sup,\
+                                      beta_last,       d_n_last  ))
             
             ax[1].plot(self.line_z, g_last, label="gradient last")
 
-            beta_last=  beta_nNext
             ax[0].plot(self.line_z, beta_last, label="beta_n last")
             
             try :
@@ -830,7 +850,7 @@ class Temperature() :
                         
             bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s)
             
-            for i in range(49):
+            for i in range(249):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) )
             
@@ -849,9 +869,6 @@ class Temperature() :
             plt.legend(loc="best")
             
             try :
-                plt.figure("sup_g_lst vs iteration")
-                plt.plot(range(cpt), sup_g_lst)
-                
                 fiig, axxes = plt.subplots(2,2,figsize=(8,8))
                 axxes[0][0].set_title("alpha vs iterations ")
                 axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o', linestyle='none', markersize=8)
@@ -885,6 +902,10 @@ class Temperature() :
         self.bfgs_adj_mins   =   bfgs_mins_lst
         
         self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
+        
+        self.al2_lst    =    al2_lst
+        self.corr_chol  =   corr_chol
+        
 ###---------------------------------------------------##
 ###---------------------------------------------------##
 ######                                            ######
@@ -1015,17 +1036,51 @@ class Temperature() :
         
         return alpha
 ##----------------------------------------------------## 
-    def backline_search(self, J, djk, xk, dk, rho=0.001, c=1e-2) :
-        alpha = 1.
-        cond = lambda alpha : (J(xk + alpha*dk)) <=\
+    def backline_search(self, J, g_J, djk, xk, dk, rho=0.1, c=0.5) :
+        alpha = alpha_lo = alpha_hi = 1.
+        correction = False
+        bool_curv  = False
+        
+        armi  = lambda alpha : (J(xk + alpha*dk)) <=\
                 (J(xk) + c * alpha * np.dot(djk.T, dk)) 
+        curv  = lambda alpha : (np.linalg.norm(g_J(xk + alpha*dk))) <=\
+                (0.9*np.linalg.norm(djk,2))  
+        
         cpt, cptmax = 0, 5000
-        while (cond(alpha) == False) and cpt< cptmax :
+        while (armi(alpha) == False) and cpt< cptmax :
+            alpha_lo =  alpha
             alpha   *=  rho
             cpt     +=  1
-            print (alpha,  cond(alpha))
+            print (alpha,  armi(alpha))
+            alpha_hi =  alpha            
         print ("alpha = {}\t cpt = {}".format(alpha, cpt))
-        return max(alpha, 1e-9)
+        print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
+        
+        bool_curv = curv(alpha)
+        
+        print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
+        if cpt > 0 and bool_curv == False:
+            alpha_2 = alpha_lo
+            
+            it = 0
+            bool_curv = curv(alpha_2)
+            while bool_curv == False and (alpha_2 - alpha_hi)>0 :
+                alpha_2 *= 0.9        
+                it  +=  1
+                bool_curv = curv(alpha_2)
+#                if it > 50 :
+#                    alpha_2 = alpha
+#                    break
+                        
+            if bool_curv == True :
+                print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, iteration = {}\x1b[0m".format(alpha_2, alpha, it))
+                alpha = alpha_2
+                correction = True
+       
+        if bool_curv == False or armi(alpha) == False :
+            alpha = max(alpha, 1e-11)
+            
+        return alpha, correction
 ##----------------------------------------------------##   
 #    def goldstein(self, )   
 ##----------------------------------------------------## 
@@ -1070,7 +1125,7 @@ class Temperature() :
             while (t1(alpha) == False or t2(alpha) == False) and cpt < cptmax :
                 cpt +=  1
                 if cpt % 10 ==0 and verbose== True :
-                    print("cpt : {}\nt1 = {} \t t2 = {}".format(cpt, t1(alpha), t2(alpha)))
+                    print("\x1b[1;37;43mcpt : {}\nt1 = {} \t t2 = {}\x1b[0m".format(cpt, t1(alpha), t2(alpha)))
                 alpha *= 0.85
         if verbose == True : print  ("t1 = {} \t t2 = {}".format(t1(alpha), t2(alpha)))
         return alpha
@@ -1365,9 +1420,9 @@ if __name__ == "__main__" :
     parser = parser()
     print (parser)
     
-    T = Temperature(parser)
-    T.obs_pri_model()
-    T.get_prior_statistics()
+    temp = Temperature(parser)
+    temp.obs_pri_model()
+    temp.get_prior_statistics()
 
 ########
 #              
