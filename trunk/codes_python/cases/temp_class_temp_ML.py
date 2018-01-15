@@ -43,8 +43,8 @@ def parser() :
                         help='Define the number of realization of epsilon(T) you want to pick up. Default to %(default)d\n' )
     parser.add_argument('--tolerance', '-tol', action='store', type=float, default=1e-5, dest='tol', 
                         help='Define the tolerance on the optimization error. Default to %(default).8f \n' )
-    parser.add_argument('--QN_tolerance', '-QN_tol', action='store', type=float, default=1e-5, dest='QN_tol', 
-                        help='Define the tolerance on the QN_BFGS error (hybrid). Default to %(default).8f \n' )
+    parser.add_argument('--g_sup_max', '-g_sup', action='store', type=float, default=0.1, dest='g_sup_max', 
+                        help='Define the criteria on grad_J to stop the optimization. Default to %(default).5f \n' )
     
     parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', 
         default=1 ,dest='beta_prior', help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
@@ -76,8 +76,8 @@ class Temperature() :
         dt,         h       =   parser.dt,      parser.h
         datapath            =   os.path.abspath(parser.datapath)
         num_real,   tol     =   parser.num_real,parser.tol
-        cov_mod,    QN_tol  =   parser.cov_mod, parser.QN_tol
         cpt_max_adj         =   parser.cpt_max_adj
+        cov_mod,    g_sup_max  =   parser.cov_mod, parser.g_sup_max
         
         self.beta_prior = np.asarray([parser.beta_prior for i in range(parser.N_discr-2)]) 
         
@@ -118,17 +118,17 @@ class Temperature() :
         
         self.line_z  = np.linspace(z_init, z_final, N_discr)[1:N_discr-1]
         self.cpt_max_adj = cpt_max_adj
+        self.g_sup_max = g_sup_max  
         self.num_real = num_real
         self.eps_0 = 5.*10**(-4)
         self.cov_mod = cov_mod
         self.N_discr = N_discr
-        self.QN_tol = QN_tol  
         self.tol = tol
         self.dt = dt        
         self.h = h
         
         bool_method = dict()
-        for s in {"opti_scipy", "adj_bfgs", "stat", "adj", "first_guess"} :
+        for s in {"opti_scipy", "adj_bfgs", "stat", "sr1", "dump_bfgs"} :
             bool_method[s] = False
         self.bool_method = bool_method
         
@@ -190,6 +190,15 @@ class Temperature() :
         self.cpt_max_adj = new_compteur
         print("cpt_max_adj is now {}".format(self.cpt_max_adj))
 ##---------------------------------------------------
+    def set_g_sup_max(self, new_criteria) :
+        """
+        Descr :
+        ----------
+        Method designed to change the adjoint criteria for exiting adjoint optimization without running back the whole program.
+        """
+        self.g_sup_max = new_criteria
+        print("g_sup_max is now {}".format(self.g_sup_max))
+
     def pd_read_csv(self, filename) :
         if os.path.splitext(filename)[-1] is not ".csv" :
             filename = os.path.splitext(filename)[0] + ".csv"
@@ -414,119 +423,6 @@ class Temperature() :
 ######                                            ######
 ##----------------------------------------------------## 
 
-##----------------------------------------------------## 
-    def minimization_with_first_guess(self) :
-        """
-        Méthode utilisant les dérivations automatiques de la bibliothèque numdifftools pour le 
-        gradient.
-        Utilise la routine op.minimize(method='bfgs') pour un first guess de la hessienne.
-        Puis incrémente.
-        Méthode qui peut être supprimée.
-        """
-        if self.bool_method["stat"] == False : self.get_prior_statistics()
-
-        QN_BFGS_bmap,   QN_BFGS_bf        =   dict(),     dict()
-        QN_BFGS_hess,   QN_BFGS_cholesky  =   dict(),     dict()
-
-        mins,   maxs    =   dict(),     dict()
-        
-        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-        
-        beta_QNBFGS_real =  []
-        alpha_lst       =   []
-        direction_lst   =   []
-        
-        for T_inf in self.T_inf_lst :
-            sT_inf  =   "T_inf_" + str(T_inf)
-            curr_d  =   self.T_obs_mean[sT_inf]
-            cov_m   =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else self.full_cov_obs_dict[sT_inf] 
-            cov_prior =  self.cov_pri_dict[sT_inf]
-            
-            J = lambda beta : 0.5*  ( 
-                  np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
-                    np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
-                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
-                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
-                                    )
-                                    
-#            first_guess_opti =  op.minimize(self.J_los[sT_inf], self.beta_prior, method="BFGS", tol=0.1, options={"disp" : True, "maxiter" : 10}) ## Simplement pour avoir Hess_0 
-            first_guess_opti =  op.minimize(J, self.beta_prior, method="BFGS", tol=0.01, options={"disp" : True, "maxiter" : 10}) ## Simplement pour avoir Hess_0 
-            for item in first_guess_opti.iteritems() : print (item)
-            
-            beta_n  =   first_guess_opti.x
-            H_n     =   first_guess_opti.hess_inv
-            g_n     =   first_guess_opti.jac
-            
-            self.first_guess_opti   =   first_guess_opti
-            
-            err_hess,   err =   0., 1.0
-            cpt,        cpt_max     =   0,  100
-            while (np.abs(err) > self.QN_tol) and (cpt<cpt_max) :
-                ## Incr
-                if cpt > 0 :
-                    H_n     =   H_nNext
-                    g_n     =   g_nNext 
-                    beta_n  =   beta_nNext      
-                
-                cpt += 1    
-                direction   =   np.dot(H_n, g_n) ; print("direction:\n", direction)
-
-                alpha       =   self.backline_search(J, beta_n, direction)
-                print ("alpha = ", alpha)
-
-                beta_nNext  =   beta_n - alpha*direction
-
-                alpha_lst.append(alpha)
-                direction_lst.append(direction)
-                
-                ## Estimation of H_nNext
-                g_nNext =   nd.Gradient(J)(beta_nNext) # From numdifftools
-                print ("compteur = {}, Gradient dans la boucle minimization: \n {}".format(cpt, g_nNext))
-                y_nNext =   g_nNext - g_n
-                s_nNext =   beta_nNext - beta_n
-                H_nNext =   self.Next_hess(H_n, y_nNext, s_nNext)
-                
-                err     =   (J(beta_nNext) - J(beta_n)) 
-                err_hess=  np.linalg.norm(H_nNext - H_n)
-                print ("cpt = {} \t err = {:.5}".format(cpt, err))
-
-            print ("Compteur = %d \t err_j = %.12f \t err_Hess %.12f" % (cpt, err, err_hess))
-            print ("beta_nNext = ", beta_nNext)
-            print ("J(beta_nNext) = ", J(beta_nNext) )
-            
-            QN_BFGS_bmap[sT_inf]    =   beta_nNext
-            QN_BFGS_hess[sT_inf]    =   H_nNext
-            
-            QN_BFGS_cholesky[sT_inf]=   np.linalg.cholesky(H_nNext)
-            
-            QN_BFGS_bf[sT_inf]      =   QN_BFGS_bmap[sT_inf] + np.dot(np.linalg.cholesky(H_nNext), s)
-            
-            for i in range(100):
-                s   =   np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-                beta_QNBFGS_real.append(QN_BFGS_bmap[sT_inf] + np.dot(QN_BFGS_cholesky[sT_inf], s))
-            
-            beta_QNBFGS_real.append(QN_BFGS_bf[sT_inf])
-            
-            for i in range(self.N_discr-2) :
-                mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_QNBFGS_real]))
-                maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_QNBFGS_real]))
-            
-            mins_lst    =   [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
-            maxs_lst    =   [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
-            
-        self.QN_BFGS_bmap   =   QN_BFGS_bmap
-        self.QN_BFGS_bf     =   QN_BFGS_bf
-        self.QN_BFGS_hess   =   QN_BFGS_hess
-        
-        self.QN_BFGS_cholesky   =   QN_BFGS_cholesky
-        self.QN_BFGS_mins_lst   =   mins_lst
-        self.QN_BFGS_maxs_lst   =   maxs_lst
-        
-        self.alpha_lst      =   np.asarray(alpha_lst)
-        self.direction_lst  =   np.asarray(direction_lst)
-        
-        self.QN_done = True
-##----------------------------------------------------##
 ##----------------------------------------------------##    
     def optimization(self, verbose=False) :
         """
@@ -805,7 +701,298 @@ class Temperature() :
             ##-- Optimisation --##
             ######################
             
-            while (cpt<cptMax) and g_sup > 1.0001 :
+            while (cpt<cptMax) and g_sup > self.g_sup_max :
+                if cpt > 0 :
+                ########################
+                ##-- Incrementation --##
+                ######################## 
+                    beta_nPrev  =   beta_n             
+                    beta_n  =   beta_nNext
+                    ax[0].plot(self.line_z, beta_n, label="beta cpt%d" %(cpt))
+                    print ("beta cpt {}:\n{}".format(cpt,beta_n))
+                   
+                    g_nPrev =   g_n
+                    g_n     =   g_nNext
+                    g_sup   =   np.linalg.norm(g_n, np.inf)
+                    
+                    plt.figure("Evolution de l'erreur")
+                    plt.scatter(cpt, g_sup, c='black')
+                    if inter_plot == True :
+                        plt.pause(0.05)
+                    sup_g_lst.append(g_sup)
+                    
+                    print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
+
+                    ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
+
+                    H_n_inv   =   H_nNext_inv
+                    
+                    print("grad n = {}".format(g_n))                            
+                    print("beta_n = \n  {} ".format(beta_n))
+                    print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
+                                                           err_beta, err_hess) )
+                test = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
+                                    np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]                
+                #################
+                ##-- Routine --##
+                #################
+                
+                ## Calcule de la direction 
+                d_n     =   - np.dot(H_n_inv, g_n)
+                test_   =   (test(H_n_inv) < 0)
+                print("d_n descent direction : {}".format(test_))    
+                            
+                if test_  == False :
+                    self.positive_definite_test(H_n_inv, verbose=False)
+
+                    H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.)
+                    print("cpt = {}\t cholesky for MPD used.")
+                    print("new d_n descent direction : {}".format(test(H_n_inv) < 0))
+                    
+                    d_n     =   - np.dot(H_n_inv, g_n)  
+                    
+                    corr_chol.append(cpt)
+
+                print("d_n :\n {}".format(d_n))
+                
+                ## Calcule de la longueur de pas 
+                
+                alpha, al2_cor =  self.backline_search(J, grad_J, g_n, beta_n, d_n, rho=1e-2, c=0.5)
+                if al2_cor  :
+                    al2_lst.append(cpt)
+                
+                print("alpha for cpt {}: {}".format(cpt, alpha))
+                              
+#                if cpt < cpt_inter :
+###                    dbeta = dbeta/10000000
+#                    dbeta_n /= 1000000
+                
+                ## Calcule des termes n+1
+                dbeta_n =  alpha*d_n
+                print ("Pas pour cpt = {}: dbeta_n = {}".format(cpt, dbeta_n))
+                beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
+
+                g_nNext =   grad_J(beta_nNext)
+                s_nNext =   (beta_nNext - beta_n)
+                y_nNext =   g_nNext - g_n
+
+                ## Ça arrange un peu la hessienne
+                if cpt == 0 :
+                    fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
+                    fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
+                    
+                    H_n_inv *= fac_H
+                
+#                if np.linalg.norm(s_nNext,2) < 1e-8 : 
+##                    print("s_nNext = {}".format(s_nNext))
+#                    print("H_nNext = H_n")
+#                    H_nNext_inv = H_n_inv ## Cad le determinant rho est trop petit, une mise à jour n'est pas nécessaire                    
+##                    break
+#                else :
+                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+#                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
+                
+                self.debug["curr_hess"] = H_nNext_inv
+#                print("Hess:\n{}".format(H_nNext_inv))
+                
+                err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
+                print("err_beta = {} cpt = {}".format(err_beta, cpt))
+                
+                err_j    =   J(beta_nNext) - J(beta_n)
+                print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
+                
+                err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
+                print ("err_hess = {}".format(err_hess))
+                
+                self.alpha_lst.append(alpha)
+                err_hess_lst.append(err_hess) 
+                err_beta_lst.append(err_beta)
+                dir_lst.append(np.linalg.norm(d_n, 2))
+                
+                print("\n")
+                cpt +=  1    
+                # n --> n+1 si non convergence, sort de la boucle sinon 
+            
+            ######################
+            ##-- Post Process --##
+            ######################
+            
+            H_last  =   H_nNext_inv
+            g_last  =   g_nNext
+            beta_last=  beta_nNext
+            d_n_last = d_n
+            
+            print ("Final Sup_g = {}\nFinal beta = {}\nFinal direction {}".format(g_sup,\
+                                      beta_last,       d_n_last  ))
+            
+            ax[1].plot(self.line_z, g_last, label="gradient last")
+
+            ax[0].plot(self.line_z, beta_last, label="beta_n last")
+            
+            try :
+                R   =   np.linalg.cholesky(H_last)
+            except np.linalg.LinAlgError :
+                H_last = self.cholesky_for_MPD(H_last, fac = 5.)
+                R   =   H_last
+#                print("HH eign: \n{}".format(np.linalg.eig(H_last)[0]))
+#                print('det(HH) ={}'.format(np.linalg.det(H_last)))
+                
+            bfgs_adj_bmap[sT_inf]   =   beta_last
+            bfgs_adj_grad[sT_inf]   =   g_last
+            
+            bfgs_adj_hessinv[sT_inf]    =   H_last            
+            bfgs_adj_cholesky[sT_inf]   =   R
+            
+            bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s)
+            
+            
+            for i in range(249):
+                s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+                beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) )
+            
+            beta_var.append(bfgs_adj_bf[sT_inf]) # Pour faire 250
+            sigma_post = []
+            
+            for i in range(self.N_discr-2) :
+                bfgs_adj_mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
+                bfgs_adj_maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
+                sigma_post.append(np.std([j[i] for j in beta_var]))
+                 
+            bfgs_adj_sigma_post[sT_inf] = sigma_post 
+            bfgs_mins_lst =  [bfgs_adj_mins["T_inf_%d%03d" %(T_inf, i) ]\
+                                            for i in range(self.N_discr-2)]   
+            bfgs_maxs_lst =  [bfgs_adj_maxs["T_inf_%d%03d" %(T_inf, i) ]\
+                                            for i in range(self.N_discr-2)]
+            
+            plt.legend(loc="best")
+            
+            try :
+                fiig, axxes = plt.subplots(2,2,figsize=(8,8))
+                axxes[0][0].set_title("alpha vs iterations ")
+                axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o',\
+                                            linestyle='none', markersize=8)
+                axxes[0][0].set_xlabel("Iterations")
+                axxes[0][0].set_ylabel("alpha")
+                
+                axxes[0][1].set_title("err_hess vs iterations ")
+                axxes[0][1].plot(range(cpt), err_hess_lst, marker='s',\
+                                            linestyle='none', markersize=8)
+                axxes[0][1].set_xlabel("Iterations")
+                axxes[0][1].set_ylabel("norm(H_nNext_inv - H_n_inv, 2)")
+                
+                axxes[1][0].set_title("err_beta vs iterations ")
+                axxes[1][0].plot(range(cpt), err_beta_lst, marker='^',\
+                                            linestyle='none', markersize=8)
+                axxes[1][0].set_xlabel("Iterations")
+                axxes[1][0].set_ylabel("beta_nNext - beta_n")            
+                
+                axxes[1][1].set_title("||d_n|| vs iterations")
+                axxes[1][1].plot(range(cpt), dir_lst, marker='v',\
+                                            linestyle='none', markersize=8)
+                axxes[1][1].set_xlabel("Iteration")
+                axxes[1][1].set_ylabel("Direction")            
+            
+            except ValueError :
+                break
+        #self.Hess = np.dot(g_n.T, g_n)
+        self.bfgs_adj_bf     =   bfgs_adj_bf
+        self.bfgs_adj_bmap   =   bfgs_adj_bmap
+        self.bfgs_adj_grad   =   bfgs_adj_grad
+        self.bfgs_adj_gamma  =   bfgs_adj_gamma
+        
+        self.bfgs_adj_hessinv=  bfgs_adj_hessinv
+        self.bfgs_adj_cholesky= bfgs_adj_cholesky
+        
+        
+        self.bfgs_adj_maxs   =   bfgs_maxs_lst
+        self.bfgs_adj_mins   =   bfgs_mins_lst
+        
+        self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
+        
+        self.al2_lst    =    al2_lst
+        self.corr_chol  =   corr_chol
+        
+        self.bool_method["adj_bfgs"] = True
+###---------------------------------------------------##   
+##----------------------------------------------------##        
+    def dumped_bfgs(self, inter_plot=False) : 
+        """
+        
+        """
+        if self.bool_method["stat"] == False : self.get_prior_statistics() 
+        
+        self.debug = dict()
+        sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
+        
+        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+        
+        dump_bfgs_grad,   dump_bfgs_gamma     =   dict(), dict()
+        dump_bfgs_bmap,   dump_bfgs_bf        =   dict(), dict()
+        dump_bfgs_hessinv,dump_bfgs_cholesky  =   dict(), dict()
+        
+        dump_bfgs_mins,   dump_bfgs_maxs  =   dict(),  dict()
+        
+        dump_bfgs_sigma_post  = dict()
+        beta_var = []
+                
+        for T_inf in self.T_inf_lst :
+            sT_inf      =   "T_inf_%d" %(T_inf)
+            curr_d      =   self.T_obs_mean[sT_inf]
+            cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
+                            self.full_cov_obs_dict[sT_inf]
+            
+            cov_pri     =   self.cov_pri_dict[sT_inf]
+            
+            inv_cov_pri =   np.linalg.inv(cov_pri)  
+            inv_cov_obs =   np.linalg.inv(cov_obs)
+            
+            J_1 =   lambda beta :\
+            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
+            
+            J_2 =   lambda beta :\
+            0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
+                                        
+            ## Fonction de coût
+            J = lambda beta : J_1(beta) + J_2(beta)  
+            
+            grad_J = lambda beta :\
+            np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            
+            err_beta = err_hess = err_j = 1            
+            cpt, cptMax =   0, self.cpt_max_adj
+            
+            sup_g_lst = []
+            corr_chol = []
+            al2_lst  =   []
+                        
+            ########################
+            ##-- Initialisation --##
+            ########################
+
+            #dJ/dBeta 
+            beta_n  =   self.beta_prior
+            g_n     =   grad_J(beta_n)
+            
+            g_sup = np.linalg.norm(g_n, np.inf)
+            sup_g_lst.append(np.linalg.norm(g_n, np.inf))
+            
+            print ("\x1b[1;37;44mSup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
+
+            H_n_inv =   np.eye(self.N_discr-2)
+            self.debug["first_hess"] = H_n_inv
+                            
+            fig, ax = plt.subplots(1,2,figsize=(13,7))
+            ax[0].plot(self.line_z, beta_n, label="beta_prior")
+            ax[1].plot(self.line_z, g_n,    label="gradient prior")
+            
+            self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
+            dir_lst =   []
+            
+            ######################
+            ##-- Optimisation --##
+            ######################
+            
+            while (cpt<cptMax) and g_sup > self.g_sup_max :
                 if cpt > 0 :
                 ########################
                 ##-- Incrementation --##
@@ -872,7 +1059,6 @@ class Temperature() :
 #                    dbeta_n /= 1000000
                 
                 ## Calcule des termes n+1
-                
                 dbeta_n =  alpha*d_n
                 print ("Pas pour cpt = {}: dbeta_n = {}".format(cpt, dbeta_n))
                 beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
@@ -880,20 +1066,15 @@ class Temperature() :
                 g_nNext =   grad_J(beta_nNext)
                 s_nNext =   (beta_nNext - beta_n)
                 y_nNext =   g_nNext - g_n
-                
-                if np.linalg.norm(s_nNext,2) < 1e-8 : 
-                    print("s_nNext = {}".format(s_nNext))
-                    break
-                
+
                 ## Ça arrange un peu la hessienne
                 if cpt == 0 :
                     fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
                     fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
                     
                     H_n_inv *= fac_H
-#                    
-                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
-#                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
+                
+                H_nNext_inv = self.Next_Dumped_BFGS(H_n_inv, y_nNext, s_nNext)
                 
                 self.debug["curr_hess"] = H_nNext_inv
 #                print("Hess:\n{}".format(H_nNext_inv))
@@ -940,27 +1121,27 @@ class Temperature() :
 #                print("HH eign: \n{}".format(np.linalg.eig(H_last)[0]))
 #                print('det(HH) ={}'.format(np.linalg.det(H_last)))
                 
-            bfgs_adj_bmap[sT_inf]   =   beta_last
-            bfgs_adj_grad[sT_inf]   =   g_last
+            dump_bfgs_bmap[sT_inf]   =   beta_last
+            dump_bfgs_grad[sT_inf]   =   g_last
                         
-            bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s)
+            dump_bfgs_bf[sT_inf]     =   dump_bfgs_bmap[sT_inf] + np.dot(R, s)
             
             for i in range(249):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-                beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) )
+                beta_var.append( dump_bfgs_bmap[sT_inf] + np.dot(R, s) )
             
-            beta_var.append(bfgs_adj_bf[sT_inf]) # Pour faire 250
+            beta_var.append(dump_bfgs_bf[sT_inf]) # Pour faire 250
             sigma_post = []
             
             for i in range(self.N_discr-2) :
-                bfgs_adj_mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
-                bfgs_adj_maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
+                dump_bfgs_mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
+                dump_bfgs_maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
                 sigma_post.append(np.std([j[i] for j in beta_var]))
                  
-            bfgs_adj_sigma_post[sT_inf] = sigma_post 
-            bfgs_mins_lst =  [bfgs_adj_mins["T_inf_%d%03d" %(T_inf, i) ]\
+            dump_bfgs_sigma_post[sT_inf] = sigma_post 
+            dump_bfgs_mins_lst =  [dump_bfgs_mins["T_inf_%d%03d" %(T_inf, i) ]\
                                             for i in range(self.N_discr-2)]   
-            bfgs_maxs_lst =  [bfgs_adj_maxs["T_inf_%d%03d" %(T_inf, i) ]\
+            dump_bfgs_maxs_lst =  [dump_bfgs_maxs["T_inf_%d%03d" %(T_inf, i) ]\
                                             for i in range(self.N_discr-2)]
             
             plt.legend(loc="best")
@@ -994,21 +1175,313 @@ class Temperature() :
             except ValueError :
                 break
         #self.Hess = np.dot(g_n.T, g_n)
-        self.bfgs_adj_bf     =   bfgs_adj_bf
-        self.bfgs_adj_bmap   =   bfgs_adj_bmap
-        self.bfgs_adj_grad   =   bfgs_adj_grad
-        self.bfgs_adj_gamma  =   bfgs_adj_gamma
+        self.dump_bfgs_bf     =   dump_bfgs_bf
+        self.dump_bfgs_bmap   =   dump_bfgs_bmap
+        self.dump_bfgs_grad   =   dump_bfgs_grad
+        self.dump_bfgs_gamma  =   dump_bfgs_gamma
         
-        self.bfgs_adj_maxs   =   bfgs_maxs_lst
-        self.bfgs_adj_mins   =   bfgs_mins_lst
+        self.dump_bfgs_maxs   =   dump_bfgs_maxs_lst
+        self.dump_bfgs_mins   =   dump_bfgs_mins_lst
         
-        self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
+        self.dump_bfgs_sigma_post     =   bfgs_adj_sigma_post
+        
+        self.dump_bfgs_al2_lst    =    al2_lst
+        self.dump_bfgs_corr_chol  =   corr_chol
+        
+        self.bool_method["dump_bfgs"] = True
+###---------------------------------------------------##  
+    def adj_SR1(self, inter_plot=False): 
+        """
+        
+        """
+        if self.bool_method["stat"] == False : self.get_prior_statistics() 
+        
+        self.debug = dict()
+        sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
+        
+        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+        
+        sr1_grad,   sr1_gamma     =   dict(), dict()
+        sr1_bmap,   sr1_bf        =   dict(), dict()
+        sr1_hessinv,sr1_cholesky  =   dict(), dict()
+        
+        sr1_mins,   sr1_maxs  =   dict(),  dict()
+        
+        sr1_sigma_post  = dict()
+        beta_var = []
+                
+        for T_inf in self.T_inf_lst :
+            sT_inf      =   "T_inf_%d" %(T_inf)
+            curr_d      =   self.T_obs_mean[sT_inf]
+            cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
+                            self.full_cov_obs_dict[sT_inf]
+            
+            cov_pri     =   self.cov_pri_dict[sT_inf]
+            
+            inv_cov_pri =   np.linalg.inv(cov_pri)  
+            inv_cov_obs =   np.linalg.inv(cov_obs)
+            
+            J_1 =   lambda beta :\
+            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
+            
+            J_2 =   lambda beta :\
+            0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
+                                        
+            ## Fonction de coût
+            J = lambda beta : J_1(beta) + J_2(beta)  
+            
+            grad_J = lambda beta :\
+            np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            
+            err_beta = err_hess = err_j = 1            
+            cpt, cptMax =   0, self.cpt_max_adj
+            
+            sup_g_lst   =   []
+            corr_chol   =   []
+            al2_lst     =   []
+                        
+            ########################
+            ##-- Initialisation --##
+            ########################
+
+            beta_n  =   self.beta_prior
+            g_n     =   grad_J(beta_n)
+            
+            g_sup = np.linalg.norm(g_n, np.inf)
+            sup_g_lst.append(np.linalg.norm(g_n, np.inf))
+            
+            print ("\x1b[1;37;44mFirst Sup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
+
+            H_n_inv =   np.eye(self.N_discr-2)
+            self.debug["first_hess"] = H_n_inv
+                            
+            fig, ax = plt.subplots(1,2,figsize=(13,7))
+            ax[0].plot(self.line_z, beta_n, label="beta_prior")
+            ax[1].plot(self.line_z, g_n,    label="gradient prior")
+            
+            self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
+            dir_lst =   []
+            itt = 0
+            ######################
+            ##-- Optimisation --##
+            ######################
+            
+            while (cpt<cptMax) and g_sup > self.g_sup_max :
+                if cpt > 0 :
+                ########################
+                ##-- Incrementation --##
+                ######################## 
+                    beta_n  =   beta_nNext
+                    #Traće des différents beta au cours de la boucle
+                    ax[0].plot(self.line_z, beta_n, label="beta cpt%d" %(cpt))
+                    print ("beta cpt {}:\n{}".format(cpt,beta_n))
+                   
+                    g_n     =   g_nNext
+                    g_sup   =   np.linalg.norm(g_n, np.inf)
+                    
+                    # Tracé de l'erreur sur le gradient
+                    plt.figure("Evolution de l'erreur")
+                    plt.scatter(cpt, g_sup, c='black')
+                    if inter_plot == True :
+                        plt.pause(0.05)
+                    sup_g_lst.append(g_sup)
+                    
+                    print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
+                    
+                    #Tracé du gradient 
+                    ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
+
+                    H_n_inv   =   H_nNext_inv
+                    
+                    print("grad n = {}".format(g_n))                            
+                    print("beta_n = \n  {} ".format(beta_n))
+                    print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
+                                                           err_beta, err_hess) )
+                test = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
+                                    np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]                
+                #################
+                ##-- Routine --##
+                #################
+                
+                ## Calcule de la direction 
+                d_n     =   - np.dot(H_n_inv, g_n)
+                test_   =   (test(H_n_inv) < 0)
+                print("d_n descent direction : {}".format(test_))    
+                            
+                if test_  == False :
+                    self.positive_definite_test(H_n_inv, verbose=False)
+
+                    H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.)
+                    print("cpt = {}\t cholesky for MPD used.")
+                    print("new d_n descent direction : {}".format(test(H_n_inv) < 0))
+                    
+                    d_n     =   - np.dot(H_n_inv, g_n)  
+                    
+                    corr_chol.append(cpt)
+
+                print("d_n :\n {}".format(d_n))
+                
+                ## Calcule de la longueur de pas 
+                
+                alpha, al2_cor =  self.backline_search(J, grad_J, g_n, beta_n, d_n, rho=0.1, c=0.5)
+                if al2_cor == True :
+                    al2_lst.append(cpt)
+                
+                print("alpha for cpt {}: {}".format(cpt, alpha))
+                              
+                ## Calcule des termes n+1
+                dbeta_n =  alpha*d_n
+                print ("Pas pour cpt = {} \ndbeta_n = {}".format(cpt, dbeta_n))
+                beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
+
+                g_nNext =   grad_J(beta_nNext)
+                s_nNext =   (beta_nNext - beta_n)
+                
+                # SR1 
+                r = 1.e-8
+                y_nNext =   g_nNext - g_n
+
+                bksk = np.dot(H_n_inv, s_nNext)
+                yk_bksk= y_nNext - bksk
+                
+                t1 = abs( np.dot( s_nNext[np.newaxis, :], (y_nNext[:, np.newaxis] - np.dot(H_n_inv, s_nNext[:, np.newaxis])) )[0,0] )
+                t2 = r * np.linalg.norm(s_nNext, 2) * np.linalg.norm(yk_bksk, 2)
+                
+                ## Pour éviter de diviser par zéro
+                test_sr1 = (t1 >= t2) 
+                print test_sr1
+
+                if cpt == 0 :
+                # Ça arrange un peu la hessienne
+                    fac_H =  np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
+                    fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
+                    
+                    H_n_inv *= fac_H
+                                
+                if test_sr1 == True :
+                    H_nNext_inv = self.sr1_Next_hess(H_n_inv, yk_bksk, s_nNext)
+                
+                else :
+                    if np.linalg.norm(s_nNext,2) < 1e-8 :
+                        print("SR1 non adapté np.linalg.norm(s_nNext,2) = {}".format(np.linalg.norm(s_nNext,2)))
+                        itt+=1
+                        print("erreur vu {} fois".format(itt))
+                        
+                    H_nNext_inv = H_n_inv
+                
+                self.debug["curr_hess"] = H_nNext_inv
+#                print("Hess:\n{}".format(H_nNext_inv))
+                
+                err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
+                print("err_beta = {} cpt = {}".format(err_beta, cpt))
+                
+                err_j    =   J(beta_nNext) - J(beta_n)
+                print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
+                
+                err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
+                print ("err_hess = {}".format(err_hess))
+                
+                self.alpha_lst.append(alpha)
+                err_hess_lst.append(err_hess) 
+                err_beta_lst.append(err_beta)
+                dir_lst.append(np.linalg.norm(d_n, 2))
+                
+                print("\n")
+                cpt +=  1    
+                # n --> n+1 si non convergence, sort de la boucle sinon 
+            
+            ######################
+            ##-- Post Process --##
+            ######################
+            
+            H_last  =   H_nNext_inv
+            g_last  =   g_nNext
+            beta_last=  beta_nNext
+            d_n_last = d_n
+            
+            print ("Final Sup_g = {}\nFinal beta = {}\nFinal direction {}".format(g_sup,\
+                                      beta_last,       d_n_last  ))
+            
+            ax[1].plot(self.line_z, g_last, label="gradient last")
+
+            ax[0].plot(self.line_z, beta_last, label="beta_n last")
+            
+            try :
+                R   =   np.linalg.cholesky(H_last)
+            except np.linalg.LinAlgError :
+                H_last = self.cholesky_for_MPD(H_last, fac = 5.)
+                R   =   H_last
+#                print("HH eign: \n{}".format(np.linalg.eig(H_last)[0]))
+#                print('det(HH) ={}'.format(np.linalg.det(H_last)))
+                
+            sr1_bmap[sT_inf]   =   beta_last
+            sr1_grad[sT_inf]   =   g_last
+                        
+            sr1_bf[sT_inf]     =   sr1_bmap[sT_inf] + np.dot(R, s)
+            
+            for i in range(249):
+                s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+                beta_var.append( sr1_bmap[sT_inf] + np.dot(R, s) )
+            
+            beta_var.append(sr1_bf[sT_inf]) # Pour faire 250
+            sigma_post = []
+            
+            for i in range(self.N_discr-2) :
+                sr1_mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
+                sr1_maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
+                sigma_post.append(np.std([j[i] for j in beta_var]))
+                 
+            sr1_sigma_post[sT_inf] = sigma_post 
+            sr1_mins_lst =  [sr1_mins["T_inf_%d%03d" %(T_inf, i) ]\
+                                            for i in range(self.N_discr-2)]   
+            sr1_maxs_lst =  [sr1_maxs["T_inf_%d%03d" %(T_inf, i) ]\
+                                            for i in range(self.N_discr-2)]
+            
+            plt.legend(loc="best")
+            
+            try :
+                fiig, axxes = plt.subplots(2,2,figsize=(8,8))
+                axxes[0][0].set_title("alpha vs iterations ")
+                axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o',\
+                                            linestyle='none', markersize=8)
+                axxes[0][0].set_xlabel("Iterations")
+                axxes[0][0].set_ylabel("alpha")
+                
+                axxes[0][1].set_title("err_hess vs iterations ")
+                axxes[0][1].plot(range(cpt), err_hess_lst, marker='s',\
+                                            linestyle='none', markersize=8)
+                axxes[0][1].set_xlabel("Iterations")
+                axxes[0][1].set_ylabel("norm(H_nNext_inv - H_n_inv, 2)")
+                
+                axxes[1][0].set_title("err_beta vs iterations ")
+                axxes[1][0].plot(range(cpt), err_beta_lst, marker='^',\
+                                            linestyle='none', markersize=8)
+                axxes[1][0].set_xlabel("Iterations")
+                axxes[1][0].set_ylabel("beta_nNext - beta_n")            
+                
+                axxes[1][1].set_title("||d_n|| vs iterations")
+                axxes[1][1].plot(range(cpt), dir_lst, marker='v',\
+                                            linestyle='none', markersize=8)
+                axxes[1][1].set_xlabel("Iteration")
+                axxes[1][1].set_ylabel("Direction")            
+            
+            except ValueError :
+                break
+        #self.Hess = np.dot(g_n.T, g_n)
+        self.sr1_bf     =   sr1_bf
+        self.sr1_bmap   =   sr1_bmap
+        self.sr1_grad   =   sr1_grad
+        self.sr1_gamma  =   sr1_gamma
+        
+        self.sr1_maxs   =   sr1_maxs_lst
+        self.sr1_mins   =   sr1_mins_lst
+        
+        self.sr1_sigma_post     =   sr1_sigma_post
         
         self.al2_lst    =    al2_lst
         self.corr_chol  =   corr_chol
         
-        self.bool_method["adj_bfgs"] = True
-        
+        self.bool_method["sr1"] = True 
 ###---------------------------------------------------##
 ###---------------------------------------------------##
 ######                                            ######
@@ -1021,7 +1494,7 @@ class Temperature() :
         Procedure close to the scipy's one 
         """
         # Comme Scipy
-        rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) != 0 else 1./1e-8
+        rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) != 0 else 1000.0
         print("In Next Hess, check rho_nN = {}".format(rho_nN))
         
         Id      =   np.eye(self.N_discr-2)
@@ -1030,7 +1503,47 @@ class Temperature() :
         A2 = Id - rho_nN * y_nN[:, np.newaxis] * s_nN[np.newaxis, :]
         
         return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* s_nN[:, np.newaxis] * s_nN[np.newaxis, :])
-##----------------------------------------------------##        
+##----------------------------------------------------##
+    def sr1_Next_hess(self, Bk, yk_bksk, s_nNext) : 
+        """
+        Formule d'update de rang 1 appelé SR1 voir Nocedal and Wright
+        """
+        deno=   np.dot(yk_bksk.reshape(1,-1), s_nNext)[0]
+        print deno
+        mat =   np.dot(yk_bksk.reshape(-1,1), yk_bksk.reshape(1,-1))
+        
+        mat /=  deno
+        
+#        print("mat sr1 = {}".format(mat))
+        
+        return np.linalg.inv(Bk + mat)
+##----------------------------------------------------##   
+    def Next_Dumped_BFGS(self, Bk, yk, sk): 
+        """
+        Formule de Dumped BFGS.
+        """
+        fac_1   =   np.dot(sk[np.newaxis, :], yk[:, np.newaxis])[0,0]
+        fac_2   =   np.dot(sk[np.newaxis, :], np.dot(Bk, sk[:, np.newaxis]))[0,0]
+
+        t1 = fac_1
+        t2 = 0.2*fac_2
+        
+        # Construction de theta_k abrégé tk. C'est un scalaire
+        if t1 >= t2 : 
+            tk = 1.
+        else :
+            tk = 0.8*fac_2 / (fac_2 - fac_1) 
+        
+        rk = tk * yk + (1-tk)*np.dot(Bk, sk)
+        
+        mat1 = np.dot(np.dot(Bk, sk)[:, np.newaxis], np.dot(sk[np.newaxis, :], Bk))
+        mat1 /= fac_2
+        
+        mat2 = np.dot(rk[:, np.newaxis], rk[np.newaxis, :])
+        mat2 /= np.dot(sk[np.newaxis ,:], rk)[0]
+        
+        return  np.linalg.inv(Bk - mat1 + mat2)
+##----------------------------------------------------##   
     def Next_hess_further(self, prev_hess_inv, y_nN, s_nN):
         ## Trop lente
         """
@@ -1100,7 +1613,6 @@ class Temperature() :
         
         return np.linalg.inv(H)
 ##----------------------------------------------------##
-##----------------------------------------------------##
     def H_formule_2(self, beta, cov_pri, T_inf):
         dR_dT   =   self.DR_DT(beta, T_inf)
         dR_dBeta=   self.DR_DBETA(beta, T_inf)
@@ -1139,7 +1651,7 @@ class Temperature() :
         
         return alpha
 ##----------------------------------------------------## 
-    def backline_search(self, J, g_J, djk, xk, dk, rho=0.1, c=0.5) :
+    def backline_search(self, J, g_J, djk, xk, dk, rho=1., c=0.5) :
         alpha = alpha_lo = alpha_hi = 1.
         correction = False
         bool_curv  = False
@@ -1160,12 +1672,12 @@ class Temperature() :
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
         bool_curv = curv(alpha)
+        it = 0
         
         print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
         if cpt > 0 and bool_curv == False:
             alpha_2 = alpha_lo
             
-            it = 0
             bool_curv = curv(alpha_2)
             while bool_curv == False and (alpha_2 - alpha_hi)>0 :
                 alpha_2 *= 0.9        
@@ -1176,12 +1688,16 @@ class Temperature() :
 #                    break
                         
             if bool_curv == True :
-                print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, iteration = {}\x1b[0m".format(alpha_2, alpha, it))
                 alpha = alpha_2
                 correction = True
-       
-        if bool_curv == False or armi(alpha) == False :
+                print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, iteration = {}\x1b[0m".format(alpha_2, alpha, it))
+                                   
+        if bool_curv == False and armi(alpha) == False :
             alpha = max(alpha, 1e-11)
+        
+        if armi(alpha) == True and curv(alpha) == True :
+            print("it = {}".format(it))
+            print("\x1b[1;37;43mArmijo = {}\t Curvature = {}\x1b[0m".format(armi(alpha), curv(alpha)))
             
         return alpha, correction
 ##----------------------------------------------------##   
@@ -1315,14 +1831,14 @@ def subplot(T, method='adj_bfgs') :
     Afficher les max et min des différents tirages 
     Comparer l'approximation de la température avec beta_final et la température exacte
     """
-    if method == "QN_BFGS"    :
-        dico_beta_map   =   T.QN_BFGS_bmap
-        dico_beta_fin   =   T.QN_BFGS_bf
+    if method == "sr1"    :
+        dico_beta_map   =   T.sr1_bmap
+        dico_beta_fin   =   T.sr1_bf
         
-        mins    =   T.QN_BFGS_mins_lst
-        maxs    =   T.QN_BFGS_maxs_lst
+        mins    =   T.sr1_mins
+        maxs    =   T.sr1_maxs
         
-        titles = ["QNBFGS: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "QNBFGS: Temperature fields"]
+        titles = ["SR1: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "SR1: Temperature fields"]
     if method in {"optimization", "Optimization", "opti"}:
         dico_beta_map   =   T.betamap
         dico_beta_fin   =   T.beta_final
@@ -1387,83 +1903,83 @@ def subplot(T, method='adj_bfgs') :
         axes[1].legend(loc='best', fontsize = 10, ncol=2)
         
         plt.show()
+        
+        if T.bool_method["adj_bfgs"] == True and T.bool_method["opti_scipy"] == True :
+            bmaps=  [T.betamap[sT_inf], T.bfgs_adj_bmap[sT_inf]]
+            mins =  [T.mins_lst, T.bfgs_adj_mins]
+            maxs =  [T.maxs_lst, T.bfgs_adj_maxs]
+            keys =  ["Scipy - optimization", "BFGS Adjoint Opti"]
+                     
+            comparaison(T, bmaps, mins, maxs, keys, T_inf)
+        
+        if T.bool_method["adj_bfgs"] == True and T.bool_method["sr1"] == True :
+            bmaps=  [T.bfgs_adj_bmap[sT_inf], T.sr1_bmap[sT_inf]]
+            mins =  [T.bfgs_adj_mins, T.sr1_mins]
+            maxs =  [T.bfgs_adj_maxs, T.sr1_maxs]
+            keys =  ["BFGS Adjoint Opti", "SR1 Update"]
+                     
+            comparaison(T, bmaps, mins, maxs, keys, T_inf)
+        
+        if T.bool_method["opti_scipy"] == True and T.bool_method["sr1"] == True :
+            bmaps=  [T.betamap[sT_inf], T.sr1_bmap[sT_inf]]
+            mins =  [T.mins_lst, T.sr1_mins]
+            maxs =  [T.maxs_lst, T.sr1_maxs]
+            keys =  ["Scipy - optimization", "SR1 Update"]
+            
+            comparaison(T, bmaps, mins, maxs, keys, T_inf)
+            
+    return axes
+##---------------------------------------------------##
+def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf) :
+    betamap1    =   betamaps[0]
+    betamap2    =   betamaps[1]
     
-    if T.bool_method["adj_bfgs"] == True and T.bool_method["opti_scipy"] == True :
-        # Main plot
-        fig = plt.figure(figsize=(8, 4))
-        ax = fig.add_axes([0.1, 0.15, 0.8, 0.8], axisbg="#f5f5f5")
-        ax.plot(T.line_z, T.betamap[sT_inf], label="Optimization Betamap for {}".format(sT_inf), linestyle='none', marker='o', color='magenta')
-        ax.plot(T.line_z, T.bfgs_adj_bmap[sT_inf], label="Adjoint Betamap for {}".format(sT_inf), linestyle='none', marker='+', color='yellow')
-        ax.plot(T.line_z, T.true_beta(curr_d, T_inf), label = "True beta profil {}".format(sT_inf), color='orange')
-        
-        ax.fill_between(T.line_z, T.bfgs_adj_mins, T.bfgs_adj_maxs, facecolor= "1", alpha=0.4, interpolate=True, hatch='\\', color="cyan", label="Adjoint uncertainty")
-        ax.fill_between(T.line_z,  T.mins_lst, T.maxs_lst, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label="Optimization uncertainty")
-        
-#        import matplotlib as mpl
-#        x0, x1 = 0.3, 0.7
-#        dz = 1./(T.N_discr-1)
-#        ind0, ind1 = int(x0/dz), int(x1/dz)
-#        ## Les deux lignes pointillees
-#        ax.axvline(x0, ymin = 1, ymax=1.6, color="black", linestyle=":")  
-#        ax.axvline(x1, ymin = 1, ymax=1.6, color="black", linestyle=":")
+    labelbmap1  =   keys[0] + " bmap" 
+    labelbmap2  =   keys[1] + " bmap"
+    
+    mins_lst1   =   minslsts[0]
+    mins_lst2   =   minslsts[1]
 
-#        #Ajout de la figure
-#        ax1 = fig.add_axes([0.05, 0.05, 0.4, 0.32], axisbg='#f8f8f8') 
-#        ax1.set_ylim(1.2,1.6)
-#        #[beg_horz, beg_vertical, end_horiz, end_vertical]
-#        ##
-#        x = np.linspace(x0, x1, len(T.line_z[ind0:ind1]))
-#        ax1.plot(x, T.betamap[sT_inf][ind0:ind1], linestyle='none', marker='o', color='magenta')
-#        ax1.plot(x, T.adj_bmap[sT_inf][ind0:ind1], linestyle='none', marker='+', color='yellow')
-#        ax1.plot(x, T.true_beta(curr_d, T_inf)[ind0:ind1], color='orange')
-#        
-##        ax1.fill_between(x, T.QN_BFGS_mins_lst[ind0:ind1], T.QN_BFGS_maxs_lst[ind0:ind1], facecolor= "1", alpha=0.2, interpolate=True, hatch='\\', color="cyan")
-#        ax1.fill_between(x,  T.mins_lst[ind0:ind1], T.maxs_lst[ind0:ind1], facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black")
-#        
-        ax.set_title("Beta comparison between Optimisation and Adjoint")
-        ax.set_xlabel("z")
-        ax.set_ylabel("beta\'s")
-        ax.legend(loc="best", fontsize = 13, ncol=2)
-        
-        
-#    if T.QN_done == True and T.optimize == True :
-#        # Main plot
-#        fig = plt.figure(figsize=(8, 4))
-#        ax = fig.add_axes([0.1, 0.15, 0.8, 0.8], axisbg="#f5f5f5")
-#        ax.plot(T.line_z, T.betamap[sT_inf], label="Optimization Betamap for {}".format(sT_inf), linestyle='none', marker='o', color='magenta')
-#        ax.plot(T.line_z, T.QN_BFGS_bmap[sT_inf], label="QN_BFGS Betamap for {}".format(sT_inf), linestyle='none', marker='+', color='yellow')
-#        ax.plot(T.line_z, T.true_beta(curr_d, T_inf), label = "True beta profil {}".format(sT_inf), color='orange')
-#        
-#        ax.fill_between(T.line_z, T.QN_BFGS_mins_lst, T.QN_BFGS_maxs_lst, facecolor= "1", alpha=0.4, interpolate=True, hatch='\\', color="cyan", label="QN_BFGS uncertainty")
-#        ax.fill_between(T.line_z,  T.mins_lst, T.maxs_lst, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label="Optimization uncertainty")
-#        
-#        import matplotlib as mpl
-#        x0, x1 = 0.3, 0.7
-#        dz = 1./(T.N_discr-1)
-#        ind0, ind1 = int(x0/dz), int(x1/dz)
-#        ## Les deux lignes pointillees
-#        ax.axvline(x0, ymin = 1, ymax=1.6, color="black", linestyle=":")  
-#        ax.axvline(x1, ymin = 1, ymax=1.6, color="black", linestyle=":")
+    maxs_lst1   =   maxslsts[0]
+    maxs_lst2   =   maxslsts[1]
+    
+    labelmm1    =   keys[0] + " uncertainty" 
+    labelmm2    =   keys[1] + " uncertainty"
+    sT_inf      =   "T_inf_"+str(T_inf)
+    curr_d = T.T_obs_mean[sT_inf]
+    
+    # Main plot
+    fig = plt.figure(figsize=(8, 4))
+    ax = fig.add_axes([0.1, 0.15, 0.8, 0.8], axisbg="#f5f5f5")
+    ax.plot(T.line_z, betamap1, label=labelbmap1 + " for {}".format(sT_inf), linestyle='none', marker='o', color='magenta')
+    ax.plot(T.line_z, betamap2, label=labelbmap2 + " for {}".format(sT_inf), linestyle='none', marker='+', color='yellow')
+    ax.plot(T.line_z, T.true_beta(curr_d, T_inf), label = "True beta profil {}".format(sT_inf), color='orange')
+    
+    ax.fill_between(T.line_z, mins_lst1, maxs_lst1, facecolor= "1", alpha=0.4, interpolate=True, hatch='\\', color="cyan", label=labelmm1)
+    ax.fill_between(T.line_z, mins_lst2, maxs_lst2, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label=labelmm2)
+    
+    plt.legend(loc='best')
+#    import matplotlib as mpl
+#    x0, x1 = 0.3, 0.7
+#    dz = 1./(T.N_discr-1)
+#    ind0, ind1 = int(x0/dz), int(x1/dz)
+#    ## Les deux lignes pointillees
+#    ax.axvline(x0, ymin = 1, ymax=1.6, color="black", linestyle=":")  
+#    ax.axvline(x1, ymin = 1, ymax=1.6, color="black", linestyle=":")
 
-#        #Ajout de la figure
-#        ax1 = fig.add_axes([0.05, 0.05, 0.4, 0.32], axisbg='#f8f8f8') 
-#        ax1.set_ylim(1.2,1.6)
-#        #[beg_horz, beg_vertical, end_horiz, end_vertical]
-#        ##
-#        x = np.linspace(x0, x1, len(T.line_z[ind0:ind1]))
-#        ax1.plot(x, T.betamap[sT_inf][ind0:ind1], linestyle='none', marker='o', color='magenta')
-#        ax1.plot(x, T.QN_BFGS_bmap[sT_inf][ind0:ind1], linestyle='none', marker='+', color='yellow')
-#        ax1.plot(x, T.true_beta(curr_d, T_inf)[ind0:ind1], color='orange')
+#    #Ajout de la figure
+#    ax1 = fig.add_axes([0.05, 0.05, 0.4, 0.32], axisbg='#f8f8f8') 
+#    ax1.set_ylim(1.2,1.6)
+#    #[beg_horz, beg_vertical, end_horiz, end_vertical]
+#    ##
+#    x = np.linspace(x0, x1, len(T.line_z[ind0:ind1]))
+#    ax1.plot(x, betamap1[ind0:ind1], linestyle='none', marker='o', color='magenta')
+#    ax1.plot(x, betamap1[ind0:ind1], linestyle='none', marker='+', color='yellow')
+#    ax1.plot(x, T.true_beta(curr_d, T_inf)[ind0:ind1], color='orange')
+#    
+#    ax1.fill_between(x, mins_lst1[ind0:ind1], maxs_lst1[ind0:ind1], facecolor= "1", alpha=0.2, interpolate=True, hatch='\\', color="cyan", label=labelmm1)
+#    ax1.fill_between(x, mins_lst2[ind0:ind1], maxs_lst2[ind0:ind1], facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label=labelmm2)
 #        
-##        ax1.fill_between(x, T.QN_BFGS_mins_lst[ind0:ind1], T.QN_BFGS_maxs_lst[ind0:ind1], facecolor= "1", alpha=0.2, interpolate=True, hatch='\\', color="cyan")
-#        ax1.fill_between(x,  T.mins_lst[ind0:ind1], T.maxs_lst[ind0:ind1], facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black")
-#        
-#        ax.set_title("Beta comparison between Optimisation and QN_BFGS (hybrid) method")
-#        ax.set_xlabel("z")
-#        ax.set_ylabel("beta\'s")
-#        ax.legend(loc="best", fontsize = 13, ncol=2)
-#        
-        return axes
 ##---------------------------------------------------##
 ##---------------------------------------------------##
 def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
