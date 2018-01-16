@@ -110,6 +110,8 @@ class Temperature() :
         self.noise = self.tab_normal(0, 0.1, N_discr-2)[0]
         self.lst_gauss = [self.tab_normal(0,0.1,N_discr-2)[0] for i in range(num_real)]
         
+        self.store_rho = []
+        
         self.prior_sigma = dict()
         prior_sigma_lst = [20, 2, 1, 1, 0.5, 1, 1, 1, 1, 0.8]
         
@@ -643,7 +645,9 @@ class Temperature() :
         
         bfgs_adj_sigma_post  = dict()
         beta_var = []
-                
+        
+        frozen = 0
+        
         for T_inf in self.T_inf_lst :
             sT_inf      =   "T_inf_%d" %(T_inf)
             curr_d      =   self.T_obs_mean[sT_inf]
@@ -672,7 +676,7 @@ class Temperature() :
             
             sup_g_lst = []
             corr_chol = []
-            al2_lst  =   []
+            al2_lst  =  []
                         
             ########################
             ##-- Initialisation --##
@@ -762,14 +766,17 @@ class Temperature() :
                     al2_lst.append(cpt)
                 
                 print("alpha for cpt {}: {}".format(cpt, alpha))
-                              
+                if self.warn == "out" :
+                    print("Alpha lower than 5e-12. Convergence issue ?\n")
+                    break
+                      
 #                if cpt < cpt_inter :
 ###                    dbeta = dbeta/10000000
 #                    dbeta_n /= 1000000
                 
                 ## Calcule des termes n+1
                 dbeta_n =  alpha*d_n
-                print ("Pas pour cpt = {}: dbeta_n = {}".format(cpt, dbeta_n))
+#                print ("Pas pour cpt = {}: dbeta_n = {}".format(cpt, dbeta_n))
                 beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
 
                 g_nNext =   grad_J(beta_nNext)
@@ -782,14 +789,20 @@ class Temperature() :
                     fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
                     
                     H_n_inv *= fac_H
-                
-#                if np.linalg.norm(s_nNext,2) < 1e-8 : 
-##                    print("s_nNext = {}".format(s_nNext))
-#                    print("H_nNext = H_n")
-#                    H_nNext_inv = H_n_inv ## Cad le determinant rho est trop petit, une mise à jour n'est pas nécessaire                    
-##                    break
+                                 
+                if np.linalg.norm(s_nNext,2) < 1e-8: 
+                    frozen +=1
+                    if frozen <=6 :
+                        print("H_nNext = H_n, cpt = {} \t frozen = {}".format(cpt, frozen))
+                        H_nNext_inv = H_n_inv ## Cad le determinant rho est trop petit, une mise à jour n'est pas nécessaire                    
+                    else :
+                        H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+#                    break
 #                else :
-                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+                else :
+                    H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+
+                if frozen == 7 : frozen = 0
 #                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
                 
                 self.debug["curr_hess"] = H_nNext_inv
@@ -1494,15 +1507,16 @@ class Temperature() :
         Procedure close to the scipy's one 
         """
         # Comme Scipy
-        rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) != 0 else 1000.0
-        print("In Next Hess, check rho_nN = {}".format(rho_nN))
+        rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) > 1e-12 else 1000.0
+        self.store_rho.append(rho_nN)
+        print("\x1b[1;35;47mIn Next Hess, check rho_nN = {}\x1b[0m".format(rho_nN))
         
         Id      =   np.eye(self.N_discr-2)
         
-        A1 = Id - rho_nN * s_nN[:, np.newaxis] * y_nN[np.newaxis, :]
-        A2 = Id - rho_nN * y_nN[:, np.newaxis] * s_nN[np.newaxis, :]
+        A1 = Id - rho_nN * np.dot(s_nN[:, np.newaxis] , y_nN[np.newaxis, :])
+        A2 = Id - rho_nN * np.dot(y_nN[:, np.newaxis] , s_nN[np.newaxis, :])
         
-        return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* s_nN[:, np.newaxis] * s_nN[np.newaxis, :])
+        return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* np.dot(s_nN[:, np.newaxis] ,s_nN[np.newaxis, :]))
 ##----------------------------------------------------##
     def sr1_Next_hess(self, Bk, yk_bksk, s_nNext) : 
         """
@@ -1656,13 +1670,15 @@ class Temperature() :
         correction = False
         bool_curv  = False
         
+        self.warn = "go on"
+        
         armi  = lambda alpha : (J(xk + alpha*dk)) <=\
                 (J(xk) + c * alpha * np.dot(djk.T, dk)) 
         curv  = lambda alpha : (np.linalg.norm(g_J(xk + alpha*dk))) <=\
                 (0.9*np.linalg.norm(djk,2))  
         
-        cpt, cptmax = 0, 5000
-        while (armi(alpha) == False) and cpt< cptmax :
+        cpt, cptmax = 0, 15
+        while (armi(alpha) == False) and cpt< cptmax and self.warn=="go on" :
             alpha_lo =  alpha
             alpha   *=  rho
             cpt     +=  1
@@ -1675,6 +1691,10 @@ class Temperature() :
         it = 0
         
         print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
+        
+        if alpha <= 1.e-12 :
+            self.warn = "out"
+            
         if cpt > 0 and bool_curv == False:
             alpha_2 = alpha_lo
             
@@ -1999,7 +2019,13 @@ def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
         sigma_post = T.bfgs_adj_sigma_post
         
         title = "Adjoint (BFGS) sigma posterior comparison "        
-
+    
+    if method=="sr1" :
+        sigma_post = T.sr1_sigma_post
+        
+        title = "SR1 (1-rank BFGS) sigma posterior comparison "        
+            
+    
     print ("Title = %s" %(title))
 
     dual = True if T.bool_method["opti_scipy"] == True and T.bool_method["adj_bfgs"] == True\
