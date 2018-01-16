@@ -647,6 +647,7 @@ class Temperature() :
         beta_var = []
         
         frozen = 0
+        self.too_low_err_hess = dict()
         
         for T_inf in self.T_inf_lst :
             sT_inf      =   "T_inf_%d" %(T_inf)
@@ -765,11 +766,17 @@ class Temperature() :
                 if al2_cor  :
                     al2_lst.append(cpt)
                 
-                print("alpha for cpt {}: {}".format(cpt, alpha))
-                if self.warn == "out" :
-                    print("Alpha lower than 5e-12. Convergence issue ?\n")
-                    break
-                      
+                if alpha <= 1e-9 and g_sup > self.g_sup_max :
+                    print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt))
+                    time.sleep(1.)
+                    alpha = 1.
+                
+                
+#                print("alpha for cpt {}: {}".format(cpt, alpha))
+#                if self.warn == "out" :
+#                    print("Alpha lower than 5e-12. Convergence issue ?\n")
+#                    break
+#                      
 #                if cpt < cpt_inter :
 ###                    dbeta = dbeta/10000000
 #                    dbeta_n /= 1000000
@@ -790,21 +797,28 @@ class Temperature() :
                     
                     H_n_inv *= fac_H
                                  
-                if np.linalg.norm(s_nNext,2) < 1e-8: 
-                    frozen +=1
-                    if frozen <=6 :
-                        print("H_nNext = H_n, cpt = {} \t frozen = {}".format(cpt, frozen))
-                        H_nNext_inv = H_n_inv ## Cad le determinant rho est trop petit, une mise à jour n'est pas nécessaire                    
-                    else :
-                        H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
-#                    break
+#                if np.linalg.norm(s_nNext,2) < 1e-8: 
+#                    frozen +=1
+#                    if frozen <=6 :
+#                        print("H_nNext = H_n, cpt = {} \t frozen = {}".format(cpt, frozen))
+#                        H_nNext_inv = H_n_inv ## Cad le determinant rho est trop petit, une mise à jour n'est pas nécessaire                    
+#                    else :
+#                        H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+##                    break
+##                else :
 #                else :
-                else :
-                    H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+#                    H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
 
-                if frozen == 7 : frozen = 0
-#                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
+#                if frozen == 7 : print("s_nN petit, convergence a priori"); break
+##                H_nNext_inv = self.H_formule(beta_n, self.cov_pri_dict["T_inf_%s"%(str(T_inf))], T_inf)
                 
+#                if np.abs(err_hess) <= 1e-7 :
+#                    H_nNext_inv = H_n_inv
+#                    print ("err_hess < 1e-7, H_nNext = H_n, cpt = {}".format(cpt))
+#                    self.too_low_err_hess["cpt_" + str(cpt)] = err_hess
+#                else :
+                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+                    
                 self.debug["curr_hess"] = H_nNext_inv
 #                print("Hess:\n{}".format(H_nNext_inv))
                 
@@ -1518,6 +1532,30 @@ class Temperature() :
         
         return np.dot(A1, np.dot(prev_hess_inv, A2)) + (rho_nN* np.dot(s_nN[:, np.newaxis] ,s_nN[np.newaxis, :]))
 ##----------------------------------------------------##
+    def Next_hess_bis(self, Bkm1, yk, sk) :
+        """
+        Procedure Wikipédia 
+        """
+        skL = sk[np.newaxis, :] #skLigne
+        skC = sk[:, np.newaxis] #skColone
+        
+        ykL = yk[np.newaxis, :] #ykLigne
+        ykC = yk[:, np.newaxis] #ykColone
+        
+        
+        fac_1   =   np.dot(skL, ykC)[0,0] #sk.T yk
+        fac_2   =   np.dot(ykL, np.dot(Bkm1, ykC))[0,0] #yk.T B yk
+        
+        skskT   =   skL * skC
+        bkykskT =   np.dot(Bkm1, np.dot(ykC, skL))
+        
+        skykTbk =   np.dot(np.dot(skC, ykL), Bkm1)
+        
+        t2  =   (fac_1 + fac_2) / (fac_1**2) * skskT
+        t3 = bkykskT + skykTbk / fac_1 
+        
+        return Bkm1 + t2 - t3
+##----------------------------------------------------##
     def sr1_Next_hess(self, Bk, yk_bksk, s_nNext) : 
         """
         Formule d'update de rang 1 appelé SR1 voir Nocedal and Wright
@@ -1578,30 +1616,6 @@ class Temperature() :
         T_3 =   (M_2 + M_3) / scal_1
                 
         return T_1 + T_2 - T_3
-##----------------------------------------------------##    
-    def Next_hess_further_scd(self, prev_hess_inv, y_nN, s_nN):
-        # Cette fonction ne semble pas marcher
-        #https://arxiv.org/pdf/1704.00116.pdf 
-        # Nocedal_Wright_Numerical_optimization_v2
-        
-        d = self.N_discr-2
-        fac_1   =   (np.dot(prev_hess_inv, s_nN))[:, np.newaxis]  # vecteur colonne
-        fac_2   =   np.dot(s_nN[np.newaxis, :], prev_hess_inv)    # vecteur ligne
-        
-#        print ("fac_1 =\n{} \nfac_2 =\n{}".format(fac_1, fac_2)) 
-        
-        scal_1  =   np.dot(np.dot(s_nN[np.newaxis, :], prev_hess_inv), s_nN[:, np.newaxis])
-        scal_2  =   np.dot(y_nN[np.newaxis, :], s_nN[:, np.newaxis])
-        
-        scal_1, scal_2  =   scal_1[0,0], scal_2[0,0]
-#        print ("scal_1 = {}\t scal_2 = {}".format(scal_1, scal_2))
-        
-        T_1 =   prev_hess_inv
-        T_2 =   np.dot(fac_1, fac_2) / scal_1
-        T_3 =   np.dot(y_nN[:, np.newaxis], y_nN[np.newaxis, :]) / scal_2
-#        print("Shapes :\n T_1 : {} \t T_2 : {} \t T_3 : {}".format(T_1.shape,\
-#                                                                   T_3.shape))
-        return T_1 - T_2 + T_3
 ##----------------------------------------------------##
     def H_formule(self, beta, cov_pri, T_inf):
         dR_dT   =   self.DR_DT(beta, T_inf)
@@ -1684,7 +1698,7 @@ class Temperature() :
             cpt     +=  1
             print (alpha,  armi(alpha))
             alpha_hi =  alpha            
-        print ("alpha = {}\t cpt = {}".format(alpha, cpt))
+        print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
         bool_curv = curv(alpha)
@@ -1692,7 +1706,7 @@ class Temperature() :
         
         print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
         
-        if alpha <= 1.e-12 :
+        if alpha <= 1.e-14 :
             self.warn = "out"
             
         if cpt > 0 and bool_curv == False:
@@ -2072,7 +2086,9 @@ if __name__ == "__main__" :
     temp = Temperature(parser)
     temp.obs_pri_model()
     temp.get_prior_statistics()
-
+    
+    
+    
 ########
 #              
 ##----------------------------------------------------##
@@ -2084,3 +2100,4 @@ if __name__ == "__main__" :
 ##----------------------------------------------------##
 
 #run temp_class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'full' -N 33 -dt 1e-4 -cptmax 500
+#run temp_class_temp_ML.py -T_inf_lst 50 -g_sup 1e-4 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'full' -N 33 -dt 1e-4 -cptmax 150 
