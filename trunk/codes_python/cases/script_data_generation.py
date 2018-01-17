@@ -10,22 +10,24 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from scipy import optimize as op
 
-import class_temp_ML as ct #Pour utiliser les fonctions de classs_temp
+import class_temp_ML as ctm  #Pour utiliser les fonctions de classs_temp
 import class_functions_aux as cfa #Pour les tracés post-process
 
-ct = reload(ct)
+# run script_data_generation.py -T_inf_lst 15 -g_sup 1e-3 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'full' -N 33 -dt 1e-4 -cptmax 300
+
+ctm = reload(ctm)
 cfa = reload(cfa)
 
 parser = cfa.parser()
 
-temp = ct.Temperature(parser)
+temp = ctm.Temperature(parser)
 print(parser)
 
 temp.obs_pri_model()
 temp.get_prior_statistics()
 
-ct.adjoint_bfgs(inter_plot=True)
-ct.optimization()
+temp.adjoint_bfgs(inter_plot=True)
+temp.optimization()
 
 cfa.subplot(temp)
 cfa.sigma_plot(temp, save=True)
