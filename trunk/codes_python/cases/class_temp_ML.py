@@ -1150,7 +1150,7 @@ def sigma_plot(T, method='adj_bfgs', exp = 0.02, save=False) :
     dual = True if T.bool_method["opti_scipy"] == True and T.bool_method["adj_bfgs"] == True\
                 else False
         
-    for t in enumerate(T.T_inf_lst) :
+    for t in T.T_inf_lst :
         sT_inf = "T_inf_"+str(t)
         base = T.prior_sigma[sT_inf] 
         
