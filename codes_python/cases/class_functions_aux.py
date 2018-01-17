@@ -1,10 +1,11 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
-import matplotplib.pyplot as plt
+
+import matplotlib.pyplot as plt
 import numpy as np
 import os.path as os
+import argparse 
 
-## Autres fonctions en dehors de la classe ##
 def parser() :
     parser=argparse.ArgumentParser(description='You can initialize a case you want to study')
     #lists
