@@ -137,6 +137,7 @@ class Temperature() :
             os.mkdir(datapath)
         
         self.datapath = datapath
+        self.parser     =   parser
 ##---------------------------------------------------
     def set_T_inf (self, T_inf) :
         """
@@ -1856,6 +1857,24 @@ class Temperature() :
             except np.linalg.LinAlgError :
                 tau = max(fac * tau, rho)
         return L
+##----------------------------------------------------## 
+    def write_logbook(self) :
+        date = time.strftime("%m_%d_%Hh%M", time.localtime())
+        title = "%s_logbook.csv" %(date)
+        f = open(title, "w")
+        method = []
+        for item in self.bool_method.interitems():
+            if item[1] == True :
+                method.append(item[0])
+        
+        f.write("\t \t Logbook: simulation launched %s  \t \t \n" %(time.strftime("%Y_%m_%d_%Hh%Mm%Ss", time.localtime())))
+        f.write("Simulation\'s features :\n{}\n".format(self.parser))
+        
+        f.write("")
+        for t in self.T_inf_lst :
+            f.write("")
+            if self.bool_method["adj_bfgs"] == True :
+            
 ##----------------------------------------------------## 
 ## Autres fonctions en dehors de la classe ##
 def subplot(T, method='adj_bfgs', save = False) : 
