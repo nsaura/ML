@@ -768,7 +768,7 @@ class Temperature() :
                 if al2_cor  :
                     al2_lst.append(cpt)
                 
-                if alpha <= 1e-9 and g_sup > self.g_sup_max :
+                if (alpha <= 1e-7 and cpt > 70) and g_sup > self.g_sup_max :
                     print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt))
                     time.sleep(1.)
                     alpha = 1.
@@ -1861,7 +1861,7 @@ class Temperature() :
         return L
 ##----------------------------------------------------## 
 ## Autres fonctions en dehors de la classe ##
-def subplot(T, method='adj_bfgs') : 
+def subplot(T, method='adj_bfgs', save = False) : 
     """
     Fonction pour comparer les beta. 
     Afficher les max et min des différents tirages 
@@ -1966,7 +1966,7 @@ def subplot(T, method='adj_bfgs') :
             
     return axes
 ##---------------------------------------------------##
-def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf) :
+def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf, save = False) :
     betamap1    =   betamaps[0]
     betamap2    =   betamaps[1]
     
@@ -2018,7 +2018,7 @@ def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf) :
 #        
 ##---------------------------------------------------##
 ##---------------------------------------------------##
-def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
+def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8], save=False) :
     """
     Fonction pour comparer les sigma posterior
     """
@@ -2057,26 +2057,28 @@ def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
         plt.figure()
         plt.title(title + sT_inf)
         plt.semilogy(T.line_z, exp_sigma, label='Expected Sigma', marker = 's', linestyle='none')
-        plt.semilogy(T.line_z, sigma_post[sT_inf], label="Sigma posterior")
+        plt.semilogy(T.line_z, sigma_post[sT_inf], label="Sigma Posterior %s" %(title[:3]))
         plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
         plt.legend(loc='best')
-        plt.savefig(title_to_save)##Pour ne pas prendre le dernier espace
+        if save == True :
+            plt.savefig(title_to_save)##Pour ne pas prendre le dernier espace
         plt.show()
         
     if dual == True :
-        title_dual = "Scipy_opti and Adj_bfgs sigma post comparison %s" %(sT_inf)
+        title_dual = "Scipy_opti and Adj_bfgs sigma post comparison %s (%s)" %(sT_inf, T.cov_mod)
         title_to_save = os.join(os.split(title_to_save)[0],title_dual.replace(" ", "_")+".png")
         opti_sigma_post = T.sigma_post_dict[sT_inf]
         adj_bfgs_sigma_post = T.bfgs_adj_sigma_post[sT_inf]
         
         plt.figure()
-        plt.title(title_dual + sT_inf)
+        plt.title(title_dual)
         plt.semilogy(T.line_z, exp_sigma, label='Expected Sigma', marker = '^', linestyle='none')
         plt.semilogy(T.line_z, opti_sigma_post, label="Opti Sigma posterior")
         plt.semilogy(T.line_z, adj_bfgs_sigma_post, label="Adj_bfgs Sigma posterior")
         plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
         plt.legend(loc='best')
-        plt.savefig(title_to_save)
+        if save == True :
+            plt.savefig(title_to_save)
         plt.show()
     
 ##---------------------------------------------------##
