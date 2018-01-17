@@ -30,5 +30,6 @@ temp.adjoint_bfgs(inter_plot=True)
 temp.optimization()
 
 cfa.subplot(temp)
+cfa.subplot(temp, method="opti", comp=False )
 cfa.sigma_plot(temp, save=True)
 

@@ -100,7 +100,7 @@ class Temperature() :
             runs.add("opti_scipy_%s" %(sT_inf))
             runs.add("adj_bfgs_%s" %(sT_inf))
             
-        for r in runs
+        for r in runs :
             bool_method[r] = False
         self.bool_method = bool_method
         
@@ -110,13 +110,11 @@ class Temperature() :
         self.datapath   =   datapath
         self.parser     =   parser
 ##----------------------------------------------------##        
-        
 ##----------------------------------------------------##
 ######                                            ######
 ######           Modifieurs et built-in           ######
 ######                                            ######
 ##----------------------------------------------------## 
-        
 ##----------------------------------------------------##
     def set_T_inf (self, T_inf) :
         """
@@ -419,12 +417,15 @@ class Temperature() :
         Fonction utilisant la fonction op.minimize de scipy. La méthode utilisée est BFGS.
         La dérivée est calculée à partir de la méthode utilisant les adjoints.
         """
+        print("Début de l\'optimisation scipy\n")
         if self.bool_method["stat"] == False : self.get_prior_statistics()
         
         betamap, beta_final = dict(), dict()
         hess, cholesky = dict(), dict()
         
         mins, maxs = dict(), dict()
+        mins_dict, maxs_dict = dict(), dict()
+        
         sigma_post_dict = dict()
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
         beta_var = []
@@ -434,7 +435,7 @@ class Temperature() :
         ######################
         
         for T_inf in self.T_inf_lst :
-            print ("Calcule pour T_inf = %d" %(T_inf))
+            print ("Optimisation pour T_inf = %d" %(T_inf))
             sT_inf  =   "T_inf_" + str(T_inf)
             
             curr_d  =   self.T_obs_mean[sT_inf]
@@ -489,8 +490,12 @@ class Temperature() :
             sigma_post_dict[sT_inf] = sigma_post 
             mins_lst =  [mins["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]   
             maxs_lst =  [maxs["T_inf_%d%03d" %(T_inf, i) ] for i in range(self.N_discr-2)]
-        
-        
+            
+            mins_dict[sT_inf] = mins_lst
+            maxs_dict[sT_inf] = maxs_lst
+            
+            self.bool_method["opti_scipy_"+sT_inf] = True
+            self.write_logbook(T_inf)
         ##############################
         ##-- Passages en attribut --##
         ##############################
@@ -499,12 +504,10 @@ class Temperature() :
         self.hess       =   hess
         self.cholseky   =   cholesky
         self.beta_final =   beta_final
-        self.mins_lst   =   mins_lst
-        self.maxs_lst   =   maxs_lst
+        self.mins_dict  =   mins_dict
+        self.maxs_dict  =   maxs_dict
         self.beta_var   =   beta_var
         self.sigma_post_dict = sigma_post_dict
-        
-        self.bool_method["opti_scipy"]   =   True
         
         #########
         #- Fin -#
@@ -514,6 +517,7 @@ class Temperature() :
         """
         
         """
+        print("Début de l\'optimisation maison\n")
         if self.bool_method["stat"] == False : self.get_prior_statistics() 
         
         self.debug = dict()
@@ -526,6 +530,7 @@ class Temperature() :
         
         bfgs_adj_mins,   bfgs_adj_maxs  =   dict(),  dict()
         
+        bfgs_adj_mins_dict, bfgs_adj_maxs_dict = dict(), dict()
         bfgs_adj_sigma_post  = dict()
         beta_var = []
         
@@ -748,10 +753,13 @@ class Temperature() :
                 sigma_post.append(np.std([j[i] for j in beta_var]))
                  
             bfgs_adj_sigma_post[sT_inf] = sigma_post 
-            bfgs_mins_lst =  [bfgs_adj_mins["T_inf_%d%03d" %(T_inf, i) ]\
+            bfgs_adj_mins_lst =  [bfgs_adj_mins["T_inf_%d%03d" %(T_inf, i) ]\
                                             for i in range(self.N_discr-2)]   
-            bfgs_maxs_lst =  [bfgs_adj_maxs["T_inf_%d%03d" %(T_inf, i) ]\
+            bfgs_adj_maxs_lst =  [bfgs_adj_maxs["T_inf_%d%03d" %(T_inf, i) ]\
                                             for i in range(self.N_discr-2)]
+            
+            bfgs_adj_mins_dict[sT_inf] = bfgs_adj_mins_lst
+            bfgs_adj_maxs_dict[sT_inf] = bfgs_adj_maxs_lst
             
             plt.legend(loc="best")
             
@@ -783,6 +791,11 @@ class Temperature() :
             
             except ValueError :
                 break
+                
+            self.bool_method["adj_bfgs_"+sT_inf] = True
+            self.write_logbook(T_inf)
+        ## Fin boucle sur température
+        
         #self.Hess = np.dot(g_n.T, g_n)
         self.bfgs_adj_bf     =   bfgs_adj_bf
         self.bfgs_adj_bmap   =   bfgs_adj_bmap
@@ -792,16 +805,14 @@ class Temperature() :
         self.bfgs_adj_hessinv=  bfgs_adj_hessinv
         self.bfgs_adj_cholesky= bfgs_adj_cholesky
         
-        
-        self.bfgs_adj_maxs   =   bfgs_maxs_lst
-        self.bfgs_adj_mins   =   bfgs_mins_lst
+        self.bfgs_adj_mins_dict   =   bfgs_adj_mins_dict
+        self.bfgs_adj_maxs_dict   =   bfgs_adj_maxs_dict
         
         self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
         
         self.al2_lst    =    al2_lst
         self.corr_chol  =   corr_chol
         
-        self.bool_method["adj_bfgs"] = True
 ###---------------------------------------------------##   
 ######                                            ######
 ######    Fonctions pour calculer la Hessienne    ######
@@ -963,7 +974,7 @@ class Temperature() :
 ##----------------------------------------------------## 
     def write_logbook(self, T_inf) :
         date = time.strftime("%m_%d_%Hh%M", time.localtime())
-        title = os.join(logbook_path, "%s_logbook.csv" %(date))
+        title = os.join(self.parser.logbook_path, "%s_logbook.csv" %(date))
         if os.isfile(title) :
             f = open(title, "a")    
         else : 
@@ -976,19 +987,20 @@ class Temperature() :
 #        for item in self.bool_method.interitems():
 #            f.write("bool_method[{}] = {}\n".format(item[0], item[1]))
 #        
+        sT_inf = "T_inf_" + str(T_inf)
         f.write("Method status for %s: \n" %(str(T_inf)))        
-        if self.bool_method["adj_bfgs"] == True:
-            f.write("ADJ_BFGS\n")
+        if self.bool_method["adj_bfgs_"+sT_inf] == True:
+            f.write("\nADJ_BFGS\n")
             for item in self.logout_last.iteritems() :
                 f.write("{} = {} \n".format(item[0], item[1]))
-        if self.bool_method["opti_scipy"] :
-            f.write("SCIPY_OPTI\n")
-            f.write("g_last = {}".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
-            f.write("Message : {} \t Success = {}".format(self.opti_obj.message, self.opti_obj.success))
-            f.write("N-Iterations:  = {}".format(self.opti_obj.nit))
-            f.write("beta_last = {}".format(self.opti_obj.x))
-            f.write("SCIPY: J(beta_last) = {}".format(self.opti_obj.values()[5]))
-            f.write("SCIPY: J(beta_last) = {}".format(self.opti_obj.values()[5]))
+        if self.bool_method["opti_scipy_"+sT_inf] :
+            f.write("\nSCIPY_OPTI\n")
+            f.write("g_last = {}\n".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
+            f.write("Message : {} \t Success = {}\n".format(self.opti_obj.message, self.opti_obj.success))
+            f.write("N-Iterations:  = {}\n".format(self.opti_obj.nit))
+            f.write("beta_last = {}\n".format(self.opti_obj.x))
+            f.write("SCIPY: J(beta_last) = {}\n".format(self.opti_obj.values()[5]))
+            
         
         f.close()
         print("file {} written")      

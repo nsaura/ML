@@ -44,8 +44,9 @@ def parser() :
                         help='Define the logbook\'s path. Default to %(default)s \n')
     
     return parser.parse_args()
-
-def subplot(T, method='adj_bfgs', save = False) : 
+##-------------------------------------------------------------##
+##-------------------------------------------------------------##
+def subplot(T, method='adj_bfgs', save = False, comp=True) : 
     """
     Fonction pour comparer les beta. 
     Afficher les max et min des différents tirages 
@@ -55,16 +56,16 @@ def subplot(T, method='adj_bfgs', save = False) :
         dico_beta_map   =   T.betamap
         dico_beta_fin   =   T.beta_final
 
-        mins    =   T.mins_lst
-        maxs    =   T.maxs_lst
+        mins    =   T.mins_dict
+        maxs    =   T.maxs_dict
         titles = ["Opti: Beta comparaison (bp = {},  cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
 
     if method=="adj_bfgs":
         dico_beta_map   =   T.bfgs_adj_bmap
         dico_beta_fin   =   T.bfgs_adj_bf
 
-        mins    =   T.bfgs_adj_mins
-        maxs    =   T.bfgs_adj_maxs
+        mins    =   T.bfgs_adj_mins_dict
+        maxs    =   T.bfgs_adj_maxs_dict
         
         titles = ["BFGS_ADJ: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
     
@@ -89,13 +90,13 @@ def subplot(T, method='adj_bfgs', save = False) :
             label = "h_betamap {}".format(sT_inf), marker = 'o',\
                                                     linestyle = 'None', color = colors[1])
         axes[1].plot(T.line_z, curr_d, label= "curr_d {}".format(sT_inf))
-        
-        axes[0].plot(T.line_z, mins, label='Valeurs minimums', marker='s',\
+
+        axes[0].plot(T.line_z, mins[sT_inf], label='Valeurs minimums', marker='s',\
                                                     linestyle='none', color='magenta')
-        axes[0].plot(T.line_z, maxs, label='Valeurs maximums', marker='s',\
+        axes[0].plot(T.line_z, maxs[sT_inf], label='Valeurs maximums', marker='s',\
                                                     linestyle='none', color='black')
 
-        axes[0].fill_between(T.line_z, mins, maxs, facecolor= "0.2", alpha=0.4, interpolate=True)                
+        axes[0].fill_between(T.line_z, mins[sT_inf], maxs[sT_inf], facecolor= "0.2", alpha=0.4, interpolate=True)                
 #            for m,M in zip(self.mins_list, self.maxs_list) :
 #                axes[0].axvspan(m, M, facecolor="0.2", alpha = 0.5 )
         
@@ -107,17 +108,19 @@ def subplot(T, method='adj_bfgs', save = False) :
         
         plt.show()
         
-        if T.bool_method["adj_bfgs_" + sT_inf] == True and T.bool_method["opti_scipy_" + sT_inf] == True :
-            bmaps=  [T.betamap[sT_inf], T.bfgs_adj_bmap[sT_inf]]
-            mins =  [T.mins_lst, T.bfgs_adj_mins]
-            maxs =  [T.maxs_lst, T.bfgs_adj_maxs]
-            keys =  ["Scipy - optimization", "BFGS Adjoint Opti"]
-                     
-            comparaison(T, bmaps, mins, maxs, keys, T_inf)
+        print(T.bool_method["adj_bfgs_" + sT_inf] , T.bool_method["opti_scipy_" + sT_inf])
         
-            
+        if comp == True :
+            if T.bool_method["adj_bfgs_" + sT_inf] == True and T.bool_method["opti_scipy_" + sT_inf] == True :
+                comp_bmaps=  [T.betamap[sT_inf], T.bfgs_adj_bmap[sT_inf]]
+                comp_mins =  [T.mins_dict[sT_inf], T.bfgs_adj_mins_dict[sT_inf]]
+                comp_maxs =  [T.maxs_dict[sT_inf], T.bfgs_adj_maxs_dict[sT_inf]]
+                comp_keys =  ["Scipy - optimization", "BFGS Adjoint Opti"]
+                         
+                comparaison(T, comp_bmaps, comp_mins, comp_maxs, comp_keys, T_inf)
     return axes
 ##---------------------------------------------------##
+##-------------------------------------------------------------##
 def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf, save = False) :
     betamap1    =   betamaps[0]
     betamap2    =   betamaps[1]
