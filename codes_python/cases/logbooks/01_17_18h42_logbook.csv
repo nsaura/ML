@@ -1,0 +1,4 @@
+	 	 Logbook: simulation launched 2018_01_17_18h42m09s  	 	 
+Simulation's features :
+Namespace(N_discr=33, T_inf_lst=[50], beta_prior=1.0, cov_mod='diag', cpt_max_adj=200, datapath='./data', dt=0.0001, g_sup_max=0.0001, h=0.5, kappa=1.0, logbook_path='./logbooks/', num_real=10, tol=1e-05)
+Method status for 50: 
