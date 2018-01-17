@@ -244,7 +244,8 @@ class Temperature() :
 ##---------------------------------------------------
     def true_beta(self, T, T_inf) : 
         return np.asarray (
-        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i])) *10**(-4) + self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in range(self.N_discr-2)]        
+        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i])) *10**(-4) +\
+            self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in range(self.N_discr-2)])        
 ##---------------------------------------------------    
 ##----------------------------------------------------##
 

@@ -1,7 +1,6 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
 import time
-import sys, warnings, argparse
 
 import numpy as np
 import pandas as pd
@@ -11,8 +10,11 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from scipy import optimize as op
 
-import class_temp as ct #Pour utiliser les fonctions de classs_temp
+import class_temp_ML as ct #Pour utiliser les fonctions de classs_temp
 import class_functions_aux as cfa #Pour les tracés post-process
+
+ct = reload(ct)
+cfa = reload(cfa)
 
 parser = cfa.parser()
 
@@ -21,4 +23,10 @@ print(parser)
 
 temp.obs_pri_model()
 temp.get_prior_statistics()
+
+ct.adjoint_bfgs(inter_plot=True)
+ct.optimization()
+
+cfa.subplot(temp)
+cfa.sigma_plot(temp, save=True)
 
