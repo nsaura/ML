@@ -51,14 +51,6 @@ def subplot(T, method='adj_bfgs', save = False) :
     Afficher les max et min des différents tirages 
     Comparer l'approximation de la température avec beta_final et la température exacte
     """
-    if method == "sr1"    :
-        dico_beta_map   =   T.sr1_bmap
-        dico_beta_fin   =   T.sr1_bf
-        
-        mins    =   T.sr1_mins
-        maxs    =   T.sr1_maxs
-        
-        titles = ["SR1: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "SR1: Temperature fields"]
     if method in {"optimization", "Optimization", "opti"}:
         dico_beta_map   =   T.betamap
         dico_beta_fin   =   T.beta_final
@@ -67,15 +59,6 @@ def subplot(T, method='adj_bfgs', save = False) :
         maxs    =   T.maxs_lst
         titles = ["Opti: Beta comparaison (bp = {},  cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
 
-    if method in {"",  "adjoint" }:
-        dico_beta_map   =   T.adj_bmap
-        dico_beta_fin   =   T.adj_bf
-
-        mins    =   T.adj_mins
-        maxs    =   T.adj_maxs
-        
-        titles = ["Adjoint: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
-    
     if method=="adj_bfgs":
         dico_beta_map   =   T.bfgs_adj_bmap
         dico_beta_fin   =   T.bfgs_adj_bf
@@ -124,7 +107,7 @@ def subplot(T, method='adj_bfgs', save = False) :
         
         plt.show()
         
-        if T.bool_method["adj_bfgs"] == True and T.bool_method["opti_scipy"] == True :
+        if T.bool_method["adj_bfgs_" + sT_inf] == True and T.bool_method["opti_scipy_" + sT_inf] == True :
             bmaps=  [T.betamap[sT_inf], T.bfgs_adj_bmap[sT_inf]]
             mins =  [T.mins_lst, T.bfgs_adj_mins]
             maxs =  [T.maxs_lst, T.bfgs_adj_maxs]
@@ -132,21 +115,6 @@ def subplot(T, method='adj_bfgs', save = False) :
                      
             comparaison(T, bmaps, mins, maxs, keys, T_inf)
         
-        if T.bool_method["adj_bfgs"] == True and T.bool_method["sr1"] == True :
-            bmaps=  [T.bfgs_adj_bmap[sT_inf], T.sr1_bmap[sT_inf]]
-            mins =  [T.bfgs_adj_mins, T.sr1_mins]
-            maxs =  [T.bfgs_adj_maxs, T.sr1_maxs]
-            keys =  ["BFGS Adjoint Opti", "SR1 Update"]
-                     
-            comparaison(T, bmaps, mins, maxs, keys, T_inf)
-        
-        if T.bool_method["opti_scipy"] == True and T.bool_method["sr1"] == True :
-            bmaps=  [T.betamap[sT_inf], T.sr1_bmap[sT_inf]]
-            mins =  [T.mins_lst, T.sr1_mins]
-            maxs =  [T.maxs_lst, T.sr1_maxs]
-            keys =  ["Scipy - optimization", "SR1 Update"]
-            
-            comparaison(T, bmaps, mins, maxs, keys, T_inf)
             
     return axes
 ##---------------------------------------------------##
