@@ -91,8 +91,17 @@ class Temperature() :
         self.h = h
         
         bool_method = dict()
-        for s in {"opti_scipy", "adj_bfgs", "stat", "sr1", "dump_bfgs"} :
-            bool_method[s] = False
+        
+        runs = set()
+        runs.add("stat")
+        
+        for t in self.T_inf_lst :
+            sT_inf = "T_inf_%s" %(str(t))
+            runs.add("opti_scipy_%s" %(sT_inf))
+            runs.add("adj_bfgs_%s" %(sT_inf))
+            
+        for r in runs
+            bool_method[r] = False
         self.bool_method = bool_method
         
         if os.exists(datapath) == False :
@@ -952,7 +961,37 @@ class Temperature() :
                 tau = max(fac * tau, rho)
         return L
 ##----------------------------------------------------## 
-            
+    def write_logbook(self, T_inf) :
+        date = time.strftime("%m_%d_%Hh%M", time.localtime())
+        title = os.join(logbook_path, "%s_logbook.csv" %(date))
+        if os.isfile(title) :
+            f = open(title, "a")    
+        else : 
+            f = open(title, "w")
+        
+        f.write("\t \t Logbook: simulation launched %s  \t \t \n" %(time.strftime("%Y_%m_%d_%Hh%Mm%Ss", time.localtime())))
+        f.write("Simulation\'s features :\n{}\n".format(self.parser))
+        
+#        f.write("Overview of methods ran")
+#        for item in self.bool_method.interitems():
+#            f.write("bool_method[{}] = {}\n".format(item[0], item[1]))
+#        
+        f.write("Method status for %s: \n" %(str(T_inf)))        
+        if self.bool_method["adj_bfgs"] == True:
+            f.write("ADJ_BFGS\n")
+            for item in self.logout_last.iteritems() :
+                f.write("{} = {} \n".format(item[0], item[1]))
+        if self.bool_method["opti_scipy"] :
+            f.write("SCIPY_OPTI\n")
+            f.write("g_last = {}".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
+            f.write("Message : {} \t Success = {}".format(self.opti_obj.message, self.opti_obj.success))
+            f.write("N-Iterations:  = {}".format(self.opti_obj.nit))
+            f.write("beta_last = {}".format(self.opti_obj.x))
+            f.write("SCIPY: J(beta_last) = {}".format(self.opti_obj.values()[5]))
+            f.write("SCIPY: J(beta_last) = {}".format(self.opti_obj.values()[5]))
+        
+        f.close()
+        print("file {} written")      
 ##----------------------------------------------------## 
 #if __name__ == "__main__" :
 #    

@@ -129,15 +129,24 @@ class Temperature() :
         self.h = h
         
         bool_method = dict()
-        for s in {"opti_scipy", "adj_bfgs", "stat", "sr1", "dump_bfgs"} :
-            bool_method[s] = False
+        
+        runs = set()
+        runs.add("stat")
+        
+        for t in self.T_inf_lst :
+            sT_inf = "T_inf_%s" %(str(t))
+            runs.add("opti_scipy_%s" %(sT_inf))
+            runs.add("adj_bfgs_%s" %(sT_inf))
+            
+        for r in runs
+            bool_method[r] = False
         self.bool_method = bool_method
         
         if os.exists(datapath) == False :
             os.mkdir(datapath)
         
         self.datapath = datapath
-        self.parser     =   parser
+        self.parser   =   parser
 ##---------------------------------------------------
     def set_T_inf (self, T_inf) :
         """
