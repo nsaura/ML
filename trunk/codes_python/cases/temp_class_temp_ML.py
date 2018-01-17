@@ -1,6 +1,5 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
-
 import numpy as np
 import pandas as pd
 
@@ -14,8 +13,6 @@ from itertools import cycle
 import matplotlib.cm as cm
 
 import numdifftools as nd
-
-import time
 
 ## Import de la classe TF ##
 nnc_folder = os.abspath(os.dirname("../TF/NN_class_try.py"))
@@ -821,7 +818,7 @@ class Temperature() :
 #                else :
                 H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
                     
-                self.debug["curr_hess"] = H_nNext_inv
+                self.debug["curr_hess_%s" %(str(cpt))] = H_nNext_inv
 #                print("Hess:\n{}".format(H_nNext_inv))
                 
                 err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
