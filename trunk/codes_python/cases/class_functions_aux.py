@@ -189,22 +189,15 @@ def sigma_plot(T, method='adj_bfgs', exp = 0.02, save=False) :
         
         title = "Adjoint (BFGS) sigma posterior comparison "        
     
-    if method=="sr1" :
-        sigma_post = T.sr1_sigma_post
-        
-        title = "SR1 (1-rank BFGS) sigma posterior comparison "        
-            
-    
     print ("Title = %s" %(title))
     title_to_save = os.join(os.abspath("./res_all_T_inf"),title.replace(" ", "_")[:-1]+".png")
-    dual = True if T.bool_method["opti_scipy"] == True and T.bool_method["adj_bfgs"] == True\
-                else False
         
     for t in T.T_inf_lst :
         sT_inf = "T_inf_"+str(t)
-        base = T.prior_sigma[sT_inf] 
+        dual = True if T.bool_method["opti_scipy_" + sT_inf] == True and T.bool_method["adj_bfgs_" + sT_inf] == True\
+                else False
         
-        base_sigma  =   np.asarray([base for j in range(T.N_discr-2)])
+        base_sigma  =   np.asarray([T.prior_sigma[sT_inf] for j in range(T.N_discr-2)])
         exp_sigma   =   np.asarray([exp for j in range(T.N_discr-2)])
         
         plt.figure()
