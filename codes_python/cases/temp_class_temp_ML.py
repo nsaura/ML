@@ -849,8 +849,19 @@ class Temperature() :
             beta_last=  beta_nNext
             d_n_last = d_n
             
-            print ("Final Sup_g = {}\nFinal beta = {}\nFinal direction {}".format(g_sup,\
-                                      beta_last,       d_n_last  ))
+            self.logout_last = dict()
+            self.logout_last["cpt_last"]    =   cpt
+            self.logout_last["g_last"]      =   g_last
+            self.logout_last["beta_last"]   =   beta_last
+            self.logout_last["J(beta_last)"]=   J(beta_last)
+            
+            self.logout_last["Residu_hess"] =   err_hess
+            self.logout_last["Residu_beta"] =   err_beta
+            
+            self.logout_last["Corr_chol"]   =   len(corr_chol)
+            
+            print ("\x1b[1;35;47mFinal Sup_g = {}\nFinal beta = {}\nFinal direction {}\x1b[0m".format(\
+                g_sup, beta_last, d_n_last))
             
             ax[1].plot(self.line_z, g_last, label="gradient last")
 
@@ -1858,23 +1869,41 @@ class Temperature() :
                 tau = max(fac * tau, rho)
         return L
 ##----------------------------------------------------## 
-    def write_logbook(self) :
+    def write_logbook(self, T_inf) :
         date = time.strftime("%m_%d_%Hh%M", time.localtime())
-        title = "%s_logbook.csv" %(date)
-        f = open(title, "w")
+        title = os.join(logbook_path, "%s_logbook.csv" %(date))
+        if os.isfile(title) :
+            f = open(title, "a")    
+        else : 
+            f = open(title, "w")
         method = []
-        for item in self.bool_method.interitems():
+        for item in self.bool_method.iteritems():
             if item[1] == True :
                 method.append(item[0])
         
         f.write("\t \t Logbook: simulation launched %s  \t \t \n" %(time.strftime("%Y_%m_%d_%Hh%Mm%Ss", time.localtime())))
         f.write("Simulation\'s features :\n{}\n".format(self.parser))
         
-        f.write("")
-        for t in self.T_inf_lst :
-            f.write("")
-            if self.bool_method["adj_bfgs"] == True :
-            
+        f.write("Overview of methods ran")
+        for item in self.bool_method.interitems():
+            f.write("bool_method[{}] = {}\n".format(item[0], item[1]))
+        
+        f.write("Method status for %s: \n" %(str(T_inf)))        
+        if self.bool_method["adj_bfgs"] == True:
+            f.write("ADJ_BFGS\n")
+            for item in self.logout_last.iteritems() :
+                f.write("{} = {} \n".format(item[0], item[1]))
+        if self.bool_method["opti_scipy"] :
+            f.write("SCIPY_OPTI\n")
+            f.write("g_last = {}".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
+            f.write("Message : {} \t Success = {}".format(self.opti_obj.message, self.opti_obj.success))
+            f.write("N-Iterations:  = {}".format(self.opti_obj.nit))
+            f.write("beta_last = {}".format(self.opti_obj.x))
+            f.write("SCIPY: J(beta_last) = {}".format(self.opti_obj.values()[5]))
+            f.write("SCIPY: J(beta_last) = {}".format(self.opti_obj.values()[5]))
+        
+        f.close()
+        print("file {} written")
 ##----------------------------------------------------## 
 ## Autres fonctions en dehors de la classe ##
 def subplot(T, method='adj_bfgs', save = False) : 
