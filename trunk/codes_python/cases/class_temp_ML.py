@@ -399,13 +399,11 @@ class Temperature() :
             
             self.bool_method["stat"] = True
 ##----------------------------------------------------##    
-
 ##----------------------------------------------------##
 ######                                            ######
 ######        Routines pour l'optimisation        ######
 ######                                            ######
 ##----------------------------------------------------## 
-
 ##----------------------------------------------------##    
     def optimization(self, verbose=False) :
         """
@@ -695,8 +693,19 @@ class Temperature() :
             beta_last=  beta_nNext
             d_n_last = d_n
             
-            print ("Final Sup_g = {}\nFinal beta = {}\nFinal direction {}".format(g_sup,\
-                                      beta_last,       d_n_last  ))
+            self.logout_last = dict()
+            self.logout_last["cpt_last"]    =   cpt   
+            self.logout_last["g_last"]      =   g_last
+            self.logout_last["beta_last"]   =   beta_last
+            self.logout_last["J(beta_last)"]=   J(beta_last)
+            
+            self.logout_last["Residu_hess"] =   err_hess
+            self.logout_last["Residu_beta"] =   err_beta
+            
+            self.logout_last["Corr_chol"]   =   len(corr_chol)
+            
+            print ("\x1b[1;35;47mFinal Sup_g = {}\nFinal beta = {}\nFinal direction {}\x1b[0m".format(\
+                g_sup, beta_last, d_n_last))
             
             ax[1].plot(self.line_z, g_last, label="gradient last")
 
