@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
-import os, sys, warnings, argparse
+import sys, warnings, argparse
+
+import os.path as os
 
 from scipy import optimize as op
 from itertools import cycle
@@ -16,7 +18,7 @@ import numdifftools as nd
 import time
 
 ## Import de la classe TF ##
-nnc_folder = os.path.abspath(os.path.dirname("../TF/NN_class_try.py"))
+nnc_folder = os.abspath(os.dirname("../TF/NN_class_try.py"))
 sys.path.append(nnc_folder)
 import NN_class_try as NNC
 ##------------------------##  
@@ -74,7 +76,7 @@ class Temperature() :
 
         N_discr,    kappa   =   parser.N_discr, parser.kappa,    
         dt,         h       =   parser.dt,      parser.h
-        datapath            =   os.path.abspath(parser.datapath)
+        datapath            =   os.abspath(parser.datapath)
         num_real,   tol     =   parser.num_real,parser.tol
         cpt_max_adj         =   parser.cpt_max_adj
         cov_mod,    g_sup_max  =   parser.cov_mod, parser.g_sup_max
@@ -134,7 +136,7 @@ class Temperature() :
             bool_method[s] = False
         self.bool_method = bool_method
         
-        if os.path.exists(datapath) == False :
+        if os.exists(datapath) == False :
             os.mkdir(datapath)
         
         self.datapath = datapath
@@ -202,14 +204,14 @@ class Temperature() :
         print("g_sup_max is now {}".format(self.g_sup_max))
 
     def pd_read_csv(self, filename) :
-        if os.path.splitext(filename)[-1] is not ".csv" :
-            filename = os.path.splitext(filename)[0] + ".csv"
-        path = os.path.join(self.datapath, filename)
+        if os.splitext(filename)[-1] is not ".csv" :
+            filename = os.splitext(filename)[0] + ".csv"
+        path = os.join(self.datapath, filename)
         data = pd.read_csv(path).get_values()            
         return data.reshape(data.shape[0])
 ##---------------------------------------------------
     def pd_write_csv(self, filename, data) :
-        path = os.path.join(self.datapath, filename)
+        path = os.join(self.datapath, filename)
         pd.DataFrame(data).to_csv(path, index=False, header= True)
 ##---------------------------------------------------
     def tab_normal(self, mu, sigma, length) :
@@ -578,7 +580,7 @@ class Temperature() :
                 hess[sT_inf] = self.H_formule_2(betamap[sT_inf], cov_prior, T_inf)
                 cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
             except np.linalg.LinAlgError  :
-                sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
+                sigmas = np.sqrt(np.diag(self.cov_obs_dict[sT_inf]))
                 print ("Cholesky impossible avec H_formule. Plan B : adjoint de la solution")
                 hbeta   =   self.h_beta(betamap[sT_inf], T_inf, verbose=False)
                 f       =   np.diag([( hbeta[p] - curr_d[p] ) / sigmas[p] for p in range(self.N_discr-2)])
@@ -633,7 +635,6 @@ class Temperature() :
         if self.bool_method["stat"] == False : self.get_prior_statistics() 
         
         self.debug = dict()
-        sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
         
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
         
@@ -651,6 +652,7 @@ class Temperature() :
         
         for T_inf in self.T_inf_lst :
             sT_inf      =   "T_inf_%d" %(T_inf)
+            sigmas = np.sqrt(np.diag(self.cov_obs_dict[sT_inf]))
             curr_d      =   self.T_obs_mean[sT_inf]
             cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
                             self.full_cov_obs_dict[sT_inf]
@@ -949,7 +951,7 @@ class Temperature() :
         if self.bool_method["stat"] == False : self.get_prior_statistics() 
         
         self.debug = dict()
-        sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
+        sigmas = np.sqrt(np.diag(self.cov_obs_dict[sT_inf]))
         
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
         
@@ -1224,7 +1226,7 @@ class Temperature() :
         if self.bool_method["stat"] == False : self.get_prior_statistics() 
         
         self.debug = dict()
-        sigmas = np.sqrt(np.diag(self.cov_obs_dict["T_inf_50"]))
+        sigmas = np.sqrt(np.diag(self.cov_obs_dict[sT_inf]))
         
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
         
@@ -2020,6 +2022,7 @@ def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
     """
     Fonction pour comparer les sigma posterior
     """
+    import os.path as os
     if method in {"optimization", "Optimization", "opti"}:
         sigma_post = T.sigma_post_dict
         title = "Optimization sigma posterior comparison "
@@ -2041,7 +2044,7 @@ def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
             
     
     print ("Title = %s" %(title))
-
+    title_to_save = os.join(os.abspath("./res_all_T_inf"),title.replace(" ", "_")[:-1]+".png")
     dual = True if T.bool_method["opti_scipy"] == True and T.bool_method["adj_bfgs"] == True\
                 else False
         
@@ -2056,11 +2059,13 @@ def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
         plt.semilogy(T.line_z, exp_sigma, label='Expected Sigma', marker = 's', linestyle='none')
         plt.semilogy(T.line_z, sigma_post[sT_inf], label="Sigma posterior")
         plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
-        plt.legend()
+        plt.legend(loc='best')
+        plt.savefig(title_to_save)##Pour ne pas prendre le dernier espace
         plt.show()
         
     if dual == True :
         title_dual = "Scipy_opti and Adj_bfgs sigma post comparison %s" %(sT_inf)
+        title_to_save = os.join(os.split(title_to_save)[0],title_dual.replace(" ", "_")+".png")
         opti_sigma_post = T.sigma_post_dict[sT_inf]
         adj_bfgs_sigma_post = T.bfgs_adj_sigma_post[sT_inf]
         
@@ -2070,7 +2075,8 @@ def sigma_plot(T, method='adj_bfgs', exp = [0.02], base = [0.8]) :
         plt.semilogy(T.line_z, opti_sigma_post, label="Opti Sigma posterior")
         plt.semilogy(T.line_z, adj_bfgs_sigma_post, label="Adj_bfgs Sigma posterior")
         plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
-        plt.legend()
+        plt.legend(loc='best')
+        plt.savefig(title_to_save)
         plt.show()
     
 ##---------------------------------------------------##
@@ -2087,7 +2093,7 @@ if __name__ == "__main__" :
     temp.obs_pri_model()
     temp.get_prior_statistics()
     
-    
+    temp.adjoint_bfgs(inter_plot=True)
     
 ########
 #              
