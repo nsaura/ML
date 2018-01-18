@@ -503,6 +503,7 @@ class Temperature() :
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
                 beta_var.append(betamap[sT_inf] + np.dot(cholesky[sT_inf], s))
             beta_var.append(beta_final[sT_inf])
+            
             sigma_post = []
             for i in range(self.N_discr-2) :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
