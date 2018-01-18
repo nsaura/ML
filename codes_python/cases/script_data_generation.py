@@ -1,5 +1,6 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
+
 import time
 
 import numpy as np
@@ -29,7 +30,7 @@ temp.get_prior_statistics()
 temp.adjoint_bfgs(inter_plot=True)
 temp.optimization()
 
-cfa.subplot(temp)
-cfa.subplot(temp, method="opti", comp=False )
+cfa.subplot(temp, save=True)
+cfa.subplot(temp, method="opti", comp=False, save=True)
 cfa.sigma_plot(temp, save=True)
 

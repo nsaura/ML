@@ -20,7 +20,7 @@ def parser() :
 
     parser.add_argument('--H', '-H', action='store', type=float, default=0.5, dest='h', 
                         help='Define the convection coefficient h \n' )
-    parser.add_argument('--delta_t', '-dt', action='store', type=float, default=0.005, dest='dt', 
+    parser.add_argument('--delta_t', '-dt', action='store', type=float, default=1e-4, dest='dt', 
                         help='Define the time step disctretization. Default to %(default).5f \n' )
     parser.add_argument('--kappa', '-kappa', action='store', type=float, default=1.0, dest='kappa', 
                         help='Define the diffusivity number kappa. Default to %(default).2f\n' )
@@ -46,7 +46,7 @@ def parser() :
     return parser.parse_args()
 ##-------------------------------------------------------------##
 ##-------------------------------------------------------------##
-def subplot(T, method='adj_bfgs', save = False, comp=True) : 
+def subplot(T, method='adj_bfgs', picpath = "./res_all_T_inf", save = False, comp=True) : 
     """
     Fonction pour comparer les beta. 
     Afficher les max et min des différents tirages 
@@ -67,7 +67,7 @@ def subplot(T, method='adj_bfgs', save = False, comp=True) :
         mins    =   T.bfgs_adj_mins_dict
         maxs    =   T.bfgs_adj_maxs_dict
         
-        titles = ["BFGS_ADJ: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
+        titles = ["ADJ_BFGS: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
     
     for T_inf in T.T_inf_lst :
         sT_inf = "T_inf_" + str(T_inf)
@@ -97,8 +97,6 @@ def subplot(T, method='adj_bfgs', save = False, comp=True) :
                                                     linestyle='none', color='black')
 
         axes[0].fill_between(T.line_z, mins[sT_inf], maxs[sT_inf], facecolor= "0.2", alpha=0.4, interpolate=True)                
-#            for m,M in zip(self.mins_list, self.maxs_list) :
-#                axes[0].axvspan(m, M, facecolor="0.2", alpha = 0.5 )
         
         axes[0].set_title(titles[0])
         axes[1].set_title(titles[1])
@@ -106,8 +104,12 @@ def subplot(T, method='adj_bfgs', save = False, comp=True) :
         axes[0].legend(loc='best', fontsize = 10, ncol=2)
         axes[1].legend(loc='best', fontsize = 10, ncol=2)
         
+        if save == True :
+            title_to_save = "{}_{}_betmap_T_field_{}.png".format(T.cov_mod, titles[0][:3], sT_inf)
+            title_to_save = os.join(os.abspath(picpath), title_to_save)
+            plt.savefig(title_to_save)
         plt.show()
-        
+#        
         print(T.bool_method["adj_bfgs_" + sT_inf] , T.bool_method["opti_scipy_" + sT_inf])
         
         if comp == True :
@@ -117,11 +119,11 @@ def subplot(T, method='adj_bfgs', save = False, comp=True) :
                 comp_maxs =  [T.maxs_dict[sT_inf], T.bfgs_adj_maxs_dict[sT_inf]]
                 comp_keys =  ["Scipy - optimization", "BFGS Adjoint Opti"]
                          
-                comparaison(T, comp_bmaps, comp_mins, comp_maxs, comp_keys, T_inf)
+                comparaison(T, comp_bmaps, comp_mins, comp_maxs, comp_keys, T_inf, picpath = picpath)
     return axes
 ##---------------------------------------------------##
 ##-------------------------------------------------------------##
-def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf, save = False) :
+def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf, picpath = "./res_all_T_inf", save = False) :
     betamap1    =   betamaps[0]
     betamap2    =   betamaps[1]
     
@@ -150,6 +152,12 @@ def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf, save = False) :
     ax.fill_between(T.line_z, mins_lst2, maxs_lst2, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label=labelmm2)
     
     plt.legend(loc='best')
+#    
+    if save == True:
+        title_to_save = "%s_Adj_ScipyOpti_beta_distrib_comp_%s.png" %(T.cov_mod, sT_inf) 
+        title_to_save = os.join(os.abspath(pacpith), title_to_save)
+        plt.savefig(title_to_save)
+        
 #    import matplotlib as mpl
 #    x0, x1 = 0.3, 0.7
 #    dz = 1./(T.N_discr-1)
