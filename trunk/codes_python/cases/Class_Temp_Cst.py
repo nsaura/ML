@@ -1,26 +1,27 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
-#import numpy as np
-#import pandas as pd
+import numpy as np
+import pandas as pd
 
-#import matplotlib.pyplot as plt
-#import sys, warnings, argparse
+import matplotlib.pyplot as plt
+import sys, warnings, argparse
 
-#import os
-#import os.path as osp
+import os
+import os.path as osp
 
-#from scipy import optimize as op
-#from itertools import cycle
-#import matplotlib.cm as cm
+from scipy import optimize as op
+from itertools import cycle
+import matplotlib.cm as cm
 
-#import numdifftools as nd
+import numdifftools as nd
 
-#import time
+import time
 
-### Import de la classe TF ##
-#nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
-#sys.path.append(nnc_folder)
-#import NN_class_try as NNC
+## Import de la classe TF ##
+nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
+sys.path.append(nnc_folder)
+import NN_class_try as NNC
+
 class Temperature_cst() :
 ##---------------------------------------------------------------
     def __init__ (self, parser):
