@@ -3,7 +3,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import os.path as os
+import os.path as osp
 import argparse 
 
 def parser() :
@@ -106,9 +106,9 @@ def subplot(T, method='adj_bfgs', picpath = "./res_all_T_inf", save = False, com
         
         if save == True :
             title_to_save = "{}_{}_betmap_T_field_{}.png".format(T.cov_mod, titles[0][:3], sT_inf)
-            title_to_save = os.join(os.abspath(picpath), title_to_save)
+            title_to_save = osp.join(osp.abspath(picpath), title_to_save)
             plt.savefig(title_to_save)
-        plt.show()
+#        plt.show()
 #        
         print(T.bool_method["adj_bfgs_" + sT_inf] , T.bool_method["opti_scipy_" + sT_inf])
         
@@ -119,7 +119,7 @@ def subplot(T, method='adj_bfgs', picpath = "./res_all_T_inf", save = False, com
                 comp_maxs =  [T.maxs_dict[sT_inf], T.bfgs_adj_maxs_dict[sT_inf]]
                 comp_keys =  ["Scipy - optimization", "BFGS Adjoint Opti"]
                          
-                comparaison(T, comp_bmaps, comp_mins, comp_maxs, comp_keys, T_inf, picpath = picpath)
+                comparaison(T, comp_bmaps, comp_mins, comp_maxs, comp_keys, T_inf, picpath = picpath, save=save)
     return axes
 ##---------------------------------------------------##
 ##-------------------------------------------------------------##
@@ -154,8 +154,8 @@ def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf, picpath = "./res_a
     plt.legend(loc='best')
 #    
     if save == True:
-        title_to_save = "%s_Adj_ScipyOpti_beta_distrib_comp_%s.png" %(T.cov_mod, sT_inf) 
-        title_to_save = os.join(os.abspath(pacpith), title_to_save)
+        title_to_save = "Scipy_opti_and_Adj_bfgs_bmaps_comparison_%s_(%s)" %(sT_inf, T.cov_mod) 
+        title_to_save = osp.join(osp.abspath(picpath), title_to_save)
         plt.savefig(title_to_save)
         
 #    import matplotlib as mpl
@@ -185,7 +185,6 @@ def sigma_plot(T, method='adj_bfgs', exp = 0.02, save=False) :
     """
     Fonction pour comparer les sigma posterior
     """
-    import os.path as os
     if method in {"optimization", "Optimization", "opti"}:
         sigma_post = T.sigma_post_dict
         title = "Optimization sigma posterior comparison "
@@ -201,10 +200,12 @@ def sigma_plot(T, method='adj_bfgs', exp = 0.02, save=False) :
         title = "Adjoint (BFGS) sigma posterior comparison "        
     
     print ("Title = %s" %(title))
-    title_to_save = os.join(os.abspath("./res_all_T_inf"),title.replace(" ", "_")[:-1]+".png")
         
     for t in T.T_inf_lst :
         sT_inf = "T_inf_"+str(t)
+        title_to_save = osp.join(osp.abspath("./res_all_T_inf"),title.replace(" ", "_")[:-1]+"_%s.png" %(sT_inf))
+        print title_to_save
+        
         dual = True if T.bool_method["opti_scipy_" + sT_inf] == True and T.bool_method["adj_bfgs_" + sT_inf] == True\
                 else False
         
@@ -212,31 +213,34 @@ def sigma_plot(T, method='adj_bfgs', exp = 0.02, save=False) :
         exp_sigma   =   np.asarray([exp for j in range(T.N_discr-2)])
         
         plt.figure()
-        plt.title(title + sT_inf)
+        plt.title(title_to_save)
         plt.semilogy(T.line_z, exp_sigma, label='Expected Sigma', marker = 's', linestyle='none')
         plt.semilogy(T.line_z, sigma_post[sT_inf], label="Sigma Posterior %s" %(title[:3]))
         plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
         plt.legend(loc='best')
-        if save == True :
-            plt.savefig(title_to_save)##Pour ne pas prendre le dernier espace
-        plt.show()
         
-    if dual == True :
-        title_dual = "Scipy_opti and Adj_bfgs sigma post comparison %s (%s)" %(sT_inf, T.cov_mod)
-        title_to_save = os.join(os.split(title_to_save)[0],title_dual.replace(" ", "_")+".png")
-        opti_sigma_post = T.sigma_post_dict[sT_inf]
-        adj_bfgs_sigma_post = T.bfgs_adj_sigma_post[sT_inf]
-        
-        plt.figure()
-        plt.title(title_dual)
-        plt.semilogy(T.line_z, exp_sigma, label='Expected Sigma', marker = '^', linestyle='none')
-        plt.semilogy(T.line_z, opti_sigma_post, label="Opti Sigma posterior")
-        plt.semilogy(T.line_z, adj_bfgs_sigma_post, label="Adj_bfgs Sigma posterior")
-        plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
-        plt.legend(loc='best')
         if save == True :
             plt.savefig(title_to_save)
-        plt.show()
+#        plt.show()
+        
+        if dual == True :
+            title_dual = "Scipy_opti and Adj_bfgs sigma post comparison %s (%s)" %(sT_inf, T.cov_mod)
+            title_to_save = osp.join(osp.split(title_to_save)[0],title_dual.replace(" ", "_")+".png")
+            print title_to_save
+            
+            opti_sigma_post = T.sigma_post_dict[sT_inf]
+            adj_bfgs_sigma_post = T.bfgs_adj_sigma_post[sT_inf]
+            
+            plt.figure()
+            plt.title(title_dual)
+            plt.semilogy(T.line_z, exp_sigma, label='Expected Sigma', marker = '^', linestyle='none')
+            plt.semilogy(T.line_z, opti_sigma_post, label="Opti Sigma posterior")
+            plt.semilogy(T.line_z, adj_bfgs_sigma_post, label="Adj_bfgs Sigma posterior")
+            plt.semilogy(T.line_z, base_sigma, label="Sigma for beta = beta_prior (base)")
+            plt.legend(loc='best')
+            if save == True :
+                plt.savefig(title_to_save)
+    #        plt.show()
     
 ##---------------------------------------------------##
 ##---------------------------------------------------##     

@@ -5,8 +5,9 @@ import time
 
 import numpy as np
 import pandas as pd
-import os.path as os
+import os 
 
+import os.path as osp
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from scipy import optimize as op
@@ -27,7 +28,7 @@ print(parser)
 temp.obs_pri_model()
 temp.get_prior_statistics()
 
-temp.adjoint_bfgs(inter_plot=True)
+temp.adjoint_bfgs(inter_plot=False)
 temp.optimization()
 
 cfa.subplot(temp, save=True)
