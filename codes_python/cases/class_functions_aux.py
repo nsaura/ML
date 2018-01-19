@@ -5,11 +5,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os.path as osp
 import argparse 
+import types
 
 def parser() :
     parser=argparse.ArgumentParser(description='You can initialize a case you want to study')
     #lists
     parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=['all'],dest='T_inf_lst', 
+                        help='List of different T_inf. Default : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]\n' )
+    
+    #lists
+    parser.add_argument('--test', '-t',action='store', type=types.LambdaType, default=lambda x : x**2,dest='tl', 
                         help='List of different T_inf. Default : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]\n' )
     
     #digits
