@@ -1,32 +1,33 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
-import numpy as np
-import pandas as pd
+#import numpy as np
+#import pandas as pd
 
-import matplotlib.pyplot as plt
-import sys, warnings, argparse
+#import matplotlib.pyplot as plt
+#import sys, warnings, argparse
 
-import os.path as os
+#import os
+#import os.path as osp
 
-from scipy import optimize as op
-from itertools import cycle
-import matplotlib.cm as cm
+#from scipy import optimize as op
+#from itertools import cycle
+#import matplotlib.cm as cm
 
-import numdifftools as nd
+#import numdifftools as nd
 
-import time
+#import time
 
-## Import de la classe TF ##
-nnc_folder = os.abspath(os.dirname("../TF/NN_class_try.py"))
-sys.path.append(nnc_folder)
-import NN_class_try as NNC
+### Import de la classe TF ##
+#nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
+#sys.path.append(nnc_folder)
+#import NN_class_try as NNC
+class Temperature_cst() :
 ##---------------------------------------------------------------
-class Temperature() :
     def __init__ (self, parser):
         """
         This object has been made to solve optimization problem.
         """
-        np.random.seed(1000) ; plt.ion()
+        np.random.seed(1000) ; #plt.ion()
         
         if parser.cov_mod not in ['full', 'diag'] :
             raise AttributeError("\x1b[7;1;255mcov_mod must be either diag or full\x1b[0m")
@@ -35,7 +36,7 @@ class Temperature() :
 
         N_discr,    kappa   =   parser.N_discr, parser.kappa,    
         dt,         h       =   parser.dt,      parser.h
-        datapath            =   os.abspath(parser.datapath)
+        datapath            =   osp.abspath(parser.datapath)
         num_real,   tol     =   parser.num_real,parser.tol
         cpt_max_adj         =   parser.cpt_max_adj
         cov_mod,    g_sup_max  =   parser.cov_mod, parser.g_sup_max
@@ -104,7 +105,7 @@ class Temperature() :
             bool_method[r] = False
         self.bool_method = bool_method
         
-        if os.exists(datapath) == False :
+        if osp.exists(datapath) == False :
             os.mkdir(datapath)
         
         self.datapath   =   datapath
@@ -184,10 +185,15 @@ class Temperature() :
         ----------
         filename : the file's path with or without the extension which is csv in any way. 
         """
-        if os.splitext(filename)[-1] is not ".csv" :
-            filename = os.splitext(filename)[0] + ".csv"
-        data = pd.read_csv(filename).get_values()            
-        return data.reshape(data.shape[0])
+        if osp.splitext(filename)[-1] is not ".csv" :
+            filename = osp.splitext(filename)[0] + ".csv"
+        data = pd.read_csv(filename).get_values()
+        data = pd.read_csv(filename).get_values()
+#        print data
+#        print data.shape
+        if np.shape(data)[1] == 1 : 
+            data = data.reshape(data.shape[0])
+        return data
 ##---------------------------------------------------
     def pd_write_csv(self, filename, data) :
         """
@@ -196,7 +202,7 @@ class Temperature() :
         filename:   the path where creates the csv file;
         data    :   the data to write in the file
         """
-        path = os.join(self.datapath, filename)
+        path = osp.join(self.datapath, filename)
         pd.DataFrame(data).to_csv(path, index=False, header= True)
 ##---------------------------------------------------
     def tab_normal(self, mu, sigma, length) :
@@ -260,18 +266,17 @@ class Temperature() :
         return T_nNext 
 ##---------------------------------------------------
     def true_beta(self, T, T_inf) : 
-        return np.asarray (
-        [ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i])) *10**(-4) +\
-            self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in range(self.N_discr-2)])        
+        # dans t1 on ne rajoute pas le bruit contrairement à l'équation 36
+        t1 = np.asarray([ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i])) *10**(-4) for i in range(self.N_discr-2)])
+        t2 = np.asarray([self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in range(self.N_discr-2)]) 
+        return t1 + t2        
 ##---------------------------------------------------    
 ##----------------------------------------------------##
-
 ##----------------------------------------------------##
 ######                                            ######
 ######        Génération de données et stats      ######
 ######                                            ######
 ##----------------------------------------------------## 
-
 ##----------------------------------------------------##
     def obs_pri_model(self) :
         T_nNext_obs_lst, T_nNext_pri_lst, T_init = [], [], []
@@ -280,15 +285,15 @@ class Temperature() :
             for it, bruit in enumerate(self.lst_gauss) :
                 # Obs and Prior Temperature field initializations
                 # For python3.5 add list( )
-                obs_filename    = 'obs_T_inf_{}_{}.csv'.format(T_inf, it)
-                pri_filename  =   'prior_T_inf_{}_{}.csv'.format(T_inf, it)
+                obs_filename    = '{}_obs_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
+                pri_filename  =   '{}_prior_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
                 
-                obs_filename = os.join(self.datapath, obs_filename)
-                pri_filename = os.join(self.datapath, pri_filename)
+                obs_filename = osp.join(self.datapath, obs_filename)
+                pri_filename = osp.join(self.datapath, pri_filename)
                 
                 tol ,err_obs, err_pri, compteur = 1e-4, 1.0, 1.0, 0                
                                 
-                if os.isfile(obs_filename) and os.isfile(pri_filename) :
+                if osp.isfile(obs_filename) and osp.isfile(pri_filename) :
                     continue
                                 
                 T_n_obs =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) )
@@ -365,11 +370,11 @@ class Temperature() :
             sT_inf = "T_inf_" + str(T_inf)
             
             for it in range(self.num_real) :
-                obs_filename  =  'obs_T_inf_{}_{}.csv'.format(T_inf, it)
-                pri_filename  =  'prior_T_inf_{}_{}.csv'.format(T_inf, it)
+                obs_filename  =  '{}_obs_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
+                pri_filename  =  '{}_prior_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
                 
-                obs_filename = os.join(self.datapath, obs_filename)
-                pri_filename = os.join(self.datapath, pri_filename)
+                obs_filename = osp.join(self.datapath, obs_filename)
+                pri_filename = osp.join(self.datapath, pri_filename)
                 
                 # Compute covariance from data 
                 T_temp = self.pd_read_csv(obs_filename)
@@ -392,8 +397,8 @@ class Temperature() :
             std_meshgrid_values = np.asarray([np.std(vals_obs_meshpoints[sT_inf+"_"+str(j)]) for j in range(self.N_discr-2)])
             
             for it in range(self.num_real) :
-                obs_filename  =  'obs_T_inf_{}_{}.csv'.format(T_inf, it)
-                obs_filename = os.join(self.datapath, obs_filename)
+                obs_filename  =  '{}_obs_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
+                obs_filename = osp.join(self.datapath, obs_filename)
                 T_temp = self.pd_read_csv(obs_filename)
                 
                 for ii in range(self.N_discr-2)  :
@@ -459,7 +464,7 @@ class Temperature() :
             inv_cov_obs =   np.linalg.inv(cov_m)
             
             J_1 =   lambda beta :\
-            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
+            0.5*np.dot(np.dot((curr_d - self.h_beta(beta, T_inf)).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
             
             J_2 =   lambda beta :\
             0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
@@ -496,11 +501,9 @@ class Temperature() :
             
             # Construction de la distribution beta à partir de beta map et cov_betamap
             for i in range(249):
-                s = self.tab_normal(0,1,temp.N_discr-2)[0]
+                s = self.tab_normal(0,1,self.N_discr-2)[0]
                 beta_var.append(betamap[sT_inf] + np.dot(cholesky[sT_inf], s))
             beta_var.append(beta_final[sT_inf])
-            
-            print ("T_inf = {} \nbeta_var = {}".format(T_inf, beta_var))
             
             # Calcule des min maxs et std sur chaque point            
             for i in range(self.N_discr-2) :
@@ -536,7 +539,7 @@ class Temperature() :
         #- Fin -#
         #########
 ##----------------------------------------------------##        
-    def adjoint_bfgs(self, inter_plot=False) : 
+    def adjoint_bfgs(self, inter_plot=False, verbose = False) : 
         """
         
         """
@@ -561,7 +564,7 @@ class Temperature() :
         
         for T_inf in self.T_inf_lst :
             sT_inf      =   "T_inf_%d" %(T_inf)
-            sigmas = np.sqrt(np.diag(self.cov_obs_dict[sT_inf]))
+            sigmas      =   np.sqrt(np.diag(self.cov_obs_dict[sT_inf]))
             curr_d      =   self.T_obs_mean[sT_inf]
             cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
                             self.full_cov_obs_dict[sT_inf]
@@ -625,14 +628,13 @@ class Temperature() :
                 ######################## 
                     beta_nPrev  =   beta_n             
                     beta_n  =   beta_nNext
-                    ax[0].plot(self.line_z, beta_n, label="beta cpt%d" %(cpt))
-                    print ("beta cpt {}:\n{}".format(cpt,beta_n))
+                    ax[0].plot(self.line_z, beta_n, label="beta cpt%d_%s" %(cpt, sT_inf))
                    
                     g_nPrev =   g_n
                     g_n     =   g_nNext
                     g_sup   =   np.linalg.norm(g_n, np.inf)
                     
-                    plt.figure("Evolution de l'erreur")
+                    plt.figure("Evolution de l'erreur %s" %(sT_inf))
                     plt.scatter(cpt, g_sup, c='black')
                     if inter_plot == True :
                         plt.pause(0.05)
@@ -648,10 +650,13 @@ class Temperature() :
 
                     H_n_inv   =   H_nNext_inv
                     
-                    print("grad n = {}".format(g_n))                            
-                    print("beta_n = \n  {} ".format(beta_n))
-                    print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
+                    if verbose == True :
+                        print ("beta cpt {}:\n{}".format(cpt,beta_n))
+                        print("grad n = {}".format(g_n))                            
+                        print("beta_n = \n  {} ".format(beta_n))
+                        print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
                                                            err_beta, err_hess) )
+                                                           
                 test = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
                                     np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]                
                 #################
@@ -680,13 +685,17 @@ class Temperature() :
                 
                 ## Peut nous faire gagner du temps de calcule
                 if (sup_g_stagne == True or g_sup > 100 and cpt > 20) and g_sup < 10000 :
+                    if g_sup < 1e-2 and cpt > 150 :
+                        # Dans ce cas on suppose qu'on n'aura pas mieux
+                        break
+
                     alpha = 1.
                     print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt))
                     if sup_g_stagne == True :
                         print("\x1b[1;37;44mgradient stagne : coup de pouce alpha = 1. \x1b[0m")
                     
                     time.sleep(0.7)                    
-                    
+                
                 else :
                     alpha, al2_cor =  self.backline_search(J, grad_J, g_n, beta_n, d_n, rho=1e-2, c=0.5)
                     if al2_cor  :
@@ -719,14 +728,15 @@ class Temperature() :
 #                print("Hess:\n{}".format(H_nNext_inv))
                 
                 err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
-                print("err_beta = {} cpt = {}".format(err_beta, cpt))
                 
                 err_j    =   J(beta_nNext) - J(beta_n)
-                print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
                 
                 err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
-                print ("err_hess = {}".format(err_hess))
-                
+                if verbose == True :
+                    print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
+                    print("err_beta = {} cpt = {}".format(err_beta, cpt))
+                    print ("err_hess = {}".format(err_hess))
+                    
                 self.alpha_lst.append(alpha)
                 err_hess_lst.append(err_hess) 
                 err_beta_lst.append(err_beta)
@@ -775,6 +785,11 @@ class Temperature() :
             bfgs_adj_cholesky[sT_inf]   =   R
             
             bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s)
+            
+            if osp.exists(osp.abspath("./data/post_cov")) == False :
+                os.mkdir(osp.abspath("./data/post_cov"))
+                
+            self.pd_write_csv(osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf)), pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
             
             beta_var = []
             sigma_post = []
@@ -1012,8 +1027,8 @@ class Temperature() :
 ##----------------------------------------------------## 
     def write_logbook(self, T_inf) :
         date = time.strftime("%m_%d_%Hh%M", time.localtime())
-        title = os.join(self.parser.logbook_path, "%s_logbook.csv" %(date))
-        if os.isfile(title) :
+        title = osp.join(self.parser.logbook_path, "%s_logbook.csv" %(date))
+        if osp.isfile(title) :
             f = open(title, "a")    
         else : 
             f = open(title, "w")
