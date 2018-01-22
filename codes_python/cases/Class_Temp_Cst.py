@@ -287,8 +287,8 @@ class Temperature_cst() :
             for it, bruit in enumerate(self.lst_gauss) :
                 # Obs and Prior Temperature field initializations
                 # For python3.5 add list( )
-                obs_filename    = '{}_obs_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
-                pri_filename  =   '{}_prior_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
+                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
+                pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 
                 obs_filename = osp.join(self.datapath, obs_filename)
                 pri_filename = osp.join(self.datapath, pri_filename)
@@ -372,8 +372,8 @@ class Temperature_cst() :
             sT_inf = "T_inf_" + str(T_inf)
             
             for it in range(self.num_real) :
-                obs_filename  =  '{}_obs_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
-                pri_filename  =  '{}_prior_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
+                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
+                pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 
                 obs_filename = osp.join(self.datapath, obs_filename)
                 pri_filename = osp.join(self.datapath, pri_filename)
@@ -399,7 +399,7 @@ class Temperature_cst() :
             std_meshgrid_values = np.asarray([np.std(vals_obs_meshpoints[sT_inf+"_"+str(j)]) for j in range(self.N_discr-2)])
             
             for it in range(self.num_real) :
-                obs_filename  =  '{}_obs_T_inf_{}_{}.csv'.format(self.cov_mod, T_inf, it)
+                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 obs_filename = osp.join(self.datapath, obs_filename)
                 T_temp = self.pd_read_csv(obs_filename)
                 
@@ -645,7 +645,7 @@ class Temperature_cst() :
                         lst_ = sup_g_lst[(len(sup_g_lst)-5):]
                         mat = [[abs(i - j) for i in lst_] for j in lst_]
                         sup_g_stagne = (np.linalg.norm(mat, 2) <= 1e-2)
-        
+                    print("Compteur = %d" %(cpt))
                     print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
                     print("Stagne ? {}".format(sup_g_stagne))
                     ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
@@ -698,16 +698,11 @@ class Temperature_cst() :
                     
                     time.sleep(0.7)                    
                 
-                else :
-                    alpha, al2_cor =  self.backline_search(J, grad_J, g_n, beta_n, d_n, rho=1e-2, c=0.5)
+                else :  
+                    alpha, al2_cor = self.backline_search(J, grad_J, g_n, beta_n ,d_n ,cpt, g_sup, rho=1e-2,c=0.5)
                     if al2_cor  :
                         al2_lst.append(cpt)
-                
-                    if ((alpha <= 1e-7 and cpt > 50)) and g_sup < 10000:
-                        print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt))
-                        time.sleep(0.7)
-                        alpha = 1.
-                
+                    
                 ## Calcule des termes n+1
                 dbeta_n =  alpha*d_n
 #                print ("Pas pour cpt = {}: dbeta_n = {}".format(cpt, dbeta_n))
@@ -896,7 +891,7 @@ class Temperature_cst() :
 ######                                            ######
 ##----------------------------------------------------## 
 ##----------------------------------------------------## 
-    def backline_search(self, J, g_J, djk, xk, dk, rho=1., c=0.5) :
+    def backline_search(self, J, g_J, djk, xk, dk, cpt_ext, g_sup, rho=1., c=0.5) :
         alpha = alpha_lo = alpha_hi = 1.
         correction = False
         bool_curv  = False
@@ -909,47 +904,55 @@ class Temperature_cst() :
                 (0.9*np.linalg.norm(djk,2))  
         
         cpt, cptmax = 0, 15
+        
         while (armi(alpha) == False) and cpt< cptmax and self.warn=="go on" :
             alpha_lo =  alpha
             alpha   *=  rho
             cpt     +=  1
             print (alpha,  armi(alpha))
-            alpha_hi =  alpha            
+            alpha_hi =  alpha
+            if alpha <= 1.e-14 :
+                self.warn = "out"            
         print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
-        bool_curv = curv(alpha)
-        it = 0
         
-        print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
-        
-        if alpha <= 1.e-14 :
-            self.warn = "out"
+        if ((alpha <= 1e-7 and cpt_ext > 30)) and g_sup < 10000:
+            print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt_ext))
+            time.sleep(0.3)
+            alpha = 1.
+                    
             
-        if cpt > 0 and bool_curv == False:
-            alpha_2 = alpha_lo
+        else :
+            print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
+            bool_curv = curv(alpha)
+            it = 0
             
-            bool_curv = curv(alpha_2)
-            while bool_curv == False and (alpha_2 - alpha_hi)>0 :
-                alpha_2 *= 0.9        
-                it  +=  1
+            
+            if cpt > 0 and bool_curv == False:
+                alpha_2 = alpha_lo
+                
                 bool_curv = curv(alpha_2)
-#                if it > 50 :
-#                    alpha_2 = alpha
-#                    break
-                        
-            if bool_curv == True :
-                alpha = alpha_2
-                correction = True
-                print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, iteration = {}\x1b[0m".format(alpha_2, alpha, it))
+                while bool_curv == False and (alpha_2 - alpha_hi)>0 :
+                    alpha_2 *= 0.7        
+                    it  +=  1
+                    bool_curv = curv(alpha_2)
+    #                if it > 50 :
+    #                    alpha_2 = alpha
+    #                    break
+                            
+                if bool_curv == True :
+                    alpha = alpha_2
+                    correction = True
+                    print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, iteration = {}\x1b[0m".format(alpha_2, alpha, it))
                                    
-        if bool_curv == False and armi(alpha) == False :
-            alpha = max(alpha, 1e-11)
+            if bool_curv == False and armi(alpha) == False :
+                alpha = max(alpha, 1e-11)
         
         if armi(alpha) == True and curv(alpha) == True :
             print("it = {}".format(it))
             print("\x1b[1;37;43mArmijo = {}\t Curvature = {}\x1b[0m".format(armi(alpha), curv(alpha)))
-            
+        
         return alpha, correction
 ##----------------------------------------------------##   
 ##----------------------------------------------------##              

@@ -30,7 +30,7 @@ temp.get_prior_statistics()
 temp.adjoint_bfgs(inter_plot=False)
 temp.optimization()
 
-cfa.subplot(temp, save=True)
-cfa.subplot(temp, method="opti", comp=False, save=True)
-cfa.sigma_plot(temp, save=True)
+cfa.subplot_cst(temp, save=True)
+cfa.subplot_cst(temp, method="opti", comp=False, save=True)
+cfa.sigma_plot_cst(temp, save=True)
 

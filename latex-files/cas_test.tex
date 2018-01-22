@@ -136,6 +136,8 @@ keywordstyle=[0]{\color{red}},
 \newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
 \newcolumntype{N}{@{}m{0pt}@{}}
 
+\huge{À tout reprendre}
+
 \section{Sans la deuxième condition de Wolfe}
 \begin{lstlisting}
     def backline_search(self, J, djk, xk, dk, rho=0.001, c=1e-2) :
@@ -293,6 +295,22 @@ keywordstyle=[0]{\color{red}},
 		\vspace{0.5cm}
 		\caption{Différents cas tests de \textsc{class\_temp\_ml}. 
 		\label{tab:simParameters}}		
+
+\end{table}
+
+\pagebreak \huge{Nouveauté}
+\begin{table}[h]
+		% Center the table
+		\centering
+		% Table itself: here we have two columns which are centered and have lines to the left, right and in the middle: |c|c|
+		\begin{tabular}{|M{1.6cm}|M{1.7cm}|M{1.7cm}|M{1.7cm}|M{2cm}|M{2.1cm}|M{1.9cm}|N }
+		\hline
+		T\_inf & N\_discr & Cov\_mod & Cpt Max & Final J(A//O)& Final Sup\_g&Comparaison &\\[.5cm] \hline
+		5 & 71 & full & 350 &  & 		
+		\end{tabular} 
+		\vspace{0.5cm}
+		\caption{Différents cas num\_real fixé à 100.} 
+		\label{tab:simParameters}
 
 \end{table}
 
