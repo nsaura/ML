@@ -125,6 +125,7 @@ class Temperature_Noncst() :
         Method designed to change the covariance form  without running back the whole program.
         """
         self.cov_mod = new_cov_mod
+        self.bool_method["stat"] = False 
         print("cov_mod is now \n{}".format(self.cov_mod))
 ##---------------------------------------------------        
     def set_cpt_max_adj(self, new_compteur) :
@@ -249,8 +250,8 @@ class Temperature_Noncst() :
         for it, bruit in enumerate(self.lst_gauss) :
             # Obs and Prior Temperature field initializations
             # For python3.5 add list( )
-            obs_filename    = '{}_obs_{}_{}.csv'.format(self.cov_mod, self.body, it)
-            pri_filename  =   '{}_prior_{}_{}.csv'.format(self.cov_mod, self.body, it)
+            obs_filename    = '{}_obs_{}_N{}_{}.csv'.format(self.cov_mod, self.body, self.N_discr-2, it)
+            pri_filename  =   '{}_pri_{}_N{}_{}.csv'.format(self.cov_mod, self.body, self.N_discr-2, it)
             
             obs_filename = osp.join(self.datapath, obs_filename)
             pri_filename = osp.join(self.datapath, pri_filename)
@@ -337,8 +338,8 @@ class Temperature_Noncst() :
         T_sum_pri = np.zeros((self.N_discr-2))
         
         for it in range(self.num_real) :
-            obs_filename  =  '{}_obs_{}_{}.csv'.format(self.cov_mod, self.body, it)
-            pri_filename  =  '{}_prior_{}_{}.csv'.format(self.cov_mod, self.body, it)
+            obs_filename  =   '{}_obs_{}_N{}_{}.csv'.format(self.cov_mod, self.body, self.N_discr-2, it)
+            pri_filename  =   '{}_pri_{}_N{}_{}.csv'.format(self.cov_mod, self.body, self.N_discr-2, it)
             
             obs_filename = osp.join(self.datapath, obs_filename)
             pri_filename = osp.join(self.datapath, pri_filename)
@@ -374,8 +375,8 @@ class Temperature_Noncst() :
         std_meshgrid_values_pri = np.asarray([np.std(vals_pri_meshpoints[self.body+"_"+str(j)]) for j in range(self.N_discr-2)])
         
         for it in range(self.num_real) :
-            obs_filename  =  '{}_obs_{}_{}.csv'.format(self.cov_mod, self.body, it)
-            pri_filename  =  '{}_prior_{}_{}.csv'.format(self.cov_mod, self.body, it)
+            obs_filename  =   '{}_obs_{}_N{}_{}.csv'.format(self.cov_mod, self.body, self.N_discr-2, it)
+            pri_filename  =   '{}_pri_{}_N{}_{}.csv'.format(self.cov_mod, self.body, self.N_discr-2, it)
             obs_filename = osp.join(self.datapath, obs_filename)
             pri_filename = osp.join(self.datapath, pri_filename)
 
@@ -890,7 +891,9 @@ class Temperature_Noncst() :
             alpha   *=  rho
             cpt     +=  1
             print (alpha,  armi(alpha))
-            alpha_hi =  alpha            
+            alpha_hi =  alpha
+            if alpha <= 1.e-14 :
+                self.warn = "out"            
         print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
@@ -905,11 +908,9 @@ class Temperature_Noncst() :
             print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
             bool_curv = curv(alpha)
             it = 0
-            if alpha <= 1.e-14 :
-                self.warn = "out"
             
-            elif cpt > 0 and bool_curv == False:
-                
+            
+            if cpt > 0 and bool_curv == False:
                 alpha_2 = alpha_lo
                 
                 bool_curv = curv(alpha_2)
