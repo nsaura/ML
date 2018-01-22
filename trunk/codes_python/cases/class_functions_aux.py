@@ -9,49 +9,60 @@ import types
 
 def parser() :
     parser=argparse.ArgumentParser(description='You can initialize a case you want to study')
+    ## VaV T_inf
     #lists
-    parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=['all'],dest='T_inf_lst', 
-                        help='List of different T_inf. Default : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]\n' )
+    parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=[50],dest='T_inf_lst', 
+                        help='List of different T_inf. Default : 50\n' )
+    parser.add_argument('--T_inf_prop', '-T_prop', nargs='+', action='store', type=float, default=[35, 20], dest='T_prop', 
+                        help='Value of constant appearing in T_inf expression; default 35, 25 \n' )
     
-    #lists
-    parser.add_argument('--test', '-t',action='store', type=types.LambdaType, default=lambda x : x**2,dest='tl', 
-                        help='List of different T_inf. Default : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]\n' )
     
     #digits
+    parser.add_argument('--T_inf', '-T_inf', action='store', type=int, default=50, dest='T_inf', 
+                        help='Value of T_inf of the current study; default %(default)d \n' )
+    
+    # Booléen
+    parser.add_argument('--T_inf_type', '-T_cst', action='store', type=bool, default=False, dest='T_cst', 
+                        help='Define whether the T_inf is constant or not. Default to %(default)s \n')
+    #strings
+    parser.add_argument('--body_lambda', '-BL', action='store', type=str, default=False, dest='BL', 
+                        help='String of the lambda\'s body. Default to %(default)s \n') 
+    
+    # Pour la simulation de manière générale
+    # Ints                       
     parser.add_argument('--N_discr', '-N', action='store', type=int, default=33, dest='N_discr', 
                         help='Define the number of discretization points : default %(default)d \n' )
-    parser.add_argument('--compteur_max_adjoint', '-cptmax', action='store', type=int, default=50, dest='cpt_max_adj', 
+    parser.add_argument('--compteur_max_adjoint', '-cptmax', action='store', type=int, default=100, dest='cpt_max_adj', 
                         help='Define compteur_max (-cptmax) for adjoint method : default %(default)d \n' )
-
+    
+    # Floats
     parser.add_argument('--H', '-H', action='store', type=float, default=0.5, dest='h', 
                         help='Define the convection coefficient h \n' )
     parser.add_argument('--delta_t', '-dt', action='store', type=float, default=1e-4, dest='dt', 
                         help='Define the time step disctretization. Default to %(default).5f \n' )
     parser.add_argument('--kappa', '-kappa', action='store', type=float, default=1.0, dest='kappa', 
                         help='Define the diffusivity number kappa. Default to %(default).2f\n' )
-    parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=10, dest='num_real', 
+    parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=100, dest='num_real', 
                         help='Define the number of realization of epsilon(T) you want to pick up. Default to %(default)d\n' )
     parser.add_argument('--tolerance', '-tol', action='store', type=float, default=1e-5, dest='tol', 
                         help='Define the tolerance on the optimization error. Default to %(default).8f \n' )
     parser.add_argument('--g_sup_max', '-g_sup', action='store', type=float, default=0.1, dest='g_sup_max', 
                         help='Define the criteria on grad_J to stop the optimization. Default to %(default).5f \n' )
+    parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', default=1 ,dest='beta_prior',\
+                        help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
     
-    parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', 
-        default=1 ,dest='beta_prior', help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
-    
-    #strings
+    # Strings
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', 
                         help='Define the directory where the data will be stored and read. Default to %(default)s \n')
     parser.add_argument('--covariance_model', '-cov_mod', action='store', type=str, default='diag', dest='cov_mod', 
                         help='Define the covariance model. Default to %(default)s \n')
-    
     parser.add_argument('--logbook_path', '-p', action='store', type=str, default='./logbooks/', dest='logbook_path', 
                         help='Define the logbook\'s path. Default to %(default)s \n')
     
     return parser.parse_args()
 ##-------------------------------------------------------------##
 ##-------------------------------------------------------------##
-def subplot(T, method='adj_bfgs', picpath = "./res_all_T_inf", save = False, comp=True) : 
+def subplot_cst(T, method='adj_bfgs', picpath = "./res_all_T_inf", save = False, comp=True) : 
     """
     Fonction pour comparer les beta. 
     Afficher les max et min des différents tirages 
@@ -127,7 +138,116 @@ def subplot(T, method='adj_bfgs', picpath = "./res_all_T_inf", save = False, com
                 comparaison(T, comp_bmaps, comp_mins, comp_maxs, comp_keys, T_inf, picpath = picpath, save=save)
     return axes
 ##---------------------------------------------------##
+def subplot_Ncst(T, method='adj_bfgs', picpath = "./res_all_T_inf", save = False, comp=True) : 
+    """
+    Fonction pour comparer les beta. 
+    Afficher les max et min des différents tirages 
+    Comparer l'approximation de la température avec beta_final et la température exacte
+    """
+    if method in {"optimization", "Optimization", "opti"}:
+        dico_beta_map   =   T.betamap
+        dico_beta_fin   =   T.beta_final
+
+        mins    =   T.mins_dict
+        maxs    =   T.maxs_dict
+        titles = ["Opti: Beta comparaison (bp = {},  cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
+
+    if method=="adj_bfgs":
+        dico_beta_map   =   T.bfgs_adj_bmap
+        dico_beta_fin   =   T.bfgs_adj_bf
+
+        mins    =   T.bfgs_adj_mins_dict
+        maxs    =   T.bfgs_adj_maxs_dict
+        
+        titles = ["ADJ_BFGS: Beta comparaison (bp = {}, cov_mod = {})".format(T.beta_prior[0], T.cov_mod), "Temperature fields"]
+    
+    curr_d = T.T_obs_mean[T.body]
+    fig, axes = plt.subplots(1,2,figsize=(20,10))
+    colors = 'green', 'orange'
+            
+    axes[0].plot(T.line_z, dico_beta_fin[T.body], label = "Beta for {}".format(T.body), 
+        marker = 'o', linestyle = 'None', color = colors[0])
+        
+    axes[0].plot(T.line_z, dico_beta_map[T.body], label = 'Betamap for {}'.format(T.body),      
+         marker = 'o', linestyle = 'None', color = colors[1])
+    
+    axes[0].plot(T.line_z, T.true_beta(curr_d), label = "True beta profil {}".format(T.body))
+    
+    axes[1].plot(T.line_z, T.h_beta(dico_beta_fin[T.body]), 
+        label = "h_beta {}".format(T.body), marker = 'o',\
+                                                linestyle = 'None', color = colors[0])
+    axes[1].plot(T.line_z, T.h_beta(dico_beta_map[T.body], T.T_inf), 
+        label = "h_betamap {}".format(T.body), marker = 'o',\
+                                                linestyle = 'None', color = colors[1])
+    axes[1].plot(T.line_z, curr_d, label= "curr_d {}".format(T.body))
+
+    axes[0].plot(T.line_z, mins[T.body], label='Valeurs minimums', marker='s',\
+                                                linestyle='none', color='magenta')
+    axes[0].plot(T.line_z, maxs[T.body], label='Valeurs maximums', marker='s',\
+                                                linestyle='none', color='black')
+
+    axes[0].fill_between(T.line_z, mins[T.body], maxs[T.body], facecolor= "0.2", alpha=0.4, interpolate=True)                
+    
+    axes[0].set_title(titles[0])
+    axes[1].set_title(titles[1])
+
+    axes[0].legend(loc='best', fontsize = 10, ncol=2)
+    axes[1].legend(loc='best', fontsize = 10, ncol=2)
+    
+    if save == True :
+        title_to_save = "{}_{}_betmap_T_field_{}.png".format(T.cov_mod, titles[0][:3], T.body)
+        title_to_save = osp.join(osp.abspath(picpath), title_to_save)
+        plt.savefig(title_to_save)
+#        plt.show()
+#        
+    print(T.bool_method["adj_bfgs_" + T.body] , T.bool_method["opti_scipy_" + T.body])
+    
+    if comp == True :
+        if T.bool_method["adj_bfgs_" + T.body] == True and T.bool_method["opti_scipy_" + T.body] == True :
+            comp_bmaps=  [T.betamap[T.body], T.bfgs_adj_bmap[T.body]]
+            comp_mins =  [T.mins_dict[T.body], T.bfgs_adj_mins_dict[T.body]]
+            comp_maxs =  [T.maxs_dict[T.body], T.bfgs_adj_maxs_dict[T.body]]
+            comp_keys =  ["Scipy - optimization", "BFGS Adjoint Opti"]
+                     
+            comparaison_Ncst(T, comp_bmaps, comp_mins, comp_maxs, comp_keys, picpath = picpath, save=save)
+    return axes
+##---------------------------------------------------##
 ##-------------------------------------------------------------##
+def comparaison_Ncst(T, betamaps, minslsts, maxslsts, keys, picpath = "./res_all_T_inf", save = False) :
+    betamap1    =   betamaps[0]
+    betamap2    =   betamaps[1]
+    
+    labelbmap1  =   keys[0] + " bmap" 
+    labelbmap2  =   keys[1] + " bmap"
+    
+    mins_lst1   =   minslsts[0]
+    mins_lst2   =   minslsts[1]
+
+    maxs_lst1   =   maxslsts[0]
+    maxs_lst2   =   maxslsts[1]
+    
+    labelmm1    =   keys[0] + " uncertainty" 
+    labelmm2    =   keys[1] + " uncertainty"
+    curr_d = T.T_obs_mean[T.body]
+    
+    # Main plot
+    fig = plt.figure(figsize=(8, 4))
+    ax = fig.add_axes([0.1, 0.15, 0.8, 0.8], axisbg="#f5f5f5")
+    ax.plot(T.line_z, betamap1, label=labelbmap1 + " for {}".format(T.body), linestyle='none', marker='o', color='magenta')
+    ax.plot(T.line_z, betamap2, label=labelbmap2 + " for {}".format(T.body), linestyle='none', marker='+', color='yellow')
+    ax.plot(T.line_z, T.true_beta(curr_d), label = "True beta profil {}".format(T.body), color='orange')
+    
+    ax.fill_between(T.line_z, mins_lst1, maxs_lst1, facecolor= "1", alpha=0.4, interpolate=True, hatch='\\', color="cyan", label=labelmm1)
+    ax.fill_between(T.line_z, mins_lst2, maxs_lst2, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="black", label=labelmm2)
+    
+    plt.legend(loc='best')
+#    
+    if save == True:
+        title_to_save = "Scipy_opti_and_Adj_bfgs_bmaps_comparison_%s_(%s)" %(T.body, T.cov_mod) 
+        title_to_save = osp.join(osp.abspath(picpath), title_to_save)
+        plt.savefig(title_to_save)
+##---------------------------------------------------##        
+##---------------------------------------------------##
 def comparaison(T, betamaps, minslsts, maxslsts, keys, T_inf, picpath = "./res_all_T_inf", save = False) :
     betamap1    =   betamaps[0]
     betamap2    =   betamaps[1]
