@@ -160,6 +160,7 @@ class Temperature_cst() :
         Method designed to change the covariance form  without running back the whole program.
         """
         self.cov_mod = new_cov_mod
+        self.bool_method["stat"] = False
         print("cov_mod is now \n{}".format(self.cov_mod))
 ##---------------------------------------------------        
     def set_cpt_max_adj(self, new_compteur) :
