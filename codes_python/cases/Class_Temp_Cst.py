@@ -93,6 +93,7 @@ class Temperature_cst() :
         self.h = h
         
         bool_method = dict()
+        bool_written= dict()
         
         runs = set()
         runs.add("stat")
@@ -104,6 +105,8 @@ class Temperature_cst() :
             
         for r in runs :
             bool_method[r] = False
+            bool_written[r]= False
+            
         self.bool_method = bool_method
         
         if osp.exists(datapath) == False :
@@ -255,10 +258,7 @@ class Temperature_cst() :
             
             if compteur == compteur_max :
                 warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \t \x1b[0m".format(err, tol))
-#                time.sleep(2.5)
-#        if verbose == True :
-#        plt.plot(self.line_z, T_nNext, marker="o", linestyle='none')
-#        plt.legend(loc="best", ncol=4)
+
             if verbose==True :
                 print ("Err = {} ".format(err))
                 print ("Compteur = ", compteur)
@@ -471,7 +471,14 @@ class Temperature_cst() :
         La dérivée est calculée à partir de la méthode utilisant les adjoints.
         """
         print("Début de l\'optimisation scipy\n")
+        
+        # Mesure de sécurité        
         if self.bool_method["stat"] == False : self.get_prior_statistics()
+
+        # Le code a été pensé pour être lancé avec plusieurs valeurs de T_inf dans la liste T_inf_lst.
+        # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
+        # cours. De cette façon, on peut passer d'une température à une autre, et donc recommencer une optimisation 
+        # pour T_inf différente, sans craindre de perdre les résultats de la T_inf précédente        
         
         betamap, beta_final = dict(), dict()
         hess, cholesky = dict(), dict()
@@ -488,26 +495,30 @@ class Temperature_cst() :
         for T_inf in self.T_inf_lst :
             mins, maxs = dict(), dict()
             print ("Optimisation pour T_inf = %d" %(T_inf))
-            sT_inf  =   "T_inf_" + str(T_inf)
+            sT_inf = "T_inf_" + str(T_inf) # clé en cours pour les dictionnaires 
             
-            curr_d  =   self.T_obs_mean[sT_inf]
-            cov_prior   =  self.cov_pri_dict[sT_inf]
-            cov_m = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag'\
-                    else self.full_cov_obs_dict[sT_inf]           
+            # On récupère  les covariances 
+            curr_d = self.T_obs_mean[sT_inf] # Temperature moyenne sur les self.num_real tirages
+            cov_m  = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag'\
+                        else self.full_cov_obs_dict[sT_inf]           
+            cov_prior = self.cov_pri_dict[sT_inf]
             
-            inv_cov_pri =   np.linalg.inv(cov_prior)  
-            inv_cov_obs =   np.linalg.inv(cov_m)
+            inv_cov_pri = np.linalg.inv(cov_prior)  
+            inv_cov_obs = np.linalg.inv(cov_m)
             
+            # On construit la fonction de coût en trois temps
             J_1 =   lambda beta :\
             0.5*np.dot(np.dot((curr_d - self.h_beta(beta, T_inf)).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
             
             J_2 =   lambda beta :\
             0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
-                                        
+                      
+            ## Fonction de coût                  
             J = lambda beta : J_1(beta) + J_2(beta)  ## Fonction de coût
             
             print ("J(beta_prior) = {}".format(J(self.beta_prior)))
-
+            
+            # Calcule de dJ/dbeta avec méthode adjoint equation (13) avec (12)
             grad_J = lambda beta :\
             np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
             
@@ -523,38 +534,49 @@ class Temperature_cst() :
             
             betamap[sT_inf] =   opti_obj.x
             hess[sT_inf]    =   opti_obj.hess_inv
-            self.opti_obj   =   opti_obj
+            self.opti_obj   =   opti_obj # object that contains all the scipy optimizations information
             
-            cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
+            # Cbmap
+            cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf]) 
                             
             print ("Sucess state of the optimization {}".format(self.opti_obj.success))
-            
+           
             beta_final[sT_inf]  =   betamap[sT_inf] + np.dot(cholesky[sT_inf], s)  
             
             beta_var = []
             sigma_post = []
             
-            # Construction de la distribution beta à partir de beta map et cov_betamap
+            # On va à présent faire des tirages (sample) à partir de beta_map et de Cholesky
             for i in range(249):
                 s = self.tab_normal(0,1,self.N_discr-2)[0]
                 beta_var.append(betamap[sT_inf] + np.dot(cholesky[sT_inf], s))
             beta_var.append(beta_final[sT_inf])
+            # Beta var est une liste de listes. Chacune de ces liste mesure self.N_discr - 2 et contient la valeur
+            # les samples tirées plus haut.
+            # Pour les tracés, on calcule les minimum et maximum de toutes ces listes pour chaque point.
             
             # Calcule des min maxs et std sur chaque point            
             for i in range(self.N_discr-2) :
                 mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
                 maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
                 sigma_post.append(np.std([j[i] for j in beta_var])) 
+                # Pour une itération, i (point de discrétisation) est fixé et on parcours les liste contenues dans
+                # beta_var. De cette façon on raisonne sur le i-ème élément de tous les samples.
+                # On calcule également l'écart type de chaque point.  
 
             sigma_post_dict[sT_inf] = sigma_post 
 
+            # On rassemble les valeurs des mins relatives à tous les points de discrétisation dans une seule liste
             mins_lst =  [mins[sT_inf + str("{:03d}".format(i)) ] for i in range(self.N_discr-2)]   
             maxs_lst =  [maxs[sT_inf + str("{:03d}".format(i)) ] for i in range(self.N_discr-2)]
-            
+
+            # Puis on les garde pour la température en cours
             mins_dict[sT_inf] = mins_lst
             maxs_dict[sT_inf] = maxs_lst
             
+            # On précise que le cas en cours a été traité. On pourra alors le tracé (voir class_functions_aux.py subplot_cst) et l'écrire
             self.bool_method["opti_scipy_"+sT_inf] = True
+            # On l'écrit
             self.write_logbook(T_inf)
             
         ##############################
@@ -914,10 +936,18 @@ class Temperature_cst() :
             
             except ValueError :
                 break
-                
+            
+            # On précise que le cas en cours a été traité. On pourra alors le tracé (voir class_functions_aux.py subplot_cst) et l'écrire
             self.bool_method["adj_bfgs_"+sT_inf] = True
+            
+            # On l'écrit
             self.write_logbook(T_inf)
-        ## Fin boucle sur température
+            
+        ## Fin boucle sur température 
+        
+        ##############################
+        ##-- Passages en attribut --##
+        ##############################
         
         # Passage en attribut des dictionnaires comprenant les résultats respectifs pour chaque val de T_inf_lst
         self.bfgs_adj_bf     =   bfgs_adj_bf
@@ -936,6 +966,10 @@ class Temperature_cst() :
         # obsolète et inutile mais sait-on jamais
         self.al2_lst    =    al2_lst
         self.corr_chol  =   corr_chol
+    
+        #########
+        #- Fin -#
+        #########
 ###---------------------------------------------------##   
 ######                                            ######
 ######    Fonctions pour calculer la Hessienne    ######
@@ -1121,19 +1155,22 @@ class Temperature_cst() :
         
         f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(sT_inf))  
         
-        if self.bool_method["adj_bfgs_"+sT_inf] == True:
+        if self.bool_method["adj_bfgs_"+sT_inf] and self.bool_written["adj_bfgs_"+sT_inf] == False:
             f.write("\nADJ_BFGS\n")
             for item in self.logout_last.iteritems() :
                 f.write("{} = {} \n".format(item[0], item[1])) # Voir adjoint_bfgs dans la section Post Process
+            self.bool_written["adj_bfgs_"+sT_inf] == True
         
-        if self.bool_method["opti_scipy_"+sT_inf] :
+        
+        if self.bool_method["opti_scipy_"+sT_inf] and self.bool_written["opti_scipy_"+sT_inf] == False :
             f.write("\nSCIPY_OPTI\n")
             f.write("g_last = {}\n".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
             f.write("Message : {} \t Success = {}\n".format(self.opti_obj.message, self.opti_obj.success))
             f.write("N-Iterations:  = {}\n".format(self.opti_obj.nit))
             f.write("beta_last = {}\n".format(self.opti_obj.x))
             f.write("SCIPY: J(beta_last) = {}\n".format(self.opti_obj.values()[5]))
-        
+            
+            self.bool_written["opti_scipy_"+sT_inf] = True
         f.close()
         print("file {} written")      
 ##----------------------------------------------------## 
