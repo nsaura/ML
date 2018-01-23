@@ -108,6 +108,7 @@ class Temperature_cst() :
             bool_written[r]= False
             
         self.bool_method = bool_method
+        self.bool_written = bool_written
         
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
@@ -288,19 +289,25 @@ class Temperature_cst() :
             for it, bruit in enumerate(self.lst_gauss) :
                 # Obs and Prior Temperature field initializations
                 # For python3.5 add list( )
+                
+                # Titre qui prend en compte la forme de la covariance, de la température en cours, et le nombre de points de discrétisation
                 obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 
-                obs_filename = osp.join(self.datapath, obs_filename)
+                # écriture en chemin absolue pour éviter conflits
+                obs_filename = osp.join(self.datapath, obs_filename) 
                 pri_filename = osp.join(self.datapath, pri_filename)
                 
                 tol ,err_obs, err_pri, compteur = 1e-4, 1.0, 1.0, 0                
-                                
+                
+                # L'utilité de faire attention aux titres des fichiers c'est qu'on n'est plus obligé de les recalculer à toutes les SIMULATIONS (et non itération)
+                # Une fois calculée les champs de températures sont enregistrés
                 if osp.isfile(obs_filename) and osp.isfile(pri_filename) :
                     continue
-                                
-                T_n_obs =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) )
-                T_n_pri =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) 
+                
+                # Initialisation des champs T que l'on va ensuite faire converger 
+                T_n_obs =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) # On va utiliser le modèle complet -> obs
+                T_n_pri =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) # On va utiliser le modèle incomplet -> pri
                 
                 T_init.append(T_n_obs)
                 T_nNext_obs = T_n_obs
@@ -313,19 +320,20 @@ class Temperature_cst() :
                 
                 while (np.abs(err_obs) > tol) and (compteur < 800) and (np.abs(err_pri) > tol):
                     if compteur > 0 :
+                        # Initialisation pour itération suivante
                         T_n_obs = T_nNext_obs
                         T_n_pri = T_nNext_pri
                     compteur += 1
                     
                     # B_n = np.zeros((N_discr,1))
-                    T_n_obs_tmp = np.dot(self.A2, T_n_obs) 
-                    T_n_pri_tmp = np.dot(self.A2, T_n_pri)
+                    T_n_obs_tmp = np.dot(self.A2, T_n_obs) # Voir les mails
+                    T_n_pri_tmp = np.dot(self.A2, T_n_pri) # Voir les mails
                      
                     for i in range(self.N_discr-2) :
                         B_n_obs[i] = T_n_obs_tmp[i] + self.dt*  (
                         ( 10**(-4) * ( 1.+5.*np.sin(3.*T_n_obs[i]*np.pi/200.) + 
                         np.exp(0.02*T_n_obs[i]) + bruit[i] ) ) *( T_inf**4 - T_n_obs[i]**4)
-                         + self.h * (T_inf-T_n_obs[i])      )   
+                         + self.h * (T_inf-T_n_obs[i])          )   
                         
                         B_n_pri[i] = T_n_pri_tmp[i] + self.dt * (5 * 10**(-4) * (T_inf**4-T_n_pri[i]**4) * (1 + bruit[i]))
                                                             
@@ -335,10 +343,10 @@ class Temperature_cst() :
                     T_nNext_obs_lst.append(T_nNext_obs)
                     T_nNext_pri_lst.append(T_nNext_pri)
                 
-                    err_obs = np.linalg.norm(T_nNext_obs - T_n_obs, 2)
+                    err_obs = np.linalg.norm(T_nNext_obs - T_n_obs, 2) 
                     err_pri = np.linalg.norm(T_nNext_pri - T_n_pri, 2)
                 
-                # On écrit le champ convergé 
+                # On écrit les champs convergés 
                 self.pd_write_csv(obs_filename, T_nNext_obs)
                 self.pd_write_csv(pri_filename, T_nNext_pri)             
 
@@ -352,6 +360,12 @@ class Temperature_cst() :
         self.T_nNext_pri_lst    =   T_nNext_pri_lst
 ##---------------------------------------------------   
     def get_prior_statistics(self, verbose = False):
+
+       # Le code a été pensé pour être lancé avec plusieurs valeurs de T_inf dans la liste T_inf_lst.
+        # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
+        # cours. De cette façon, on peut passer d'une température à une autre, et préparer les covariances pour l'optimisation
+        # ceux pour des T_inf différentes, sans craindre de perdre ou de mélanger les statistiques        
+        
         cov_obs_dict    =   dict() 
         cov_pri_dict    =   dict()
         
@@ -359,12 +373,13 @@ class Temperature_cst() :
         full_cov_obs_dict   =   dict()        
         vals_obs_meshpoints =   dict()
         
-        T_obs_mean, condi  = dict(),    dict()
+        condi = dict()
+        T_obs_mean  = dict()
         
         for t in self.T_inf_lst :
             for j in range(self.N_discr-2) :
-                key = "T_inf_{}_{}".format(t, j)
-                vals_obs_meshpoints[key] =  []
+                key = "T_inf_{}_{}".format(t, j)    # Clés prenant la température en cours et le point de discrétisation
+                vals_obs_meshpoints[key] =  []      # On va calculer les écarts types dans ce tableau
         
         for i, T_inf in enumerate(self.T_inf_lst) :
             
@@ -373,61 +388,73 @@ class Temperature_cst() :
             sT_inf = "T_inf_" + str(T_inf)
             
             for it in range(self.num_real) :
+                # num_real : nombre de tirage effectués lors de la fonction obs_pri_modele. Bruit gaussien de moyenne nulle et d'écart type 0.1
+                
+                # Titre qui prend en compte la forme de la covariance, de la température en cours, et le nombre de points de discrétisation
+                # Correspondent aux fichiers enregistrés dans la fonction précédente
                 obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 
+                # Pour éviter les conflits d'une machine à l'autre
                 obs_filename = osp.join(self.datapath, obs_filename)
                 pri_filename = osp.join(self.datapath, pri_filename)
                 
-                # Compute covariance from data 
+                # Calcule des covariances
                 T_temp = self.pd_read_csv(obs_filename)
-                T_sum += T_temp / float(self.num_real)
-                T_obs.append(T_temp)
+                T_sum += T_temp / float(self.num_real) # T_sum est la température moyenne sur le nombre de tirages. Espérance pour les variances
                 
                 for j in range(self.N_discr-2) :
-                    vals_obs_meshpoints[sT_inf+"_"+str(j)].append(T_temp[j])
+                    vals_obs_meshpoints[sT_inf+"_"+str(j)].append(T_temp[j]) # On enregistre les différentes valeurs de température en chaque point
                 
-                # We conserve the T_disc
-                T_disc = self.pd_read_csv(pri_filename)
-                T_prior.append(T_disc)
+                # On récupère les températures du modèle incomplet
+                T_pri = self.pd_read_csv(pri_filename)
+                T_prior.append(T_pri)
+                
                 if verbose == True :
-                    plt.plot(self.line_z, T_disc, label='pri real = %d' %(it), marker='o', linestyle='none')
+                    plt.plot(self.line_z, T_pri, label='pri real = %d' %(it), marker='o', linestyle='none')
                     plt.plot(self.line_z, T_temp, label='obs real = %d' %(it))
 
-            T_obs_mean[sT_inf] = T_sum # Joue aussi le rôle de moyenne pour la covariance
+            T_obs_mean[sT_inf] = T_sum # Voir commentaire plus haut sut T_sum
             
-            Sum    =    np.zeros((self.N_discr-2, self.N_discr-2))   
-            std_meshgrid_values = np.asarray([np.std(vals_obs_meshpoints[sT_inf+"_"+str(j)]) for j in range(self.N_discr-2)])
+            # À partir des valeurs de température en chaque point, on calcule la covariance diagonale des observables
+            std_meshgrid_values = np.asarray([np.std(vals_obs_meshpoints[sT_inf+"_"+str(j)]) for j in range(self.N_discr-2)]) 
+            cov_obs_dict[sT_inf] = np.diag([std_meshgrid_values[j]**2 for j in range(self.N_discr-2)])
+            self.cov_obs_dict = cov_obs_dict
+
+            # On veut aussi calculer la covariance full
+            full_cov = np.zeros((self.N_discr-2, self.N_discr-2)) 
             
             for it in range(self.num_real) :
                 obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 obs_filename = osp.join(self.datapath, obs_filename)
                 T_temp = self.pd_read_csv(obs_filename)
                 
+                # Façon non Pythonique mais ça marche quand même
                 for ii in range(self.N_discr-2)  :
                     for jj in range(self.N_discr-2) : 
-                        Sum[ii,jj] += (T_temp[ii] - T_obs_mean[sT_inf][ii]) * (T_temp[jj] - T_obs_mean[sT_inf][jj])/float(self.num_real)
+                        full_cov[ii,jj] += (T_temp[ii] - T_obs_mean[sT_inf][ii]) * (T_temp[jj] - T_obs_mean[sT_inf][jj])/float(self.num_real)
             
-            full_cov_obs_dict[sT_inf] = Sum 
-            condi['full' + sT_inf] = np.linalg.norm(Sum)*np.linalg.norm(np.linalg.inv(Sum))
-            print ("cov_obs :\n{}".format(Sum))
-            
-            std_mean_prior          =   np.mean(np.asarray([np.std(T_prior[i]) for i in range(len(T_prior))]))
-            cov_obs_dict[sT_inf]    =   np.diag([std_meshgrid_values[j]**2 for j in range(self.N_discr-2)])
-            
-            self.cov_obs_dict       =   cov_obs_dict
+            full_cov_obs_dict[sT_inf] = full_cov 
             self.full_cov_obs_dict  =   full_cov_obs_dict
+
+            print ("cov_obs :\n{}".format(full_cov))
             
-            cov_pri_dict[sT_inf]    =   np.diag([self.prior_sigma[sT_inf]**2 for j in range(self.N_discr-2)])
-            self.cov_pri_dict   =   cov_pri_dict
+            # On voudrait peut être regarder le conditionnement de la matrice
+            condi['full' + sT_inf] = np.linalg.norm(full_cov)*np.linalg.norm(np.linalg.inv(full_cov))
+            condi['diag' + sT_inf] = np.linalg.norm(self.cov_obs_dict[sT_inf])*np.linalg.norm(np.linalg.inv(self.cov_obs_dict[sT_inf]))
+            
+            # Covariance prior 
+            cov_pri_dict[sT_inf] = np.diag([self.prior_sigma[sT_inf]**2 for j in range(self.N_discr-2)])
+            self.cov_pri_dict = cov_pri_dict
+            
+            # On teste si la covariance prior ainsi calculée vérifie la condition : les sigma prior doivent être compris dans l'intervalle +- sigma_obs
             self.cov_prior(T_inf)            
             
-            condi['diag' + sT_inf]  = np.linalg.norm(cov_obs_dict[sT_inf])*np.linalg.norm(np.linalg.inv(cov_obs_dict[sT_inf]))
-            
-            
-            self.T_obs_mean     =   T_obs_mean
+            # Quelques attributs utilises pour la suite
+            self.T_obs_mean = T_obs_mean
             self.vals_obs_meshpoints = vals_obs_meshpoints
             
+            # On précise que les statistiques ont été calculées
             self.bool_method["stat"] = True
 ##----------------------------------------------------##    
     def cov_prior(self, T_inf) :
