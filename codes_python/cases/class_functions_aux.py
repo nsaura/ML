@@ -16,7 +16,6 @@ def parser() :
     parser.add_argument('--T_inf_prop', '-T_prop', nargs='+', action='store', type=float, default=[35, 20], dest='T_prop', 
                         help='Value of constant appearing in T_inf expression; default 35, 25 \n' )
     
-    
     #digits
     parser.add_argument('--T_inf', '-T_inf', action='store', type=int, default=50, dest='T_inf', 
                         help='Value of T_inf of the current study; default %(default)d \n' )

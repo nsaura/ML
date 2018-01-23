@@ -109,6 +109,7 @@ class Temperature_cst() :
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
         
+        self.date = time.strftime("%m_%d_%Hh%M", time.localtime())
         self.datapath   =   datapath
         self.parser     =   parser
 ##----------------------------------------------------##        
@@ -413,18 +414,50 @@ class Temperature_cst() :
             
             std_mean_prior          =   np.mean(np.asarray([np.std(T_prior[i]) for i in range(len(T_prior))]))
             cov_obs_dict[sT_inf]    =   np.diag([std_meshgrid_values[j]**2 for j in range(self.N_discr-2)])
+            
+            self.cov_obs_dict       =   cov_obs_dict
+            self.full_cov_obs_dict  =   full_cov_obs_dict
+            
             cov_pri_dict[sT_inf]    =   np.diag([self.prior_sigma[sT_inf]**2 for j in range(self.N_discr-2)])
+            self.cov_pri_dict   =   cov_pri_dict
+            self.cov_prior(T_inf)            
             
             condi['diag' + sT_inf]  = np.linalg.norm(cov_obs_dict[sT_inf])*np.linalg.norm(np.linalg.inv(cov_obs_dict[sT_inf]))
             
-            self.cov_obs_dict   =   cov_obs_dict
-            self.cov_pri_dict   =   cov_pri_dict
-            self.T_obs_mean     =   T_obs_mean
             
-            self.vals_obs_meshpoints    =   vals_obs_meshpoints
-            self.full_cov_obs_dict      =   full_cov_obs_dict
+            self.T_obs_mean     =   T_obs_mean
+            self.vals_obs_meshpoints = vals_obs_meshpoints
             
             self.bool_method["stat"] = True
+##----------------------------------------------------##    
+    def cov_prior(self, T_inf) :
+        sT_inf = "T_inf_" + str(T_inf)
+        cov_obs = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
+                  self.full_cov_obs_dict[sT_inf]
+        sigma_obs = np.diag(cov_obs)
+        cov_pri = self.cov_pri_dict[sT_inf]
+        
+        b_distrib_dict = dict()
+        
+        for j  in range(self.N_discr-2) :
+            b_distrib_dict[sT_inf+"_"+str(j)] = []
+            
+        for it in range(self.num_real) :
+            s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+            b_distrib = self.beta_prior +\
+                np.dot(np.linalg.cholesky(cov_pri), s)
+            
+            for j in range(self.N_discr-2) :
+                b_distrib_dict[sT_inf+"_"+str(j)].append(b_distrib[j])
+        sigma_pri = np.asarray([np.std(b_distrib_dict[sT_inf+"_"+str(j)]) for j in range(self.N_discr-2)])
+        print 2*sigma_obs - sigma_pri
+        
+        bool_tab = [2*sigma_pri[i] - (np.abs(sigma_obs[i])) > 0 for i in range(self.N_discr-2)]
+        
+        if False in bool_tab :
+            print False
+            sys.exit(0)
+##----------------------------------------------------##    
 ##----------------------------------------------------##    
 ##----------------------------------------------------##
 ######                                            ######
@@ -550,8 +583,11 @@ class Temperature_cst() :
         
         self.debug = dict()
         
-        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-        
+        # Le code a été pensé pour être lancé avec plusieurs valeurs de T_inf dans la liste T_inf_lst.
+        # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
+        # cours. De cette façon, on peut passer d'une température à une autre, et donc recommencer une optimisation 
+        # pour T_inf différente, sans craindre de perdre les résultats de la T_inf précédente
+
         bfgs_adj_grad,   bfgs_adj_gamma     =   dict(), dict()
         bfgs_adj_bmap,   bfgs_adj_bf        =   dict(), dict()
         bfgs_adj_hessinv,bfgs_adj_cholesky  =   dict(), dict()
@@ -563,11 +599,15 @@ class Temperature_cst() :
         
         self.too_low_err_hess = dict()
         sup_g_stagne = False
+
+        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0]) # vecteur aléatoire
         
         for T_inf in self.T_inf_lst :
-            sT_inf      =   "T_inf_%d" %(T_inf)
-            sigmas      =   np.sqrt(np.diag(self.cov_obs_dict[sT_inf]))
-            curr_d      =   self.T_obs_mean[sT_inf]
+            sT_inf      =   "T_inf_%d" %(T_inf) # Clé pour simplifier
+            sigmas      =   np.sqrt(np.diag(self.cov_obs_dict[sT_inf])) #Std obs
+            curr_d      =   self.T_obs_mean[sT_inf] # Temperature moyenne sur les self.num_real tirages
+            
+            # On récupère  les covariances 
             cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
                             self.full_cov_obs_dict[sT_inf]
             
@@ -576,6 +616,7 @@ class Temperature_cst() :
             inv_cov_pri =   np.linalg.inv(cov_pri)  
             inv_cov_obs =   np.linalg.inv(cov_obs)
             
+            # On construit la fonction de coût en trois temps
             J_1 =   lambda beta :\
             0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
             
@@ -585,33 +626,36 @@ class Temperature_cst() :
             ## Fonction de coût
             J = lambda beta : J_1(beta) + J_2(beta)  
             
+            # Calcule de dJ/dbeta avec méthode adjoint equation (13) avec (12)
             grad_J = lambda beta :\
             np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
             
             err_beta = err_hess = err_j = 1            
             cpt, cptMax =   0, self.cpt_max_adj
             
-            sup_g_lst = []
-            corr_chol = []
-            al2_lst  =  []
+            sup_g_lst = [] # Pour tester si la correction a stagné
+            corr_chol = [] # Pour comptabiliser les fois ou la hessienne n'était pas définie positive
+            al2_lst  =  [] # Comptabilise les fois où les DEUX conditions de Wolfe sont vérifiés
             
             print("J(beta_prior) = {} \t T_inf = {}".format(J(self.beta_prior), T_inf))
+            
             ########################
             ##-- Initialisation --##
             ########################
 
-            #dJ/dBeta 
             beta_n  =   self.beta_prior
             g_n     =   grad_J(beta_n)
             
             g_sup = np.linalg.norm(g_n, np.inf)
             sup_g_lst.append(np.linalg.norm(g_n, np.inf))
             
-            print ("\x1b[1;37;44mSup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf)))
+            print ("\x1b[1;37;44mSup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf))) # Affichage surligné bleu
 
+            # Hessienne (réinitialisé plus tard)
             H_n_inv =   np.eye(self.N_discr-2)
             self.debug["first_hess"] = H_n_inv
-                            
+            
+            # Tracé des différentes figures (Evolutions de béta et du gradient en coursc d'optimization)
             fig, ax = plt.subplots(1,2,figsize=(13,7))
             ax[0].plot(self.line_z, beta_n, label="beta_prior")
             ax[1].plot(self.line_z, g_n,    label="gradient prior")
@@ -628,29 +672,33 @@ class Temperature_cst() :
                 ########################
                 ##-- Incrementation --##
                 ######################## 
-                    beta_nPrev  =   beta_n             
                     beta_n  =   beta_nNext
-                    ax[0].plot(self.line_z, beta_n, label="beta cpt%d_%s" %(cpt, sT_inf))
                    
-                    g_nPrev =   g_n
                     g_n     =   g_nNext
-                    g_sup   =   np.linalg.norm(g_n, np.inf)
+                    g_sup   =   np.linalg.norm(g_n, np.inf) # norme infini du gradient
                     
+                    H_n_inv   =   H_nNext_inv
+
+                    #MAJ des figures avec nouveaux tracés
                     plt.figure("Evolution de l'erreur %s" %(sT_inf))
                     plt.scatter(cpt, g_sup, c='black')
                     if inter_plot == True :
                         plt.pause(0.05)
+
+                    ax[0].plot(self.line_z, beta_n, label="beta cpt%d_%s" %(cpt, sT_inf))
+                    ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
+                    
+                    # MAJ de la liste des gradient.                      
                     sup_g_lst.append(g_sup)
                     if len(sup_g_lst) > 6 :
-                        lst_ = sup_g_lst[(len(sup_g_lst)-5):]
-                        mat = [[abs(i - j) for i in lst_] for j in lst_]
-                        sup_g_stagne = (np.linalg.norm(mat, 2) <= 1e-2)
+                        lst_ = sup_g_lst[(len(sup_g_lst)-5):] # Prend les 5 dernières valeurs des sup_g
+                        mat = [[abs(i - j) for i in lst_] for j in lst_] # Matrices des différences val par val
+                        sup_g_stagne = (np.linalg.norm(mat, 2) <= 1) # True ? -> alpha = 1 sinon backline_search
+                    
+                    # Affichage des données itérations précédentes, initialisant celle à venir
                     print("Compteur = %d" %(cpt))
                     print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
                     print("Stagne ? {}".format(sup_g_stagne))
-                    ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
-
-                    H_n_inv   =   H_nNext_inv
                     
                     if verbose == True :
                         print ("beta cpt {}:\n{}".format(cpt,beta_n))
@@ -658,82 +706,86 @@ class Temperature_cst() :
                         print("beta_n = \n  {} ".format(beta_n))
                         print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
                                                            err_beta, err_hess) )
-                                                           
-                test = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
-                                    np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]                
+
                 #################
                 ##-- Routine --##
                 #################
-                
+                # Calcule : -np.dot(grad_J(bk), d_n). 
+                # GD pour Gradient Descent.  Doit être négatif (voir après et Nocedal et Wright)
+                GD = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
+                                    np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]                
                 ## Calcule de la direction 
                 d_n     =   - np.dot(H_n_inv, g_n)
-                test_   =   (test(H_n_inv) < 0)
+                test_   =   (GD(H_n_inv) < 0) ## Booléen GD ou pas ?
+                
                 print("d_n descent direction : {}".format(test_))    
-                            
-                if test_  == False :
-                    self.positive_definite_test(H_n_inv, verbose=False)
+                
+                if test_  == False : 
+                    # Si GD == False : H_n n'est pas définie positive (Matrix Positive Definite)
+                    self.positive_definite_test(H_n_inv, verbose=False) # Permet de vérifier diagnostique (obsolète)
 
-                    H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.)
+                    H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.) # Corr CF Nocedal Wright (page ou chap ?)
                     print("cpt = {}\t cholesky for MPD used.")
                     print("new d_n descent direction : {}".format(test(H_n_inv) < 0))
                     
-                    d_n     =   - np.dot(H_n_inv, g_n)  
-                    
-                    corr_chol.append(cpt)
+                    d_n     =   - np.dot(H_n_inv, g_n)  # Nouvelle direction conforme
+                    corr_chol.append(cpt) # Compteur pour lequel H_n n'était pas MPD (pour post_process) 
 
                 print("d_n :\n {}".format(d_n))
                 
                 ## Calcule de la longueur de pas 
-                
                 ## Peut nous faire gagner du temps de calcule
-                if (sup_g_stagne == True or g_sup > 100 and cpt > 20) and g_sup < 10000 :
-                    if g_sup < 1e-2 and cpt > 150 :
+                if (sup_g_stagne == True and cpt > 20) : 
+                    if g_sup < 1e-2 and cpt > 150 : # Pour accélérer sortie de programme
                         # Dans ce cas on suppose qu'on n'aura pas mieux
                         break
-
-                    alpha = 1.
-                    print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt))
-                    if sup_g_stagne == True :
-                        print("\x1b[1;37;44mgradient stagne : coup de pouce alpha = 1. \x1b[0m")
                     
-                    time.sleep(0.7)                    
+                    alpha = 1. 
+                    print("\x1b[1;37;44mgradient stagne : coup de pouce alpha = 1. \x1b[0m")
+                    
+                    time.sleep(0.7) # Pour avoir le temps de voir qu'il y a eu modif           
                 
+                # Sinon on ne stagne pas : procédure normale Armijo et Strong Wolf condition (Nocedal and Wright)
                 else :  
                     alpha, al2_cor = self.backline_search(J, grad_J, g_n, beta_n ,d_n ,cpt, g_sup, rho=1e-2,c=0.5)
                     if al2_cor  :
                         al2_lst.append(cpt)
-                    
+                        # Armijo et Strong Wolf verfiées (obsolète)
+                        
                 ## Calcule des termes n+1
                 dbeta_n =  alpha*d_n
-#                print ("Pas pour cpt = {}: dbeta_n = {}".format(cpt, dbeta_n))
                 beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
 
                 g_nNext =   grad_J(beta_nNext)
+                # On construit s_nNext et y_nNext conformément au BFGS
                 s_nNext =   (beta_nNext - beta_n)
                 y_nNext =   g_nNext - g_n
 
-                ## Ça arrange un peu la hessienne
+                ## Pour la première itération on peut prendre (voir Nocedal and Wright (page chapitre)) :
                 if cpt == 0 :
                     fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
                     fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
                     
                     H_n_inv *= fac_H
-                                 
+                
+                # Incrémentation de H_n conformément au BFGS (Nocedal and Wright et scipy)
                 H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
                     
                 self.debug["curr_hess_%s" %(str(cpt))] = H_nNext_inv
-#                print("Hess:\n{}".format(H_nNext_inv))
                 
+                # Calcule des résidus
                 err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
+                err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
                 
+                # Erreur sur J entre l'ancien beta et le nouveau                 
                 err_j    =   J(beta_nNext) - J(beta_n)
                 
-                err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
                 if verbose == True :
                     print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
                     print("err_beta = {} cpt = {}".format(err_beta, cpt))
                     print ("err_hess = {}".format(err_hess))
-                    
+                
+                # Implémentation de liste pour vérifier si besoin
                 self.alpha_lst.append(alpha)
                 err_hess_lst.append(err_hess) 
                 err_beta_lst.append(err_beta)
@@ -751,9 +803,11 @@ class Temperature_cst() :
             beta_last=  beta_nNext
             d_n_last = d_n
             
+            # On remplit le dictionnaire dont les entrées sont écrites dans le carnet de bord (voir write_logbook)
             self.logout_last = dict()
             self.logout_last["cpt_last"]    =   cpt   
             self.logout_last["g_last"]      =   g_last
+            self.logout_last["g_sup_max"]   =   g_sup
             self.logout_last["beta_last"]   =   beta_last
             self.logout_last["J(beta_last)"]=   J(beta_last)
             
@@ -762,60 +816,79 @@ class Temperature_cst() :
             
             self.logout_last["Corr_chol"]   =   len(corr_chol)
             
+            # Affichage récapitulatif pour se rassurer ou ...            
             print ("\x1b[1;35;47mFinal Sup_g = {}\nFinal beta = {}\nFinal direction {}\x1b[0m".format(\
                 g_sup, beta_last, d_n_last))
             
+            # Tracés beta_last et grad_J(beta_last)
             ax[1].plot(self.line_z, g_last, label="gradient last")
-
             ax[0].plot(self.line_z, beta_last, label="beta_n last")
             
+            # Construction de la C_bmap
             try :
                 R   =   np.linalg.cholesky(H_last)
-            except np.linalg.LinAlgError :
+            except np.linalg.LinAlgError : # i.e si H_last n'est pas MPD -> modification
                 H_last = self.cholesky_for_MPD(H_last, fac = 5.)
+                corr_chol.append(cpt)
                 R   =   H_last
-                
-            bfgs_adj_bmap[sT_inf]   =   beta_last
-            bfgs_adj_grad[sT_inf]   =   g_last
             
-            bfgs_adj_hessinv[sT_inf]    =   H_last            
+            bfgs_adj_bmap[sT_inf]   =   beta_last # beta_map
+            bfgs_adj_grad[sT_inf]   =   g_last  
+            
+            bfgs_adj_hessinv[sT_inf]    =   H_last# Hessienne inverse finale  
             bfgs_adj_cholesky[sT_inf]   =   R
             
-            bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s)
+            bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s) # beta_finale voir après 
             
+            # Pour écrire la valeur de cov_post. Utile pour le ML 
             if osp.exists(osp.abspath("./data/post_cov")) == False :
                 os.mkdir(osp.abspath("./data/post_cov"))
-                
+            
+            # On utilise une fonction codée plus haut : pd_write_csv 
             self.pd_write_csv(osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf)), pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
             
             beta_var = []
             sigma_post = []
             
+            # On va à présent faire des tirages (sample) à partir de beta_map et de Cholesky
             for i in range(249):
                 s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
-                beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) )
+                beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) ) # équation 11
             
-            beta_var.append(bfgs_adj_bf[sT_inf]) # Pour faire 250
+            beta_var.append(bfgs_adj_bf[sT_inf]) # Pour faire 250, on rajoute beta_final
+            
+            # Beta var est une liste de listes. Chacune de ces liste mesure self.N_discr - 2 et contient la valeur
+            # les samples tirées plus haut.
+            # Pour les tracés, on calcule les minimum et maximum de toutes ces listes pour chaque point.
             
             for i in range(self.N_discr-2) :
                 bfgs_adj_mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
                 bfgs_adj_maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
-                sigma_post.append(np.std([j[i] for j in beta_var]))
+                # Les clés sont moches mais permettent de garder un ordre de 0 à self.N_discr - 2
+                sigma_post.append(np.std([j[i] for j in beta_var])) 
+                # Pour une itération, i (point de discrétisation) est fixé et on parcours les liste contenues dans
+                # beta_var. De cette façon on raisonne sur le i-ème élément de tous les samples.
+                # On calcule également l'écart type de chaque point.  
                  
             bfgs_adj_sigma_post[sT_inf] = sigma_post 
+            
+            # On rassemble les valeurs des mins relatives à tous les points de discrétisation dans une seule liste
             bfgs_adj_mins_lst =  [bfgs_adj_mins["T_inf_%d%03d" %(T_inf, i) ]\
                                             for i in range(self.N_discr-2)]   
             bfgs_adj_maxs_lst =  [bfgs_adj_maxs["T_inf_%d%03d" %(T_inf, i) ]\
                                             for i in range(self.N_discr-2)]
             
-            bfgs_adj_mins_dict[sT_inf] = bfgs_adj_mins_lst
+            # Puis on les garde pour la température en cours
+            bfgs_adj_mins_dict[sT_inf] = bfgs_adj_mins_lst 
             bfgs_adj_maxs_dict[sT_inf] = bfgs_adj_maxs_lst
             
-            plt.legend(loc="best")
+            plt.legend(loc="best") # légende des figures tracé plus haut
             
             try :
+                # On va récapituler différentes évolutions au cours de l'optimization
                 fiig, axxes = plt.subplots(2,2,figsize=(8,8))
-                axxes[0][0].set_title("alpha vs iterations ")
+                
+                axxes[0][0].set_title("alpha vs iterations T_inf %d " %(T_inf))
                 axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o',\
                                             linestyle='none', markersize=8)
                 axxes[0][0].set_xlabel("Iterations")
@@ -846,7 +919,7 @@ class Temperature_cst() :
             self.write_logbook(T_inf)
         ## Fin boucle sur température
         
-        #self.Hess = np.dot(g_n.T, g_n)
+        # Passage en attribut des dictionnaires comprenant les résultats respectifs pour chaque val de T_inf_lst
         self.bfgs_adj_bf     =   bfgs_adj_bf
         self.bfgs_adj_bmap   =   bfgs_adj_bmap
         self.bfgs_adj_grad   =   bfgs_adj_grad
@@ -860,9 +933,9 @@ class Temperature_cst() :
         
         self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
         
+        # obsolète et inutile mais sait-on jamais
         self.al2_lst    =    al2_lst
         self.corr_chol  =   corr_chol
-        
 ###---------------------------------------------------##   
 ######                                            ######
 ######    Fonctions pour calculer la Hessienne    ######
@@ -871,9 +944,10 @@ class Temperature_cst() :
 ##----------------------------------------------------## 
     def Next_hess(self, prev_hess_inv, y_nN, s_nN) :
         """
-        Procedure close to the scipy's one 
+        Procedure close to the scipy's one. 
+        It is used in adjoint_bfgs function
         """
-        # Comme Scipy
+        # Comme Scipy. De manière générale on évite de diviser par zéro
         rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) > 1e-12 else 1000.0
         self.store_rho.append(rho_nN)
         print("\x1b[1;35;47mIn Next Hess, check rho_nN = {}\x1b[0m".format(rho_nN))
@@ -898,13 +972,17 @@ class Temperature_cst() :
         
         self.warn = "go on"
         
+        # Condition d'Armijo
         armi  = lambda alpha : (J(xk + alpha*dk)) <=\
                 (J(xk) + c * alpha * np.dot(djk.T, dk)) 
+        # Strong Wolf Condition
         curv  = lambda alpha : (np.linalg.norm(g_J(xk + alpha*dk))) <=\
                 (0.9*np.linalg.norm(djk,2))  
         
         cpt, cptmax = 0, 15
         
+        # On conmmence avec le backline classique qui consiste à chercher la alpha vérifiant condition d'Armijo
+        # Algo inspiré (si ce n'est calqué) de l'algo 3.1 de Nocedal and Wright
         while (armi(alpha) == False) and cpt< cptmax and self.warn=="go on" :
             alpha_lo =  alpha
             alpha   *=  rho
@@ -912,46 +990,47 @@ class Temperature_cst() :
             print (alpha,  armi(alpha))
             alpha_hi =  alpha
             if alpha <= 1.e-14 :
-                self.warn = "out"            
+                self.warn = "out"
+                break
+                # inutile de continuer dans ces cas là
         print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
-        
         if ((alpha <= 1e-7 and cpt_ext > 30)) and g_sup < 10000:
-            print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt_ext))
+            print("\x1b[1;37;44mCompteur = {}\alpha from {} to 1.\x1b[0m".format(cpt_ext, alpha))
             time.sleep(0.3)
             alpha = 1.
                     
-            
         else :
             print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
             bool_curv = curv(alpha)
             it = 0
             
-            
-            if cpt > 0 and bool_curv == False:
-                alpha_2 = alpha_lo
-                
+            if cpt > 0 and bool_curv == False: # la condition cpt > 0 équivaut à alpha != 1
+                # On va parcourir des alpha entre alpha_lo et alpha_hi (autour du alpha qui a vérifié armijo)
+                # Pour voir si on peut trouver un alpha qui vérifie Strong Wolf 
+                alpha_2 = alpha_lo 
                 bool_curv = curv(alpha_2)
+                
                 while bool_curv == False and (alpha_2 - alpha_hi)>0 :
-                    alpha_2 *= 0.7        
-                    it  +=  1
+                    alpha_2 *= 0.7  # l'incrément peut être plus soft ou plus aigüe      
+                    it  +=  1       # Pour le fun
                     bool_curv = curv(alpha_2)
-    #                if it > 50 :
-    #                    alpha_2 = alpha
-    #                    break
                             
-                if bool_curv == True :
-                    alpha = alpha_2
+                if bool_curv == True :  # Si on a finalement trouvé le bon alpha
+                    alpha = alpha_2     # Alors on prend celui qui vérifie les deux conditions
                     correction = True
-                    print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, iteration = {}\x1b[0m".format(alpha_2, alpha, it))
-                                   
+                    print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, it = {}\x1b[0m".format(alpha_2, alpha, it))
+
+            # On considère un cas qui n'arrive quasiment jamais
             if bool_curv == False and armi(alpha) == False :
                 alpha = max(alpha, 1e-11)
-        
+                # Car en général dans ce cas la alpha environ 1e-20
+                # Mettre alpha = 1 aurait été trop radical (mon avis)
+                        
         if armi(alpha) == True and curv(alpha) == True :
-            print("it = {}".format(it))
-            print("\x1b[1;37;43mArmijo = {}\t Curvature = {}\x1b[0m".format(armi(alpha), curv(alpha)))
+            print("\x1b[1;37;43mArmijo = True \t Curvature = True \x1b[0m") 
+            # On sait qu'ils sont True, on gagne du temps en ne recalculant pas armi(alpha) et curv(alpha)
         
         return alpha, correction
 ##----------------------------------------------------##   
@@ -1031,26 +1110,22 @@ class Temperature_cst() :
         return L
 ##----------------------------------------------------## 
     def write_logbook(self, T_inf) :
-        date = time.strftime("%m_%d_%Hh%M", time.localtime())
-        title = osp.join(self.parser.logbook_path, "%s_logbook.csv" %(date))
-        if osp.isfile(title) :
-            f = open(title, "a")    
-        else : 
-            f = open(title, "w")
+        sT_inf = "T_inf_" + str(T_inf)
+        title = osp.join(self.parser.logbook_path, "%s_logbook.csv" %(self.date))
+        
+        f = open(title, "a") if osp.isfile(title) else open(title, "w")
+        # En "append" si le fichier existe // Écriture from scratch si il n'existe pas (début de la simu)
         
         f.write("\t \t Logbook: simulation launched %s  \t \t \n" %(time.strftime("%Y_%m_%d_%Hh%Mm%Ss", time.localtime())))
         f.write("Simulation\'s features :\n{}\n".format(self.parser))
         
-#        f.write("Overview of methods ran")
-#        for item in self.bool_method.interitems():
-#            f.write("bool_method[{}] = {}\n".format(item[0], item[1]))
-#        
-        sT_inf = "T_inf_" + str(T_inf)
-        f.write("Method status for %s: \n" %(str(T_inf)))        
+        f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(sT_inf))  
+        
         if self.bool_method["adj_bfgs_"+sT_inf] == True:
             f.write("\nADJ_BFGS\n")
             for item in self.logout_last.iteritems() :
-                f.write("{} = {} \n".format(item[0], item[1]))
+                f.write("{} = {} \n".format(item[0], item[1])) # Voir adjoint_bfgs dans la section Post Process
+        
         if self.bool_method["opti_scipy_"+sT_inf] :
             f.write("\nSCIPY_OPTI\n")
             f.write("g_last = {}\n".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
@@ -1058,7 +1133,6 @@ class Temperature_cst() :
             f.write("N-Iterations:  = {}\n".format(self.opti_obj.nit))
             f.write("beta_last = {}\n".format(self.opti_obj.x))
             f.write("SCIPY: J(beta_last) = {}\n".format(self.opti_obj.values()[5]))
-            
         
         f.close()
         print("file {} written")      

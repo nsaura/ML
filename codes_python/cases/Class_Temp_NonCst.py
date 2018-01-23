@@ -51,7 +51,6 @@ class Temperature_Noncst() :
         self.T_inf = map(TL, self.line_z)
         self.body = parser.BL.replace(" ", "_")
         
-        # T_inf case est une liste de liste liée à une ou plusieurs clé(s).
         # On pourra alors parcourir sur l'ensemble des listes définies en parser.
         # Si il n'y a qu'un seul cas (une fonction ou un un cas de T_inf), le code ne traitera 
         # que ce cas.
@@ -99,7 +98,7 @@ class Temperature_Noncst() :
         
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
-        
+        self.date = time.strftime("%m_%d_%Hh%M", time.localtime())
         self.datapath   =   datapath
         self.parser     =   parser
 ##----------------------------------------------------##        
@@ -393,24 +392,53 @@ class Temperature_Noncst() :
         condi['full' + self.body] = np.linalg.norm(Sum_obs)*np.linalg.norm(np.linalg.inv(Sum_obs))
         print ("cov_obs :\n{}".format(Sum_obs))
         
-        std_mean_prior =   np.mean(np.asarray([np.std(T_prior[i]) for i in range(len(T_prior))]))
+        std_mean_prior = np.mean(np.asarray([np.std(T_prior[i]) for i in range(len(T_prior))]))
         cov_obs_dict[self.body] = np.diag([std_meshgrid_values_obs[j]**2 for j in range(self.N_discr-2)])
 #        cov_pri_dict[self.body] = np.diag([self.prior_sigma[self.body**2] for j in range(self.N_discr-2)])
+        self.cov_obs_dict   =   cov_obs_dict
+        self.cov_pri_dict   =   cov_pri_dict
+        self.full_cov_obs_dict      =   full_cov_obs_dict
         
         cov_pri_dict[self.body] = Sum_pri
+        self.cov_prior()
+        
         
         condi['diag' + self.body] = np.linalg.norm(cov_obs_dict[self.body])*np.linalg.norm(np.linalg.inv(cov_obs_dict[self.body]))
         
-        self.cov_obs_dict   =   cov_obs_dict
-        self.cov_pri_dict   =   cov_pri_dict
         self.T_obs_mean     =   T_obs_mean
         
         self.vals_obs_meshpoints    =   vals_obs_meshpoints
-        self.full_cov_obs_dict      =   full_cov_obs_dict
         
         self.bool_method["stat"] = True
 ##----------------------------------------------------##    
-##----------------------------------------------------##
+    def cov_prior(self) :
+        cov_obs = self.cov_obs_dict[self.body] if self.cov_mod=='diag' else\
+                  self.full_cov_obs_dict[self.body]
+        sigma_obs = np.diag(cov_obs)
+        cov_pri = self.cov_pri_dict[self.body]
+        
+        b_distrib_dict = dict()
+        
+        for j  in range(self.N_discr-2) :
+            b_distrib_dict[self.body+"_"+str(j)] = []
+            
+        for it in range(self.num_real) :
+            s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+            b_distrib = self.beta_prior +\
+                np.dot(np.linalg.cholesky(cov_pri), s)
+            
+            for j in range(self.N_discr-2) :
+                b_distrib_dict[self.body+"_"+str(j)].append(b_distrib[j])
+        sigma_pri = np.asarray([np.std(b_distrib_dict[self.body+"_"+str(j)]) for j in range(self.N_discr-2)])
+        print 2*sigma_obs - sigma_pri
+        
+        bool_tab = [2*sigma_pri[i] - (np.abs(sigma_obs[i])) > 0 for i in range(self.N_discr-2)]
+        
+        if False in bool_tab :
+            print False
+            sys.exit(0)
+##----------------------------------------------------##    
+##----------------------------------------------------##  
 ######                                            ######
 ######        Routines pour l'optimisation        ######
 ######                                            ######
@@ -624,7 +652,7 @@ class Temperature_Noncst() :
                 if len(sup_g_lst) > 6 :
                     lst_ = sup_g_lst[(len(sup_g_lst)-5):]
                     mat = [[abs(i - j) for i in lst_] for j in lst_]
-                    sup_g_stagne = (np.linalg.norm(mat, 2) <= 1e-2)
+                    sup_g_stagne = (np.linalg.norm(mat, 2) <= 1)
                 
                 print ("cpt = %d" %(cpt))
                 print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
@@ -666,7 +694,7 @@ class Temperature_Noncst() :
             ## Calcule de la longueur de pas 
             
             ## Peut nous faire gagner du temps de calcule
-            if (sup_g_stagne == True or g_sup > 100 and cpt > 20) and g_sup < 10000 :
+            if (sup_g_stagne == True and cpt > 20) and g_sup < 10000 :
                 if g_sup < 1e-2 and cpt > 150 :
                     # Dans ce cas on suppose qu'on n'aura pas mieux
                     break
@@ -735,6 +763,7 @@ class Temperature_Noncst() :
         self.logout_last = dict()
         self.logout_last["cpt_last"]    =   cpt   
         self.logout_last["g_last"]      =   g_last
+        self.logout_last["g_sup_max"]   =   g_sup
         self.logout_last["beta_last"]   =   beta_last
         self.logout_last["J(beta_last)"]=   J(beta_last)
         
@@ -898,7 +927,7 @@ class Temperature_Noncst() :
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
         
-        if ((alpha <= 1e-7 and cpt_ext > 30)) and g_sup < 10000:
+        if ((alpha <= 1e-7 and cpt_ext > 30)) and g_sup < 5000:
             print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt_ext))
             time.sleep(0.3)
             alpha = 1.
@@ -1011,8 +1040,7 @@ class Temperature_Noncst() :
         return L
 ##----------------------------------------------------## 
     def write_logbook(self) :
-        date = time.strftime("%m_%d_%Hh%M", time.localtime())
-        title = osp.join(self.parser.logbook_path, "%s_logbook.csv" %(date))
+        title = osp.join(self.parser.logbook_path, "%s_logbook.csv" %(self.date))
         if osp.isfile(title) :
             f = open(title, "a")    
         else : 
@@ -1025,7 +1053,7 @@ class Temperature_Noncst() :
 #        for item in self.bool_method.interitems():
 #            f.write("bool_method[{}] = {}\n".format(item[0], item[1]))
 #        
-        f.write("Method status for %s: \n" %(self.body))        
+        f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(self.body))        
         if self.bool_method["adj_bfgs_"+self.body] == True:
             f.write("\nADJ_BFGS\n")
             for item in self.logout_last.iteritems() :
