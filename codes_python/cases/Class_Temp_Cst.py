@@ -110,10 +110,31 @@ class Temperature_cst() :
         self.bool_method = bool_method
         self.bool_written = bool_written
         
+
+        #Création des différents fichiers
+        self.date = time.strftime("%m_%d_%Hh%M", time.localtime())
+        
+        # On test si les dossiers existent, sinon on les créé
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
         
-        self.date = time.strftime("%m_%d_%Hh%M", time.localtime())
+        if osp.exists(parser.logbook_path) == False :
+            os.mkdir(parser.logbook_path)
+        
+        if osp.exists("./err_check") == False :
+            os.mkdir("./err_check")
+            
+        self.err_title = osp.join("err_check", "%s_err_check.csv" %(self.date))
+        self.logout_title = osp.join(parser.logbook_path, "%s_logbook.csv" %(self.date))
+        
+        # On intialise les fichiers en rappelant la teneur de la simulation
+        for f in {open(self.logout_title, "w"), open(self.err_title, "w")} :
+            f.write("\n#######################################################\n")
+            f.write("## Logbook: simulation launched %s ## \n" %(time.strftime("%Y_%m_%d_%Hh%Mm%Ss", time.localtime())))
+            f.write("#######################################################\n")
+            f.write("Simulation\'s features :\n{}\n".format(parser))
+            f.close()
+
         self.datapath   =   datapath
         self.parser     =   parser
 ##----------------------------------------------------##        
@@ -604,8 +625,19 @@ class Temperature_cst() :
             # On précise que le cas en cours a été traité. On pourra alors le tracé (voir class_functions_aux.py subplot_cst) et l'écrire
             self.bool_method["opti_scipy_"+sT_inf] = True
             # On l'écrit
-            self.write_logbook(T_inf)
+            f = open(self.logout_title, "a")
+            f.write("\nSCIPY_OPTI\n")
+            f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(sT_inf))
+            f.write("SCIPY: J(beta_last) = {}\n".format(self.opti_obj.values()[5]))
+            f.write("beta_last = {}\n".format(self.opti_obj.x))
+            f.write("g_last = {}\n".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
             
+            f.write("Message : {} \t Success = {}\n".format(self.opti_obj.message, self.opti_obj.success))
+            f.write("N-Iterations:  = {}\n".format(self.opti_obj.nit))
+            
+            self.bool_written["opti_scipy_"+sT_inf] = True
+            f.close()
+        
         ##############################
         ##-- Passages en attribut --##
         ##############################
@@ -742,7 +774,7 @@ class Temperature_cst() :
                     if len(sup_g_lst) > 6 :
                         lst_ = sup_g_lst[(len(sup_g_lst)-5):] # Prend les 5 dernières valeurs des sup_g
                         mat = [[abs(i - j) for i in lst_] for j in lst_] # Matrices des différences val par val
-                        sup_g_stagne = (np.linalg.norm(mat, 2) <= 1) # True ? -> alpha = 1 sinon backline_search
+                        sup_g_stagne = (np.linalg.norm(mat, 2) <= 1e-2) # True ? -> alpha = 1 sinon backline_search
                     
                     # Affichage des données itérations précédentes, initialisant celle à venir
                     print("Compteur = %d" %(cpt))
@@ -853,17 +885,16 @@ class Temperature_cst() :
             d_n_last = d_n
             
             # On remplit le dictionnaire dont les entrées sont écrites dans le carnet de bord (voir write_logbook)
-            self.logout_last = dict()
-            self.logout_last["cpt_last"]    =   cpt   
-            self.logout_last["g_last"]      =   g_last
-            self.logout_last["g_sup_max"]   =   g_sup
-            self.logout_last["beta_last"]   =   beta_last
-            self.logout_last["J(beta_last)"]=   J(beta_last)
+            logout_last = dict()
+            logout_last["cpt_last"]    =   cpt   
+            logout_last["J(beta_last)"]=   J(beta_last)
+            logout_last["beta_last"]   =   beta_last
+            logout_last["g_sup_max"]   =   g_sup
+            logout_last["g_last"]      =   g_last
             
-            self.logout_last["Residu_hess"] =   err_hess
-            self.logout_last["Residu_beta"] =   err_beta
-            
-            self.logout_last["Corr_chol"]   =   len(corr_chol)
+            logout_last["Corr_chol"]   =   len(corr_chol)
+            logout_last["Residu_hess"] =   err_hess
+            logout_last["Residu_beta"] =   err_beta
             
             # Affichage récapitulatif pour se rassurer ou ...            
             print ("\x1b[1;35;47mFinal Sup_g = {}\nFinal beta = {}\nFinal direction {}\x1b[0m".format(\
@@ -968,9 +999,28 @@ class Temperature_cst() :
             self.bool_method["adj_bfgs_"+sT_inf] = True
             
             # On l'écrit
-            self.write_logbook(T_inf)
+            f = open(self.logout_title, "a")
+            f.write("\nADJ_BFGS\n")
+            f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(sT_inf))
+            for item in logout_last.iteritems() :
+                f.write("{} = {} \n".format(item[0], item[1])) # Voir adjoint_bfgs dans la section Post Process
+            self.bool_written["adj_bfgs_"+sT_inf] == True
+            f.close()
+            
+            # On écrit les erreurs 
+            f = open(self.err_title, "a")
+            f.write("\nADJ_BFGS\n")
+            f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(sT_inf))
+            f.write("\nErreur grad\tErreur Hess\tErreur Beta\n")
+            for g,h,j in zip(sup_g_lst, err_hess_lst, err_beta_lst) :
+                f.write("{:.7f} \t {:.7f} \t {:.7f}\n".format(g, h, j))
+            f.close()
             
         ## Fin boucle sur température 
+        # Finalisation des fichiers
+        for f in {open(self.err_title, "a"), open(self.logout_title, "a")} :
+            f.write("\nFin de la simulation")
+            f.close()
         
         ##############################
         ##-- Passages en attribut --##
@@ -1057,11 +1107,11 @@ class Temperature_cst() :
         print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
-        if ((alpha <= 1e-7 and cpt_ext > 30)) and g_sup < 10000:
+        if (((alpha <= 1e-7 and cpt_ext > 50)) and g_sup < 5000) and self.warn == "go on":
             print("\x1b[1;37;44mCompteur = {}\alpha from {} to 1.\x1b[0m".format(cpt_ext, alpha))
             time.sleep(0.3)
             alpha = 1.
-                    
+        
         else :
             print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
             bool_curv = curv(alpha)
@@ -1088,7 +1138,11 @@ class Temperature_cst() :
                 alpha = max(alpha, 1e-11)
                 # Car en général dans ce cas la alpha environ 1e-20
                 # Mettre alpha = 1 aurait été trop radical (mon avis)
-                        
+
+        if self.warn == "out" and armi(alpha) == False :
+            alpha = 1e-8 ## Au pire on recentrera avec l'itération suivante mais on veut éviter l'explosion
+            print warnings.warn("Alpha = 1e-8 previously under 1e-14 ")
+          
         if armi(alpha) == True and curv(alpha) == True :
             print("\x1b[1;37;43mArmijo = True \t Curvature = True \x1b[0m") 
             # On sait qu'ils sont True, on gagne du temps en ne recalculant pas armi(alpha) et curv(alpha)
@@ -1169,37 +1223,6 @@ class Temperature_cst() :
             except np.linalg.LinAlgError :
                 tau = max(fac * tau, rho)
         return L
-##----------------------------------------------------## 
-    def write_logbook(self, T_inf) :
-        sT_inf = "T_inf_" + str(T_inf)
-        title = osp.join(self.parser.logbook_path, "%s_logbook.csv" %(self.date))
-        
-        f = open(title, "a") if osp.isfile(title) else open(title, "w")
-        # En "append" si le fichier existe // Écriture from scratch si il n'existe pas (début de la simu)
-        
-        f.write("\t \t Logbook: simulation launched %s  \t \t \n" %(time.strftime("%Y_%m_%d_%Hh%Mm%Ss", time.localtime())))
-        f.write("Simulation\'s features :\n{}\n".format(self.parser))
-        
-        f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(sT_inf))  
-        
-        if self.bool_method["adj_bfgs_"+sT_inf] and self.bool_written["adj_bfgs_"+sT_inf] == False:
-            f.write("\nADJ_BFGS\n")
-            for item in self.logout_last.iteritems() :
-                f.write("{} = {} \n".format(item[0], item[1])) # Voir adjoint_bfgs dans la section Post Process
-            self.bool_written["adj_bfgs_"+sT_inf] == True
-        
-        
-        if self.bool_method["opti_scipy_"+sT_inf] and self.bool_written["opti_scipy_"+sT_inf] == False :
-            f.write("\nSCIPY_OPTI\n")
-            f.write("g_last = {}\n".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
-            f.write("Message : {} \t Success = {}\n".format(self.opti_obj.message, self.opti_obj.success))
-            f.write("N-Iterations:  = {}\n".format(self.opti_obj.nit))
-            f.write("beta_last = {}\n".format(self.opti_obj.x))
-            f.write("SCIPY: J(beta_last) = {}\n".format(self.opti_obj.values()[5]))
-            
-            self.bool_written["opti_scipy_"+sT_inf] = True
-        f.close()
-        print("file {} written")      
 ##----------------------------------------------------## 
 if __name__ == "__main__" :
     import class_functions_aux as cfa #Pour les tracés post-process

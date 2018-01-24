@@ -24,9 +24,13 @@ import NN_class_try as NNC
 
 class Temperature_Noncst() :
 ##---------------------------------------------------------------
-    def __init__ (self, parser, TL):
+    def __init__ (self, parser, TL, BL):
         """
-        This object has been made to solve optimization problem.
+        This object has been made to solve optimization problem when T_inf is not a constant.
+        We added too more arguments namely : TL where L stands for lambda and BL where B stands for Body
+        
+        TL is the lambda expression corresponding to T_inf.
+        BL is the string representation of this expression, we added it to avoid re-solving both exact and inexact problems.
         """
         np.random.seed(1000) ; #plt.ion()
         
@@ -47,15 +51,13 @@ class Temperature_Noncst() :
         z_init, z_final =   0.0, 1.0
         dz = np.abs(z_final - z_init) / float(N_discr)
         self.line_z  = np.linspace(z_init, z_final, N_discr)[1:N_discr-1]
-
-        self.T_inf = map(TL, self.line_z)
-        self.body = parser.BL.replace(" ", "_")
         
-        # On pourra alors parcourir sur l'ensemble des listes définies en parser.
-        # Si il n'y a qu'un seul cas (une fonction ou un un cas de T_inf), le code ne traitera 
-        # que ce cas.
-        # Il faut donc faire attention à la façon dont on prend en compte T_inf dans le reste   
-        # des codes.
+        # On construit le vecteur de T_inf qui restera inchangé au cours de la simulation.
+        # On résout TL sur les points de discrétisation
+        self.T_inf = map(TL, self.line_z)
+        
+        # On construit la clé pour faciliter les actions aux dico et communcation entre fonctions
+        self.body = BL.replace(" ", "_")
         
         ## Matrices des coefficients pour la résolution
         INF1 = np.diag(np.transpose([-dt/dz**2*kappa/2 for i in range(N_discr-3)]), -1)
@@ -87,7 +89,6 @@ class Temperature_Noncst() :
         bool_method = dict()
         
         runs = set()
-
         runs.add("stat")
         runs.add("opti_scipy_%s" %(self.body))
         runs.add("adj_bfgs_%s" %(self.body))
@@ -96,9 +97,31 @@ class Temperature_Noncst() :
             bool_method[r] = False
         self.bool_method = bool_method
         
+        #Création des différents fichiers
+        self.date = time.strftime("%m_%d_%Hh%M", time.localtime())
+        
+        # On test si les dossiers existent, sinon on les créé
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
-        self.date = time.strftime("%m_%d_%Hh%M", time.localtime())
+        
+        if osp.exists(parser.logbook_path) == False :
+            os.mkdir(parser.logbook_path)
+        
+        if osp.exists("./err_check") == False :
+            os.mkdir("./err_check")
+            
+        self.err_title = osp.join("err_check", "%s_Ncst_err_check.csv" %(self.date))
+        self.logout_title = osp.join(parser.logbook_path, "%s_Ncst_logbook.csv" %(self.date))
+        
+        # On intialise les fichiers en rappelant la teneur de la simulation
+        for f in {open(self.logout_title, "w"), open(self.err_title, "w")} :
+            f.write("\n#######################################################\n")
+            f.write("## Logbook: simulation launched %s ## \n" %(time.strftime("%Y_%m_%d_%Hh%Mm%Ss", time.localtime())))
+            f.write("#######################################################\n")
+            f.write("Simulation\'s features :\n{}\n".format(parser))
+            f.write('T_inf equation : %s\n' %(self.body))
+            f.close()
+        
         self.datapath   =   datapath
         self.parser     =   parser
 ##----------------------------------------------------##        
@@ -533,6 +556,19 @@ class Temperature_Noncst() :
         
         self.bool_method["opti_scipy_"+self.body] = True
         self.write_logbook()
+        
+        f = open(self.logout_title, "a")
+        f.write("\nSCIPY_OPTI\n")
+        f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(self.body))
+        f.write("SCIPY: J(beta_last) = {}\n".format(self.opti_obj.values()[5]))
+        f.write("beta_last = {}\n".format(self.opti_obj.x))
+        f.write("g_last = {}\n".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
+        
+        f.write("Message : {} \t Success = {}\n".format(self.opti_obj.message, self.opti_obj.success))
+        f.write("N-Iterations:  = {}\n".format(self.opti_obj.nit))
+        
+        self.bool_written["opti_scipy_"+self.body] = True
+        f.close()
             
         ##############################
         ##-- Passages en attribut --##
@@ -852,9 +888,27 @@ class Temperature_Noncst() :
         except ValueError :
             pass
             
-        self.bool_method["adj_bfgs_"+self.body] = True
-        self.write_logbook()
+
+        # On l'écrit
+        f = open(self.logout_title, "a")
+        f.write("\nADJ_BFGS\n")
+        f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(self.body))
+        for item in logout_last.iteritems() :
+            f.write("{} = {} \n".format(item[0], item[1])) # Voir adjoint_bfgs dans la section Post Process
+        self.bool_written["adj_bfgs_"+self.body] == True
+        f.close()
+        
+        # On écrit les erreurs 
+        f = open(self.err_title, "a")
+        f.write("\nADJ_BFGS\n")
+        f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(self.body))
+        f.write("\nErreur grad\tErreur Hess\tErreur Beta\n")
+        for g,h,j in zip(sup_g_lst, err_hess_lst, err_beta_lst) :
+            f.write("{:.7f} \t {:.7f} \t {:.7f}\n".format(g, h, j))
+        f.close()
+
         ## Fin boucle sur température
+        self.bool_method["adj_bfgs_"+self.body] = True
         
         #self.Hess = np.dot(g_n.T, g_n)
         self.bfgs_adj_bf     =   bfgs_adj_bf
@@ -908,13 +962,17 @@ class Temperature_Noncst() :
         
         self.warn = "go on"
         
+        # Condition d'Armijo
         armi  = lambda alpha : (J(xk + alpha*dk)) <=\
                 (J(xk) + c * alpha * np.dot(djk.T, dk)) 
+        # Strong Wolf Condition
         curv  = lambda alpha : (np.linalg.norm(g_J(xk + alpha*dk))) <=\
                 (0.9*np.linalg.norm(djk,2))  
         
         cpt, cptmax = 0, 15
         
+        # On conmmence avec le backline classique qui consiste à chercher la alpha vérifiant condition d'Armijo
+        # Algo inspiré (si ce n'est calqué) de l'algo 3.1 de Nocedal and Wright
         while (armi(alpha) == False) and cpt< cptmax and self.warn=="go on" :
             alpha_lo =  alpha
             alpha   *=  rho
@@ -922,46 +980,51 @@ class Temperature_Noncst() :
             print (alpha,  armi(alpha))
             alpha_hi =  alpha
             if alpha <= 1.e-14 :
-                self.warn = "out"            
+                self.warn = "out"
+                break
+                # inutile de continuer dans ces cas là
         print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
-        
-        if ((alpha <= 1e-7 and cpt_ext > 30)) and g_sup < 5000:
-            print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt_ext))
+        if (((alpha <= 1e-7 and cpt_ext > 50)) and g_sup < 5000) and self.warn == "go on":
+            print("\x1b[1;37;44mCompteur = {}\alpha from {} to 1.\x1b[0m".format(cpt_ext, alpha))
             time.sleep(0.3)
             alpha = 1.
-                    
-            
+        
         else :
             print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
             bool_curv = curv(alpha)
             it = 0
             
-            
-            if cpt > 0 and bool_curv == False:
-                alpha_2 = alpha_lo
-                
+            if cpt > 0 and bool_curv == False: # la condition cpt > 0 équivaut à alpha != 1
+                # On va parcourir des alpha entre alpha_lo et alpha_hi (autour du alpha qui a vérifié armijo)
+                # Pour voir si on peut trouver un alpha qui vérifie Strong Wolf 
+                alpha_2 = alpha_lo 
                 bool_curv = curv(alpha_2)
+                
                 while bool_curv == False and (alpha_2 - alpha_hi)>0 :
-                    alpha_2 *= 0.7        
-                    it  +=  1
+                    alpha_2 *= 0.7  # l'incrément peut être plus soft ou plus aigüe      
+                    it  +=  1       # Pour le fun
                     bool_curv = curv(alpha_2)
-    #                if it > 50 :
-    #                    alpha_2 = alpha
-    #                    break
                             
-                if bool_curv == True :
-                    alpha = alpha_2
+                if bool_curv == True :  # Si on a finalement trouvé le bon alpha
+                    alpha = alpha_2     # Alors on prend celui qui vérifie les deux conditions
                     correction = True
-                    print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, iteration = {}\x1b[0m".format(alpha_2, alpha, it))
-                                   
+                    print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, it = {}\x1b[0m".format(alpha_2, alpha, it))
+
+            # On considère un cas qui n'arrive quasiment jamais
             if bool_curv == False and armi(alpha) == False :
                 alpha = max(alpha, 1e-11)
-        
+                # Car en général dans ce cas la alpha environ 1e-20
+                # Mettre alpha = 1 aurait été trop radical (mon avis)
+
+        if self.warn == "out" and armi(alpha) == False :
+            alpha = 1e-8 ## Au pire on recentrera avec l'itération suivante mais on veut éviter l'explosion
+            print warnings.warn("Alpha = 1e-8 previously under 1e-14 ")
+          
         if armi(alpha) == True and curv(alpha) == True :
-            print("it = {}".format(it))
-            print("\x1b[1;37;43mArmijo = {}\t Curvature = {}\x1b[0m".format(armi(alpha), curv(alpha)))
+            print("\x1b[1;37;43mArmijo = True \t Curvature = True \x1b[0m") 
+            # On sait qu'ils sont True, on gagne du temps en ne recalculant pas armi(alpha) et curv(alpha)
         
         return alpha, correction
 ##----------------------------------------------------##   
@@ -1038,36 +1101,6 @@ class Temperature_Noncst() :
             except np.linalg.LinAlgError :
                 tau = max(fac * tau, rho)
         return L
-##----------------------------------------------------## 
-    def write_logbook(self) :
-        title = osp.join(self.parser.logbook_path, "%s_logbook.csv" %(self.date))
-        if osp.isfile(title) :
-            f = open(title, "a")    
-        else : 
-            f = open(title, "w")
-        
-        f.write("\t \t Logbook: simulation launched %s  \t \t \n" %(time.strftime("%Y_%m_%d_%Hh%Mm%Ss", time.localtime())))
-        f.write("Simulation\'s features :\n{}\n".format(self.parser))
-        
-#        f.write("Overview of methods ran")
-#        for item in self.bool_method.interitems():
-#            f.write("bool_method[{}] = {}\n".format(item[0], item[1]))
-#        
-        f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(self.body))        
-        if self.bool_method["adj_bfgs_"+self.body] == True:
-            f.write("\nADJ_BFGS\n")
-            for item in self.logout_last.iteritems() :
-                f.write("{} = {} \n".format(item[0], item[1]))
-        if self.bool_method["opti_scipy_"+self.body] :
-            f.write("\nSCIPY_OPTI\n")
-            f.write("g_last = {}\n".format(np.linalg.norm(self.opti_obj.jac, np.inf)))
-            f.write("Message : {} \t Success = {}\n".format(self.opti_obj.message, self.opti_obj.success))
-            f.write("N-Iterations:  = {}\n".format(self.opti_obj.nit))
-            f.write("beta_last = {}\n".format(self.opti_obj.x))
-            f.write("SCIPY: J(beta_last) = {}\n".format(self.opti_obj.values()[5]))
-            
-        f.close()
-        print("file {} written")      
 ##----------------------------------------------------## 
 if __name__ == "__main__" :
     import class_functions_aux as cfa #Pour les tracés post-process
