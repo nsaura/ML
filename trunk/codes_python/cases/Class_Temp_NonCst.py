@@ -86,17 +86,16 @@ class Temperature_Noncst() :
         self.dt = dt        
         self.h = h
         
-        bool_method = dict()
-        
+        self.bool_method = dict()
+        self.bool_written= dict()
         runs = set()
         runs.add("stat")
         runs.add("opti_scipy_%s" %(self.body))
         runs.add("adj_bfgs_%s" %(self.body))
             
         for r in runs :
-            bool_method[r] = False
-        self.bool_method = bool_method
-        
+            self.bool_method[r] = False
+            self.bool_written[r] = False
         #Création des différents fichiers
         self.date = time.strftime("%m_%d_%Hh%M", time.localtime())
         
@@ -109,6 +108,9 @@ class Temperature_Noncst() :
         
         if osp.exists("./err_check") == False :
             os.mkdir("./err_check")
+            
+        if osp.exists(osp.abspath("./data/post_cov")) == False :
+            os.mkdir(osp.abspath("./data/post_cov"))
             
         self.err_title = osp.join("err_check", "%s_Ncst_err_check.csv" %(self.date))
         self.logout_title = osp.join(parser.logbook_path, "%s_Ncst_logbook.csv" %(self.date))
@@ -555,7 +557,6 @@ class Temperature_Noncst() :
         maxs_dict[self.body] = maxs_lst
         
         self.bool_method["opti_scipy_"+self.body] = True
-        self.write_logbook()
         
         f = open(self.logout_title, "a")
         f.write("\nSCIPY_OPTI\n")
@@ -796,17 +797,17 @@ class Temperature_Noncst() :
         beta_last=  beta_nNext
         d_n_last = d_n
         
-        self.logout_last = dict()
-        self.logout_last["cpt_last"]    =   cpt   
-        self.logout_last["g_last"]      =   g_last
-        self.logout_last["g_sup_max"]   =   g_sup
-        self.logout_last["beta_last"]   =   beta_last
-        self.logout_last["J(beta_last)"]=   J(beta_last)
+        logout_last = dict()
+        logout_last["cpt_last"]    =   cpt   
+        logout_last["g_last"]      =   g_last
+        logout_last["g_sup_max"]   =   g_sup
+        logout_last["beta_last"]   =   beta_last
+        logout_last["J(beta_last)"]=   J(beta_last)
         
-        self.logout_last["Residu_hess"] =   err_hess
-        self.logout_last["Residu_beta"] =   err_beta
+        logout_last["Residu_hess"] =   err_hess
+        logout_last["Residu_beta"] =   err_beta
         
-        self.logout_last["Corr_chol"]   =   len(corr_chol)
+        logout_last["Corr_chol"]   =   len(corr_chol)
         
         print ("\x1b[1;35;47mFinal Sup_g = {}\nFinal beta = {}\nFinal direction {}\x1b[0m".format(\
             g_sup, beta_last, d_n_last))
@@ -829,9 +830,6 @@ class Temperature_Noncst() :
         
         bfgs_adj_bf[self.body]     =   bfgs_adj_bmap[self.body] + np.dot(R, s)
         
-        if osp.exists(osp.abspath("./data/post_cov")) == False :
-            os.mkdir(osp.abspath("./data/post_cov"))
-            
         self.pd_write_csv(osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod,self.body)), pd.DataFrame(bfgs_adj_cholesky[self.body]))
         
         beta_var = []
