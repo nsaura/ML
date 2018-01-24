@@ -115,6 +115,10 @@ class Temperature_cst() :
         self.date = time.strftime("%m_%d_%Hh%M", time.localtime())
         
         # On test si les dossiers existent, sinon on les créé
+        # Pour écrire la valeur de cov_post. Utile pour le ML 
+        if osp.exists(osp.abspath("./data/post_cov")) == False :
+            os.mkdir(osp.abspath("./data/post_cov"))
+        
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
         
@@ -483,6 +487,7 @@ class Temperature_cst() :
         cov_obs = self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
                   self.full_cov_obs_dict[sT_inf]
         sigma_obs = np.diag(cov_obs)
+        
         cov_pri = self.cov_pri_dict[sT_inf]
         
         b_distrib_dict = dict()
@@ -497,6 +502,7 @@ class Temperature_cst() :
             
             for j in range(self.N_discr-2) :
                 b_distrib_dict[sT_inf+"_"+str(j)].append(b_distrib[j])
+                
         sigma_pri = np.asarray([np.std(b_distrib_dict[sT_inf+"_"+str(j)]) for j in range(self.N_discr-2)])
         print 2*sigma_obs - sigma_pri
         
@@ -920,13 +926,16 @@ class Temperature_cst() :
             
             bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s) # beta_finale voir après 
             
-            # Pour écrire la valeur de cov_post. Utile pour le ML 
-            if osp.exists(osp.abspath("./data/post_cov")) == False :
-                os.mkdir(osp.abspath("./data/post_cov"))
-            
             # On utilise une fonction codée plus haut : pd_write_csv 
-            self.pd_write_csv(osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf)), pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
+            # On écrit la covariance a posteriori dans un fichier pour l'utiliser dans le ML
+            write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf)), pd.DataFrame(bfgs_adj_cholesky[sT_inf])
+            add_title = 0
+            while osp.exists(write_cov) :
+                add_title =+ 1
+                write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + osp.splitext(write_cov)[1]
             
+            self.pd_write_csv(write_cov)
+            print("%s written" %(write_cov))
             beta_var = []
             sigma_post = []
             
