@@ -23,9 +23,9 @@ def parser() :
     # Booléen
     parser.add_argument('--T_inf_type', '-T_cst', action='store', type=bool, default=False, dest='T_cst', 
                         help='Define whether the T_inf is constant or not. Default to %(default)s \n')
-    #strings
-    parser.add_argument('--body_lambda', '-BL', action='store', type=str, default=False, dest='BL', 
-                        help='String of the lambda\'s body. Default to %(default)s \n') 
+#    #strings
+#    parser.add_argument('--body_lambda', '-BL', action='store', type=str, default=False, dest='BL', 
+#                        help='String of the lambda\'s body. Default to %(default)s \n') 
     
     # Pour la simulation de manière générale
     # Ints                       
