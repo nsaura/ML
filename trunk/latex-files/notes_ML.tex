@@ -67,12 +67,12 @@ keywordstyle=[0]{\color{red}},
 %%%%%%%%%%%%%%%%%%%%%
 \title{\color{red}Notes Machine Learning \color{black}}%%%%%%%%%%%%%%%%%%%%
 \date{}
-\usepackage{multicol}
-\usepackage{etoolbox}
-\patchcmd{\thebibliography}{\section*{\refname}}
-    {\begin{multicols}{2}[\section*{\refname}]}{}{}
-\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
-
+%\usepackage{multicol}
+%\usepackage{etoolbox}
+%\patchcmd{\thebibliography}{\section*{\refname}}
+%    {\begin{multicols}{2}[\section*{\refname}]}{}{}
+%\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
+\usepackage[authoryear]{natbib}
 
 \usepackage{geometry}
 \geometry{hmargin=2cm, vmargin=2cm}
@@ -129,9 +129,46 @@ keywordstyle=[0]{\color{red}},
 \renewcommand{\headrulewidth}{0.4pt}
 
 \numberwithin{equation}{section} %%%% To count the equation like Section.Number
+
+
+
 \begin{document}
 \maketitle
-\section{Notes}
+
+\tableofcontents
+\bibliographystyle{apalike}
+\bibliography{bibliotheque}
+
+\newpage 
+
+\section{Vocabulaires \& Notions}
+\subsection{Formulations ou citations}
+\navy \paragraph*{Machine Learning} :\bk \\
+\cite{rasmussen2006gaussian} définissent le \textit{surpervised learning} comme l'apprentissage d'une correspondance entrées/sortie (on parlera de \textit{mapping}), à partir de données préalables. Ces données sont regroupées en paires dans un ensemble communément appelée Dataset : \\ 
+\begin{equation}
+\mathcal{D} = \left\{ \left( x_i, y_i \right) : i = 1,. . ., n \right\}
+\end{equation}
+ 
+
+\navy \paragraph*{Processus Gaussien (GP)} :\bk \\
+Cette idée généralise la notion de distribution Gaussienne. De manière générale, lorsqu'une distribution de probabilité nous renseigne sur une variable ou un vecteur \textit{aléatoire}, un processus stochastique régit les \textit{propriétés} de la fonction.  \\
+
+\noindent Dans un problème d'apprentissage, on doit passer de $\mathcal{D}$, \cad $ $ une connaissance \textit{spécifique}, à une connaissance \textit{généralisée} avec laquelle on sera capable de \textit{mapper} une entrée avec une sortie cohérente, selon le problème étudié. On construit donc une fonctionnelle liant entrées et sorties. Cette fonctionnelle peut se construire de plusieurs façons. \\
+L'approche Neural Network consiste à n'utiliser que des combinaisons linéaires des entrées de chaque couche. Chaque site recevant cette entrée emet un signal à la couche de neuronnes suivante. Ce signal est une fonction non linéaire de l'entrée (voir plus loin ou autres notes sur les différentes fonctions d'activation).\\
+Mais de maniere générale les relations entre les entrées sont toujours linéaires.\\
+
+\noindent L'approche du processus Gaussien consiste à adapter la fonction liant les entrées. C'est-à-dire, initialement toutes les fonctions sont possibles, mais le processus Gaussiens nous permet de donner plus de poids à telle ou telle fonction en spécifiant les propriétés recherchées.\\
+Même si initialement toutes les fonctions étaient possibles, le fait d'en choisir une en particulier n'influe pas sur le résultat final.\\
+
+
+\subsection{Notions}
+\begin{itemize}
+\item[--] \textbf{Homoscédasticité} : Une des hypothèses fondamentales de la régression linéaire. \\
+Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
+\item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \ne j$.
+\end{itemize}
+
+\section{Notes -- Mueller \cite{muller2016introduction}}
 \brick \subsection{Classification}\bk
 \subsubsection{Binaires}
 \navy \paragraph*{LogisticRegression} :\bk \\
@@ -246,12 +283,4 @@ En fin de programme, on calcule la moyenne des scores optimaux pour les CV succe
 On pourra s'inspirer de la fonction \rbk{nested\_cv} and dataasets\_mglearn provenant de \textit{Introduction to Machine Learning with Python}.
 
 \pagebreak 
-
-\section{Vocabulaires \& Notions}
-\begin{itemize}
-\item[--] \textbf{Homoscédasticité} : Une des hypothèses fondamentales de la régression linéaire. \\
-Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
-\item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \ne j$.
-\end{itemize}
-
 \end{document}

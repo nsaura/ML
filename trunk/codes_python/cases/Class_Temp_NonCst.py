@@ -241,7 +241,7 @@ class Temperature_Noncst() :
                 plt.plot(self.line_z, T_nNext, label='tracer cpt %d' %(compteur))
             
             if compteur == compteur_max :
-                warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \t \x1b[0m".format(err, tol))
+                print("\x1b[7;1;255mWarning : H_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {}   \x1b[0m".format(err, tol))
 #                time.sleep(2.5)
 #        if verbose == True :
 #        plt.plot(self.line_z, T_nNext, marker="o", linestyle='none')
@@ -673,11 +673,9 @@ class Temperature_Noncst() :
             ########################
             ##-- Incrementation --##
             ######################## 
-                beta_nPrev  =   beta_n             
                 beta_n  =   beta_nNext
                 ax[0].plot(self.line_z, beta_n, label="beta cpt%d_%s" %(cpt, self.body))
                
-                g_nPrev =   g_n
                 g_n     =   g_nNext
                 g_sup   =   np.linalg.norm(g_n, np.inf)
                 
@@ -689,7 +687,7 @@ class Temperature_Noncst() :
                 if len(sup_g_lst) > 6 :
                     lst_ = sup_g_lst[(len(sup_g_lst)-5):]
                     mat = [[abs(i - j) for i in lst_] for j in lst_]
-                    sup_g_stagne = (np.linalg.norm(mat, 2) <= 1)
+                    sup_g_stagne = (np.linalg.norm(mat, 2) <= 1e-2)
                 
                 print ("cpt = %d" %(cpt))
                 print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
@@ -729,7 +727,6 @@ class Temperature_Noncst() :
             print("d_n :\n {}".format(d_n))
             
             ## Calcule de la longueur de pas 
-            
             ## Peut nous faire gagner du temps de calcule
             if (sup_g_stagne == True and cpt > 20) and g_sup < 10000 :
                 if g_sup < 1e-2 and cpt > 150 :
@@ -984,10 +981,11 @@ class Temperature_Noncst() :
         print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
-        if (((alpha <= 1e-7 and cpt_ext > 50)) and g_sup < 5000) and self.warn == "go on":
+        if (alpha <= 1e-7 and cpt_ext > 10) :# and self.warn == "go on":
             print("\x1b[1;37;44mCompteur = {}\alpha from {} to 1.\x1b[0m".format(cpt_ext, alpha))
             time.sleep(0.3)
             alpha = 1.
+            self.warn = "go on"
         
         else :
             print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
@@ -1018,7 +1016,7 @@ class Temperature_Noncst() :
 
         if self.warn == "out" and armi(alpha) == False :
             alpha = 1e-8 ## Au pire on recentrera avec l'itération suivante mais on veut éviter l'explosion
-            print warnings.warn("Alpha = 1e-8 previously under 1e-14 ")
+            print("Alpha = 1e-8 previously under 1e-14 ")
           
         if armi(alpha) == True and curv(alpha) == True :
             print("\x1b[1;37;43mArmijo = True \t Curvature = True \x1b[0m") 
