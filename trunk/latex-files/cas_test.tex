@@ -139,142 +139,60 @@ keywordstyle=[0]{\color{red}},
 \huge{À tout reprendre}
 
 \section{Sans la deuxième condition de Wolfe}
+\subsection{Fonction backline search :}
 \begin{lstlisting}
-    def backline_search(self, J, djk, xk, dk, rho=0.001, c=1e-2) :
-        alpha = 1.
-        cond = lambda alpha : (J(xk + alpha*dk)) <=\
-                (J(xk) + c * alpha * np.dot(djk.T, dk)) 
-        cpt, cptmax = 0, 5000
-        while (cond(alpha) == False) and cpt< cptmax :
-            alpha   *=  rho
-            cpt     +=  1
-            print cond(alpha)
-        print ("alpha = {}\t cpt = {}".format(alpha, cpt))
-        return max(1e-10,alpha)
-\end{lstlisting}
-\begin{table}[h]
-		% Center the table
-		\centering
-		% Table itself: here we have two columns which are centered and have lines to the left, right and in the middle: |c|c|
-		\begin{tabular}{|M{1.6cm}|M{1.7cm}|M{1.7cm}|M{1.7cm}|M{1.7cm}|M{1.5cm} |M{2.1cm}|M{1.7cm}|N }
-		\hline
-		N\_discr & Num\_real & Cov\_mod & Sigma\_b & Cpt Max & \textbf{b prior}& Final Sup\_g&Passable&\\[.5cm] \hline
-		
-		50 & $100$ & Diag & $0 \pnt 1 $ & $500$ & \textbf{1.} & 674.22679 &  \red False \bk &\\[1cm] \hline 
-
-		50 & $100$ & Diag & $0 \pnt 1 $ & $700 ou 1000$ & \textbf{1.} & 647.4511 &  \red False \bk &\\[1cm] \hline 
-		50 & $100$ & Diag & $0 \pnt 1 $ & $263$ & \textbf{1.5} \bk & refaire & True&\\[1cm] \hline		
-		
-		50 & $100$ & Diag & $0 \pnt 1 $ & $106$ & \textbf{1.3}& $1\pnt1785$&True &\\[1cm] \hline
-
-		\dgreen 33 \bk & $100$ & Diag & $0 \pnt 1 $ & $434$ & \textbf{1.}& $0 \pnt 352482$&True &\\[1cm] \hline
-		\end{tabular} 
-		\vspace{0.5cm}
-		\caption{Différents cas tests de \textsc{class\_temp\_ml}. 
-		\label{tab:simParameters}}		
-
-\end{table}
-		
-		
-\pagebreak
-		
-		
-\section{Ajout de la deuxième condition de Wolfe}
-\begin{lstlisting}
-    def backline_search(self, J, g_J, djk, xk, dk, rho=0.001, c=1e-2) :
-        alpha = 1.
-        
-        armi  = lambda alpha : (J(xk + alpha*dk)) <=\
-                (J(xk) + c * alpha * np.dot(djk.T, dk)) 
-        curv  = lambda alpha : (np.linalg.norm(g_J(xk + alpha*dk))) <=\
-                (0.9*np.linalg.norm(djk,2))  
-        
-        cpt, cptmax = 0, 5000
-        while (armi(alpha) == False) and cpt< cptmax :
-            alpha_lo =  alpha
-            alpha   *=  rho
-            cpt     +=  1
-            print (alpha,  armi(alpha))
-            alpha_hi =  alpha            
-        print ("alpha = {}\t cpt = {}".format(alpha, cpt))
-        print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
-        
-        if cpt > 0 and curv(alpha) == False:
-            alpha_2 = 0.5*(alpha_lo - alpha_hi)
-            
-            it =0
-            
-            while curv(alpha_2) == False and it <=5 :
-                alpha_2 *= 0.5        
-                it  +=  1
-            
-            print ("alpha_2 = {}\t alpha = {}".format(alpha_2, alpha))            
-            if it in range(1,5):
-                alpha = alpha_2
-                
-        return max(alpha, 1e-10)
-\end{lstlisting}
-\begin{table}[h]
-		% Center the table
-		\centering
-		% Table itself: here we have two columns which are centered and have lines to the left, right and in the middle: |c|c|
-		\begin{tabular}{|M{1.6cm}|M{1.7cm}|M{1.7cm}|M{1.7cm}|M{1.7cm}|M{1.5cm} |M{2.1cm}|M{1.7cm}|N }
-		\hline
-		N\_discr & Num\_real & Cov\_mod & Sigma\_b & Cpt Max & \textbf{b prior}& Final Sup\_g&Passable&\\[.5cm] \hline
-		
-		50 & $100$ & Diag & $0 \pnt 1 $ & $500$ & \textbf{1.} & 617.76176 &  \red False \bk &\\[1cm] \hline 
-
-		50 & $100$ & Diag & $0 \pnt 1 $ & $118$ & \textbf{1.5} \bk & 0.135845 & True&\\[1cm] \hline		
-		
-		50 & $100$ & Diag & $0 \pnt 1 $ & $106$ & \textbf{1.3}& $1\pnt1785$&REFAIRE &\\[1cm] \hline
-
-		\dgreen 33 \bk & $100$ & Diag & $0 \pnt 1 $ & $223$ & \textbf{1.}& $0\pnt4117$&True &\\[1cm] \hline
-		\end{tabular} 
-		\vspace{0.5cm}
-		\caption{Différents cas tests de \textsc{class\_temp\_ml}. 
-		\label{tab:simParameters}}		
-
-\end{table}
-
-\pagebreak 
-\section{Deuxième forme :}
-\begin{lstlisting}
-    def backline_search(self, J, g_J, djk, xk, dk, rho=0.1, c=0.5) :
+    def backline_search(self, J, g_J, djk, xk, dk, rho=1., c=0.5) :
         alpha = alpha_lo = alpha_hi = 1.
+        correction = False
+        bool_curv  = False
+        self.warn = "go on"
         
         armi  = lambda alpha : (J(xk + alpha*dk)) <=\
                 (J(xk) + c * alpha * np.dot(djk.T, dk)) 
         curv  = lambda alpha : (np.linalg.norm(g_J(xk + alpha*dk))) <=\
                 (0.9*np.linalg.norm(djk,2))  
         
-        cpt, cptmax = 0, 5000
-        while (armi(alpha) == False) and cpt< cptmax :
+        cpt, cptmax = 0, 15
+        while (armi(alpha) == False) and cpt< cptmax and self.warn=="go on" :
             alpha_lo =  alpha
             alpha   *=  rho
             cpt     +=  1
             print (alpha,  armi(alpha))
             alpha_hi =  alpha            
-        print ("alpha = {}\t cpt = {}".format(alpha, cpt))
+        print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
+        bool_curv = curv(alpha)
+        it = 0
         print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
         
-        if cpt > 0 and curv(alpha) == False:
+        if alpha <= 1.e-14 :
+            self.warn = "out"
+            
+        if cpt > 0 and bool_curv == False:
             alpha_2 = alpha_lo
             
-            it =0
             bool_curv = curv(alpha_2)
             while bool_curv == False and (alpha_2 - alpha_hi)>0 :
-                alpha_2 *= 0.3        
+                alpha_2 *= 0.9        
                 it  +=  1
-                bool_curv = curv(alpha_2)           
+                bool_curv = curv(alpha_2)
                         
             if bool_curv == True :
                 alpha = alpha_2
+                correction = True
                 print ("\x1b[1;37;43malpha_2 = {}\t alpha = {}, iteration = {}\x1b[0m".format(alpha_2, alpha, it))
-                    
-        return max(alpha, 1e-10)
+                                   
+        if bool_curv == False and armi(alpha) == False :
+            alpha = max(alpha, 1e-11)
+        
+        if armi(alpha) == True and curv(alpha) == True :
+            print("it = {}".format(it))
+            print("\x1b[1;37;43mArmijo = {}\t Curvature = {}\x1b[0m".format(armi(alpha), curv(alpha)))
+            
+        return alpha, correction
 \end{lstlisting}
+\pagebreak 
 
 \begin{table}[h]
 		% Center the table
@@ -284,19 +202,20 @@ keywordstyle=[0]{\color{red}},
 		\hline
 		N\_discr & Num\_real & Cov\_mod & Sigma\_b & Cpt Max & \textbf{b prior}& Final Sup\_g&Passable&\\[.5cm] \hline
 		
-		50 & $100$ & Diag & $0 \pnt 1 $ & $500$ & \textbf{1.} & 617.76176 &  \red REFAIRE \bk &\\[1cm] \hline 
+		33 & $100$ & Full & $0 \pnt 1 $ & $500$ & \textbf{1.} & 674.22679 &  \red False \bk &\\[1cm] \hline 
 
-		50 & $100$ & Diag & $0 \pnt 1 $ & $89$ & \textbf{1.5} \bk & 0.91700 & REFAIRE&\\[1cm] \hline		
+		33 & $100$ & Full & $0 \pnt 1 $ & $700 ou 1000$ & \textbf{1.} & 647.4511 &  \red False \bk &\\[1cm] \hline 
+		33 & $100$ & Full & $0 \pnt 1 $ & $263$ & \textbf{1.5} \bk & refaire & True&\\[1cm] \hline		
 		
-		50 & $100$ & Diag & $0 \pnt 1 $ & $110$ & \textbf{1.3}& $0\pnt71759$&REFAIRE &\\[1cm] \hline
+		33 & $100$ & Full & $0 \pnt 1 $ & $106$ & \textbf{1.3}& $1\pnt1785$&True &\\[1cm] \hline
 
-		\dgreen 33 \bk & $100$ & Diag & $0 \pnt 1 $ & $173$ & \textbf{1.}& $0 \pnt 56462$&True &\\[1cm] \hline
 		\end{tabular} 
 		\vspace{0.5cm}
-		\caption{Différents cas tests de \textsc{class\_temp\_ml}. 
+		\caption{Différents cas tests de \textsc{class\_temp\_ml}. \textbf{\red N\_discr = 33; cov\_mod = full \bk}. 
 		\label{tab:simParameters}}		
 
 \end{table}
+		
 
 \pagebreak \huge{Nouveauté}
 \begin{table}[h]
