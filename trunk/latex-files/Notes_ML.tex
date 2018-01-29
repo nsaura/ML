@@ -1,11 +1,10 @@
-\documentclass[a4paper,12pt]{article} 
+\documentclass[a4paper,12pt]{report} 
 \usepackage[utf8x]{inputenc}
 \usepackage[french]{babel}
 \usepackage{mathtools}
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
-\usepackage{graphicx}		 			% Inclusion des figures 
 \usepackage{textcomp}
 \usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
 \usepackage{multicol}					% Pour utiliser \hfill
@@ -17,7 +16,7 @@
 \usepackage{wrapfig}
 %\usepackage[squaren]{SIunits}
 %\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
-\usepackage[linkcolor=DarkRed,colorlinks=true, citecolor= DarkGreen, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage[linkcolor=DarkGreen,colorlinks=true, citecolor= DarkGreen, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
 \usepackage{listings}					% Pour citer du code
 \usepackage[justification=centering]{caption}
 \usepackage{sistyle} 
@@ -28,6 +27,8 @@
 %\usepackage{cleveref}
 \usepackage{setspace}
 
+\usepackage{graphicx}		 			% Inclusion des figures
+\graphicspath{{./pic/}}
 \usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
 
 \newcommand{\bepar}[1]{
@@ -65,7 +66,7 @@ keywords=[0]{cv},
 keywordstyle=[0]{\color{red}},
 }
 %%%%%%%%%%%%%%%%%%%%%
-\title{\color{red}Notes Machine Learning \color{black}}%%%%%%%%%%%%%%%%%%%%
+\title{\navy \textbf{Notes Machine Learning} \color{black}}%%%%%%%%%%%%%%%%%%%%
 \date{}
 %\usepackage{multicol}
 %\usepackage{etoolbox}
@@ -141,24 +142,132 @@ keywordstyle=[0]{\color{red}},
 
 \newpage 
 
-\section{Vocabulaires \& Notions}
-\subsection{Formulations ou citations}
-\navy \paragraph*{Machine Learning} :\bk \\
+\navy \chapter{NN VS GP} \bk
 \cite{rasmussen2006gaussian} définissent le \textit{surpervised learning} comme l'apprentissage d'une correspondance entrées/sortie (on parlera de \textit{mapping}), à partir de données préalables. Ces données sont regroupées en paires dans un ensemble communément appelée Dataset : \\ 
 \begin{equation}
 \mathcal{D} = \left\{ \left( x_i, y_i \right) : i = 1,. . ., n \right\}
 \end{equation}
- 
+\noindent Le procédé d'apprentissage (ou \textit{learning}), consiste à passer de $\mathcal{D}$, une connaissance \textit{spécifique}, à une connaissance \textit{généralisée} dans le but de \textit{mapper} n'importe qu'elle entrée avec une sortie cohérente, selon le problème étudié. On construit donc une fonctionnelle liant entrées et sorties. Cette fonctionnelle peut se construire de plusieurs façons. 
+\section{Neural Networks}
+L'approche Neural Network consiste à n'utiliser que des combinaisons linéaires des entrées de chaque couche. Chaque site recevant cette entrée émet ensuite un signal à la couche de neurones suivante. Ce signal est une fonction non linéaire de l'entrée (voir plus loin ou autres notes sur les différentes fonctions d'activation). \\
+Mais de maniere générale les relations entre les entrées sont toujours linéaires.
+\section{Processus Gaussien (régression)}
 
-\navy \paragraph*{Processus Gaussien (GP)} :\bk \\
-Cette idée généralise la notion de distribution Gaussienne. De manière générale, lorsqu'une distribution de probabilité nous renseigne sur une variable ou un vecteur \textit{aléatoire}, un processus stochastique régit les \textit{propriétés} de la fonction.  \\
+\begin{figure}[!ht]
+\centering 
+\includegraphics[scale=0.6]{fig_ramuss_1.png}
+\caption{Provient de \citep{rasmussen2006gaussian}}
+\label{ramuss_1}
+\end{figure}
 
-\noindent Dans un problème d'apprentissage, on doit passer de $\mathcal{D}$, \cad $ $ une connaissance \textit{spécifique}, à une connaissance \textit{généralisée} avec laquelle on sera capable de \textit{mapper} une entrée avec une sortie cohérente, selon le problème étudié. On construit donc une fonctionnelle liant entrées et sorties. Cette fonctionnelle peut se construire de plusieurs façons. \\
-L'approche Neural Network consiste à n'utiliser que des combinaisons linéaires des entrées de chaque couche. Chaque site recevant cette entrée emet un signal à la couche de neuronnes suivante. Ce signal est une fonction non linéaire de l'entrée (voir plus loin ou autres notes sur les différentes fonctions d'activation).\\
-Mais de maniere générale les relations entre les entrées sont toujours linéaires.\\
+\noindent Cette idée généralise la notion de distribution Gaussienne (DG). De manière générale, lorsqu'une distribution de probabilité nous renseigne sur une \textbf{variable} ou un \textbf{vecteur} \textit{aléatoire}, un processus stochastique régit les \textit{propriétés} d'une distribution de \textbf{fonctions}. Sous des conditions particulières, les modèles de GP peuvent être mathématiquement équivalents aux splines, larges Neural Networks etc.. \\
+L'approche du processus Gaussien consiste à adapter la fonction liant les entrées. C'est-à-dire, initialement toutes les fonctions sont possibles, mais le processus Gaussiens nous permet de donner plus de poids à telle ou telle fonction en spécifiant les propriétés recherchées.\\
+Même si initialement toutes les fonctions étaient possibles, le fait d'en choisir une en particulier n'influe pas sur le résultat final. Les GP permettent d'obtenir une connaissance claire sur les statistiques de données ainsi que sur les relations (linéaires, etc). On parlera de \textit{tracabilité} du calcul. \\
 
-\noindent L'approche du processus Gaussien consiste à adapter la fonction liant les entrées. C'est-à-dire, initialement toutes les fonctions sont possibles, mais le processus Gaussiens nous permet de donner plus de poids à telle ou telle fonction en spécifiant les propriétés recherchées.\\
-Même si initialement toutes les fonctions étaient possibles, le fait d'en choisir une en particulier n'influe pas sur le résultat final.\\
+\navy \textbf{\large{Utilisation :}} \bk Dans le manque d'informations \textit{a priori}, on suppose que la moyenne des tirages d'un GP est nulle pour tous les points\footnote{Cela n'implique pas forcément que chaque sample (ici ce sont des functions) a une moyenne nulle, mais que pour un nombre suffisant de tirage, la moyenne de ces fonctions en un point fixé est nulle.}. On peut aussi spécifier la variabilité des tirages en implémentant la variance sur chaque point. \\ 
+La première étape consiste à fournir une distribution \textit{prior} fixant les propriétés des fonctions avec lesquelles il faudra composer. Comme illustré figure \eqref{ramuss_1}, les tirages de la distribution prior ne tiennent compte d'aucune contrainte si ce n'est la classe de fonctions considérée. \\
+La majorité des caractéristiques de la distribution de fonctions est régie par la forme de la Covariance du Processus Gaussien (GPC). \\
+Finalement le problème du \textit{learning} dans le GP c'est celui de trouver les bonnes propriétés sur la Covariance, de sorte que les fonctions issues de cette distribution collent parfaitement avec les données (qu'on peut voir comme des contraintes sur la distribution prior). De cette façon, on obtient des propriétés sur les informations a posteriori que l'on peut interpréter. \\ Notons enfin que le GP nécessite d'inverser des covariances dont la taille est définie par la taille de la base de données utilisée, ce qui peut considérablement ralentir les calculs (par rapport au NN et la back propagation). \\[3mm]
+
+\dgreen \textbf{\large{Exemple :}} \bk Supposons que l'on veut considérer uniquement des fonctions qui passent par deux points $A_1 = \left( x_1, y_1 \right)$ et $A_2 = \left( x_2, y_2\right)$. Le résultat du GP correspondant est illustré figure \eqref{ramuss_1}. On peut également rajouter une variabilité autour de ces points.\\
+On remarque sur cette figure, que l'incertitude (zone grisée) est nulle aux points $A_1$ et $A_2$ et est maximale aux points les plus éloignés de $A_1$ \textsc{et} $A_2$.\\
+La ligne solide représente la moyenne des tirages (lignes en poitillés), cette moyenne est consistente avec la contrainte initiale; elle constitue l'information \textit{a posteriori}.\\
+
+
+\noindent Passer de $\mathcal{D}$ à la fonctionnelle $f$ se fait au travers l'apprentissage. On arrange les entrées $x_i$ en une matrice $\textbf{\textit{X}}$ de taille \textit{D}$\, \times \,n$ où \textit{D} représente la taille des données. Cette matrice est appelée \textit{design matrix}.\\
+On concatène toutes les sorties en un seul vecteur $\vec{\textbf{y}}$, de telle sorte qu'on écrira 
+\begin{equation}
+\mathcal{D} = \bepar{\textit{\textbf{X}}, \vec{\textbf{y}}\,}
+\end{equation}
+Enfin déduire une fonctionnelle liant entrées et sorties revient à établir une distribution de probabilités conditionnelle donnant la sortie sachant l'entrée :
+\begin{equation}
+P \bepar{S | E}
+\end{equation}
+\brick \subsection{Learning en utilisant des poids} \bk
+
+\subsubsection*{Retour sur le modèle linéaire}
+Les modèles linéaires se basent sur une prédiction telle que
+\begin{equation}
+f(\textbf{x}) = \textbf{x}^T\textbf{w} \text{\hspace{1cm}(le biais est inclus)}
+\end{equation}
+La valeur observée elle s'écrit 
+\begin{equation}
+y = f(\textbf{x}) + \varepsilon
+\end{equation}
+On suppose que $y$ et $f(\textbf{x})$ diffèrent de $\varepsilon$, un bruit suivant une distribution Gaussienne (DG) indépendamment de $\textbf{x}$ ou $y$, de moyenne nulle et de variance $\sigma^2_n$. On écrit alors 
+\begin{equation}
+\varepsilon \sim \mathcal{N}\bepar{0, \sigma^2_n}
+\end{equation}
+Pour chaque pair $\bepar{x_i, y_i}$ le bruit $\varepsilon_i$ correspondant est indépendant de tout les autres indices. Ainsi, on peut exprimer la fonction de vraisemblance (\textit{likelihood function LF}) \textit{i.e.} la probabilité conditionnelle d'obtenir les sorties $\textbf{y}$ donnés $\textbf{\textit{X}}$ et $\textbf{w}$ :
+\begin{equation}
+L = p\bepar{\textbf{y} | \textbf{\textit{X}},\, \textbf{w}} =  \prod_{i=1}^{n} p\bepar{y_i | \textbf{x}_i, \, \textbf{w} }
+\end{equation}
+Cette dernière équation revient à multiplier les distributions Gaussiennes soit
+\begin{equation}
+\prod_{i=1}^n\frac{1}{\sqrt{2 \pi} \sigma_n} \exp{\bepar{- \frac{\bepar{y_i - \textbf{x}_i^T \textbf{w}}^2}{2 \sigma_n^2}}} 
+\end{equation}
+Ce produit revient à sommer les arguments des exponentielles et multiplier les termes en $\bepar{2\pi\sigma_n^2}^{1/2}$. Finalement, on peut reconnaitre (à un facteur près) en $L$ une DG autour de \textbf{y}:
+\begin{equation}
+L \sim \mathcal{N}\bepar{\textbf{\textit{X}}^T\textbf{w}, \, \sigma^2_n \textbf{\textit{I}}_n}
+\end{equation}
+Dans la théorie Baysienne, il faut spécifier une première estimation pour $\textbf{w}$. On suppose qu'il suit une DG : \begin{equation}
+\textbf{w} \sim \mathcal{N}\bepar{0,\, \Sigma_p} \propto \exp{\bepar{-\frac{1}{2} \textbf{w}^T \Sigma^{-1}_p\textbf{w}}}
+\end{equation}.\\
+L'idée ici est d'utiliser le théorème de Bayes pouvant s'écrire :
+\begin{equation}
+\text{posterior} = \frac{\text{likelihood}\times\text{prior}}{\text{marginal likelihood}} \label{bayesTH}
+\end{equation}
+La \textit{marginal likelihood} est la fonction de probabilité conditionnelle $L$ considérant tout les poids possibles :
+\begin{equation}
+p\bepar{\textbf{y}|\textbf{\textit{X}}} = \int p\bepar{\textbf{y} | \textbf{\textit{X}},\, \textbf{w}} p\left( \textbf{w}\right ) d\textbf{w} 
+\end{equation}
+On peut alors exprimer \eqref{bayesTH} voir \citep{rasmussen2006gaussian}
+\begin{equation}
+\text{posterior} = p\bepar{\textbf{w}|\textbf{\textit{X}}, \, \textbf{y}} \sim \mathcal{N}\bepar{\sigma_n^{-2} A^{-1}\textbf{\textit{X}} A, \, A^{-1}} \text{\hspace{3mm} avec \hspace{3mm}} A = \sigma_n ^{-2} \textbf{\textit{X}}\textbf{\textit{X}}^T + \Sigma_p^{-1} \label{pwxy}
+\end{equation}
+La moyenne est appelée estimation \textit{maximum a posteriori} ou encore MAP de $\textbf{w}$. 
+
+\noindent Ici on peut estimer la distribution et donner sa nature grâce à \eqref{pwxy}: on note $f_*$ la prédiction $f(x_*)$. Cette estimation peut être vue comme la probabilité de trouver $f(x_*)$ sachant $x_*$ et $\textbf{\textit{X}}$ ainsi que $\textbf{y}$. \\
+Trouver cette probabilité revient finalement à trouver le meilleur set $\textbf{w}$ sachant $\textbf{\textit{X}}$ et $\textbf{y}$.\\
+On va donc sommer sur $\textbf{w}$ toutes les estimations de $f(x_*)$ sachant $x_*$ et \textbf{w}, en pondérant à chaque itération par la probabilité d'obtenir \textbf{w} sachant $\textbf{\textit{X}}$ et $\textbf{y}$. On écrit cette prédiction comme :
+\begin{align}
+p\bepar{f_*|x_*, \, \textbf{\textit{X}}, \, \textbf{y}} &= \int p\bepar{f_*|x_*,\, \textbf{w}} p\bepar{\textbf{w}|\textbf{\textit{X}}, \, \textbf{y}} d\textbf{w} = \int \textbf{x}_*^T\textbf{w} ~ p\bepar{\textbf{w} | \textbf{\textit{X}}, \, \textbf{y}} \label{predict}\\
+&= \mathcal{N}\bepar{\sigma_n^{-2}\textbf{x}_*^TA^{-1}\textbf{\textit{X}}\textbf{y}, \, \textbf{x}_*^T A^{-1} \textbf{x}_*} \label{predict_DG}
+\end{align}
+Dans le membre du milieu de \eqref{predict}, on distingue deux termes : le premier $p\bepar{f_*|x_*,\, \textbf{w}}$ représente la probabilité d'avoir $f_*$ sachant $x_*$ et le poids $\textbf{w}$. Cette probabilité est pondérée par celle d'avoir $p\bepar{\textbf{w}|\textbf{\textit{X}}, \, \textbf{y}}$ \cad $ $ le taux de correspondance entre les poids \textbf{w} et les données de l'apprentissage.\\
+Ainsi, ce sont bien les poids définies lors de la phase de training qui seront utilisés.\\
+L'équation \eqref{predict_DG} nous renseigne quant à elle, sur la nature de la distribution prédite, elle est Gaussienne.
+
+\subsubsection*{Projection dans l'espace des caractéristiques}
+Pour augmenter les possibilités du modèle, on peut projeter les entrées dans un espace de plus grande dimension, appelée \textit{feature space}. On peut prendre l'exemple d'un scalaire $x$ projeté dans l'espace des puissances $\left( 1, x, x^2, x^3,...\,  \right )$.\\
+On s'assure que le problème projeté reste bien linéaire tant que les projections sont indépendantes de $\textbf{w}$.\\ 
+On substitue alors à $x$ : $\phi(x)$, ce qui nous permet d'écrire par exemple 
+\begin{equation}
+f(x) = \phi(x)^T\textbf{w}
+\end{equation}
+De manière analogue à ce qu'on a fait avec $\textbf{\textit{X}}$ on construit $\Phi(x)$ en concaténant en colone (cette fois) les $\phi(x)$ pour tous les cas de l'ensemble des tests.\\
+Par la suite, on reprend \eqref{predict_DG} et on remplace $\textbf{x}_*$ et \textbf{\textit{X}} par $\phi(x_*)$ et $\Phi$ resp. :
+
+\begin{equation}
+p\bepar{f_*|\textbf{x}_*,\, \textbf{\textit{X}},\textbf{y}} \sim \mathcal{N}\bepar{\sigma_n^{-2}\phi(\textbf{x}_*)^TA^{-1}\Phi\textbf{y}, \, \phi(\textbf{x}_*)^T A^{-1} \phi(\textbf{x}_*)}
+\end{equation}
+On remanie cette équation pour éviter d'avoir à inverser la matrice  $A$ :
+\begin{equation}
+p\bepar{f_*|\textbf{x}_*,\, \textbf{\textit{X}},\textbf{y}} \sim \mathcal{N}\bepar{\phi_*^T \Sigma_p \Phi(K + \sigma_n^2 \textbf{ \textit{I}})^{-1}, \, \, \textsc{cov}} \label{distrib_FS}
+\end{equation}
+avec :
+\begin{align}
+K = \Phi^T \Sigma_p\Phi& \\
+\textsc{cov} = \phi_*^T\Sigma_p\phi_* - \phi^T\Sigma_p\,\Phi&\left(K  + \sigma_n^2\mathbf{\mathit{I}}\right)^{-1}\Phi^T \Sigma_p\phi_* \label{covFS}
+\end{align}
+On remarque dans les expressions \eqref{distrib_FS} et \eqref{covFS} laprésence des termes $\displaystyle \phi_*^T\Sigma_p\phi_*\, \Phi^T\Sigma_p\Phi$ et $\phi_*^T\Sigma_p\Phi$. On peut poser $\displaystyle k(\textbf{x}, \textbf{x}') = \phi(x)^T\Sigma_p\phi(x')$, fonction qui s'appelle \textit{kernel} ou \textit{fonction de covariance}. De plus, dans le cas ou $\Sigma_p$ est définie positive, on peut poser $\displaystyle \psi(\textbf{x}) = \Sigma_p^{1/2} \phi(x)$ de telle sorte que
+\begin{equation}
+k(\textbf{x}, \textbf{x'}) = \psi(x)\cdot \psi(x')
+\end{equation}
+On reviendra sur ce \textit{kernel trick}.
+
+\newpage
+
 
 
 \subsection{Notions}
@@ -168,11 +277,11 @@ Se dit lorsque la variance des erreurs stochastiques de la régression est la m�
 \item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \ne j$.
 \end{itemize}
 
-\section{Notes -- Mueller \cite{muller2016introduction}}
+\section{Notes ML : \cite{muller2016introduction}}
 \brick \subsection{Classification}\bk
 \subsubsection{Binaires}
 \navy \paragraph*{LogisticRegression} :\bk \\
-\indent Mesure la similitude entre une donnée et les classes avec une norme euclidienne.\\
+\noindent Mesure la similitude entre une donnée et les classes avec une norme euclidienne.\\
 Utilise la fonction logistique $f$ qui associe à toute entrée, valeur comprise entre 0 et 1.\\
 Lors du training, sont déterminées les valeurs de $a$ et $b$ qui apparaissent dans le calcul de la «probabilité d'appartenance» d'une donnée à une des deux classes : $P = f\bepar{a+bx}$\\
 
