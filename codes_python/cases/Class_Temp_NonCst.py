@@ -729,9 +729,9 @@ class Temperature_Noncst() :
             ## Calcule de la longueur de pas 
             ## Peut nous faire gagner du temps de calcule
             if (sup_g_stagne == True and cpt > 20) and g_sup < 10000 :
-                if g_sup < 1e-2 and cpt > 150 :
-                    # Dans ce cas on suppose qu'on n'aura pas mieux
-                    break
+#                if g_sup < 1e-2 and cpt > 150 :
+#                    # Dans ce cas on suppose qu'on n'aura pas mieux
+#                    break
 
                 alpha = 1.
                 print("\x1b[1;37;44mCompteur = {}, alpha = 1.\x1b[0m".format(cpt))
