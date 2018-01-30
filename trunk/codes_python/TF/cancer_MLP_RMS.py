@@ -63,10 +63,10 @@ print("\x1b[0;30;47m RMSPropOptimizer \x1b[0m")
 start = time.time()
 
 sess = tf.InteractiveSession()
-#   1-- Weihts and Bias 
+#   1-- Weights and Bias 
 #   One HL here (IN->1 , 1->OUT)
 w1_init = np.random.randn(Ncol_Xtrain,N1) / 28
-b1_init = np.zeros(N1)
+b1_init = np.zeros(N1)ó
 
 w2_init = np.random.randn(N1, N2) / np.sqrt(N1)
 b2_init = np.random.randn(N2)
@@ -142,7 +142,7 @@ for epoch in xrange(max_epoch) :
 correct_prediction = tf.equal(tf.argmax(y_,1), tf.argmax(t,1))
 print(correct_prediction.eval(feed_dict={x:X_test, t:y_test_ind})) 
 
-R = correct_prediction.eval(feed_dict={x:X_test, t:y_test_ind})
+R = correct_prediction.eval(feed_dict={x:X_test, t:y_test_ind})import tensorflow as tf
 
 res = {k:v for k,v in zip (["False","True"], np.bincount(R))}
 perc = res["True"]/float(res["True"] + res["False"])

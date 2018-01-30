@@ -822,9 +822,9 @@ class Temperature_cst() :
                 ## Calcule de la longueur de pas 
                 ## Peut nous faire gagner du temps de calcule
                 if (sup_g_stagne == True and cpt > 20) : 
-                    if g_sup < 1e-2 and cpt > 150 : # Pour accélérer sortie de programme
-                        # Dans ce cas on suppose qu'on n'aura pas mieux
-                        break
+#                    if g_sup < 1e-2 and cpt > 150 : # Pour accélérer sortie de programme
+#                        # Dans ce cas on suppose qu'on n'aura pas mieux
+#                        break
                     
                     alpha = 1. 
                     print("\x1b[1;37;44mgradient stagne : coup de pouce alpha = 1. \x1b[0m")
@@ -927,13 +927,13 @@ class Temperature_cst() :
             
             # On utilise une fonction codée plus haut : pd_write_csv 
             # On écrit la covariance a posteriori dans un fichier pour l'utiliser dans le ML
-            write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf)), pd.DataFrame(bfgs_adj_cholesky[sT_inf])
+            write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf))
             add_title = 0
             while osp.exists(write_cov) :
                 add_title =+ 1
                 write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + osp.splitext(write_cov)[1]
             
-            self.pd_write_csv(write_cov)
+            self.pd_write_csv(write_cov, pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
             print("%s written" %(write_cov))
             beta_var = []
             sigma_post = []
