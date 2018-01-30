@@ -155,23 +155,29 @@ Mais de maniere générale les relations entre les entrées sont toujours linéa
 
 \begin{figure}[!ht]
 \centering 
-\includegraphics[scale=0.6]{fig_ramuss_1.png}
+\includegraphics[scale=0.5]{fig_ramuss_1.png}
 \caption{Provient de \citep{rasmussen2006gaussian}}
 \label{ramuss_1}
 \end{figure}
 
-\noindent Cette idée généralise la notion de distribution Gaussienne (DG). De manière générale, lorsqu'une distribution de probabilité nous renseigne sur une \textbf{variable} ou un \textbf{vecteur} \textit{aléatoire}, un processus stochastique régit les \textit{propriétés} d'une distribution de \textbf{fonctions}. Sous des conditions particulières, les modèles de GP peuvent être mathématiquement équivalents aux splines, larges Neural Networks etc.. \\
+\noindent Cette idée généralise la notion de distribution Gaussienne (DG). De manière générale, lorsqu'une distribution de probabilité nous renseigne sur une \textbf{variable} ou un \textbf{vecteur} \textit{aléatoire}, un processus stochastique régit les \textit{propriétés} d'une distribution de \textbf{fonctions}. Sous des conditions particulières, les modèles de GP peuvent être mathématiquement équivalents aux splines, larges Neural Networks etc.. \\ 
+D'une manière plus formelle un GP est une collection de variables aléatoires dont on peut trouver, pour n'importe quel nombre d'entre elles, une distribution jointe, gaussienne.\\
 L'approche du processus Gaussien consiste à adapter la fonction liant les entrées. C'est-à-dire, initialement toutes les fonctions sont possibles, mais le processus Gaussiens nous permet de donner plus de poids à telle ou telle fonction en spécifiant les propriétés recherchées.\\
-Même si initialement toutes les fonctions étaient possibles, le fait d'en choisir une en particulier n'influe pas sur le résultat final. Les GP permettent d'obtenir une connaissance claire sur les statistiques de données ainsi que sur les relations (linéaires, etc). On parlera de \textit{tracabilité} du calcul. \\
+Même si initialement toutes les fonctions sont possibles, en choisir une en particulier n'influe pas sur le résultat final. Les GP permettent d'obtenir une connaissance claire sur les statistiques de données ainsi que sur les relations (linéaires, etc). On parlera de \textit{tracabilité} du calcul. \\
 
-\navy \textbf{\large{Utilisation :}} \bk Dans le manque d'informations \textit{a priori}, on suppose que la moyenne des tirages d'un GP est nulle pour tous les points\footnote{Cela n'implique pas forcément que chaque sample (ici ce sont des functions) a une moyenne nulle, mais que pour un nombre suffisant de tirage, la moyenne de ces fonctions en un point fixé est nulle.}. On peut aussi spécifier la variabilité des tirages en implémentant la variance sur chaque point. \\ 
+Si $m(\textbf{x})$ représente la moyenne du GP et $k\bepar{\textbf{x}, \textbf{x}'}$ sa covariance (ou plutôt sa fonction de covariance, voir plus loin), et qu'on note $f$ un tirage d'une telle distribution, on écrira :
+\begin{equation}
+f \sim \mathcal{GP}\bepar{m(\textbf{x}), k\bepar{\textbf{x}, \textbf{x}'}}
+\end{equation}
+Dans le manque d'informations (et de manière générale), on imposera une moyenne nulle pour tous les points\footnote{Cela n'implique pas forcément que chaque sample (ici ce sont des functions) a une moyenne nulle, mais que pour un nombre suffisant de tirage, la moyenne de ces fonctions en un point fixé est nulle.}. \\ 
 La première étape consiste à fournir une distribution \textit{prior} fixant les propriétés des fonctions avec lesquelles il faudra composer. Comme illustré figure \eqref{ramuss_1}, les tirages de la distribution prior ne tiennent compte d'aucune contrainte si ce n'est la classe de fonctions considérée. \\
 La majorité des caractéristiques de la distribution de fonctions est régie par la forme de la Covariance du Processus Gaussien (GPC). \\
+
 Finalement le problème du \textit{learning} dans le GP c'est celui de trouver les bonnes propriétés sur la Covariance, de sorte que les fonctions issues de cette distribution collent parfaitement avec les données (qu'on peut voir comme des contraintes sur la distribution prior). De cette façon, on obtient des propriétés sur les informations a posteriori que l'on peut interpréter. \\ Notons enfin que le GP nécessite d'inverser des covariances dont la taille est définie par la taille de la base de données utilisée, ce qui peut considérablement ralentir les calculs (par rapport au NN et la back propagation). \\[3mm]
 
 \dgreen \textbf{\large{Exemple :}} \bk Supposons que l'on veut considérer uniquement des fonctions qui passent par deux points $A_1 = \left( x_1, y_1 \right)$ et $A_2 = \left( x_2, y_2\right)$. Le résultat du GP correspondant est illustré figure \eqref{ramuss_1}. On peut également rajouter une variabilité autour de ces points.\\
 On remarque sur cette figure, que l'incertitude (zone grisée) est nulle aux points $A_1$ et $A_2$ et est maximale aux points les plus éloignés de $A_1$ \textsc{et} $A_2$.\\
-La ligne solide représente la moyenne des tirages (lignes en poitillés), cette moyenne est consistente avec la contrainte initiale; elle constitue l'information \textit{a posteriori}.\\
+La ligne solide représente la moyenne des tirages (lignes en pointillées), cette moyenne est consistente avec la contrainte initiale; elle constitue l'information \textit{a posteriori}.\\
 
 
 \noindent Passer de $\mathcal{D}$ à la fonctionnelle $f$ se fait au travers l'apprentissage. On arrange les entrées $x_i$ en une matrice $\textbf{\textit{X}}$ de taille \textit{D}$\, \times \,n$ où \textit{D} représente la taille des données. Cette matrice est appelée \textit{design matrix}.\\
@@ -183,14 +189,14 @@ Enfin déduire une fonctionnelle liant entrées et sorties revient à établir u
 \begin{equation}
 P \bepar{S | E}
 \end{equation}
-\brick \subsection{Learning en utilisant des poids} \bk
 
-\subsubsection*{Retour sur le modèle linéaire}
-Les modèles linéaires se basent sur une prédiction telle que
+\brick \subsection{Learning en utilisant des poids} \bk
+\subsubsection*{Retour sur le modèle linéaire : régression Baysienne}
+\noindent Les modèles linéaires se basent sur une prédiction telle que
 \begin{equation}
 f(\textbf{x}) = \textbf{x}^T\textbf{w} \text{\hspace{1cm}(le biais est inclus)}
 \end{equation}
-La valeur observée elle s'écrit 
+La valeur observée, elle, s'écrit 
 \begin{equation}
 y = f(\textbf{x}) + \varepsilon
 \end{equation}
@@ -198,7 +204,7 @@ On suppose que $y$ et $f(\textbf{x})$ diffèrent de $\varepsilon$, un bruit suiv
 \begin{equation}
 \varepsilon \sim \mathcal{N}\bepar{0, \sigma^2_n}
 \end{equation}
-Pour chaque pair $\bepar{x_i, y_i}$ le bruit $\varepsilon_i$ correspondant est indépendant de tout les autres indices. Ainsi, on peut exprimer la fonction de vraisemblance (\textit{likelihood function LF}) \textit{i.e.} la probabilité conditionnelle d'obtenir les sorties $\textbf{y}$ donnés $\textbf{\textit{X}}$ et $\textbf{w}$ :
+Pour chaque paire $\bepar{x_i, y_i}$ le bruit $\varepsilon_i$ correspondant est indépendant de tous les autres indices. Ainsi, on peut exprimer la fonction de vraisemblance (\textit{likelihood function LF}) \textit{i.e.} la probabilité conditionnelle d'obtenir les sorties $\textbf{y}$ donnés $\textbf{\textit{X}}$ et $\textbf{w}$ :
 \begin{equation}
 L = p\bepar{\textbf{y} | \textbf{\textit{X}},\, \textbf{w}} =  \prod_{i=1}^{n} p\bepar{y_i | \textbf{x}_i, \, \textbf{w} }
 \end{equation}
@@ -208,7 +214,7 @@ Cette dernière équation revient à multiplier les distributions Gaussiennes so
 \end{equation}
 Ce produit revient à sommer les arguments des exponentielles et multiplier les termes en $\bepar{2\pi\sigma_n^2}^{1/2}$. Finalement, on peut reconnaitre (à un facteur près) en $L$ une DG autour de \textbf{y}:
 \begin{equation}
-L \sim \mathcal{N}\bepar{\textbf{\textit{X}}^T\textbf{w}, \, \sigma^2_n \textbf{\textit{I}}_n}
+L \sim \mathcal{N}\bepar{\textbf{\textit{X}}^T\textbf{w}, \, \sigma^2_n \textbf{\textit{I}}_n} \label{likely}
 \end{equation}
 Dans la théorie Baysienne, il faut spécifier une première estimation pour $\textbf{w}$. On suppose qu'il suit une DG : \begin{equation}
 \textbf{w} \sim \mathcal{N}\bepar{0,\, \Sigma_p} \propto \exp{\bepar{-\frac{1}{2} \textbf{w}^T \Sigma^{-1}_p\textbf{w}}}
@@ -217,19 +223,21 @@ L'idée ici est d'utiliser le théorème de Bayes pouvant s'écrire :
 \begin{equation}
 \text{posterior} = \frac{\text{likelihood}\times\text{prior}}{\text{marginal likelihood}} \label{bayesTH}
 \end{equation}
-La \textit{marginal likelihood} est la fonction de probabilité conditionnelle $L$ considérant tout les poids possibles :
+Ici on cherche à estimer les bonnes valeurs de \textbf{w}. La probabilité notée \textsc{posterior} fait allusion à $p\bepar{\textbf{w}|\textbf{\textit{X}}, \, \textbf{y}}$. \\
+On définit également la fonction de probabilité conditionnelle \textit{marginal likelihood} qui est la somme de $L$ sur tous les poids possibles :
 \begin{equation}
 p\bepar{\textbf{y}|\textbf{\textit{X}}} = \int p\bepar{\textbf{y} | \textbf{\textit{X}},\, \textbf{w}} p\left( \textbf{w}\right ) d\textbf{w} 
 \end{equation}
-On peut alors exprimer \eqref{bayesTH} voir \citep{rasmussen2006gaussian}
+
+\noindent On peut alors exprimer \eqref{bayesTH} voir \citep{rasmussen2006gaussian}
 \begin{equation}
-\text{posterior} = p\bepar{\textbf{w}|\textbf{\textit{X}}, \, \textbf{y}} \sim \mathcal{N}\bepar{\sigma_n^{-2} A^{-1}\textbf{\textit{X}} A, \, A^{-1}} \text{\hspace{3mm} avec \hspace{3mm}} A = \sigma_n ^{-2} \textbf{\textit{X}}\textbf{\textit{X}}^T + \Sigma_p^{-1} \label{pwxy}
+\text{posterior} = p\bepar{\textbf{w}|\textbf{\textit{X}}, \, \textbf{y}} \sim \mathcal{N}\bepar{\sigma_n^{-2} A^{-1}\textbf{\textit{X}} A, \, A^{-1}} \text{\hspace{2mm} avec \hspace{2mm}} A = \sigma_n ^{-2} \textbf{\textit{X}}\textbf{\textit{X}}^T + \Sigma_p^{-1} \label{pwxy}
 \end{equation}
 La moyenne est appelée estimation \textit{maximum a posteriori} ou encore MAP de $\textbf{w}$. 
 
-\noindent Ici on peut estimer la distribution et donner sa nature grâce à \eqref{pwxy}: on note $f_*$ la prédiction $f(x_*)$. Cette estimation peut être vue comme la probabilité de trouver $f(x_*)$ sachant $x_*$ et $\textbf{\textit{X}}$ ainsi que $\textbf{y}$. \\
+\noindent Ici on peut estimer la distribution de prédiction et donner sa nature grâce à \eqref{pwxy}: on note $f_*$ la prédiction $f(x_*)$ avec $x_*$ un élément extérieur au \textit{test set}. \\ On cherche alors la probabilité de trouver $f_*$ sachant $x_*$ et $\textbf{\textit{X}}$ ainsi que $\textbf{y}$ (mais pas \textbf{w} $(\neq$ NNs)). \\
 Trouver cette probabilité revient finalement à trouver le meilleur set $\textbf{w}$ sachant $\textbf{\textit{X}}$ et $\textbf{y}$.\\
-On va donc sommer sur $\textbf{w}$ toutes les estimations de $f(x_*)$ sachant $x_*$ et \textbf{w}, en pondérant à chaque itération par la probabilité d'obtenir \textbf{w} sachant $\textbf{\textit{X}}$ et $\textbf{y}$. On écrit cette prédiction comme :
+On va donc sommer sur $\textbf{w}$ toutes les estimations de $f_*$ sachant $x_*$ et \textbf{w}, en pondérant à chaque itération par la probabilité d'obtenir \textbf{w} sachant $\textbf{\textit{X}}$ et $\textbf{y}$. On écrit cette prédiction comme :
 \begin{align}
 p\bepar{f_*|x_*, \, \textbf{\textit{X}}, \, \textbf{y}} &= \int p\bepar{f_*|x_*,\, \textbf{w}} p\bepar{\textbf{w}|\textbf{\textit{X}}, \, \textbf{y}} d\textbf{w} = \int \textbf{x}_*^T\textbf{w} ~ p\bepar{\textbf{w} | \textbf{\textit{X}}, \, \textbf{y}} \label{predict}\\
 &= \mathcal{N}\bepar{\sigma_n^{-2}\textbf{x}_*^TA^{-1}\textbf{\textit{X}}\textbf{y}, \, \textbf{x}_*^T A^{-1} \textbf{x}_*} \label{predict_DG}
@@ -241,7 +249,7 @@ L'équation \eqref{predict_DG} nous renseigne quant à elle, sur la nature de la
 \subsubsection*{Projection dans l'espace des caractéristiques}
 Pour augmenter les possibilités du modèle, on peut projeter les entrées dans un espace de plus grande dimension, appelée \textit{feature space}. On peut prendre l'exemple d'un scalaire $x$ projeté dans l'espace des puissances $\left( 1, x, x^2, x^3,...\,  \right )$.\\
 On s'assure que le problème projeté reste bien linéaire tant que les projections sont indépendantes de $\textbf{w}$.\\ 
-On substitue alors à $x$ : $\phi(x)$, ce qui nous permet d'écrire par exemple 
+On substitue alors à $x$ : $\phi(x)$, ce qui nous permet d'écrire entre autres 
 \begin{equation}
 f(x) = \phi(x)^T\textbf{w}
 \end{equation}
@@ -264,14 +272,53 @@ On remarque dans les expressions \eqref{distrib_FS} et \eqref{covFS} laprésence
 \begin{equation}
 k(\textbf{x}, \textbf{x'}) = \psi(x)\cdot \psi(x')
 \end{equation}
-On reviendra sur ce \textit{kernel trick}.
+On reviendra sur ce \textit{kernel trick}.\\
 
+\noindent Cette exemple de régression Baysienne nous permet de donner un exemple de GP : en prenant $f = \phi(\textbf{x})^T\textbf{w}$ avec $w \sim \mathcal{N}\bepar{0, \sigma_p}$, on peut calculer $\mathbb{E}[f(\textbf{x})]$ et $\mathbb{E}[f(\textbf{x})f(\textbf{x}')]$ correspondant à la moyenne et à la variance de $f$ :
+\begin{align*}
+\mathbb{E}[f(\textbf{x})] & = \phi(\textbf{x})\mathbb{E}[\textbf{w}] = 0 \\
+\mathbb{E}[f(\textbf{x})f(\textbf{x}')] & = \phi(\textbf{x})^T \mathbb{E}[\textbf{w}\textbf{w}^T]\phi(\textbf{x}') = \phi(\textbf{x})^T \Sigma_p \, \phi(\textbf{x}')
+\end{align*}
+On retrouve alors l'\textit{inner product} $\phi(\textbf{x})^T \Sigma_p \, \phi(\textbf{x}')$.\\
+Comme on l'a dit les fonctions de covariance (FDC) sont capitales pour que notre méthode se basant GP puisse apprendre et prédire avec précision. \\
+Une de ces fonctions est la \textit{Radial Basis Function (RBF)} appelée également \textit{Squared Exponential (SE)}. On l'écrit :
+\begin{equation}
+ \textsc{cov}\bepar{f(\textbf{x}_p), \, f(\mathbf{x}_q)} = k\bepar{\textbf{x}_p, \textbf{x}_q} = \exp{\bepar{-\frac{1}{2}\left| \textbf{x}_p  - \textbf{x}_q\right|^2}}\label{RBF}
+ \end{equation} 
+Cette fonction permet de construire une covariance sur les sorties ($f_i$) en fonction des entrées. Plus les entrées sont éloignées, plus la covariance sera faible, alors que si les entrées sont très proches, cette covariance sera proche de l'unité.\\
+La RBF en particulier est la fonction de covariance correspondant au model de régression Baysienne dont l'espace des caractéristiques est infinie. On peut également l'obtenir en considérant un nombre infini de combinaisons linéaires de fonction de bases de forme Gaussienne (Rajouter les ref chjap 4 eq 4.13 4.13 et Th section 4.3).\\
+Avant de regarder dans les détails les fonctions de covariance, on peut remarquer que la FDC \eqref{RBF} est indéfiniment dérivables, on s'attendra alors à des tirages de fonctions lisses et continues.\\
+De même, on peut ajuster la vitesse de variabilité des fonctions en normalisant la distance entre deux entrées.
+
+\subsubsection*{Prédiction en utilisant des observations bruitées}
+Dans ce cas, le training comprend des données dont la sortie est bruitée (incertitudes expérimentales, approximations ...). On en revient alors à écrire $y = f(\textbf{x}) + \varepsilon$. Avec la RBF, on peut écrire la covariance comme \eqref{RBF}, et puisque les bruits sont indépendants et aléatoires, les variances s'ajoutent. On a donc 
+\begin{equation*}
+\textsc{cov}\bepar{\textbf{y}_p, \textbf{y}_q} = k\bepar{\textbf{x}_p, \textbf{x}_q} + \sigma_n^2 \delta_{pq}
+\end{equation*}
+En évaluant $k\bepar{\textbf{x}_p, \textbf{x}_q}$ sur l'ensemble du training set, on peut écrire l'équation précédente sous forme matricielle :
+\begin{equation}
+\textsc{cov}(\textbf{y}) = K\bepar{\textbf{X}, \textbf{X}} + \sigma_n^2\textbf{\textit{I}}
+\end{equation}
+Les distributions de $\textbf{y}$ et de $\textbf{f}_*$ la prédiction s'écrit :
+\begin{equation}
+\left[ \begin{array}{c} 
+ \textbf{y} \\ \textbf{f}_* \end{array}
+\right] = \left[\begin{array}{c@{\qquad}c} K\left(\textbf{X}, \textbf{X}\right) + \sigma_n^2\textbf{\textit{I}}& K\bepar{\textbf{X}, \textbf{X}_*}\\ K\bepar{\textbf{X}_*, \textbf{X}} & K\bepar{\textbf{X}_*, \textbf{X}_*}\\  \end{array}\right]
+\end{equation}
+Avec l'indice $_*$ lorque que la quantité le portant se réfère à de la prédiction.\\
+
+On peut alors doner l'équation clé de la prédiction pour un Processus Gaussien, dans un cas de régression : 
+\begin{equation}
+f_*|X,y,X_* \sim \mathcal{N}\bepar{\overline{f}_*, \textsc{cov}\left (f_*\right )}
+\end{equation}
+On simplifie les expressions de $\overline{f}_*$ et de $\textsc{cov}\left (f_*\right )$ en introduisant les notations suivantes
 \newpage
 
 
 
 \subsection{Notions}
 \begin{itemize}
+\item[--] \textbf{Le formalisme Bayesien} : consiste à estimer la probabilité d'un événement sachant la réalisation d'un autre. Dès lors que l'adjectif Bayesien est utilisé, il faut avoir en tête que de tels concepts sont mis en jeu. Le théorème de Bayes est le résultat de référence dans ce genre de problème. Les résultats et propriétés des probabilités conditionnelles sont également mis en jeu.
 \item[--] \textbf{Homoscédasticité} : Une des hypothèses fondamentales de la régression linéaire. \\
 Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
 \item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \ne j$.
