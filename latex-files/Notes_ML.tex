@@ -31,6 +31,9 @@
 \graphicspath{{./pic/}}
 \usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
 
+%%% Commandes utiles définies
+\newcommand{\argmin}{\mathop{\mathrm{argmin}}}
+
 \newcommand{\bepar}[1]{
 	\left( #1 \right)  
 }
@@ -97,8 +100,9 @@ keywordstyle=[0]{\color{red}},
 \newcommand\red{\color{red}}
 
 %%%%%%%% Cigles
-\newcommand{\rap}{par rapport }
+\newcommand{\rap}{par rapport}
 \newcommand{\cad}{c'est-à-dire}
+\newcommand{\vav}{vis-à-vis}
 
 %%%%%%%% Autres
 
@@ -198,7 +202,7 @@ f(\textbf{x}) = \textbf{x}^T\textbf{w} \text{\hspace{1cm}(le biais est inclus)}
 \end{equation}
 La valeur observée, elle, s'écrit 
 \begin{equation}
-y = f(\textbf{x}) + \varepsilon
+y = f(\textbf{x}) + \varepsilon \label{y_et_f}
 \end{equation}
 On suppose que $y$ et $f(\textbf{x})$ diffèrent de $\varepsilon$, un bruit suivant une distribution Gaussienne (DG) indépendamment de $\textbf{x}$ ou $y$, de moyenne nulle et de variance $\sigma^2_n$. On écrit alors 
 \begin{equation}
@@ -218,13 +222,13 @@ L \sim \mathcal{N}\bepar{\textbf{\textit{X}}^T\textbf{w}, \, \sigma^2_n \textbf{
 \end{equation}
 Dans la théorie Baysienne, il faut spécifier une première estimation pour $\textbf{w}$. On suppose qu'il suit une DG : \begin{equation}
 \textbf{w} \sim \mathcal{N}\bepar{0,\, \Sigma_p} \propto \exp{\bepar{-\frac{1}{2} \textbf{w}^T \Sigma^{-1}_p\textbf{w}}}
-\end{equation}.\\
-L'idée ici est d'utiliser le théorème de Bayes pouvant s'écrire :
+\end{equation}\\
+L'idée de cette théorie est d'utiliser le théorème de Bayes pouvant s'écrire :
 \begin{equation}
 \text{posterior} = \frac{\text{likelihood}\times\text{prior}}{\text{marginal likelihood}} \label{bayesTH}
 \end{equation}
 Ici on cherche à estimer les bonnes valeurs de \textbf{w}. La probabilité notée \textsc{posterior} fait allusion à $p\bepar{\textbf{w}|\textbf{\textit{X}}, \, \textbf{y}}$. \\
-On définit également la fonction de probabilité conditionnelle \textit{marginal likelihood} qui est la somme de $L$ sur tous les poids possibles :
+On définit également la fonction de probabilité conditionnelle \textit{marginal likelihood} qui est la somme de $L$ sur tous les poids possibles (on reviendra sur cette grandeur):
 \begin{equation}
 p\bepar{\textbf{y}|\textbf{\textit{X}}} = \int p\bepar{\textbf{y} | \textbf{\textit{X}},\, \textbf{w}} p\left( \textbf{w}\right ) d\textbf{w} 
 \end{equation}
@@ -280,8 +284,7 @@ On reviendra sur ce \textit{kernel trick}.\\
 \mathbb{E}[f(\textbf{x})f(\textbf{x}')] & = \phi(\textbf{x})^T \mathbb{E}[\textbf{w}\textbf{w}^T]\phi(\textbf{x}') = \phi(\textbf{x})^T \Sigma_p \, \phi(\textbf{x}')
 \end{align*}
 On retrouve alors l'\textit{inner product} $\phi(\textbf{x})^T \Sigma_p \, \phi(\textbf{x}')$.\\
-Comme on l'a dit les fonctions de covariance (FDC) sont capitales pour que notre méthode se basant GP puisse apprendre et prédire avec précision. \\
-Une de ces fonctions est la \textit{Radial Basis Function (RBF)} appelée également \textit{Squared Exponential (SE)}. On l'écrit :
+Comme on l'a dit les fonctions de covariance (FDC) sont capitales pour effectuer des prédictions avec les GP. Une de ces fonctions est la \textit{Radial Basis Function (RBF)} appelée également \textit{Squared Exponential (SE)}. On l'écrit :
 \begin{equation}
  \textsc{cov}\bepar{f(\textbf{x}_p), \, f(\mathbf{x}_q)} = k\bepar{\textbf{x}_p, \textbf{x}_q} = \exp{\bepar{-\frac{1}{2}\left| \textbf{x}_p  - \textbf{x}_q\right|^2}}\label{RBF}
  \end{equation} 
@@ -297,21 +300,51 @@ Dans ce cas, le training comprend des données dont la sortie est bruitée (ince
 \end{equation*}
 En évaluant $k\bepar{\textbf{x}_p, \textbf{x}_q}$ sur l'ensemble du training set, on peut écrire l'équation précédente sous forme matricielle :
 \begin{equation}
-\textsc{cov}(\textbf{y}) = K\bepar{\textbf{X}, \textbf{X}} + \sigma_n^2\textbf{\textit{I}}
+\textsc{cov}(\textbf{y}) = K\bepar{\textbf{\textit{X}}, \textbf{\textit{X}}} + \sigma_n^2\textbf{\textit{I}}
 \end{equation}
 Les distributions de $\textbf{y}$ et de $\textbf{f}_*$ la prédiction s'écrit :
 \begin{equation}
 \left[ \begin{array}{c} 
  \textbf{y} \\ \textbf{f}_* \end{array}
-\right] = \left[\begin{array}{c@{\qquad}c} K\left(\textbf{X}, \textbf{X}\right) + \sigma_n^2\textbf{\textit{I}}& K\bepar{\textbf{X}, \textbf{X}_*}\\ K\bepar{\textbf{X}_*, \textbf{X}} & K\bepar{\textbf{X}_*, \textbf{X}_*}\\  \end{array}\right]
+\right] = \left[\begin{array}{c@{\qquad}c} K\left(\textbf{\textit{X}}, \textbf{\textit{X}}\right) + \sigma_n^2\textbf{\textit{I}}& K\bepar{\textbf{\textit{X}}, \textbf{\textit{X}}_*}\\ K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}} & K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}_*}\\  \end{array}\right]
 \end{equation}
 Avec l'indice $_*$ lorque que la quantité le portant se réfère à de la prédiction.\\
 
-On peut alors doner l'équation clé de la prédiction pour un Processus Gaussien, dans un cas de régression : 
+\noindent On peut alors donner l'équation clé de la prédiction pour un Processus Gaussien, dans un cas de régression : 
 \begin{equation}
-f_*|X,y,X_* \sim \mathcal{N}\bepar{\overline{f}_*, \textsc{cov}\left (f_*\right )}
+\colorboxed{navy}{~ f_*|X,y,X_* \sim \mathcal{N}\bepar{\overline{f}_*, \textsc{cov}\left (f_*\right )}~}
 \end{equation}
-On simplifie les expressions de $\overline{f}_*$ et de $\textsc{cov}\left (f_*\right )$ en introduisant les notations suivantes
+On simplifie les expressions de $\overline{f}_*$ et de $\textsc{cov}\left (f_*\right )$ en introduisant les notations suivantes : $\textbf{k}_* = \textbf{k}(\textbf{x}_*)$ le vecteur de covariance entre un élément du test set ($\textbf{x}_*$) et les $n$ éléments du training. Avec une forme de kernel donnée (RBF ou autre), on fait correspondre la sortie $f_*$ du nouvel élément $\textbf{x}_*$ à la sortie $y_p$ dont l'antécédent $\textbf{x}_p$ est le plus proche de $\textbf{x}_*$ (c'est l'inverse de la covariance qui apparait dans nos calculs). Finalement on écrit :
+\begin{align}
+\overline{f}_* &= \textbf{k}_*^T\;\bepar{K + \sigma_n^2 \textit{\textbf{I}}\,}^{-1} \textbf{y} \label{mean_pred} \\
+\mathbb{V}[f_*] &= k\bepar{\textbf{x}_*, \textbf{x}_*} - \textbf{k}_*^T \bepar{K + \sigma_n^2 \textit{\textbf{I}}\,}^{-1} \textbf{k}_*  \label{var_pred}
+\end{align}
+La moyenne $\overline{f}_*$ peut être vue comme une combinaisons linéaire des observables \textbf{y}. En effet, on peut écrire  l'équation \eqref{mean_pred} en considérant $n$ produits scalaires chacun centré autour d'un point du training set :
+\begin{equation}
+\overline{f}(x_*) = \sum^n_{i=1} \alpha_i k(x_i, x_*)
+\end{equation}
+$\alpha_i$ étant la i$^{\text{ème}}$ composante du vecteur $\displaystyle \bepar{K+\sigma_n^2\textbf{\textit{I}}\,}^{-1}\textbf{y}$. \\
+Bien qu'on ait dit que le nombre de fonctions dans la base pouvait être infini, la prédiction n'ayant besoin que des $n$ points du training et d'une entrée inédite, il est logique de voir qu'elle ne prend en compte seulement $n+1$ fonctions. C'est dans ce sens que la GP est générale.\\
+
+\noindent On note également que la covariance ne dépend que des \textit{entrées} et non des sorties (puisque le kernel permet de déduire la cible la plus probable par rapport à la proximité de l'entrée testée \vav $ $ des entrées fournie lors training). L'équation \eqref{var_pred} est une différence entre deux termes : le premier $k(\textbf{x}_*, \textbf{x}_*)$ qui est vu comme la covariance a priori, et le deuxième $\textbf{k}_*^T \bepar{K + \sigma_n^2 \textit{\textbf{I}}\,}^{-1} \textbf{k}_* $ qui représente les informations que les observations nous donnent sur la fonction. Enfin puisque $f_* = \textbf{y}_* + \sigma_n^2$ (voir Eq. \eqref{y_et_f}), on peut finalement écrire :
+\begin{equation}
+\colorboxed{brick}{\, \textbf{y}_* \sim \mathcal{N}\bepar{\overline{f}_*, k\bepar{\textbf{x}_*, \textbf{x}_*} + \sigma_n^2 \textbf{\textit{I}}- \textbf{k}_*^T \bepar{K + \sigma_n^2 \textit{\textbf{I}}\,}^{-1} \textbf{k}_* } \,} \label{distrib_y_*}
+ \end{equation} 
+ Dans l'article \citep{parish2016paradigm}, la covariance prior symbolisée par $k\bepar{\textbf{x}_*, \textbf{x}_*}$ est supposée égale à 1 d'où la formule 26 de cet article.
+Dans le cas ou l'on voudrait tester plus qu'une seule entrée, on pourrait considérer un kernel sur $\textbf{X}_*$. Dans ce cas, $k_*$ serait remplacé par $K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}_*}$. \\
+
+\noindent Jusqu'à présent, nous avons considéré la distribution des fonctions prédites, au travers de ses statistiques. Dans la pratique, il faut faire un choix et optimiser le tirage dans cette distribution.\\
+On introduit alors la fonction de coût $\mathcal{L}\bepar{y_{\text{true}}, y_{\text{guess}}}$ que l'on va chercher à minimiser. Cependant, non ne connaissons pas a priori la valeur de $y_{\text{true}}$. \\
+Il faut alors minimiser la fonction de risque attendue ou \textit{exepected risk} en moyennant la distribution postérieure $p\bepar{y_*|\textbf{x}_*, \, \mathcal{D}}$, on calcule alors :
+\begin{equation}
+\tilde{R}_\mathcal{L} \bepar{y_{\text{guess}}| \textbf{x}_*} = \int\, \mathcal{L}\bepar{y_*, y_{\text{guess}}} p\bepar{y_*|\textbf{x}_*, \, \mathcal{D}}\; dy_* \label{risk_func}
+\end{equation}
+De plus la meilleure solution que l'on pourrait trouver $y_{\text{guess}}$ est le minimum de \eqref{risk_func} :
+\begin{equation}
+y_{\text{optimal}} | \textbf{x}_* = \underset{y_{\text{guess}}}{\argmin} \tilde{R}_\mathcal{L}\bepar{y_{\text{guess}}|\textbf{x}_*}
+\end{equation}
+On peut alors choisir la forme de la fonction de coût
+
 \newpage
 
 
@@ -320,8 +353,8 @@ On simplifie les expressions de $\overline{f}_*$ et de $\textsc{cov}\left (f_*\r
 \begin{itemize}
 \item[--] \textbf{Le formalisme Bayesien} : consiste à estimer la probabilité d'un événement sachant la réalisation d'un autre. Dès lors que l'adjectif Bayesien est utilisé, il faut avoir en tête que de tels concepts sont mis en jeu. Le théorème de Bayes est le résultat de référence dans ce genre de problème. Les résultats et propriétés des probabilités conditionnelles sont également mis en jeu.
 \item[--] \textbf{Homoscédasticité} : Une des hypothèses fondamentales de la régression linéaire. \\
-Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
-\item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \ne j$.
+Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chaque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
+\item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \neq j$.
 \end{itemize}
 
 \section{Notes ML : \cite{muller2016introduction}}
