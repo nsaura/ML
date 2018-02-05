@@ -14,7 +14,7 @@ from scipy import optimize as op
 import Class_Temp_Cst as ctc  #Pour utiliser les fonctions de classs_temp
 import class_functions_aux as cfa #Pour les tracés post-process
 
-#run script_data_generation.py -T_inf_lst 5 -cptmax 150 -N 71 -g_sup 1e-2 -cov_mod "full"
+#run script_data_generation.py -T_inf_lst 30 -cptmax 150 -N 71 -g_sup 1e-4 -cov_mod "full"
 ctc = reload(ctc)
 cfa = reload(cfa)
 
@@ -42,4 +42,6 @@ cfa.subplot_cst(temp, method="opti", comp=False, save=True)
 
 # On compare les sigma de la covariance a posteri pour les deux méthodes, avec les sigmas attendus.
 cfa.sigma_plot_cst(temp, save=True)
+
+plt.close("all")
 

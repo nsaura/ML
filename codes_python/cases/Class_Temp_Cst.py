@@ -28,7 +28,7 @@ class Temperature_cst() :
         """
         This object has been made to solve optimization problem.
         """
-        np.random.seed(1000) ; #plt.ion()
+#        np.random.seed(1000) ; #plt.ion()
         
         if parser.cov_mod not in ['full', 'diag'] :
             raise AttributeError("\x1b[7;1;255mcov_mod must be either diag or full\x1b[0m")
@@ -928,13 +928,21 @@ class Temperature_cst() :
             # On utilise une fonction codée plus haut : pd_write_csv 
             # On écrit la covariance a posteriori dans un fichier pour l'utiliser dans le ML
             write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf))
-            add_title = 0
-            while osp.exists(write_cov) :
-                add_title =+ 1
-                write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + osp.splitext(write_cov)[1]
+            if osp.exists(write_cov) :
+                add_title = 1
+                if osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv") == False :
+                    write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv"
+
+                # Si on rentre dans le prochaine boucle, le fichier est de la forme T_inf_nombre, reste à savoir à combien il en est
+                while osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv") :
+                    add_title += 1
+                write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv"
+                
+                print write_cov
             
             self.pd_write_csv(write_cov, pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
             print("%s written" %(write_cov))
+
             beta_var = []
             sigma_post = []
             
