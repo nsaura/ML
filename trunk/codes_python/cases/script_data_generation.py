@@ -31,7 +31,7 @@ temp.obs_pri_model()
 temp.get_prior_statistics()
 
 # Optimization de la fonction de coût J définie équation (7) par deux méthodes :
-temp.adjoint_bfgs(inter_plot=False, verbose=True) # Optimization "maison";
+temp.adjoint_bfgs(inter_plot=False, verbose=False) # Optimization "maison";
 temp.optimization()                 # Optimization de Scipy qui sert de référence.
 
 # Tracés:
