@@ -792,7 +792,7 @@ class Temperature_cst() :
                         print("beta_n = \n  {} ".format(beta_n))
                         print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
                                                            err_beta, err_hess) )
-
+                        print ("Hess cpt {}:\n{}".format(cpt, H_n_inv))
                 #################
                 ##-- Routine --##
                 #################
@@ -1125,7 +1125,6 @@ class Temperature_cst() :
         
         if (((alpha <= 1e-7 and cpt_ext > 50)) and g_sup < 5000) and self.warn == "go on":
             print("\x1b[1;37;44mCompteur = {}\alpha from {} to 1.\x1b[0m".format(cpt_ext, alpha))
-            time.sleep(0.3)
             alpha = 1.
         
         else :
