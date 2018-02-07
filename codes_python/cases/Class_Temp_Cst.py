@@ -1124,9 +1124,12 @@ class Temperature_cst() :
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
         if (((alpha <= 1e-7 and cpt_ext > 50)) and g_sup < 5000) and self.warn == "go on":
-            print("\x1b[1;37;44mCompteur = {}\alpha from {} to 1.\x1b[0m".format(cpt_ext, alpha))
-            alpha = 1.
-        
+            temp = alpha
+            if alpha <= 1e-10 :
+                alpha = 1e-5 # Ceci a été rajouté pour éviter les explosions d'une itérations à l'autre quitte à laisser le calcul être plus long
+            else : 
+                alpha = 1.
+            print("\x1b[1;37;44mCompteur = {} Alpha from {} to {}\x1b[0m".format(cpt_ext, temp, alpha))
         else :
             print ("alpha_l = {}\t alpha hi = {}".format(alpha_lo, alpha_hi))
             bool_curv = curv(alpha)
