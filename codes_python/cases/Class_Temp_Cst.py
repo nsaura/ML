@@ -1106,7 +1106,7 @@ class Temperature_cst() :
         curv  = lambda alpha : (np.linalg.norm(g_J(xk + alpha*dk))) <=\
                 (0.9*np.linalg.norm(djk,2))  
         
-        cpt, cptmax = 0, 15
+        cpt, cptmax = 0, 10
         
         # On conmmence avec le backline classique qui consiste à chercher la alpha vérifiant condition d'Armijo
         # Algo inspiré (si ce n'est calqué) de l'algo 3.1 de Nocedal and Wright
@@ -1116,9 +1116,9 @@ class Temperature_cst() :
             cpt     +=  1
             print (alpha,  armi(alpha))
             alpha_hi =  alpha
-            if alpha <= 1.e-14 :
-                self.warn = "out"
-                break
+#            if alpha <= 1.e-14 :
+#                self.warn = "out"
+#                break
                 # inutile de continuer dans ces cas là
         print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
@@ -1126,7 +1126,7 @@ class Temperature_cst() :
         if (((alpha <= 1e-7 and cpt_ext > 50)) and g_sup < 5000) and self.warn == "go on":
             temp = alpha
             if alpha <= 1e-10 :
-                alpha = 1e-5 # Ceci a été rajouté pour éviter les explosions d'une itérations à l'autre quitte à laisser le calcul être plus long
+                alpha = 1e-3 # Ceci a été rajouté pour éviter les explosions d'une itérations à l'autre quitte à laisser le calcul être plus long
             else : 
                 alpha = 1.
             print("\x1b[1;37;44mCompteur = {} Alpha from {} to {}\x1b[0m".format(cpt_ext, temp, alpha))
@@ -1157,9 +1157,9 @@ class Temperature_cst() :
                 # Car en général dans ce cas la alpha environ 1e-20
                 # Mettre alpha = 1 aurait été trop radical (mon avis)
 
-        if self.warn == "out" and armi(alpha) == False :
-            alpha = 1e-8 ## Au pire on recentrera avec l'itération suivante mais on veut éviter l'explosion
-            print warnings.warn("Alpha = 1e-8 previously under 1e-14 ")
+#        if self.warn == "out" and armi(alpha) == False :
+#            alpha = 1e-8 ## Au pire on recentrera avec l'itération suivante mais on veut éviter l'explosion
+#            print warnings.warn("Alpha = 1e-8 previously under 1e-14 ")
           
         if armi(alpha) == True and curv(alpha) == True :
             print("\x1b[1;37;43mArmijo = True \t Curvature = True \x1b[0m") 
