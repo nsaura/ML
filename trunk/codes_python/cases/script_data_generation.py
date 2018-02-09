@@ -14,6 +14,8 @@ from scipy import optimize as op
 import Class_Temp_Cst as ctc  #Pour utiliser les fonctions de classs_temp
 import class_functions_aux as cfa #Pour les tracés post-process
 
+plt.ion()
+
 #run script_data_generation.py -T_inf_lst 30 -cptmax 150 -N 71 -g_sup 1e-4 -cov_mod "full"
 ctc = reload(ctc)
 cfa = reload(cfa)
