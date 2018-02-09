@@ -194,7 +194,45 @@ def test(T, N_sample, T_inf) :
     plt.show()
     
     return beta, sigma
+
+def True_Temp(T, T_inf, body) :
+    """
+    T_inf doit avoir être un type lambda. Boucle conditionnelle qui check ça
+    """
+    T_inf_map = np.asarray(map(T_inf, T.line_z))
+    T_n_obs =  list(map(lambda x : -4*T_inf_map[len(T.line_z)/2]*x*(x-1), T.line_z) )
+    T_nNext_obs = T_n_obs
+
+    B_n_obs     =   np.zeros((T.N_discr-2, 1))
+    T_n_obs_tmp =   np.zeros((T.N_discr-2, 1))
+    tol ,err_obs, compteur = 1e-4, 1.0, 0 
     
+    while (np.abs(err_obs) > tol) and (compteur < 800) :
+        if compteur > 0 :
+            T_n_obs = T_nNext_obs
+        compteur += 1
+        T_n_obs_tmp = np.dot(T.A2, T_n_obs)
+
+        for i in range(T.N_discr-2) :
+            B_n_obs[i] = T_n_obs_tmp[i] + T.dt*  (
+            ( 10**(-4) * ( 1.+5.*np.sin(3.*T_n_obs[i]*np.pi/200.) + 
+            np.exp(0.02*T_n_obs[i]) + T.lst_gauss[0][i] ) ) *(T_inf_map[i]**4 - T_n_obs[i]**4)
+             + T.h * (T_inf_map[i]-T_n_obs[i])      ) 
+
+        T_nNext_obs = np.dot(np.linalg.inv(T.A1), B_n_obs)
+        err_obs = np.linalg.norm(T_nNext_obs - T_n_obs, 2)
+    
+    print ("Calculus with {} completed. Convergence status :".format(body))
+    print ("Err_obs = {} ".format(err_obs))    
+    print ("Iterations = {} ".format(compteur))
+    
+    plt.figure("T_inf : {}".format(body)) 
+    plt.plot(T.line_z, T_nNext_obs, label="T_inf={}".format(body))
+    plt.legend()
+    
+    return T_nNext_obs
+    
+def 
     
 def test_2(T, N_sample, T_inf) :
     X_train, Y_train, var = training_set(T, N_sample)
