@@ -119,6 +119,10 @@ class Temperature_cst() :
         if osp.exists(osp.abspath("./data/post_cov")) == False :
             os.mkdir(osp.abspath("./data/post_cov"))
         
+        if osp.exists(osp.abspath("./data/matrices")) == False :
+            os.mkdir(osp.abspath("./data/matrices"))
+        self.path_fields = osp.abspath("./data/matrices")        
+                
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
         
@@ -242,6 +246,24 @@ class Temperature_cst() :
                 (sigma * np.random.randn(length) + mu).mean(), 
                 (sigma * np.random.randn(length) + mu).std()
                ) 
+##---------------------------------------------------
+    def write_fields(self) :
+        for t in self.T_inf_lst :
+            sT_inf = "T_inf_%d" %(t)
+            if self.bool_method["opti_scipy_%s" %(sT_inf)] :
+                for f, s in zip([self.betamap, self.cholesky],["beta", "cholesky"]) :
+                    path_tosave = "opti_scipy_%s_%s_N%d_cov%s.csv" %(s, sT_inf, self.N_discr-2, self.cov_mod)
+                    path_tosave = osp.join(self.path_fields, path_tosave)
+                    self.pd_write_csv(path_tosave, f[sT_inf])
+                    
+            
+            if self.bool_method["adj_bfgs_%s" %(sT_inf)] :
+                for f, s in zip([self.bfgs_adj_bmap, self.bfgs_adj_cholesky],["beta", "cholesky"]) :
+                    path_tosave = "adj_bfgs_%s_%s_N%d_cov%s.csv" %(s, sT_inf, self.N_discr-2, self.cov_mod)
+                    path_tosave = osp.join(self.path_fields, path_tosave)
+                    self.pd_write_csv(path_tosave, f[sT_inf])
+
+        print("Fields written see {}".format(self.path_fields))
 ##---------------------------------------------------   
     def h_beta(self, beta, T_inf, verbose=False) :
 #        T_n = list(map(lambda x : -4*T_inf*x*(x-1), self.line_z))
@@ -649,7 +671,7 @@ class Temperature_cst() :
             
         self.betamap    =   betamap
         self.hess       =   hess
-        self.cholseky   =   cholesky
+        self.cholesky   =   cholesky
         self.beta_final =   beta_final
         self.mins_dict  =   mins_dict
         self.maxs_dict  =   maxs_dict
@@ -1123,10 +1145,10 @@ class Temperature_cst() :
         print("alpha = {}\t cpt = {}".format(alpha, cpt))
         print("Armijo = {}\t Curvature = {}".format(armi(alpha), curv(alpha)))
         
-        if (((alpha <= 1e-7 and cpt_ext > 50)) and g_sup < 5000) and self.warn == "go on":
+        if (((alpha <= 1e-7 and cpt_ext > 80)) and g_sup < 5000) and self.warn == "go on":
             temp = alpha
             if alpha <= 1e-10 :
-                alpha = 1e-3 # Ceci a été rajouté pour éviter les explosions d'une itérations à l'autre quitte à laisser le calcul être plus long
+                alpha = 1e-4 # Ceci a été rajouté pour éviter les explosions d'une itérations à l'autre quitte à laisser le calcul être plus long
             else : 
                 alpha = 1.
             print("\x1b[1;37;44mCompteur = {} Alpha from {} to {}\x1b[0m".format(cpt_ext, temp, alpha))
