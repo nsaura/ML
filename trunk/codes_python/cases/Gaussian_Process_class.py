@@ -17,34 +17,6 @@ import numdifftools as nd
 
 import time
 
-#class GaussianProcess(ctc.Temperature_cst) : ## Héritage
-#    def __init__(self, parser):
-#        ctc.Temperature_cst.__init__(self, parser)
-#        print self.parser
-
-#if __name__ == "__main__" :
-#    import class_functions_aux as cfa
-#    parser = cfa.parser()
-#    g = GaussianProcess(parser)
-    
-#def get_variances(T):
-#    variances = dict()
-#    for t in T.T_inf_lst :
-#        sT_inf = "T_inf_" + str(t)  # Clé pour les dictionnaires de l'objet T
-#        filename = "adj_post_cov_full_%s.csv" %(sT_inf)
-#        filepath = osp.join(osp.join(T.parser.datapath, "post_cov"), filename)
-#        print filepath
-#        
-#        # On prend la variance à partir de la covariance
-#        variances[sT_inf] = np.diag(T.pd_read_csv(filepath)) 
-#    
-#    return variances
-
-def cov_function(x1, x2, h) :
-    phi = np.exp(-np.linalg.norm(x1-x2, 2)**2/h**2)
-    
-    return phi
-
 def training_set(T, N_sample):
     """
     Dans cette fonction on construit le tableau X_train en construisant un tableau dont la première colonne comprendra
@@ -65,18 +37,32 @@ def training_set(T, N_sample):
     Y_train
     """
     # Initialisation des tableaux
-    X_train = np.zeros((1, 2))  # Pour l'instant on essaye ça
+    X_train = np.zeros((1, 2))      # Pour l'instant on essaye ça
     Y_train = np.zeros((1, 1))      # Pour l'instant on essaye ça
     var = np.zeros((N_sample*T.N_discr-2, N_sample*T.N_discr-2))
     
     variances = []
+    bmap_fields = dict()
+    chol_fields = dict()
     
     for t in T.T_inf_lst :
         sT_inf = "T_inf_" + str(t)  # Clé pour les dictionnaires de l'objet T
-                
+        
+        bmap_ = "adj_bfgs_beta_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+        bmap_ = osp.join("./data/matrices",bmap_)
+        
+        chol_ = "adj_bfgs_cholesky_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+        chol_ = osp.join("./data/matrices",chol_)
+        
+        if osp.exists(bmap_) == False or osp.exists(chol_) == False :
+            sys.exit("{} or {} or both don't exist. Check".format(bmap_, chol_))
+        
+        bmap_fields[sT_inf] = T.pd_read_csv(bmap_)
+        chol_fields[sT_inf] = T.pd_read_csv(chol_)
+
         # On construit la distribution de beta autout de betamap
         # On n'a pas encore construit la BONNE COVARIANCE, juste pour le test
-        distrib_bmap = lambda s : T.bfgs_adj_bmap[sT_inf] + np.dot(T.bfgs_adj_cholesky[sT_inf], s)
+        distrib_bmap = lambda s : bmap_fields[sT_inf] + np.dot(chol_fields[sT_inf], s)
         
         # Calcule de la variance autour de beta map 
         for i in range(N_sample) :   
@@ -105,7 +91,7 @@ def maximize_LML(T, N_sample): #Rajouter variances
     X_train, Y_train, var = training_set(T, N_sample)
     var_mat = var*np.eye(N)
     
-    h_curr = 1.5
+    h_curr = 10
 
     ### On définit les lambda
     phi = lambda h : np.asarray([[np.exp(- np.linalg.norm(X_train[i] - X_train[j], 2)**2/h**2)\
@@ -327,6 +313,3 @@ def solver_ML(T, N_sample, T_inf, body):
     
     return T_true, T_nNext
         
-    
-
-
