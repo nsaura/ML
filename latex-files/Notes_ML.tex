@@ -250,7 +250,7 @@ Dans le membre du milieu de \eqref{predict}, on distingue deux termes : le premi
 Ainsi, ce sont bien les poids définies lors de la phase de training qui seront utilisés.\\
 L'équation \eqref{predict_DG} nous renseigne quant à elle, sur la nature de la distribution prédite, elle est Gaussienne.
 
-\subsubsection*{Projection dans l'espace des caractéristiques}
+\subsubsection*{Projection dans l'espace des fonctions}
 Pour augmenter les possibilités du modèle, on peut projeter les entrées dans un espace de plus grande dimension, appelée \textit{feature space}. On peut prendre l'exemple d'un scalaire $x$ projeté dans l'espace des puissances $\left( 1, x, x^2, x^3,...\,  \right )$.\\
 On s'assure que le problème projeté reste bien linéaire tant que les projections sont indépendantes de $\textbf{w}$.\\ 
 On substitue alors à $x$ : $\phi(x)$, ce qui nous permet d'écrire entre autres 
@@ -302,24 +302,24 @@ En évaluant $k\bepar{\textbf{x}_p, \textbf{x}_q}$ sur l'ensemble du training se
 \begin{equation}
 \textsc{cov}(\textbf{y}) = K\bepar{\textbf{\textit{X}}, \textbf{\textit{X}}} + \sigma_n^2\textbf{\textit{I}}
 \end{equation}
-Les distributions de $\textbf{y}$ et de $\textbf{f}_*$ la prédiction s'écrit :
+Les distributions de $\textbf{y}$ et de $\textbf{f}_*$ la prédiction, s'écrit :
 \begin{equation}
 \left[ \begin{array}{c} 
  \textbf{y} \\ \textbf{f}_* \end{array}
 \right] = \left[\begin{array}{c@{\qquad}c} K\left(\textbf{\textit{X}}, \textbf{\textit{X}}\right) + \sigma_n^2\textbf{\textit{I}}& K\bepar{\textbf{\textit{X}}, \textbf{\textit{X}}_*}\\ K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}} & K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}_*}\\  \end{array}\right]
 \end{equation}
-Avec l'indice $_*$ lorque que la quantité le portant se réfère à de la prédiction.\\
+Avec l'indice $_*$ lorsque la quantité le portant se réfère à de la prédiction.\\
 
 \noindent On peut alors donner l'équation clé de la prédiction pour un Processus Gaussien, dans un cas de régression : 
 \begin{equation}
-\colorboxed{navy}{~ f_*|X,y,X_* \sim \mathcal{N}\bepar{\overline{f}_*, \textsc{cov}\left (f_*\right )}~}
+\colorboxed{navy}{~ f_*|\,x_*,\textbf{y}, \textbf{\textit{X}} \sim \mathcal{N}\bepar{\overline{f}_*, \textsc{cov}\left (f_*\right )}~}
 \end{equation}
 On simplifie les expressions de $\overline{f}_*$ et de $\textsc{cov}\left (f_*\right )$ en introduisant les notations suivantes : $\textbf{k}_* = \textbf{k}(\textbf{x}_*)$ le vecteur de covariance entre un élément du test set ($\textbf{x}_*$) et les $n$ éléments du training. Avec une forme de kernel donnée (RBF ou autre), on fait correspondre la sortie $f_*$ du nouvel élément $\textbf{x}_*$ à la sortie $y_p$ dont l'antécédent $\textbf{x}_p$ est le plus proche de $\textbf{x}_*$ (c'est l'inverse de la covariance qui apparait dans nos calculs). Finalement on écrit :
 \begin{align}
 \overline{f}_* &= \textbf{k}_*^T\;\bepar{K + \sigma_n^2 \textit{\textbf{I}}\,}^{-1} \textbf{y} \label{mean_pred} \\
 \mathbb{V}[f_*] &= k\bepar{\textbf{x}_*, \textbf{x}_*} - \textbf{k}_*^T \bepar{K + \sigma_n^2 \textit{\textbf{I}}\,}^{-1} \textbf{k}_*  \label{var_pred}
 \end{align}
-La moyenne $\overline{f}_*$ peut être vue comme une combinaisons linéaire des observables \textbf{y}. En effet, on peut écrire  l'équation \eqref{mean_pred} en considérant $n$ produits scalaires chacun centré autour d'un point du training set :
+La moyenne $\overline{f}_*$ peut être vue comme une combinaison linéaire des observables \textbf{y}. En effet, on peut écrire  l'équation \eqref{mean_pred} en considérant $n$ produits scalaires chacun centré autour d'un point du training set :
 \begin{equation}
 \overline{f}(x_*) = \sum^n_{i=1} \alpha_i k(x_i, x_*)
 \end{equation}
@@ -334,7 +334,7 @@ Bien qu'on ait dit que le nombre de fonctions dans la base pouvait être infini,
 Dans le cas ou l'on voudrait tester plus qu'une seule entrée, on pourrait considérer un kernel sur $\textbf{X}_*$. Dans ce cas, $k_*$ serait remplacé par $K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}_*}$. \\
 
 \noindent Jusqu'à présent, nous avons considéré la distribution des fonctions prédites, au travers de ses statistiques. Dans la pratique, il faut faire un choix et optimiser le tirage dans cette distribution.\\
-On introduit alors la fonction de coût $\mathcal{L}\bepar{y_{\text{true}}, y_{\text{guess}}}$ que l'on va chercher à minimiser. Cependant, non ne connaissons pas a priori la valeur de $y_{\text{true}}$. \\
+On introduit alors la fonction de coût $\mathcal{L}\bepar{y_{\text{true}}, y_{\text{guess}}}$ que l'on va chercher à minimiser. Cependant, non nous connaissons pas a priori la valeur de $y_{\text{true}}$. \\
 Il faut alors minimiser la fonction de risque attendue ou \textit{exepected risk} en moyennant la distribution postérieure $p\bepar{y_*|\textbf{x}_*, \, \mathcal{D}}$, on calcule alors :
 \begin{equation}
 \tilde{R}_\mathcal{L} \bepar{y_{\text{guess}}| \textbf{x}_*} = \int\, \mathcal{L}\bepar{y_*, y_{\text{guess}}} p\bepar{y_*|\textbf{x}_*, \, \mathcal{D}}\; dy_* \label{risk_func}
@@ -343,11 +343,24 @@ De plus la meilleure solution que l'on pourrait trouver $y_{\text{guess}}$ est l
 \begin{equation}
 y_{\text{optimal}} | \textbf{x}_* = \underset{y_{\text{guess}}}{\argmin} \tilde{R}_\mathcal{L}\bepar{y_{\text{guess}}|\textbf{x}_*}
 \end{equation}
-On peut alors choisir la forme de la fonction de coût
+On peut alors choisir la forme de la fonction de coût.
 
 \newpage
 
-
+\subsubsection*{Retour sur la LML (Log Marginal Likelihood)}
+\noindent Dans l'espace des fonctions, la \textit{likelihood} s'écrit $\displaystyle p\bepar{\textbf{y} | \textbf{f},\textbf{\textit{X}}}$. Cette fonction traduit la relation entre le modèle et les données observées. \\
+On marginalise cette fonction par $\textbf{f}$ au travers la probabilité prior $p\bepar{\textbf{f}\,|\textbf{\textit{X}}}$. La probabilité résultant de cette marginalisation est appelée \textit{marginal likelihood}
+\begin{equation}
+p\bepar{\textbf{y}, \textbf{\textit{X}}} = \int \, p\bepar{\textbf{y} | \textbf{f},\textbf{\textit{X}}} p\bepar{\textbf{f}\,|\textbf{\textit{X}}} d\textbf{f}
+\end{equation}
+En marginalisant par rapport à $\textbf{f}$, on veut déduire la probabilité conjointe entre $\textbf{\textit{X}}$ et $\textbf{y}$ \footnote{Pour plus de détails sur le processus de marginalisation : \url{http://www.montefiore.ulg.ac.be/~lwh/Probas/notes-probas-avril-2013-v4.pdf}}.\\
+On peut alors optimiser le lien entre $\textbf{y}$ et $\textbf{\textit{X}}$ au travers la fonction de covariance, en maximisant la \textit{marginal likelihood}, ou en pratique son logarithme.\\
+On doit alors maximiser l'expression suivant :
+\begin{equation}
+p\bepar{\textbf{y} | \textbf{\textit{X}}} = -0.5 \bepar{~ \underset{\text{Quadratique}}{\underbrace{\textbf{y}^T\bepar{K + \sigma_n^2\textit{\textbf{I}\,}}^{-1}\, \textbf{y}}} + \underset{\text{Déterminant}}{\underbrace{\log \left | K + \sigma_n^2\textbf{\textit{I}}\right |}} + \underset{\text{Terme en }\log{2\pi}}{\underbrace{N \log\bepar{2\pi}}}~ }
+\end{equation}  
+La fonction de covariance gère totalement la liaison entre $\textbf{y}$ et $\textbf{\textit{X}}$
+\newpage
 
 \subsection{Notions}
 \begin{itemize}
