@@ -74,8 +74,6 @@ if verbose == True :
 print("PCA components:\n {}".format(pca.components_))
 
 ## Heat map
-
-
 plt.matshow(pca.components_, cmap='viridis')
 plt.yticks([0,1], ['First component','Second component'])
 plt.colorbar()
