@@ -61,7 +61,6 @@ def training_set(T, N_sample):
         chol_fields[sT_inf] = T.pd_read_csv(chol_)
 
         # On construit la distribution de beta autout de betamap
-        # On n'a pas encore construit la BONNE COVARIANCE, juste pour le test
         distrib_bmap = lambda s : bmap_fields[sT_inf] + np.dot(chol_fields[sT_inf], s)
         
         # Calcule de la variance autour de beta map 
@@ -84,15 +83,12 @@ def training_set(T, N_sample):
     Y_train =   np.delete(Y_train, 0, axis=0)        # On enlève les lignes de zéros
     
     return X_train, Y_train, variances
-            
-def maximize_LML(T, N_sample): #Rajouter variances
-
+#-------------------------------------------#            
+def maximize_LML(T, N_sample, h_curr = 2.): #Rajouter variances
     N = N_sample*(T.N_discr-2)*len(T.T_inf_lst)
     X_train, Y_train, var = training_set(T, N_sample)
     var_mat = var*np.eye(N)
     
-    h_curr = 10
-
     ### On définit les lambda
     phi = lambda h : np.asarray([[np.exp(- np.linalg.norm(X_train[i] - X_train[j], 2)**2/h**2)\
                                   for i in range(N)] for j in range(N)])
@@ -111,11 +107,10 @@ def maximize_LML(T, N_sample): #Rajouter variances
     print h_op, val.success
     
     phi_op = phi(h_op)
-    
     phi_var_inv = np.linalg.inv(phi_op + var_mat)
     
     return h_op, phi_var_inv 
-
+#-------------------------------------------#
 def ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s) :
     """
     h ici est supposée optimizée pour maximiser la correspondance entre les prédictions sur Y_train et la fonction de covariance phi
@@ -135,8 +130,7 @@ def ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s) :
     sigma_ML = 1 - phi_vec_s.dot(phi_var_inv.dot(phi_vec_s))
 
     return (beta_ML, sigma_ML)
-    
-
+#-------------------------------------------#
 def test(T, N_sample, T_inf) :
     X_train, Y_train, var = training_set(T, N_sample)
     h_op, phi_var_inv = maximize_LML(T, N_sample)
@@ -178,13 +172,12 @@ def test(T, N_sample, T_inf) :
     plt.show()
     
     return beta, sigma
-
+#-------------------------------------------#
 def True_Temp(T, T_inf, body) :
     """
     T_inf doit avoir être un type lambda. Boucle conditionnelle qui check ça
     """
-    T_inf_map = np.asarray(map(T_inf, T.line_z))
-    T_n_obs =  list(map(lambda x : -4*T_inf_map[len(T.line_z)/2]*x*(x-1), T.line_z) )
+    T_n_obs =  list(map(lambda x : -4*T_inf[len(T.line_z)/2]*x*(x-1), T.line_z) )
     T_nNext_obs = T_n_obs
 
     B_n_obs     =   np.zeros((T.N_discr-2, 1))
@@ -200,8 +193,8 @@ def True_Temp(T, T_inf, body) :
         for i in range(T.N_discr-2) :
             B_n_obs[i] = T_n_obs_tmp[i] + T.dt*  (
             ( 10**(-4) * ( 1.+5.*np.sin(3.*T_n_obs[i]*np.pi/200.) + 
-            np.exp(0.02*T_n_obs[i]) + T.lst_gauss[0][i] ) ) *(T_inf_map[i]**4 - T_n_obs[i]**4)
-             + T.h * (T_inf_map[i]-T_n_obs[i])      ) 
+            np.exp(0.02*T_n_obs[i]) + T.lst_gauss[0][i] ) ) *(T_inf[i]**4 - T_n_obs[i]**4)
+             + T.h * (T_inf[i]-T_n_obs[i])      ) 
 
         T_nNext_obs = np.dot(np.linalg.inv(T.A1), B_n_obs)
         err_obs = np.linalg.norm(T_nNext_obs - T_n_obs, 2)
@@ -215,101 +208,117 @@ def True_Temp(T, T_inf, body) :
     plt.legend()
     
     return T_nNext_obs
-    
+#-------------------------------------------#    
 def True_Beta(T, T_inf) :
     """
     Pour comparer beta_true et beta_ML
     """
     t1 = np.asarray([ 1./T.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i])) *10**(-4) for i in range(T.N_discr-2)])
     t2 = np.asarray([T.h / T.eps_0*(T_inf[i] - T[i])/(T_inf[i]**4 - T[i]**4)  for i in range(N_discr-2)]) 
-
-#*************#
-#*************#
-#*************#
-
-def solver_ML(T, N_sample, T_inf, body):
-    X_train, Y_train, var = training_set(T, N_sample)
-    h_op, phi_var_inv = maximize_LML(T, N_sample)
+#-------------------------------------------#
+def beta_to_T(T, beta, T_inf, body) :
+    T_n = np.asarray(map(lambda x : -4*T_inf[(T.N_discr-2)/2]*x*(x-1), T.line_z) )
+    B_n = np.zeros((T.N_discr-2))
+    T_nNext = T_n
+        
+    err, tol, compteur, compteur_max = 1., 1e-4, 0, 1000
+        
+    while (np.abs(err) > tol) and (compteur <= compteur_max) :
+        if compteur > 0 :
+            T_n = T_nNext
+        compteur +=1 
+        T_n_tmp = np.dot(T.A2, T_n)
+        for i in range(T.N_discr-2) :
+            B_n[i] = T_n_tmp[i] + T.dt*(beta[i])*T.eps_0*(T_inf[i]**4 - T_n[i]**4)
+                            
+        T_nNext = np.dot(np.linalg.inv(T.A1), B_n)
+        err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
     
-    T_inf_old = T_inf
-    T_inf = map(T_inf, T.line_z) 
+    print ("Calculs complétés pour {}. Statut de la convergence :".format(body))
+    print ("Erreur sur la température = {} ".format(err))    
+    print ("Iterations = {} ".format(compteur))
+    return T_nNext 
+#------------------------------------#
+def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body):
+    T_n = np.asarray(map(lambda x : -4*T_inf[(T.N_discr-2)/2]*x*(x-1), T.line_z) )
+    beta, sigma =  [], []
     
     var_moy = np.mean(var)
     
-    T_n = T_nmspan = T_nMspan = np.asarray(map(lambda x : -4*T_inf[(T.N_discr-2)/2]*x*(x-1), T.line_z) )
-    beta_span, beta = [[0], [0]], []
-    sigma = []
-
     for j,t in enumerate(T_n) :
         x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
         res = ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s)
         beta.append(res[0])
         sigma.append(res[1] + var_moy )
-    beta_span[0] = [beta[i] - sigma[i] for i in range(len(beta))]
-    beta_span[1] = [beta[i] + sigma[i] for i in range(len(beta))]
-    
-    B_n = np.zeros((T.N_discr-2, 1))
-    B_nmspan   =   np.zeros((T.N_discr-2, 1)) # Calcul des incertitudes (m pour min)
-    B_nMspan   =   np.zeros((T.N_discr-2, 1)) # Calcul des incertitudes (M pour max)
-    
-    beta_n = np.asarray(beta)
-    
-    T_n_tmp = T_mn_tmp = T_Mn_tmp = np.zeros((T.N_discr-2, 1))
-    tol ,err, compteur, cmax = 1e-4, 1.0, 0, 800 
-    
-    while (np.abs(err) > tol) and (compteur <= cmax) :
-        if compteur > 0 :
-            T_n = T_nNext
-            T_nmspan = T_nmNext
-            T_nMspan = T_nMNext
 
+    beta_n = np.asarray(beta)
+    B_n = np.zeros((T.N_discr-2))
+    T_n_tmp = np.zeros((T.N_discr-2))
+
+    tol, compteur, cmax = 1e-4, 0, 1000 
+    err = err_beta = 1.
+    
+    while (np.abs(err) > tol) and (compteur <= cmax) and (np.abs(err_beta) > tol) :
+        if compteur > 0 :
             beta_n = beta_nNext
-            beta_span[0] = [beta[i] - sigma[i] for i in range(len(beta))]
-            beta_span[1] = [beta[i] + sigma[i] for i in range(len(beta))]
- 
-            beta, sigma = [], []
+            T_n = T_nNext
         compteur +=1 
             
         T_n_tmp = np.dot(T.A2, T_n)
-        T_mn_tmp = np.dot(T.A2, T_nmspan)
-        T_Mn_tmp = np.dot(T.A2, T_nMspan)
         
         for i in range(T.N_discr-2) :
-#            try :
             B_n[i]      = T_n_tmp[i] + T.dt*(beta_n[i])*T.eps_0*(T_inf[i]**4 - T_n[i]**4)
-            B_nmspan[i] = T_mn_tmp[i] + T.dt*(beta_span[0][i])*T.eps_0*(T_inf[i]**4 - T_nmspan[i]**4)
-            B_nMspan[i] = T_Mn_tmp[i] + T.dt*(beta_span[1][i])*T.eps_0*(T_inf[i]**4 - T_nMspan[i]**4)
           
         T_nNext = np.dot(np.linalg.inv(T.A1), B_n)
-        T_nmNext = np.dot(np.linalg.inv(T.A1), B_nmspan)
-        T_nMNext = np.dot(np.linalg.inv(T.A1), B_nMspan)
         
+        beta, sigma = [], []
         for j,t in enumerate(T_n) :
             x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
             res =  ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s)
             beta.append(res[0])
             sigma.append(res[1] + var_moy)
+        
         beta_nNext = np.asarray(beta)
-
+#        print ("Iteration {}".format(compteur))
+#        print ("beta.shape = {}".format(np.shape(beta)))
+#        print ("beta_nNext.shape = {}".format(np.shape(beta_nNext)))        
+#        
+#        print("T_curr shape ={}".format(T_nNext.shape))
+        
         err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
+        err_beta = np.linalg.norm(beta_nNext - beta_n, 2)    
     
-    print ("Calculus with {} completed. Convergence status :".format(body))
-    print ("Err_obs = {} ".format(err))    
+    print ("Calculs complétés pour {}. Statut de la convergence :".format(body))
+    print ("Erreur sur la température = {} ".format(err))    
+    print ("Erreur sur beta = {} ".format(err_beta))    
     print ("Iterations = {} ".format(compteur))
-
-    T_true = True_Temp(T, T_inf_old, body)
+    
+    return T_nNext, beta_nNext, sigma
+#-------------------------------------------#
+def solver_ML(T, N_sample, T_inf, body):
+    X_train, Y_train, var = training_set(T, N_sample)
+    h_op, phi_var_inv = maximize_LML(T, N_sample)
+    
+    T_inf_lambda = T_inf
+    T_inf = map(T_inf, T.line_z) 
+    
+    T_ML, beta_ML, sigma_ML = T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body)
+    
+    T_true = True_Temp(T, T_inf, body)
     
     n = T.N_discr-2
     T_true = T_true.reshape(n)
-    T_nNext = T_nNext.reshape(n)
-    T_nmNext= T_nmNext.reshape(n)
-    T_nMNext= T_nMNext.reshape(n)
+    T_ML = T_ML.reshape(n)
+    T_max = beta_to_T(T, beta_ML + sigma_ML, T_inf, body)
+    T_min = beta_to_T(T, beta_ML - sigma_ML, T_inf, body)
+#    T_nmNext= T_nmNext.reshape(n)
+#    T_nMNext= T_nMNext.reshape(n)
     
     plt.figure("Beta_True vs Beta_ML; N_sample = {}; T_inf = {}".format(N_sample, body)) 
     plt.plot(T.line_z, T_true, label="True T_field for T_inf={}".format(body), c='k', linestyle='--')
-    plt.plot(T.line_z, T_nNext, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
-    plt.fill_between(T.line_z, T_nmNext, T_nMNext, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="grey")
+    plt.plot(T.line_z, T_ML, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
+    plt.fill_between(T.line_z, T_min, T_max, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="grey")
     plt.legend()
     
-    return T_true, T_nNext
+    return T_true, T_ML
         

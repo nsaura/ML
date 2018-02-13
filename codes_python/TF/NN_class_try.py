@@ -16,54 +16,37 @@ import tensorflow as tf
 class Neural_Network():
 ###-------------------------------------------------------------------------------
     def __init__(self, lr, N_={}, max_epoch=10, pathfile="",**kwargs) :
+        """
+        On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
+        Cette classe prend les arguments suivants :
+        Args:
+        ------
+        lr : float  --  Learning Rate (voir notes pour calibration)
+        N_ : dict   --  Contient les noms des différentes couches.
+                    Doit les première et dernière couches "I" and "O" resp. 
+                    Les autres couches sont N1,...,Nn
+        max_epoch : int --  Pour le learning, on impose une fin aux aller-retours du BackPropagation Algo.
+                    Les poids seront peut être optimaux.
+        kwargs : dict --    Autres arguments qui peuvent être utiles dans certains cas
+        """
         inputs = dict()
         for kway in kwargs :
             inputs[kway] = kwargs[kway]
-
         ## We check if the file indexed by "pathfile" variable exists
         ## Otherwise, we create it
+        N_test = (N_ == "{}")
+#        if N_test == False :
+#            
+#            f = open(pathfile, "w")
+#            for item in N_.interitems() :
+#                f.write("%s=%d\n" %(item[0], item[1]))
+#            f.close()
         
-        if os.path.isfile(pathfile) == False :
-            try :
-                N_hidden_layer = kwargs["N_hidden_layer"]
-                print N_hidden_layer, type(N_hidden_layer)
-    
-            except KeyError:
-                raise KeyError ("You have to create an initializer file or to define N_hidden_layer when creating Neural_Network object ")
-    
-            try : 
-                layers_sizes = kwargs["layers_sizes"]
-                print layers_sizes, type(layers_sizes)
-                if len(layers_sizes) is not N_hidden_layer + 2 :  
-                    raise ValueError("ValueError : layers should have the length of N_hidden_layer + 2 since it contains the number of sites of the input, hidden and output layers ")
+        if N_test == True :
+            raise Exception("Merci de fournir un dictionnaire N_ de la forme : première clé \" \"I\" : N_features\"\
+                            Puis les hidden layers sous la forme (pour la j-ème ) \" \"Nj\" : 100\"\
+                            Enfin il faudra rajouter l'entrée \"\"O\" : 1 \"\n")
 
-            except :
-                raise KeyError("You have to create an initializer file or to give layers as an argument when constructing the Neural_Network object.")
-            
-            line = 0 
-            row = "N%d=%d\n" %(line, layers_sizes[line])
-            f = open(pathfile, "w")
-            while line < len(layers_sizes) - 1 :
-                f.write(row)
-                line += 1
-                row = "N%d=%d\n" %(line, layers_sizes[line])
-                
-            f.write("K=%d\n" %(layers_sizes[line]))
-            f.close()
-        
-        if len(N_.keys())  == 0 :
-            try :
-                f = csv.reader(open(pathfile, "r"), delimiter="=")
-                for line in f :
-                    N_[line[0]] = int(line[1])
-
-            except IOError:
-                raise IOError("N_ is empty and pathfile is {} (inexistant)".format(pathfile))
-        
-#        n_values_type = [type(i)==type(int) for i in N_.values()]
-#        if n_values_type == False : 
-#            N_ = dict((k,int(v)) for k,v in N_.interitems())
-        
         self.wlastkey = "wlast"
         self.blastkey = "blast"
         
@@ -71,7 +54,6 @@ class Neural_Network():
         self.N_ = N_
 ###-------------------------------------------------------------------------------        
     def train_and_split(self, X, y, random_state=0, strat=True, scale=False):
-        
         # Stratify option allows to have a loyal representation of the datasets (couples of data,target)
         # And allows a better training and can prevent from overfitting
         
@@ -89,7 +71,6 @@ class Neural_Network():
                                                 stratify=y, random_state=random_state)
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
-        
         # Sometimes scaling datas leads to better generalization
         if scale == True :
             X_train_mean =  X_train.mean(axis=0)
@@ -107,22 +88,24 @@ class Neural_Network():
         w_dict, biases_d = dict(), dict()
         Nraw_Xtrain, Ncol_Xtrain = self.X_train.shape
 
-        self.N_["N0"] = Ncol_Xtrain
+        self.N_["I"] = Ncol_Xtrain
 
         # We construct weight and biases dictionnary as we anticipate tensor dicts
         jj, err = 1, False # We skip N0 
         while jj <= len(self.N_.values()) and err == False : 
             wkey, bkey = "w%d_init" %(jj), "b%d_init" %(jj)
 
-            prev_key = "N%d" %(jj-1)
+            prev_key = "N%d" %(jj-1) if jj != 1 else "I" 
             curr_key = "N%d" %(jj)
             try :
-                w_dict[wkey] = np.random.randn(self.N_[prev_key], self.N_[curr_key]) / np.sqrt(self.N_[prev_key])
+                w_dict[wkey] = np.random.randn(self.N_[prev_key],\
+                        self.N_[curr_key]) / np.sqrt(self.N_[prev_key])
                 biases_d[bkey] = np.zeros(self.N_[curr_key])
             
             except KeyError :
-                w_dict[self.wlastkey] = np.random.randn(self.N_[prev_key], self.N_["K"]) / self.N_[prev_key]
-                biases_d[self.blastkey] = np.zeros(self.N_["K"])
+                w_dict[self.wlastkey] = np.random.randn(self.N_[prev_key],\
+                        self.N_["O"]) / self.N_[prev_key]
+                biases_d[self.blastkey] = np.zeros(self.N_["O"])
                 err = True
             jj += 1
 
@@ -143,8 +126,8 @@ class Neural_Network():
         
         ### We also create x and t which are training data and target to train the model
             ### Those will be tf.placeholder 
-        self.x = tf.placeholder(tf.float32, (None, self.N_["N0"]))
-        self.t = tf.placeholder(tf.float32, (None, self.N_["K"]))
+        self.x = tf.placeholder(tf.float32, (None, self.N_["I"]))
+        self.t = tf.placeholder(tf.float32, (None, self.N_["O"]))
         
         self.w_tf_d = w_tf_d
         self.b_tf_d = b_tf_d
@@ -169,12 +152,11 @@ class Neural_Network():
                     Z[curr_zkey] = act( tf.matmul(Z[prev_zkey], self.w_tf_d[wkey] )  + self.b_tf_d[bkey] ) 
                 self.y_pred_model = tf.matmul(Z[curr_zkey], self.w_tf_d[self.wlastkey]) + self.b_tf_d[self.blastkey]
                 
-                
         if Z == {}:
             raise AttributeError ("\"{}\" activation function is unknown.\nActivation function must be one of {}".format(activation, act_func_lst))
         
         ### We constructed operations 
-        print("Z's construits")
+        print("Z\'s construits")
         self.Z = Z
         
     def error_computation(self, err_eval) :
@@ -199,7 +181,7 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 if __name__=="__main__":
     
-    TF = Neural_Network(0.0004, model="", pathfile="test.csv", N_hidden_layer=3, layers_sizes = [5, 100, 100, 200, 50])
+    TF = Neural_Network(0.0004, model="", pathfile="test.csv", N_hidden_layer=3, layers_sizes = [2, 100, 100, 200, 1])
     from sklearn.datasets import load_breast_cancer
     cancer = load_breast_cancer()
     TF.train_and_split(cancer.data, cancer.target)
