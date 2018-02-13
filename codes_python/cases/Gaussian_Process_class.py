@@ -233,6 +233,11 @@ def beta_to_T(T, beta, T_inf, body) :
                             
         T_nNext = np.dot(np.linalg.inv(T.A1), B_n)
         err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
+        
+        if body.split("_")[-1] == "min" :
+            print("compteur = {}".format(compteur))
+            print("T_nNext = \n{}".format(T_nNext))
+            print("erreur = {}".format(err))
     
     print ("Calculs complétés pour {}. Statut de la convergence :".format(body))
     print ("Erreur sur la température = {} ".format(err))    
@@ -258,7 +263,7 @@ def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body
     tol, compteur, cmax = 1e-4, 0, 1000 
     err = err_beta = 1.
     
-    while (np.abs(err) > tol) and (compteur <= cmax) and (np.abs(err_beta) > tol) :
+    while (np.abs(err) > tol) and (compteur <= cmax) :
         if compteur > 0 :
             beta_n = beta_nNext
             T_n = T_nNext
@@ -298,26 +303,28 @@ def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body
 def solver_ML(T, N_sample, T_inf, body):
     X_train, Y_train, var = training_set(T, N_sample)
     h_op, phi_var_inv = maximize_LML(T, N_sample)
-    
+
     T_inf_lambda = T_inf
     T_inf = map(T_inf, T.line_z) 
-    
+
     T_ML, beta_ML, sigma_ML = T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body)
-    
+
     T_true = True_Temp(T, T_inf, body)
-    
+
     n = T.N_discr-2
     T_true = T_true.reshape(n)
     T_ML = T_ML.reshape(n)
-    T_max = beta_to_T(T, beta_ML + sigma_ML, T_inf, body)
-    T_min = beta_to_T(T, beta_ML - sigma_ML, T_inf, body)
-#    T_nmNext= T_nmNext.reshape(n)
-#    T_nMNext= T_nMNext.reshape(n)
-    
+    T_max = beta_to_T(T, beta_ML + sigma_ML, T_inf, body+"_max")
+    T_min = beta_to_T(T, beta_ML - sigma_ML, T_inf, body+"_min")
+    T_base = beta_to_T(T, T.beta_prior, T_inf, body+"_base")
+    #    T_nmNext= T_nmNext.reshape(n)
+    #    T_nMNext= T_nMNext.reshape(n)
+
     plt.figure("Beta_True vs Beta_ML; N_sample = {}; T_inf = {}".format(N_sample, body)) 
     plt.plot(T.line_z, T_true, label="True T_field for T_inf={}".format(body), c='k', linestyle='--')
     plt.plot(T.line_z, T_ML, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
-    plt.fill_between(T.line_z, T_min, T_max, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="grey")
+    plt.plot(T.line_z, T_base, label="Base solution", c='green')
+    plt.fill_between(T.line_z, T_min, T_max, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="grey", label="Span")
     plt.legend()
     
     return T_true, T_ML
