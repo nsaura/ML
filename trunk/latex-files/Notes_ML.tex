@@ -146,7 +146,7 @@ keywordstyle=[0]{\color{red}},
 
 \newpage 
 
-\navy \chapter{NN VS GP} \bk
+\navy \chapter{Processus Gaussien GP} \bk
 \cite{rasmussen2006gaussian} définissent le \textit{surpervised learning} comme l'apprentissage d'une correspondance entrées/sortie (on parlera de \textit{mapping}), à partir de données préalables. Ces données sont regroupées en paires dans un ensemble communément appelée Dataset : \\ 
 \begin{equation}
 \mathcal{D} = \left\{ \left( x_i, y_i \right) : i = 1,. . ., n \right\}
@@ -369,8 +369,70 @@ La fonction de covariance gère totalement la liaison entre $\textbf{y}$ et $\te
 Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chaque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
 \item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \neq j$.
 \end{itemize}
+\navy \chapter{Notes TensorFlow et algorithmes relatifs} \bk
+La création d'un graph TensorFlow pour du \textit{\textbf{Supervised Learning}} peut se décomposer en plusieurs parties (susceptibles de changer en cours de thèse):
+\begin{itemize}
+\item[\textit{a) }] Initialisation aléatoire des poids (pour plus de rapidité par rapport à une initialisation homogènement nulle) et décalaration de biais; \\
+Les poids sont des matrices dont la taille peut s'écrire : 
+\begin{lstlisting}
+w_n_init = np.random.randn(len(prev_layer), len(curr_layer))
+\end{lstlisting}
+Les biais sont des vecteurs dont la taille vaut celle du nombre de sites de la couche en cours
+\item[\textit{b) }] Création des variables "tensorflow" correspondant à la couche d'entrée, aux poids, aux biais, et à la couche de sortie.\\
+Les différents poids et biais sont déclarés comme :
+\begin{lstlisting}
+w_n = tf.Variable(w_n_init.astype(tf.float32))
+b_n = tf.Variable(b_n_init.astype(tf.float32))
+\end{lstlisting}
+Les couches d'entrée et de sortie sont déclarées comme des \textit{tf.placeholder}. On reviendra sur ce type lorsque l'on parlera de \textit{dict\_feed}. On l'écrit comme :
+\begin{lstlisting}
+x = tf.placeholder(tf.float32, (None, len(X_col))) #colone -> nombre de features
+t = tf.placeholder(tf.float32, (None, len(Output_layer))
+\end{lstlisting} 
+\end{itemize}
 
-\section{Notes ML : \cite{muller2016introduction}}
+\url{https://zlatankr.github.io/posts/2017/03/31/theano}
+\pagebreak 
+\section{Optimisation}
+\brick \subsection{GD VS SGD} \bk
+\subsubsection*{Gradient Descent}
+\noindent \footnotesize{\url{https://www.quora.com/Whats-the-difference-between-gradient-descent-and-stochastic-gradient-descent} } \normalsize
+
+\begin{wrapfigure}{R}{0.6\textwidth} 
+%https://tex.stackexchange.com/questions/56176/handling-of-wrapfig-pictures-in-latex
+\vspace{-15pt}
+\centering
+\includegraphics[scale=0.5]{GD_climb.png}
+\end{wrapfigure}
+
+\noindent On considère la fonction de coût $J(w)$ qui compare la somme des erreurs commises entre les prédictions du NN et les résultats attendus.\\
+Le training consiste à \textit{minimiser $J$} en ajustant les poids $\textbf{w}$. \\ Un taux d'apprentissage $\eta$ donné, tant que $J$ n'aura pas atteint son minimum, les poids seront incrémentés dans le sens du minimum de $J$ :
+$$w_j = w_j + \Delta w_j = w_j - \eta \frac{\partial J }{\partial w_j} $$ 
+
+\noindent Une fois le minimum atteint, les poids correspondant sont enregistrés et les prédictions se feront avec ces derniers. Les prédictions sont donc instantannées\footnote{Évidemment selon la complexité des fonctions d'activation, de la présence de convolutions ou non etc., les prédictions ne seront pas immédiates. } à partir du moment ou le training est effectué.\\
+L'incrémentation de $\textbf{w}$ se fait après avoir parcouru l'ensemble du training set. Plus ce dernier ensemble est conséquent, plus l'incrémentation sur les poids sera espacée et ainsi atteindre la convergence sera plus long en temps de calcul.
+
+\subsubsection*{Stochastic Gradient Descent (SGD)}
+\noindent Pour les larges bases de données, une méthode alternative propose d'effectuer seulement un\footnote{On peut en tirer plus qu'un mais ce n'est pas dans la philosophie de la méthode.} tirage du training set et de mettre à jour les poids après avoir parcouru ce sample. \\ 
+Au préalable, il faudra mélanger les données. 
+Si $J(\textbf{w})$ peut zigzaguer en cours d'optimisation, la convergence est avérée dès lors que la fonction de coût est convexe ou pseudo-convexe, et on dispose de quelques méthodes pour améliorer le learning :
+\begin{itemize}
+\item[--] Adapter le \textit{learning rate} $\eta$ en le réduisant de $d$ en cours de temps (d'une époque à l'autre) : 
+\begin{equation}
+\eta(t+1) = \frac{\eta(t)}{(1 + td)} \label{lr_decay}
+\end{equation}
+En général le $\eta$ de base dans le SGD est plus petit que celui du GD.
+\item[--] Ajouter un facteur \textit{momentum} sur l'incrément $\Delta \textbf{w}_{t+1}$ de l'époque précédente :
+\begin{equation}
+\Delta \textbf{w}_{t+1} = \eta \nabla J(\textbf{w}_{t+1}) + \alpha \Delta \textbf{w}_t
+\end{equation}
+\end{itemize}
+\noindent On peut effectuer le tirage du training set \textbf{une fois pour toute} avant l'optimisation ou bien effectuer un nouveau tirage à chaque époque.\\
+
+\noindent Ces algorithmes sont deux versions du premier : le terme stochastique fait allusion au fait que l'on effectue un GD seulement sur un sous ensemble du training set. On oppose alors la \textit{\textbf{justesse}} du GD à la \textit{\textbf{rapidité}} du SGD (tout en fournissant de bons résultats).  
+
+
+\navy \chapter{Notes ML : \cite{muller2016introduction}} \bk
 \brick \subsection{Classification}\bk
 \subsubsection{Binaires}
 \navy \paragraph*{LogisticRegression} :\bk \\
@@ -382,7 +444,7 @@ Lors du training, sont déterminées les valeurs de $a$ et $b$ qui apparaissent 
 \subsubsection{Regression}
 \brick \subsection{Évaluer son modèle : Cross Validation (CV)} \bk
 \subsubsection{CV et Stratification (SCV)}
-\textit{k-fold cross-validation} : k nombre de partitions voulues. Ces partitions ont approximativement la même taille et sont appelées \textit{folds}. À chque «tour», on reserve $1$ partition pour le test et on consacre les $k-1$ partitions restantes pour le training.
+\textit{k-fold cross-validation} : k nombre de partitions voulues. Ces partitions ont approximativement la même taille et sont appelées \textit{folds}. À chaque «tour», on réserve $1$ partition pour le test et on consacre les $k-1$ partitions restantes pour le training.
 À chacun de ces cas, on calcule le score sur le test set. Pour avoir une meilleure idée de la capacité de production du modèle qu'avec model.score ou model.predict\_proba, on pourra prendre la moyenne des scores des différents \textit{folds}.
 \begin{lstlisting}
 	scores = cross_val_score(logreg, iris.data, iris.target, cv=5)	

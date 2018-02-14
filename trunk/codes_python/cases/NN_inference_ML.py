@@ -39,26 +39,52 @@ parser = cfa.parser()
 T = ctc.Temperature_cst(parser) 
 T.get_prior_statistics()
 
-X,y,v = GPC.training_set(T, 5)
+X,y,v = GPC.training_set(T, parser.N_sample)
 dict_layers = {"I" : 2,\
-               "N1" : 10,\
-               "N2" : 10,\
-               "N3" : 10,\
-               "N4" : 10,\
+               "N1" : 100,\
+               "N2" : 100,\
+               "N3" : 50,\
+               "N4" : 50,\
+               "N5" : 100,\
                "O"  : 1}
 N_hidden_layer = len(dict_layers.keys()) - 1
 
 
-nn = NNC.Neural_Network(0.004, N_=dict_layers,\
-    max_epoch=10)
+nn = NNC.Neural_Network(1e-7, N_=dict_layers,\
+    max_epoch=100)
+
+## Les différents attibuts que les prochaines méthodes vont créer seront utiliser après ouverture d'une session
 
 nn.train_and_split(X,y,strat=False)
-nn.build_graph()
+#       nn.X_train, nn.X_test
+#       nn.y_train, nn.y_test
 
 nn.tf_variables()
-nn.feed_forward()
+#       nn.w_tf_d 
+#       nn.w_tf_d
 
-nn.error_computation(err_
+nn.feed_forward(activation="leakyrelu")
+#       nn.Z
+
+init = tf.initialize_all_variables()
+
+#nn.def_training("RMS", decay=0.99, momentum=0.9)
+nn.def_training("GD")
+#       nn.train_op
+
+nn.cost_computation("OLS")
+
+nn.def_optimization()
+#       nn.minimize_loss
+
+nn.training_session(batched=False)
+#print("L\'arbre est construit. Selon le dictionnaire N_: \n{}\n\
+#Les matrices sont a priori bien dimensionnées, on vérifie avec les différents poids pour chaque couches: \n{}".format(nn.N_, nn.w_tf_d))
+
+
+
+
+#nn.error_computation(err_
 
      
 
