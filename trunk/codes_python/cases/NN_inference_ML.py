@@ -41,11 +41,11 @@ T.get_prior_statistics()
 
 X,y,v = GPC.training_set(T, 5)
 dict_layers = {"I" : 2,\
-              "N1" : 10,\
-              "N2" : 10,\
-              "N3" : 10,\
-              "N4" : 10,\
-              "O"  : 1}
+               "N1" : 10,\
+               "N2" : 10,\
+               "N3" : 10,\
+               "N4" : 10,\
+               "O"  : 1}
 N_hidden_layer = len(dict_layers.keys()) - 1
 
 
@@ -57,6 +57,8 @@ nn.build_graph()
 
 nn.tf_variables()
 nn.feed_forward()
+
+nn.error_computation(err_
 
      
 

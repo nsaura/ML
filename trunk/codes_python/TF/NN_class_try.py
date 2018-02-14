@@ -141,6 +141,7 @@ class Neural_Network():
         ### belongs to a list predefined that should be improved by time
         #####   Must read and cite articles or documentations related to activation fcts
         
+        # cross entropy most likely to be used in classification wit sigmoid
         for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu] ) :
             if str_act == activation :
                 Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
@@ -167,14 +168,19 @@ class Neural_Network():
         error_lst_fct = ["cross_entropy", "OLS"]
         #####   To be continued.
         #####   Must read and cite articles or documentations related to error func
-        for str_err, err_eval in zip(error_lst_fct, [tf.nn.softmax_cross_entropy_with_logits, tf.square]) :
+#        cross entropy most likely to be used in classification wit sigmoid
+        ## For classical regression problems, we may use L2 regularisation -> OLS
+        ## We can also use L1 regression : tf.reduce_sum(tf.abs(y_pred - targets))
+        
+        for str_err, err_model in zip(error_lst_fct, [tf.nn.softmax_cross_entropy_with_logits, tf.square]) :
             if str_err == error_lst_fct :
-                self.loss = tf.reduce_sum(err_eval(logits=self.y_pred_model, label=self.t))
+                self.loss = tf.reduce_sum(err_model(logits=self.y_pred_model, label=self.t))
         print ("Fonction d\'erreur construite (uniquement pour cross_entropy)")
         
     def optimisation(self):
         ## Once again, we must look at different optimizers existing in TF
         print("Optimisation à construire") 
+        self.train_step = tf.train.GradientDescentOptimizer(self.lr).minimize(self.loss)
 ###-------------------------------------------------------------------------------
 
 ###-------------------------------------------------------------------------------
@@ -192,5 +198,20 @@ if __name__=="__main__":
     
     TF.optimisation()
     
-    
-    
+
+# Exemple OLS + L1 regression :
+# From https://stackoverflow.com/questions/36706379/how-to-exactly-add-l1-regularisation-to-tensorflow-error-function
+
+#import tensorflow as tf
+
+#total_loss = meansq #or other loss calcuation
+#l1_regularizer = tf.contrib.layers.l1_regularizer(
+#   scale=0.005, scope=None)
+#   
+#weights = tf.trainable_variables() # all vars of your graph
+#regularization_penalty = tf.contrib.layers.apply_regularization(l1_regularizer, weights)
+
+#regularized_loss = total_loss + regularization_penalty # this loss needs to be minimized
+#train_step = tf.train.GradientDescentOptimizer(0.05).minimize(regularized_loss)
+
+
