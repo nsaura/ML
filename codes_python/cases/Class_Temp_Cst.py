@@ -483,8 +483,8 @@ class Temperature_cst() :
             
             full_cov_obs_dict[sT_inf] = full_cov 
             self.full_cov_obs_dict  =   full_cov_obs_dict
-
-            print ("cov_obs :\n{}".format(full_cov))
+            
+            if verbose == True:  print ("cov_obs :\n{}".format(full_cov))
             
             # On voudrait peut être regarder le conditionnement de la matrice
             condi['full' + sT_inf] = np.linalg.norm(full_cov)*np.linalg.norm(np.linalg.inv(full_cov))
@@ -526,7 +526,6 @@ class Temperature_cst() :
                 b_distrib_dict[sT_inf+"_"+str(j)].append(b_distrib[j])
                 
         sigma_pri = np.asarray([np.std(b_distrib_dict[sT_inf+"_"+str(j)]) for j in range(self.N_discr-2)])
-        print 2*sigma_obs - sigma_pri
         
         bool_tab = [2*sigma_pri[i] - (np.abs(sigma_obs[i])) > 0 for i in range(self.N_discr-2)]
         

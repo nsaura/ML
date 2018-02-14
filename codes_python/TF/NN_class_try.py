@@ -13,9 +13,20 @@ from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
 
+# Utilities :
+def find_divisor(N) :
+    div_lst = []
+    for i in range(N) :
+        if N % (i+1) == 0: div_lst.append(i+1)
+    # Since last divisor is N itself, we keep the prior last one
+    return div_lst
+
+def error_rate(p, t):
+    return np.mean(p != t)
+    
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, N_={}, max_epoch=10, pathfile="",**kwargs) :
+    def __init__(self, lr, N_={}, max_epoch=10) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
@@ -27,21 +38,8 @@ class Neural_Network():
                     Les autres couches sont N1,...,Nn
         max_epoch : int --  Pour le learning, on impose une fin aux aller-retours du BackPropagation Algo.
                     Les poids seront peut être optimaux.
-        kwargs : dict --    Autres arguments qui peuvent être utiles dans certains cas
         """
-        inputs = dict()
-        for kway in kwargs :
-            inputs[kway] = kwargs[kway]
-        ## We check if the file indexed by "pathfile" variable exists
-        ## Otherwise, we create it
         N_test = (N_ == "{}")
-#        if N_test == False :
-#            
-#            f = open(pathfile, "w")
-#            for item in N_.interitems() :
-#                f.write("%s=%d\n" %(item[0], item[1]))
-#            f.close()
-        
         if N_test == True :
             raise Exception("Merci de fournir un dictionnaire N_ de la forme : première clé \" \"I\" : N_features\"\
                             Puis les hidden layers sous la forme (pour la j-ème ) \" \"Nj\" : 100\"\
@@ -50,28 +48,32 @@ class Neural_Network():
         self.wlastkey = "wlast"
         self.blastkey = "blast"
         
-        self.inputs = inputs
         self.N_ = N_
+        self.lr = lr
+        self.max_epoch = max_epoch
+        self.sess = tf.InteractiveSession()
+        
 ###-------------------------------------------------------------------------------        
     def train_and_split(self, X, y, random_state=0, strat=True, scale=False):
-        # Stratify option allows to have a loyal representation of the datasets (couples of data,target)
-        # And allows a better training and can prevent from overfitting
+#        Stratify option allows to have a loyal representation of the datasets (couples of data,target)
+#        And allows a better training and can prevent from overfitting
         
-#        #Stratification is the process of rearranging the data as to ensure each fold is a good     
+#        Stratification is the process of rearranging the data as to ensure each fold is a good     
 #        representative of the whole. For example in a binary classification problem where each class 
 #        comprises 50% of the data, it is best to arrange the data such that in every fold, each class 
 #        comprises around half the instances.
 
-        #Stratification is generally a better scheme, both in terms of bias and variance, when 
+#        Stratification is generally a better scheme, both in terms of bias and variance, when 
 #        compared to regular cross-validation.
-        #https://stats.stackexchange.com/questions/49540/understanding-stratified-cross-validation
+#        https://stats.stackexchange.com/questions/49540/understanding-stratified-cross-validation
         
         if strat == True :
             X_train, X_test, y_train, y_test = train_test_split(X, y, 
                                                 stratify=y, random_state=random_state)
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
-        # Sometimes scaling datas leads to better generalization
+
+#       Sometimes scaling datas leads to better generalization
         if scale == True :
             X_train_mean =  X_train.mean(axis=0)
             X_std        =  X_train.std(axis=0)
@@ -79,11 +81,11 @@ class Neural_Network():
             X_train = (X_train  - X_train_mean) /   X_std
             X_test  = (X_test   - X_train_mean) /   X_std  
         
-        #We finish by "selfing" Training Set and Testing Set
+#       We finish by "selfing" Training Set and Testing Set
         self.X_train, self.y_train  =   X_train, y_train
         self.X_test, self.y_test    =   X_test , y_test
 ###-------------------------------------------------------------------------------
-    def build_graph(self):
+    def w_b_real_init(self):
         ### We use X_train.shape
         w_dict, biases_d = dict(), dict()
         Nraw_Xtrain, Ncol_Xtrain = self.X_train.shape
@@ -115,7 +117,8 @@ class Neural_Network():
     def tf_variables(self):
         ### We want to create as many tf.tensors as we have weight and biases matrices 
             ### Those ones will be tf.Variables(weight.astype(np.float32))
-            
+        self.w_b_real_init()
+           
         w_tf_d, b_tf_d = dict(), dict()
         wkeys = [i.split("_")[0] for i in self.w_dict.keys()]
         bkeys = [i.split("_")[0] for i in self.biases_d.keys()]
@@ -135,7 +138,7 @@ class Neural_Network():
     def feed_forward(self, activation="relu"):
         Z = dict()
         act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu"]
-        # to have leakyrelu upgrade tensorflow sudo pip install tensorflow==1.4.0-rc0 
+        # to have leakyrelu upgrade tensorflow :  sudo pip install tensorflow==1.4.0-rc0 
         ### A wide variety of models are availables to compute the neuronal outputs.
         ### We chose that way of implementation : the main work is done only if str_act
         ### belongs to a list predefined that should be improved by time
@@ -159,30 +162,115 @@ class Neural_Network():
         ### We constructed operations 
         print("Z\'s construits")
         self.Z = Z
+###-------------------------------------------------------------------------------      
+    def def_training(self, train_mod, **kwargs) :
+        """
+        Define a training model. Use kwargs to specify particular training parameters.\n
+        Documentation took from http://tflearn.org
         
-    def error_computation(self, err_eval) :
-        ### Now we compute error based on different available models
-        ### We just begin with cross_entropy. Specified way of computation may be required 
-        ### for particular error functions 
+        Args:
+        -----
+        train_mod   :   str     Define the string representation of the desired optimization method.
+                                Currently, has to be one of [\"RMS\", \"GD \", \"SGD\"]. Otherwise exits
+        kwargs      :   dict    Dictionary that has to contain Optimizer specification. Else default one will be used
         
-        error_lst_fct = ["cross_entropy", "OLS"]
-        #####   To be continued.
-        #####   Must read and cite articles or documentations related to error func
-#        cross entropy most likely to be used in classification wit sigmoid
-        ## For classical regression problems, we may use L2 regularisation -> OLS
-        ## We can also use L1 regression : tf.reduce_sum(tf.abs(y_pred - targets))
+        After execution of this method, the NN object will have the NN.train_op attribute 
+        """
+        considered_training = {"RMS" : tf.train.RMSPropOptimizer,\
+                               "GD": tf.train.GradientDescentOptimizer,\
+                               "SGD": tf.train.GradientDescentOptimizer\
+                              }
+        if train_mod not in considered_training.keys() :
+            raise IndexError("{} n\'est pas dans les cas considérés. l\'argument train mod doit faire partie de la liste {}".format(train_mod, considered_training.keys()))
         
-        for str_err, err_model in zip(error_lst_fct, [tf.nn.softmax_cross_entropy_with_logits, tf.square]) :
-            if str_err == error_lst_fct :
-                self.loss = tf.reduce_sum(err_model(logits=self.y_pred_model, label=self.t))
-        print ("Fonction d\'erreur construite (uniquement pour cross_entropy)")
+        print("{} optimizer wanted".format(train_mod))
         
-    def optimisation(self):
-        ## Once again, we must look at different optimizers existing in TF
-        print("Optimisation à construire") 
-        self.train_step = tf.train.GradientDescentOptimizer(self.lr).minimize(self.loss)
-###-------------------------------------------------------------------------------
+        parameters = dict()        
+        for k in kwargs :
+            parameters[k] = kwargs[k]
+        
+        if train_mod=="RMS" :
+#       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
+            try :
+                self.train_op = considered_training[train_mod](\
+                                                               self.lr,\
+                                                               momentum=parameters["momentum"],\
+                                                               decay=parameters["decay"]\
+                                                                )
+            except NameError:
+                print("Seems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
+                Use the default one instead with lr = {} though".format(self.lr))
+                self.train_op = tf.train.RMSPropOptimizer(self.lr)
+        
+        if train_mod == "GD" or train_mod == "SGD":
+#            Si on utilise le batch pour l'entrainement ils reviennent au même
+            self.train_op = considered_training[train_mod](self.lr) 
+        
+        self.train_mod = train_mod
+#        for k, train in zip(considered_training.keys(), considered_training.values()) :
+###-------------------------------------------------------------------------------      
+    def cost_computation(self, err_type, SL_type="regression", **kwargs) :
+#        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
+#        REGRESSION pbs     : L2 regularisation -> OLS  :   tf.reduce_sum(tf.square(y_pred - targets))
+#                             L1 regression     -> AVL  :   tf.reduce_sum(tf.abs(y_pred - targets))
 
+        if SL_type == "classification" :
+            self.loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=self.y_pred_model, label=self.t))
+            
+        else :
+            expected_loss = {"OLS" : tf.square,\
+                             "AVL" : tf.abs}
+            if err_type not in expected_loss :
+                raise IndexError("{} n\'est pas dans les cas considérés. La fonction de cout doit appartenir à la liste {}".format(err_type, expected_loss.keys()))
+
+            self.loss = tf.reduce_sum(expected_loss[err_type](self.y_pred_model - self.t))
+        
+        self.err_type  = err_type 
+###-------------------------------------------------------------------------------          
+    def def_optimization(self, verbose = True):
+        if verbose == True :
+            print("Récapitulatif sur la fonction de coût et la méthode de minimisation :\n\
+                   La méthode utilisée pour minimiser les erreurs entre les prédictions et les target est :{} -> {}\n\
+                  ".format(self.train_mod, self.train_op))
+            print("La fonction de coût pour évaluer ces erreurs est {} -> {}".format(self.err_type, self.loss))
+        
+        self.minimize_loss = self.train_op.minimize(self.loss)
+        
+###-------------------------------------------------------------------------------
+    def training_session(self, batched = True) :
+        
+#       Initialization ou ré-initialization ;)
+        self.sess.run(tf.global_variables_initializer())
+        costs = []
+        err, epoch = 1., 0
+        
+        if batched == False :
+            for epoch in range(self.max_epoch) :
+                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
+                costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train, self.t : self.y_train}))
+            print costs
+        else :  
+            N_raw_Xtrain = self.X_train.shape[0]
+            print N_raw_Xtrain
+            batch_sz = find_divisor(N_raw_Xtrain)[-3]
+            n_batches = N_raw_Xtrain // batch_sz   
+            
+            test_target = tf.equal(self.y_pred_model, self.y_test)
+            
+            for epoch in range(self.max_epoch) :
+                for jj in range(n_batches) :
+                    X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
+                    y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
+                    
+                    self.sess.run(self.minimize_loss, feed_dict=({self.x : X_batch, self.t : y_batch}))
+                    prediction = self.sess.run(test_target, feed_dict={self.x : self.X_test})
+                    
+                    costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train, self.t : self.y_train}))
+            print costs
+            
+            self.costs = costs
+            
+#        self.sess.run(self.train_op, feed_dict={})
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 if __name__=="__main__":
@@ -198,7 +286,6 @@ if __name__=="__main__":
     
     TF.optimisation()
     
-
 # Exemple OLS + L1 regression :
 # From https://stackoverflow.com/questions/36706379/how-to-exactly-add-l1-regularisation-to-tensorflow-error-function
 

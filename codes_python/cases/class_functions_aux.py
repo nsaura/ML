@@ -8,31 +8,20 @@ import argparse
 import types
 
 def parser() :
-    parser=argparse.ArgumentParser(description='You can initialize a case you want to study')
+    parser=argparse.ArgumentParser(description='\
+    This parser will be used in several steps both in inference and ML postprocessing\n\
+    Each entry is detailed in the help, and each of it has the most common default value. (run ... .py -h)')
     ## VaV T_inf
     #lists
     parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=[50],dest='T_inf_lst', 
                         help='List of different T_inf. Default : 50\n' )
-    parser.add_argument('--T_inf_prop', '-T_prop', nargs='+', action='store', type=float, default=[35, 20], dest='T_prop', 
-                        help='Value of constant appearing in T_inf expression; default 35, 25 \n' )
-    
-    #digits
-    parser.add_argument('--T_inf', '-T_inf', action='store', type=int, default=50, dest='T_inf', 
-                        help='Value of T_inf of the current study; default %(default)d \n' )
-    
-    # Booléen
-    parser.add_argument('--T_inf_type', '-T_cst', action='store', type=bool, default=False, dest='T_cst', 
-                        help='Define whether the T_inf is constant or not. Default to %(default)s \n')
-#    #strings
-#    parser.add_argument('--body_lambda', '-BL', action='store', type=str, default=False, dest='BL', 
-#                        help='String of the lambda\'s body. Default to %(default)s \n') 
-    
-    # Pour la simulation de manière générale
     # Ints                       
-    parser.add_argument('--N_discr', '-N', action='store', type=int, default=33, dest='N_discr', 
+    parser.add_argument('--N_discr', '-N', action='store', type=int, default=71, dest='N_discr', 
                         help='Define the number of discretization points : default %(default)d \n' )
     parser.add_argument('--compteur_max_adjoint', '-cptmax', action='store', type=int, default=100, dest='cpt_max_adj', 
-                        help='Define compteur_max (-cptmax) for adjoint method : default %(default)d \n' )
+                        help='Define compteur_max (-cptmax) for adjoint method: default %(default)d \n' )
+    parser.add_argument('--N_sample', '-N_sample', action='store', type=int, default=3, dest='N_sample', 
+                        help='Define the number of distribution (beta, cholesky) samples: default %(default)d \n' )
     
     # Floats
     parser.add_argument('--H', '-H', action='store', type=float, default=0.5, dest='h', 
@@ -42,10 +31,10 @@ def parser() :
     parser.add_argument('--kappa', '-kappa', action='store', type=float, default=1.0, dest='kappa', 
                         help='Define the diffusivity number kappa. Default to %(default).2f\n' )
     parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=100, dest='num_real', 
-                        help='Define the number of realization of epsilon(T) you want to pick up. Default to %(default)d\n' )
+                        help='Define how many samples of epsilon(T) to draw for exact model. Default to %(default)d\n' )
     parser.add_argument('--tolerance', '-tol', action='store', type=float, default=1e-5, dest='tol', 
                         help='Define the tolerance on the optimization error. Default to %(default).8f \n' )
-    parser.add_argument('--g_sup_max', '-g_sup', action='store', type=float, default=0.1, dest='g_sup_max', 
+    parser.add_argument('--g_sup_max', '-g_sup', action='store', type=float, default=0.001, dest='g_sup_max', 
                         help='Define the criteria on grad_J to stop the optimization. Default to %(default).5f \n' )
     parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', default=1 ,dest='beta_prior',\
                         help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
@@ -53,10 +42,19 @@ def parser() :
     # Strings
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', 
                         help='Define the directory where the data will be stored and read. Default to %(default)s \n')
-    parser.add_argument('--covariance_model', '-cov_mod', action='store', type=str, default='diag', dest='cov_mod', 
+    parser.add_argument('--covariance_model', '-cov_mod', action='store', type=str, default='full', dest='cov_mod', 
                         help='Define the covariance model. Default to %(default)s \n')
     parser.add_argument('--logbook_path', '-p', action='store', type=str, default='./logbooks/', dest='logbook_path', 
                         help='Define the logbook\'s path. Default to %(default)s \n')
+    
+        
+#    # Booléen
+#    parser.add_argument('--T_inf_type', '-T_cst', action='store', type=bool, default=False, dest='T_cst', 
+#                        help='Define whether the T_inf is constant or not. Default to %(default)s \n')
+#    #strings
+    
+    # Pour la simulation de manière générale
+
     
     return parser.parse_args()
 ##-------------------------------------------------------------##

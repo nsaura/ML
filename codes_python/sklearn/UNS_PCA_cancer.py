@@ -22,7 +22,7 @@ plt.ion()
 malignant = cancer.data[cancer.target == 0]
 benign = cancer.data[cancer.target == 1]
 
-verbose = False
+verbose = True 
 if verbose == True :
     fig, axes = plt.subplots(15, 2, figsize = (15,30))
     ax = axes.ravel()
