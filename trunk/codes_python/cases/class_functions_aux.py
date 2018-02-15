@@ -22,6 +22,8 @@ def parser() :
                         help='Define compteur_max (-cptmax) for adjoint method: default %(default)d \n' )
     parser.add_argument('--N_sample', '-N_sample', action='store', type=int, default=3, dest='N_sample', 
                         help='Define the number of distribution (beta, cholesky) samples: default %(default)d \n' )
+    parser.add_argument('--max_epoch', '-epoch', action='store', type=int, default=50, dest='N_epoch', 
+                        help='Define the number of training epoch in NN optimization: default %(default)d \n' )
     
     # Floats
     parser.add_argument('--H', '-H', action='store', type=float, default=0.5, dest='h', 
@@ -38,6 +40,8 @@ def parser() :
                         help='Define the criteria on grad_J to stop the optimization. Default to %(default).5f \n' )
     parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', default=1 ,dest='beta_prior',\
                         help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
+    parser.add_argument('--learning_rate', '-lr', type=float ,action='store', default=1e-5 ,dest='lr',\
+                        help='Define the learning rate for the NN back-propagation. Value default to %(default)d\n')                        
     
     # Strings
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data', dest='datapath', 
