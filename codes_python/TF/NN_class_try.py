@@ -51,10 +51,11 @@ class Neural_Network():
         self.N_ = N_
         self.lr = lr
         self.max_epoch = max_epoch
-        self.sess = tf.InteractiveSession()
         
+        self.savefile= "./session"
+        self.sess = tf.InteractiveSession()
 ###-------------------------------------------------------------------------------        
-    def train_and_split(self, X, y, random_state=0, strat=True, scale=False):
+    def train_and_split(self, X, y, random_state=0, strat=True, scale=False, shuffle=True):
 #        Stratify option allows to have a loyal representation of the datasets (couples of data,target)
 #        And allows a better training and can prevent from overfitting
         
@@ -66,13 +67,24 @@ class Neural_Network():
 #        Stratification is generally a better scheme, both in terms of bias and variance, when 
 #        compared to regular cross-validation.
 #        https://stats.stackexchange.com/questions/49540/understanding-stratified-cross-validation
+        if shuffle == True :
+#        Inspired by : Sebastian Heinz
+#        https://medium.com/mlreview/a-simple-deep-learning-model-for-stock-price-prediction-using-tensorflow-30505541d877
+            permute_indices = np.random.permutation(np.arange(len(y)))
+            X = X[permute_indices]
+            y = y[permute_indices]        
         
+        self.X, self.y = X, y
+        
+        strat_done = False
         if strat == True :
             X_train, X_test, y_train, y_test = train_test_split(X, y, 
                                                 stratify=y, random_state=random_state)
+            strat_done = True
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
-
+        
+                
 #       Sometimes scaling datas leads to better generalization
         if scale == True :
             X_train_mean =  X_train.mean(axis=0)
@@ -148,7 +160,7 @@ class Neural_Network():
         for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu] ) :
             if str_act == activation :
                 Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
-                print ("act function chose %s \t act function wanted %s" %(str_act, activation))
+                print ("act function chosen %s \t VS. \t act function wanted %s" %(str_act, activation))
                 for i in xrange(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
                     curr_zkey, prev_zkey = "z%d" %(i), "z%d" %(i-1)
                     wkey = "w%d" %(i)
@@ -192,12 +204,15 @@ class Neural_Network():
         if train_mod=="RMS" :
 #       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
             try :
+                for k, v in zip(parameters.keys(), parameters.values()):
+                    print("parmeters[{}] = {}".format(k,v))
+                    
                 self.train_op = considered_training[train_mod](\
                                                                self.lr,\
                                                                momentum=parameters["momentum"],\
                                                                decay=parameters["decay"]\
                                                                 )
-            except NameError:
+            except KeyError:
                 print("Seems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
                 Use the default one instead with lr = {} though".format(self.lr))
                 self.train_op = tf.train.RMSPropOptimizer(self.lr)
@@ -228,30 +243,38 @@ class Neural_Network():
         self.err_type  = err_type 
 ###-------------------------------------------------------------------------------          
     def def_optimization(self, verbose = True):
+#    https://github.com/vsmolyakov/experiments_with_python/blob/master/chp03/tensorflow_optimizers.ipynb
         if verbose == True :
-            print("Récapitulatif sur la fonction de coût et la méthode de minimisation :\n\
-                   La méthode utilisée pour minimiser les erreurs entre les prédictions et les target est :{} -> {}\n\
-                  ".format(self.train_mod, self.train_op))
+            print("Récapitulatif sur la fonction de coût et la méthode de minimisation :\n")
+            print("La méthode utilisée pour minimiser les erreurs entre les prédictions et les target est :{} -> {}\n".format(self.train_mod, self.train_op))
             print("La fonction de coût pour évaluer ces erreurs est {} -> {}".format(self.err_type, self.loss))
         
         self.minimize_loss = self.train_op.minimize(self.loss)
-        
 ###-------------------------------------------------------------------------------
     def training_session(self, batched = True) :
-        
 #       Initialization ou ré-initialization ;)
-        self.sess.run(tf.global_variables_initializer())
+        init = tf.global_variables_initializer()
+        self.sess.run(init)
+        
         costs = []
         err, epoch = 1., 0
         
         if batched == False :
+#            with tf.Session() as sess:        
+            
             for epoch in range(self.max_epoch) :
                 self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
-                costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train, self.t : self.y_train}))
+                costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
+                                                                 self.t : self.y_train}))
+                if np.isnan(costs[-1]) : raise IOError("Warning, Epoch {}, lr = {}.. nan"\
+                                                    .format(epoch, self.lr))
+                if epoch % 10 == 0 :
+                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, costs[-1]))
             print costs
+#            self.saver.save(sess, self.savefile)
         else :  
             N_raw_Xtrain = self.X_train.shape[0]
-            print N_raw_Xtrain
+#            print N_raw_Xtrain
             batch_sz = find_divisor(N_raw_Xtrain)[-3]
             n_batches = N_raw_Xtrain // batch_sz   
             
@@ -262,15 +285,22 @@ class Neural_Network():
                     X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
                     y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
                     
-                    self.sess.run(self.minimize_loss, feed_dict=({self.x : X_batch, self.t : y_batch}))
-                    prediction = self.sess.run(test_target, feed_dict={self.x : self.X_test})
+                    self.sess.run(self.minimize_loss,feed_dict=({self.x : X_batch, self.t : y_batch}))
+                    self.sess.run(test_target, feed_dict={self.x : self.X_test})
                     
-                    costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train, self.t : self.y_train}))
+                    costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
+                                                                     self.t : self.y_train}))
+                    if np.isnan(costs[-1]) : raise IOError( "Warning, Epoch {} \t batch {}, \t lr = {}\
+                                    \n Explode".format(epoch, jj, self.lr) )
             print costs
-            
-            self.costs = costs
-            
-#        self.sess.run(self.train_op, feed_dict={})
+        self.costs = costs
+###-------------------------------------------------------------------------------
+    def predict(self, x_s):
+        with tf.Session() as sess:
+      # restore the model
+            self.saver.restore(sess, self.savefile)
+            P = sess.run(self.y_pred_model, feed_dict={x: x_s})
+        return P
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 if __name__=="__main__":
@@ -302,3 +332,17 @@ if __name__=="__main__":
 #train_step = tf.train.GradientDescentOptimizer(0.05).minimize(regularized_loss)
 
 
+#How to set adaptive learning rate for GradientDescentOptimizer?
+#https://stackoverflow.com/questions/33919948/how-to-set-adaptive-learning-rate-for-gradientdescentoptimizer
+#learning_rate = tf.placeholder(tf.float32, shape=[])
+## ...
+#train_step = tf.train.GradientDescentOptimizer(
+#    learning_rate=learning_rate).minimize(mse)
+
+#sess = tf.Session()
+
+## Feed different values for learning rate to each training step.
+#sess.run(train_step, feed_dict={learning_rate: 0.1})
+#sess.run(train_step, feed_dict={learning_rate: 0.1})
+#sess.run(train_step, feed_dict={learning_rate: 0.01})
+#sess.run(train_step, feed_dict={learning_rate: 0.01})
