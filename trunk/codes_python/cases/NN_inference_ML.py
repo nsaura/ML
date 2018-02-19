@@ -39,6 +39,7 @@ plt.ion()
 # On n'a cependant pas besoin de relancer l'inférence
 # Puisque les distributions importantes ont été écrites
 T = ctc.Temperature_cst(parser) 
+T.obs_pri_model()
 T.get_prior_statistics()
 
 X,y,v = GPC.training_set(T, parser.N_sample)
