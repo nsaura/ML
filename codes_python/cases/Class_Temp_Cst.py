@@ -605,7 +605,6 @@ class Temperature_cst() :
             ######################
             ##-- Post Process --##
             ######################
-            
             betamap[sT_inf] =   opti_obj.x
             hess[sT_inf]    =   opti_obj.hess_inv
             self.opti_obj   =   opti_obj # object that contains all the scipy optimizations information
@@ -663,11 +662,9 @@ class Temperature_cst() :
             
             self.bool_written["opti_scipy_"+sT_inf] = True
             f.close()
-        
         ##############################
         ##-- Passages en attribut --##
         ##############################
-            
         self.betamap    =   betamap
         self.hess       =   hess
         self.cholesky   =   cholesky
@@ -676,7 +673,6 @@ class Temperature_cst() :
         self.maxs_dict  =   maxs_dict
         self.beta_var   =   beta_var
         self.sigma_post_dict = sigma_post_dict
-        
         #########
         #- Fin -#
         #########
@@ -689,7 +685,6 @@ class Temperature_cst() :
         if self.bool_method["stat"] == False : self.get_prior_statistics() 
         
         self.debug = dict()
-        
         # Le code a été pensé pour être lancé avec plusieurs valeurs de T_inf dans la liste T_inf_lst.
         # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
         # cours. De cette façon, on peut passer d'une température à une autre, et donc recommencer une optimisation 
