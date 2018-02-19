@@ -21,7 +21,9 @@ def parser() :
     parser.add_argument('--compteur_max_adjoint', '-cptmax', action='store', type=int, default=100, dest='cpt_max_adj', 
                         help='Define compteur_max (-cptmax) for adjoint method: default %(default)d \n' )
     parser.add_argument('--N_sample', '-N_sample', action='store', type=int, default=3, dest='N_sample', 
-                        help='Define the number of distribution (beta, cholesky) samples: default %(default)d \n' )
+                        help='Define the number of dupplication : default %(default)d \n' )
+    parser.add_argument('--GPN_sample', '-GPN_sample', action='store', type=int, default=3, dest='GPN_sample', 
+                        help='Define the number of distribution (beta, cholesky) samples: default %(default)d \n' )                        
     parser.add_argument('--max_epoch', '-epoch', action='store', type=int, default=50, dest='N_epoch', 
                         help='Define the number of training epoch in NN optimization: default %(default)d \n' )
     
