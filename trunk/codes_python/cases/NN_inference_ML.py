@@ -93,10 +93,10 @@ def build_case(lr, X, y, act, opti, loss, N_=dict_layers, max_epoch=parser.N_epo
     nn_obj.def_optimization()
 #       nn.minimize_loss
     nn_obj.training_session(batched=False)
-
-    plt.figure("Evolution de l\'erreur %s" %(loss))
-    plt.plot(range(len(nn_obj.costs)), nn_obj.costs, c='r', marker='o', alpha=0.3,\
-            linestyle="none")
+    
+#    plt.figure("Evolution de l\'erreur %s" %(loss))
+#    plt.plot(range(len(nn_obj.costs)), nn_obj.costs, c='r', marker='o', alpha=0.3,\
+#            linestyle="none")
     
     return nn_obj
 ###-------------------------------------------------------------------------------
@@ -171,7 +171,7 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
     return T_nNext, beta_nNext
 #-------------------------------------------#
 #-------------------------------------------#
-def solver_NN(T, nn_obj, N_sample, T_inf, body) :
+def solver_NN(T, nn_obj, N_sample, T_inf, body, verbose = False) :
     T_inf_lambda = T_inf
     T_inf = map(T_inf, T.line_z) 
 
@@ -185,14 +185,19 @@ def solver_NN(T, nn_obj, N_sample, T_inf, body) :
     T_base = GPC.beta_to_T(T, T.beta_prior, T_inf, body+"_base")
     #    T_nmNext= T_nmNext.reshape(n)
     #    T_nMNext= T_nMNext.reshape(n)
-
-    plt.figure("Beta_True vs Beta_ML; N_sample = {}; T_inf = {}".format(N_sample, body)) 
-    plt.plot(T.line_z, T_true, label="True T_field for T_inf={}".format(body), c='k', linestyle='--')
-    plt.plot(T.line_z, T_ML, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
-    plt.plot(T.line_z, T_base, label="Base solution", c='green')
-    plt.legend(loc='best')
     
-    return T_true, T_ML
+    if verbose == True :
+        plt.figure("Beta_True vs Beta_ML; N_sample = {}; T_inf = {}".format(N_sample, body)) 
+        plt.plot(T.line_z, T_true, label="True T_field for T_inf={}".format(body), c='k', linestyle='--')
+        plt.plot(T.line_z, T_ML, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
+        plt.plot(T.line_z, T_base, label="Base solution", c='green')
+        plt.legend(loc='best')
+    
+    NN_out = dict()
+    NN_out["NN_T_ML"]  = T_ML   
+    NN_out["NN_beta_ML"] = beta_ML.reshape(n)
+    
+    return NN_out
 
 ## Les différents attibuts que les prochaines méthodes vont créer seront utiliser après ouverture d'une session
 

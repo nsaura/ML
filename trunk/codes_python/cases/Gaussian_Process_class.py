@@ -84,9 +84,8 @@ def training_set(T, N_sample):
     
     return X_train, Y_train, variances
 #-------------------------------------------#            
-def maximize_LML(T, N_sample, h_curr = 2.): #Rajouter variances
+def maximize_LML(T, X_train, Y_train, var, N_sample, h_curr = 2.): #Rajouter variances
     N = N_sample*(T.N_discr-2)*len(T.T_inf_lst)
-    X_train, Y_train, var = training_set(T, N_sample)
     var_mat = var*np.eye(N)
     
     ### On définit les lambda
@@ -260,7 +259,7 @@ def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body
     B_n = np.zeros((T.N_discr-2))
     T_n_tmp = np.zeros((T.N_discr-2))
 
-    tol, compteur, cmax = 1e-4, 0, 1000 
+    tol, compteur, cmax = 1e-4, 0, 500
     err = err_beta = 1.
     
     while (np.abs(err) > tol) and (compteur <= cmax) :
@@ -284,6 +283,8 @@ def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body
             sigma.append(res[1] + var_moy)
         
         beta_nNext = np.asarray(beta)
+        if compteur % 20 == 0 :
+            print("État : cpt = %d, err = %f" %(compteur, err))
 #        print ("Iteration {}".format(compteur))
 #        print ("beta.shape = {}".format(np.shape(beta)))
 #        print ("beta_nNext.shape = {}".format(np.shape(beta_nNext)))        
@@ -300,10 +301,8 @@ def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body
     
     return T_nNext, beta_nNext, sigma
 #-------------------------------------------#
-def solver_ML(T, N_sample, T_inf, body):
-    X_train, Y_train, var = training_set(T, N_sample)
-    h_op, phi_var_inv = maximize_LML(T, N_sample)
-
+def solver_ML(T, X_train, Y_train, var, h_op, phi_var_inv, N_sample, T_inf, body, verbose = False):
+#    X_train, Y_train, var = training_set(T, N_sample)
     T_inf_lambda = T_inf
     T_inf = map(T_inf, T.line_z) 
 
@@ -319,13 +318,25 @@ def solver_ML(T, N_sample, T_inf, body):
     T_base = beta_to_T(T, T.beta_prior, T_inf, body+"_base")
     #    T_nmNext= T_nmNext.reshape(n)
     #    T_nMNext= T_nMNext.reshape(n)
-
-    plt.figure("Beta_True vs Beta_ML; N_sample = {}; T_inf = {}".format(N_sample, body)) 
-    plt.plot(T.line_z, T_true, label="True T_field for T_inf={}".format(body), c='k', linestyle='--')
-    plt.plot(T.line_z, T_ML, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
-    plt.plot(T.line_z, T_base, label="Base solution", c='green')
-    plt.fill_between(T.line_z, T_min, T_max, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="grey", label="Span")
-    plt.legend()
     
-    return T_true, T_ML
+    GP_out = dict()
+    GP_out["GP_T_ML"]       =   T_ML
+    GP_out["GP_T_ML_max"]   =   T_max
+    GP_out["GP_T_ML_min"]   =   T_min
+    GP_out["GP_beta_ML"]    =   beta_ML    
+    
+    GP_out["T_true"]    =   T_true
+    GP_out["T_base"]    =   T_base
+
+    if verbose == True :
+        plt.figure("Beta_True vs Beta_ML; N_sample = {}; T_inf = {}".format(N_sample, body)) 
+        plt.plot(T.line_z, T_true, label="True T_field for T_inf={}".format(body), c='k', linestyle='--')
+        plt.plot(T.line_z, T_ML, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
+        plt.plot(T.line_z, T_base, label="Base solution", c='green')
+        
+        plt.fill_between(T.line_z, T_min, T_max, facecolor= "1", alpha=0.7,\
+                        interpolate=True, hatch='/', color="grey", label="Span")
+        plt.legend()
+    
+    return GP_out
         
