@@ -84,18 +84,32 @@ class Neural_Network():
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
         
-                
+        X_std        =  X_train.std(axis=0)
+        X_train_mean =  X_train.mean(axis=0)
 #       Sometimes scaling datas leads to better generalization
         if scale == True :
-            X_train_mean =  X_train.mean(axis=0)
-            X_std        =  X_train.std(axis=0)
-            
-            X_train = (X_train  - X_train_mean) /   X_std
-            X_test  = (X_test   - X_train_mean) /   X_std  
+            X_train[:,0] = (X_train[:,0]  - X_train_mean[0])
+            X_test[:,0]  = (X_test[:,0]   - X_train_mean[0])
+
+            if np.abs(X_std[0]) > 1e-12 :    
+                X_train[:,0]/= X_std[0]
+                X_test[:,0]  /= X_std[0]  
+
+            X_train[:,1] = (X_train[:,1]  - X_train_mean[1]) /   X_std[1]
+            X_test[:,1]  = (X_test[:,1]   - X_train_mean[1]) /   X_std[1]
         
 #       We finish by "selfing" Training Set and Testing Set
         self.X_train, self.y_train  =   X_train, y_train
         self.X_test, self.y_test    =   X_test , y_test
+        self.train_mean, self.train_std =  X_train_mean, X_std
+        self.scale = scale
+###-------------------------------------------------------------------------------
+    def mean_std_new_input(self, x_s):
+        for i in range(len(x_s)) :
+            x_s[i] -= self.train_mean[i]
+            if np.abs(self.train_std[i]) > 1e-12:
+                x_s[i] /= self.train_std[i]
+        return x_s       
 ###-------------------------------------------------------------------------------
     def w_b_real_init(self):
         ### We use X_train.shape
@@ -292,7 +306,7 @@ class Neural_Network():
                                                                      self.t : self.y_train}))
                     if np.isnan(costs[-1]) : raise IOError( "Warning, Epoch {} \t batch {}, \t lr = {}\
                                     \n Explode".format(epoch, jj, self.lr) )
-            print costs
+            print costs[-10:]
         self.costs = costs
 ###-------------------------------------------------------------------------------
     def predict(self, x_s):

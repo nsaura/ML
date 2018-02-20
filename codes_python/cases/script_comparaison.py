@@ -55,7 +55,7 @@ T.obs_pri_model()
 T.get_prior_statistics()
 
 X_NN,y_NN,v_NN = GPC.training_set(T, parser.N_sample)
-X_GP,y_GP,v_GP = GPC.training_set(T, 5)
+X_GP,y_GP,v_GP = GPC.training_set(T, 2)
 
 dict_layers = {"I" : 2,\
                "N1" : 1000,\
@@ -88,10 +88,10 @@ T_base = dict()
 
 key_GP = ["GP_T_ML", "GP_T_ML_max", "GP_T_ML_min"]
 
-h_op, phi_var_inv = GPC.maximize_LML(T, X_GP, y_GP, v_GP, 5)
+h_op, phi_var_inv = GPC.maximize_LML(T, X_GP, y_GP, v_GP, 2)
 
 for l,b in zip(lambda_list, body_list):
-    GP_res = GPC.solver_ML(T, X_GP, y_GP, v_GP, h_op, phi_var_inv, 5, l, b, False)
+    GP_res = GPC.solver_ML(T, X_GP, y_GP, v_GP, h_op, phi_var_inv, 2, l, b, False)
     NN_res = NNI.solver_NN(T, NN, parser.N_sample, l, b)
 
     key = lambda s : s + "_%s" %(b)

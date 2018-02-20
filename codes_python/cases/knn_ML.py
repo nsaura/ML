@@ -33,14 +33,12 @@ NNI = reload(NNI)
 
 parser = cfa.parser()
 T = ctc.Temperature_cst(parser) 
-print("out init")
 T.obs_pri_model()
-print("out obs")
 T.get_prior_statistics()
 
 X,y,v = GPC.training_set(T, parser.N_sample)
 
-def shuffle_train_split(T, X,y): 
+def shuffle_train_split(T, X, y, scale = True): 
     permute_indices = np.random.permutation(np.arange(len(y)))
     X = X[permute_indices]
     y = y[permute_indices] 
@@ -50,24 +48,18 @@ def shuffle_train_split(T, X,y):
     X_train_mean =  X_train.mean(axis=0)
     X_std        =  X_train.std(axis=0)
     
-    print X_std
-    
-    if np.abs(X_std[0]) < 1e-12:
-        X_train[:,0] = (X_train[:,0]  - X_train_mean[0])
-        X_test[:,0]  = (X_test[:,0]   - X_train_mean[0])
-    else :    
-        X_train[:,0] = (X_train[:,0]  - X_train_mean[0]) /   X_std[0]
-        X_test[:,0]  = (X_test[:,0]   - X_train_mean[0]) /   X_std[0]  
+    if scale == True :
+        if np.abs(X_std[0]) < 1e-12:
+            X_train[:,0] = (X_train[:,0]  - X_train_mean[0])
+            X_test[:,0]  = (X_test[:,0]   - X_train_mean[0])
+        else :    
+            X_train[:,0] = (X_train[:,0]  - X_train_mean[0]) /   X_std[0]
+            X_test[:,0]  = (X_test[:,0]   - X_train_mean[0]) /   X_std[0]  
 
-    X_train[:,1] = (X_train[:,1]  - X_train_mean[1]) /   X_std[1]
-    X_test[:,1]  = (X_test[:,1]   - X_train_mean[1]) /   X_std[1]
+        X_train[:,1] = (X_train[:,1]  - X_train_mean[1]) /   X_std[1]
+        X_test[:,1]  = (X_test[:,1]   - X_train_mean[1]) /   X_std[1]
 
     return X_train, X_test, y_train, y_test, X_train_mean, X_std
-
-X_train, X_test, y_train, y_test, mean, std = shuffle_train_split(T,X,y)
-
-reg = KNeighborsRegressor(n_neighbors=10).fit(X_train, y_train)
-print("Test set prediction : \n{}".format(reg.predict(X_test)))
 
 def recentre(x_s, X_train_mean, X_train_std):
     x_s[0] -= X_train_mean[0]
@@ -79,15 +71,15 @@ def recentre(x_s, X_train_mean, X_train_std):
     
     return x_s
         
-
-def T_to_beta(T, mean, std, T_inf, body) :
+def T_to_beta(T, reg, mean, std, T_inf, body, scale = True) :
     T_inf = map(T_inf, T.line_z)
     T_n = np.asarray(map(lambda x : -4*T_inf[(T.N_discr-2)/2]*x*(x-1), T.line_z) )
     beta =  []
     
     for j,t in enumerate(T_n) :
         x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
-        x_s = recentre(x_s, mean, std)
+        if scale == True :
+            x_s = recentre(x_s, mean, std)
         res = reg.predict(x_s.reshape(1,-1))
         print res
         beta.append(res[0][0])
@@ -115,7 +107,8 @@ def T_to_beta(T, mean, std, T_inf, body) :
         beta= []
         for j,t in enumerate(T_n) :
             x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
-            x_s = recentre(x_s, mean, std)
+            if scale == True :
+                x_s = recentre(x_s, mean, std)
             res =  reg.predict(x_s.reshape(1,-1))
             beta.append(res[0][0])
         
@@ -139,20 +132,29 @@ def T_to_beta(T, mean, std, T_inf, body) :
     
     return T_nNext, beta_nNext
 
-T_ML, beta_ML = T_to_beta(T, mean, std, lambda x :20, "20")
-T_true = GPC.True_Temp(T ,map(lambda x: 20, T.line_z), "20")
-true_beta = GPC.True_Beta(T, T_true, map(lambda x: 20, T.line_z))
+def processing(T, N, T_inf, body, scale) :
+#    run knn_ML.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -N_sample 10
 
-plt.ion()
-plt.figure("KNN vs True")
-plt.plot(T.line_z, T_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
-plt.plot(T.line_z, T_true, label='True', linestyle='--', c='k')
-plt.legend()
+    X_train, X_test, y_train, y_test, mean, std = shuffle_train_split(T,X,y,scale=scale)
+    reg = KNeighborsRegressor(n_neighbors=N).fit(X_train, y_train)
 
-plt.figure("beta KNN vs True")
-plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
-plt.plot(T.line_z, true_beta, label='True', linestyle='--', c='k')
-plt.legend()
+    print("Test differences entre prediction et Y_test : ")
+    print("{}".format(y_test - reg.predict(X_test)))
+    
+    T_ML, beta_ML = T_to_beta(T, reg, mean, std, T_inf, body, scale)
+    T_true = GPC.True_Temp(T ,map(T_inf, T.line_z), body)
+    true_beta = GPC.True_Beta(T, T_true, map(T_inf, T.line_z))
+
+    plt.ion()
+    plt.figure("KNN vs True")
+    plt.plot(T.line_z, T_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
+    plt.plot(T.line_z, T_true, label='True', linestyle='--', c='k')
+    plt.legend()
+
+    plt.figure("beta KNN vs True")
+    plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
+    plt.plot(T.line_z, true_beta, label='True', linestyle='--', c='k')
+    plt.legend()
 
 
 

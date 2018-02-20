@@ -39,24 +39,25 @@ plt.ion()
 # On n'a cependant pas besoin de relancer l'inférence
 # Puisque les distributions importantes ont été écrites
 if  __name__ == "__main__" :
+#    run script_comparaison.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -N_sample 10 -epoch 1500
     T = ctc.Temperature_cst(parser) 
     T.obs_pri_model()
     T.get_prior_statistics()
 
     X,y,v = GPC.training_set(T, parser.N_sample)
 
-    dict_layers = {"I" : 2,\
-                   "N1" : 1000,\
-                   "N2" : 500,\
-                   "N3" : 100,\
-                   "N4" : 100,\
-                   "N5" : 100,\
-                   "N6" : 100,\
-                   "N7" : 100,\
-                   "N8" : 100,\
-                   "N9" : 100,\
-                   "N10": 100,\
-                   "O"  : 1}
+dict_layers = {"I" : 2,\
+               "N1" : 1000,\
+               "N2" : 500,\
+               "N3" : 100,\
+               "N4" : 100,\
+               "N5" : 100,\
+               "N6" : 100,\
+               "N7" : 100,\
+               "N8" : 100,\
+               "N9" : 100,\
+               "N10": 100,\
+               "O"  : 1}
                    
     #dict_layers = {"I" : 2,\
     #               "N1" : 1000,\
@@ -67,16 +68,16 @@ if  __name__ == "__main__" :
     #               "N6" : 100,\
     #               "N7" : 1000,\
     #               "O"  : 1}               
-    N_hidden_layer = len(dict_layers.keys()) - 1
+N_hidden_layer = len(dict_layers.keys()) - 1
 #nn = NNC.Neural_Network(parser.lr, N_=dict_layers, max_epoch=parser.N_epoch)
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
-def build_case(lr, X, y, act, opti, loss, N_=dict_layers, max_epoch=parser.N_epoch, **kwargs) :
+def build_case(lr, X, y, act, opti, loss, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, **kwargs) :
     # build_case(1e-3, X, y , act="relu", opti="RMS", loss="OLS", decay=0.7, momentum=0.8, max_epoch=1000) marche très bien avec [10, 15, 20, 25, 30, 35, 40, 45, 50]
 
     nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch)
     
-    nn_obj.train_and_split(X,y,strat=False,shuffle=True)
+    nn_obj.train_and_split(X,y,strat=False,shuffle=True, scale=scale)
 #       nn.X_train, nn.X_test
 #       nn.y_train, nn.y_test
     nn_obj.tf_variables()
@@ -154,6 +155,9 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
         beta, sigma = [], []
         for j,t in enumerate(T_n) :
             x_s = np.array([[T_inf[j], t]]) ## T_inf, T(z)
+            if nn_obj.scale == True :
+                print("Rescale")
+                x_s = nn_obj.mean_std_new_input(x_s) # recentre par rapport à la moyenne en cours
             beta.append(nn_obj.sess.run(nn_obj.y_pred_model, feed_dict={nn_obj.x: x_s}))
         
         beta_nNext = np.asarray(beta)
