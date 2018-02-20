@@ -38,35 +38,36 @@ plt.ion()
 # On déclare un objet de la classe T pour pouvoir avoir accès à des grandeurs propres à la méthode.
 # On n'a cependant pas besoin de relancer l'inférence
 # Puisque les distributions importantes ont été écrites
-T = ctc.Temperature_cst(parser) 
-T.obs_pri_model()
-T.get_prior_statistics()
+if  __name__ == "__main__" :
+    T = ctc.Temperature_cst(parser) 
+    T.obs_pri_model()
+    T.get_prior_statistics()
 
-X,y,v = GPC.training_set(T, parser.N_sample)
+    X,y,v = GPC.training_set(T, parser.N_sample)
 
-dict_layers = {"I" : 2,\
-               "N1" : 1000,\
-               "N2" : 500,\
-               "N3" : 100,\
-               "N4" : 100,\
-               "N5" : 100,\
-               "N6" : 100,\
-               "N7" : 100,\
-               "N8" : 100,\
-               "N9" : 100,\
-               "N10": 100,\
-               "O"  : 1}
-               
-#dict_layers = {"I" : 2,\
-#               "N1" : 1000,\
-#               "N2" : 100,\
-#               "N3" : 1000,\
-#               "N4" : 100,\
-#               "N5" : 1000,\
-#               "N6" : 100,\
-#               "N7" : 1000,\
-#               "O"  : 1}               
-N_hidden_layer = len(dict_layers.keys()) - 1
+    dict_layers = {"I" : 2,\
+                   "N1" : 1000,\
+                   "N2" : 500,\
+                   "N3" : 100,\
+                   "N4" : 100,\
+                   "N5" : 100,\
+                   "N6" : 100,\
+                   "N7" : 100,\
+                   "N8" : 100,\
+                   "N9" : 100,\
+                   "N10": 100,\
+                   "O"  : 1}
+                   
+    #dict_layers = {"I" : 2,\
+    #               "N1" : 1000,\
+    #               "N2" : 100,\
+    #               "N3" : 1000,\
+    #               "N4" : 100,\
+    #               "N5" : 1000,\
+    #               "N6" : 100,\
+    #               "N7" : 1000,\
+    #               "O"  : 1}               
+    N_hidden_layer = len(dict_layers.keys()) - 1
 #nn = NNC.Neural_Network(parser.lr, N_=dict_layers, max_epoch=parser.N_epoch)
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
