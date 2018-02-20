@@ -265,7 +265,7 @@ class Temperature_cst() :
 
         print("Fields written see {}".format(self.path_fields))
 ##---------------------------------------------------   
-    def h_beta(self, beta, T_inf, verbose=False) :
+    def h_beta(self, beta, T_inf, verbose=True) :
 #        T_n = list(map(lambda x : -4*T_inf*x*(x-1), self.line_z))
 #   Initial condition
         
@@ -275,7 +275,7 @@ class Temperature_cst() :
         B_n = np.zeros((self.N_discr-2))
         T_nNext = T_n
         
-        err, tol, compteur, compteur_max = 1., 1e-4, 0, 1000
+        err, tol, compteur, compteur_max = 1., 1e-4, 0, 2000
         if verbose == True :
             plt.figure()
             
@@ -356,6 +356,9 @@ class Temperature_cst() :
                 T_n_obs =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) # On va utiliser le modèle complet -> obs
                 T_n_pri =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) # On va utiliser le modèle incomplet -> pri
                 
+                T_n_obs =  list(map(lambda x : 0, self.line_z) ) # On va utiliser le modèle complet -> obs
+                T_n_pri =  list(map(lambda x : 0, self.line_z) ) # On va utiliser le modèle incomplet -> pri                
+                
                 T_init.append(T_n_obs)
                 T_nNext_obs = T_n_obs
                 T_nNext_pri = T_n_pri
@@ -396,11 +399,14 @@ class Temperature_cst() :
                 # On écrit les champs convergés 
                 self.pd_write_csv(obs_filename, T_nNext_obs)
                 self.pd_write_csv(pri_filename, T_nNext_pri)             
-
-            print ("Calculus with T_inf={} completed. Convergence status :".format(T_inf))
-            print ("Err_obs = {} ".format(err_obs))    
-            print ("Err_pri = {} ".format(err_pri))
-            print ("Iterations = {} ".format(compteur))
+            
+            if compteur == 0:
+                print("Pour T_inf = {}, les fichiers ont été chargés.".format(T_inf))
+            else : 
+                print ("Calculus with T_inf={} completed. Convergence status :".format(T_inf))
+                print ("Err_obs = {} ".format(err_obs))    
+                print ("Err_pri = {} ".format(err_pri))
+                print ("Iterations = {} ".format(compteur))
         
         self.T_init             =   T_init    
         self.T_nNext_obs_lst    =   T_nNext_obs_lst
@@ -1141,7 +1147,7 @@ class Temperature_cst() :
         if (((alpha <= 1e-7 and cpt_ext > 80)) and g_sup < 5000) and self.warn == "go on":
             temp = alpha
             if alpha <= 1e-10 :
-                alpha = 1e-4 # Ceci a été rajouté pour éviter les explosions d'une itérations à l'autre quitte à laisser le calcul être plus long
+                alpha = 5e-4 # Ceci a été rajouté pour éviter les explosions d'une itérations à l'autre quitte à laisser le calcul être plus long
             else : 
                 alpha = 1.
             print("\x1b[1;37;44mCompteur = {} Alpha from {} to {}\x1b[0m".format(cpt_ext, temp, alpha))
