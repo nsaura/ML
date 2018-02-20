@@ -407,7 +407,6 @@ class Temperature_cst() :
         self.T_nNext_pri_lst    =   T_nNext_pri_lst
 ##---------------------------------------------------   
     def get_prior_statistics(self, verbose = False):
-
        # Le code a été pensé pour être lancé avec plusieurs valeurs de T_inf dans la liste T_inf_lst.
         # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
         # cours. De cette façon, on peut passer d'une température à une autre, et préparer les covariances pour l'optimisation
@@ -1264,9 +1263,9 @@ if __name__ == "__main__" :
     parser = cfa.parser()
     print (parser)
     
-    temp = Temperature(parser)
-    temp.obs_pri_model()
-    temp.get_prior_statistics()
+#    temp = Temperature(parser)
+#    temp.obs_pri_model()
+#    temp.get_prior_statistics()
 #    
 #    temp.adjoint_bfgs(inter_plot=True)
     

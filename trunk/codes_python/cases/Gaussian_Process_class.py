@@ -208,12 +208,14 @@ def True_Temp(T, T_inf, body) :
     
     return T_nNext_obs
 #-------------------------------------------#    
-def True_Beta(T, T_inf) :
+def True_Beta(T, temp, T_inf) :
     """
     Pour comparer beta_true et beta_ML
     """
-    t1 = np.asarray([ 1./T.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i])) *10**(-4) for i in range(T.N_discr-2)])
-    t2 = np.asarray([T.h / T.eps_0*(T_inf[i] - T[i])/(T_inf[i]**4 - T[i]**4)  for i in range(N_discr-2)]) 
+    t1 = np.asarray([ 1./T.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * temp[i]) + np.exp(0.02*temp[i])) *10**(-4) for i in range(T.N_discr-2)])
+    t2 = np.asarray([T.h / T.eps_0*(T_inf[i] - temp[i])/(T_inf[i]**4 - temp[i]**4)  for i in range(T.N_discr-2)]) 
+    
+    return t1 + t2
 #-------------------------------------------#
 def beta_to_T(T, beta, T_inf, body) :
     T_n = np.asarray(map(lambda x : -4*T_inf[(T.N_discr-2)/2]*x*(x-1), T.line_z) )
