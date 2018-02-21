@@ -265,7 +265,7 @@ class Temperature_cst() :
 
         print("Fields written see {}".format(self.path_fields))
 ##---------------------------------------------------   
-    def h_beta(self, beta, T_inf, verbose=True) :
+    def h_beta(self, beta, T_inf, verbose=False) :
 #        T_n = list(map(lambda x : -4*T_inf*x*(x-1), self.line_z))
 #   Initial condition
         
@@ -275,7 +275,7 @@ class Temperature_cst() :
         B_n = np.zeros((self.N_discr-2))
         T_nNext = T_n
         
-        err, tol, compteur, compteur_max = 1., 1e-4, 0, 2000
+        err, tol, compteur, compteur_max = 1., 1e-6, 0, 4000
         if verbose == True :
             plt.figure()
             
@@ -340,12 +340,18 @@ class Temperature_cst() :
                 # Titre qui prend en compte la forme de la covariance, de la température en cours, et le nombre de points de discrétisation
                 obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
+                ## Il faudra peut être zipper tout ces fichiers, les commité puis possiblement les unziper
+                ## On utilisera alors cette procédure
+#                import zipfile
+#                zip_ref = zipfile.ZipFile(path_to_zip_file, 'r')
+#                zip_ref.extractall(directory_to_extract_to)
+#                zip_ref.close()
                 
                 # écriture en chemin absolue pour éviter conflits
                 obs_filename = osp.join(self.datapath, obs_filename) 
                 pri_filename = osp.join(self.datapath, pri_filename)
                 
-                tol ,err_obs, err_pri, compteur = 1e-4, 1.0, 1.0, 0                
+                tol ,err_obs, err_pri, compteur = 1e-8, 1.0, 1.0, 0                
                 
                 # L'utilité de faire attention aux titres des fichiers c'est qu'on n'est plus obligé de les recalculer à toutes les SIMULATIONS (et non itération)
                 # Une fois calculée les champs de températures sont enregistrés
@@ -353,8 +359,8 @@ class Temperature_cst() :
                     continue
                 
                 # Initialisation des champs T que l'on va ensuite faire converger 
-                T_n_obs =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) # On va utiliser le modèle complet -> obs
-                T_n_pri =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) # On va utiliser le modèle incomplet -> pri
+#                T_n_obs =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) # On va utiliser le modèle complet -> obs
+#                T_n_pri =  list(map(lambda x : -4*T_inf*x*(x-1), self.line_z) ) # On va utiliser le modèle incomplet -> pri
                 
                 T_n_obs =  list(map(lambda x : 0, self.line_z) ) # On va utiliser le modèle complet -> obs
                 T_n_pri =  list(map(lambda x : 0, self.line_z) ) # On va utiliser le modèle incomplet -> pri                
@@ -368,7 +374,7 @@ class Temperature_cst() :
                 T_n_obs_tmp =   np.zeros((self.N_discr-2, 1))
                 T_n_pri_tmp =   np.zeros((self.N_discr-2, 1))
                 
-                while (np.abs(err_obs) > tol) and (compteur < 800) and (np.abs(err_pri) > tol):
+                while (np.abs(err_obs) > tol) and (compteur < 6000) and (np.abs(err_pri) > tol):
                     if compteur > 0 :
                         # Initialisation pour itération suivante
                         T_n_obs = T_nNext_obs
@@ -606,7 +612,7 @@ class Temperature_cst() :
             #################
             opti_obj = op.minimize(J, self.beta_prior, jac=grad_J, method="BFGS", tol=self.tol,\
                        options={"disp" : True, "maxiter" : 500})
-            
+                
             ######################
             ##-- Post Process --##
             ######################
