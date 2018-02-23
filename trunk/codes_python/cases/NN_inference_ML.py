@@ -21,10 +21,10 @@ from sklearn.model_selection import train_test_split
 nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
 sys.path.append(nnc_folder)
 
-import Gaussian_Process_class as GPC
-import class_functions_aux as cfa
-import Class_Temp_Cst as ctc
 import NN_class_try as NNC
+import Class_Temp_Cst as ctc
+import class_functions_aux as cfa
+import Gaussian_Process_class as GPC
 
 ctc = reload(ctc)
 cfa = reload(cfa)
@@ -59,15 +59,6 @@ dict_layers = {"I" : 2,\
                "N10": 100,\
                "O"  : 1}
                    
-    #dict_layers = {"I" : 2,\
-    #               "N1" : 1000,\
-    #               "N2" : 100,\
-    #               "N3" : 1000,\
-    #               "N4" : 100,\
-    #               "N5" : 1000,\
-    #               "N6" : 100,\
-    #               "N7" : 1000,\
-    #               "O"  : 1}               
 N_hidden_layer = len(dict_layers.keys()) - 1
 #nn = NNC.Neural_Network(parser.lr, N_=dict_layers, max_epoch=parser.N_epoch)
 ###-------------------------------------------------------------------------------
@@ -94,7 +85,7 @@ def build_case(lr, X, y, act, opti, loss, N_=dict_layers, max_epoch=parser.N_epo
     nn_obj.cost_computation(loss)
     nn_obj.def_optimization()
 #       nn.minimize_loss
-    nn_obj.training_session(batched=False)
+    nn_obj.training_session(tol=1e-3, batched=False)
     
 #    plt.figure("Evolution de l\'erreur %s" %(loss))
 #    plt.plot(range(len(nn_obj.costs)), nn_obj.costs, c='r', marker='o', alpha=0.3,\
@@ -136,7 +127,7 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
     B_n = np.zeros((T.N_discr-2))
     T_n_tmp = np.zeros((T.N_discr-2))
 
-    tol, compteur, cmax = 1e-4, 0, 1000 
+    tol, compteur, cmax = 1e-6, 0, 10000 
     err = err_beta = 1.
     
     while (np.abs(err) > tol) and (compteur <= cmax) :
@@ -156,7 +147,7 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
         for j,t in enumerate(T_n) :
             x_s = np.array([[T_inf[j], t]]) ## T_inf, T(z)
             if nn_obj.scale == True :
-                print("Rescale")
+#                print("Rescale")
                 x_s = nn_obj.mean_std_new_input(x_s) # recentre par rapport à la moyenne en cours
             beta.append(nn_obj.sess.run(nn_obj.y_pred_model, feed_dict={nn_obj.x: x_s}))
         
@@ -197,7 +188,12 @@ def solver_NN(T, nn_obj, N_sample, T_inf, body, verbose = False) :
         plt.plot(T.line_z, T_ML, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
         plt.plot(T.line_z, T_base, label="Base solution", c='green')
         plt.legend(loc='best')
-    
+        
+        title = osp.join(osp.abspath("./res_all_T_inf"),"Beta_True_vs_Beta_ML_N_sample_{}_T_inf_{}".format(N_sample, body))
+        
+        plt.savefig(title)
+        
+        
     NN_out = dict()
     NN_out["NN_T_ML"]  = T_ML   
     NN_out["NN_beta_ML"] = beta_ML.reshape(n)
@@ -211,9 +207,10 @@ def solver_NN(T, nn_obj, N_sample, T_inf, body, verbose = False) :
 lambda_list = [lambda z: 28, lambda z: 55, lambda z: 15+5*np.cos(np.pi*z)]
 body_list = ["28", "55", "15+5cos(piz)"]
     
-def repeat(T, nn_obj, N_sample, lambda_lst, body_lst) :
+def repeat(T, nn_obj, N_sample, lambda_lst, body_lst, verbose=False) :
     for T_inf, body in zip(lambda_lst, body_lst) :
-        solver_NN(T, nn_obj, N_sample, T_inf, body)
+        print("lambda = {}, body = {}".format(T_inf, body))
+        solver_NN(T, nn_obj, N_sample, T_inf, body, verbose=True)
     
     plt.show()
 #nn.error_computation(err_

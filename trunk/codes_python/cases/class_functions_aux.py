@@ -432,4 +432,33 @@ def sigma_plot_Ncst(T, method='adj_bfgs', exp = 0.02, save=False) :
 #        plt.show()     
 ##---------------------------------------------------##
 ##---------------------------------------------------##
-
+def check_T_beta(T, verbose=False):
+    for t in T.T_inf_lst :
+        sT_inf = "T_inf_"+str(t)
+        tfieldtr = T.T_obs_mean[sT_inf]
+        tfieldop = temp.h_beta(T.betamap[sT_inf], t)
+        tfieldbf = temp.h_beta(T.bfgs_adj_bmap[sT_inf], t)  
+        
+        bfieldth = T.true_beta(tfieldtr, t)                 
+        bfieldop = T.betamap[sT_inf]
+        bfieldbf = T.bfgs_adj_bmap[sT_inf]
+        
+        plt.figure("Comp T_field T_inf = %d" %(t))
+        plt.plot(T.line_z, tfieldtr, label="True T_field %s"%(sT_inf), c='green')
+        
+        plt.plot(T.line_z, tfieldop, label="Opti T_field %s"%(sT_inf), marker='+',\
+                c='r',fillstyle = 'none', linestyle='none')
+        plt.plot(T.line_z, tfieldbf, label="BFGS T_field %s"%(sT_inf), c='k',\
+                marker='o', fillstyle = 'none', linestyle='none')
+        plt.legend(loc='best')
+        
+        plt.figure("Comp B_field T_inf = %d" %(t))
+        plt.plot(T.line_z,bfieldth, label="True B_field %s"%(sT_inf), c='green')
+        
+        plt.plot(T.line_z, bfieldop, label="Opti B_field %s"%(sT_inf),marker='+',\
+                c='r', fillstyle = 'none', linestyle='none')
+        plt.plot(T.line_z, bfieldbf, label="BFGS B_field %s"%(sT_inf), c='k',\
+                marker='o', fillstyle = 'none', linestyle='none')
+        plt.legend(loc='best')
+##---------------------------------------------------##
+##---------------------------------------------------##        

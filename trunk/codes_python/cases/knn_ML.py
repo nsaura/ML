@@ -88,7 +88,7 @@ def T_to_beta(T, reg, mean, std, T_inf, body, scale = True) :
     B_n = np.zeros((T.N_discr-2))
     T_n_tmp = np.zeros((T.N_discr-2))
 
-    tol, compteur, cmax = 1e-4, 0, 800
+    tol, compteur, cmax = 1e-6, 0, 6000
     err = err_beta = 1.
     
     while (np.abs(err) > tol) and (compteur <= cmax) :
