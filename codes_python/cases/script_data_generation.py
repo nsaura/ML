@@ -45,9 +45,9 @@ cfa.subplot_cst(temp, method="opti", comp=False, save=True)
 
 # On compare les sigma de la covariance a posteri pour les deux méthodes, avec les sigmas attendus.
 cfa.sigma_plot_cst(temp, save=True)
-
 plt.ion()
-plt.close("all")
+plt.show()
+
 
 
 

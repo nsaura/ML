@@ -17,7 +17,7 @@ import numdifftools as nd
 
 import time
 
-def training_set(T, N_sample):
+def training_set(T, N_sample, scale=False, shuffle=False):
     """
     Dans cette fonction on construit le tableau X_train en construisant un tableau dont la première colonne comprendra
     la température T_inf et les colonnes successives seront composées des valeurs des températures finales pour chaque
@@ -37,9 +37,11 @@ def training_set(T, N_sample):
     Y_train
     """
     # Initialisation des tableaux
-    X_train = np.zeros((1, 2))      # Pour l'instant on essaye ça
-    Y_train = np.zeros((1, 1))      # Pour l'instant on essaye ça
+    X = np.zeros((1, 2))      # Pour l'instant on essaye ça
+    y = np.zeros((1,))      # Pour l'instant on essaye ça
     var = np.zeros((N_sample*T.N_discr-2, N_sample*T.N_discr-2))
+    
+    mean, std = 0, 0
     
     variances = []
     bmap_fields = dict()
@@ -48,16 +50,6 @@ def training_set(T, N_sample):
     for t in T.T_inf_lst :
         sT_inf = "T_inf_" + str(t)  # Clé pour les dictionnaires de l'objet T
         
-#        if t <25 :
-#            bmap_ = "opti_scipy_beta_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
-#            bmap_ = osp.join("./data/matrices",bmap_)
-#        
-#            chol_ = "opti_scipy_cholesky_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
-#            chol_ = osp.join("./data/matrices",chol_)  
-#            
-#            print("T_inf = {}, on considère les champs scipy".format(t))      
-#        
-#        else :        
         bmap_ = "adj_bfgs_beta_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
         bmap_ = osp.join("./data/matrices",bmap_)
         
@@ -82,17 +74,34 @@ def training_set(T, N_sample):
             # On empile la ligne "line" sous la dernière ligne du X_train
             for j,d in zip(T_finale,distrib_bmap(s_curr)) :
                 line = np.append(t, j) ## Ligne comprenant T_inf et le champ final de température
-                X_train = np.block([[X_train], [line]]) 
-                
-                Y_train = np.block([[Y_train], [d]]) 
+                X = np.block([[X], [line]]) 
+                y = np.block([[y], [d]]) 
                 
                 variances.append(np.std(distrib_bmap(s_curr))**2)
             # On empile la ligne "line" sous la dernière ligne du Y_train
     
-    X_train =   np.delete(X_train, 0, axis=0)        # On enlève les lignes de zéros
-    Y_train =   np.delete(Y_train, 0, axis=0)        # On enlève les lignes de zéros
+    X =   np.delete(X, 0, axis=0)        # On enlève les lignes de zéros
+    y =   np.delete(y, 0, axis=0)        # On enlève les lignes de zéros
+    variances = np.asarray(variances)
     
-    return X_train, Y_train, variances
+    if shuffle == True :
+        permute_indices = np.random.permutation(np.arange(len(y)))
+        X = X[permute_indices]
+        y = y[permute_indices]
+        variances = variances[permute_indices]
+    
+    if scale == True :
+        std = X.std(axis=0)
+        mean = X.mean(axis=0)
+    
+        X[:,0] = X[:,0] - mean[0]
+        
+        if np.abs(std[0]) > 1e-12 : X[:,0] /= std[0]
+        
+        X[:,1]  = (X[:,1] - mean[1]) / std[1]
+        X[:,1]  = (X[:,1] - mean[1]) / std[1]
+        
+    return X, y, variances, mean, std
 #-------------------------------------------#            
 def maximize_LML(T, X_train, Y_train, var, N_sample, h_curr = 2.): #Rajouter variances
     N = N_sample*(T.N_discr-2)*len(T.T_inf_lst)
@@ -126,8 +135,6 @@ def ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s) :
     x_s l'entrée dont on veut prédire la sortie
     """
     N = N_sample*(T.N_discr-2)*len(T.T_inf_lst)
-    if len(np.shape(var)) == 1 :
-        var *= np.eye(N)
     
     var_mat = var * np.eye(N)
     phi_vec_s = np.asarray([np.exp(-np.linalg.norm(x_s - X, 2)**2 / h_op**2) for X in X_train]) ## Vecteur de taille N
@@ -138,62 +145,21 @@ def ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s) :
     beta_ML = alpha.dot(phi_vec_s) 
     sigma_ML = 1 - phi_vec_s.dot(phi_var_inv.dot(phi_vec_s))
 
-    return (beta_ML, sigma_ML)
-#-------------------------------------------#
-def test(T, N_sample, T_inf) :
-    X_train, Y_train, var = training_set(T, N_sample)
-    h_op, phi_var_inv = maximize_LML(T, N_sample)
-    
-    sT_inf = "T_inf_%d" %(T_inf)
-    Tdistrib = T.h_beta(T.bfgs_adj_bmap[sT_inf] + T.bfgs_adj_cholesky[sT_inf].dot(T.tab_normal(0,1,T.N_discr-2)[0]), T_inf)
-    var_moy = np.mean(var)
-    
-    X_test = np.zeros((1,2))
-    for t in Tdistrib :
-        X_test = np.block([[X_test], [T_inf, t]])    
-    X_test = np.delete(X_test, 0, axis=0)    
-    beta, sigma = [],[] 
-    
-    for x in X_test :
-        res = ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x)
-        beta.append(res[0])
-        sigma.append(res[1] + var_moy)
-    
-    beta_span = []
-    beta_span.append([beta[i] + sigma[i] for i in range(len(beta))])
-    beta_span.append([beta[i] - sigma[i] for i in range(len(beta))])
-
-    T_min = T.h_beta(beta_span[0], T_inf) 
-    T_max = T.h_beta(beta_span[1], T_inf)   
-        
-    plt.figure("Temperature beta learning")
-    plt.plot(T.line_z, T.h_beta(beta, T_inf), label="Learning N_sample %d" %(N_sample), marker='o', c='r', fillstyle = 'none', linestyle='None')
-    plt.plot(T.line_z, T.h_beta(T.bfgs_adj_bmap[sT_inf], T_inf), label="Inference" , marker='+', color='green', fillstyle = 'none', linestyle='None')
-    plt.plot(T.line_z, Tdistrib, label="True", color='k', linestyle='--')
-    plt.fill_between(T.line_z, T_min, T_max, facecolor= "1", alpha=0.7, interpolate=True, hatch='/', color="grey")
-    plt.legend(loc="best")
-    plt.show()
-    
-    plt.figure("Comparaison Beta learning VS inference")
-    plt.plot(T.line_z, beta, label= "learning")
-    plt.plot(T.line_z, T.bfgs_adj_bmap[sT_inf], label="inference")
-    plt.legend()
-    plt.show()
-    
-    return beta, sigma
+    return beta_ML, sigma_ML
 #-------------------------------------------#
 def True_Temp(T, T_inf, body) :
     """
     T_inf doit avoir être un type lambda. Boucle conditionnelle qui check ça
     """
-    T_n_obs =  list(map(lambda x : -4*T_inf[len(T.line_z)/2]*x*(x-1), T.line_z) )
+    T_n_obs =  list(map(lambda x : 0., T.line_z) )
     T_nNext_obs = T_n_obs
 
     B_n_obs     =   np.zeros((T.N_discr-2, 1))
     T_n_obs_tmp =   np.zeros((T.N_discr-2, 1))
-    tol ,err_obs, compteur = 1e-4, 1.0, 0 
+
+    tol ,err_obs, compteur = 1e-8, 1.0, 0 
     
-    while (np.abs(err_obs) > tol) and (compteur < 800) :
+    while (np.abs(err_obs) > tol) and (compteur < 10000) :
         if compteur > 0 :
             T_n_obs = T_nNext_obs
         compteur += 1
@@ -212,9 +178,9 @@ def True_Temp(T, T_inf, body) :
     print ("Err_obs = {} ".format(err_obs))    
     print ("Iterations = {} ".format(compteur))
     
-    plt.figure("T_inf : {}".format(body)) 
-    plt.plot(T.line_z, T_nNext_obs, label="T_inf={}".format(body))
-    plt.legend()
+#    plt.figure("T_inf : {}".format(body)) 
+#    plt.plot(T.line_z, T_nNext_obs, label="T_inf={}".format(body))
+#    plt.legend()
     
     return T_nNext_obs
 #-------------------------------------------#    
@@ -228,11 +194,11 @@ def True_Beta(T, temp, T_inf) :
     return t1 + t2
 #-------------------------------------------#
 def beta_to_T(T, beta, T_inf, body) :
-    T_n = np.asarray(map(lambda x : -4*T_inf[(T.N_discr-2)/2]*x*(x-1), T.line_z) )
+    T_n = np.asarray(map(lambda x : 0., T.line_z) )
     B_n = np.zeros((T.N_discr-2))
     T_nNext = T_n
         
-    err, tol, compteur, compteur_max = 1., 1e-4, 0, 1000
+    err, tol, compteur, compteur_max = 1., 1e-6, 0, 10000
         
     while (np.abs(err) > tol) and (compteur <= compteur_max) :
         if compteur > 0 :
@@ -255,14 +221,22 @@ def beta_to_T(T, beta, T_inf, body) :
     print ("Iterations = {} ".format(compteur))
     return T_nNext 
 #------------------------------------#
-def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body):
-    T_n = np.asarray(map(lambda x : -4*T_inf[(T.N_discr-2)/2]*x*(x-1), T.line_z) )
+def T_to_beta(T, X_train, Y_train, var, mean, std, phi_var_inv, h_op, N_sample, T_inf, body, scale=True):
+    T_n = np.asarray(map(lambda x : 0, T.line_z) )
     beta, sigma =  [], []
     
     var_moy = np.mean(var)
     
     for j,t in enumerate(T_n) :
         x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
+        if scale == True :
+            x_s[0] -= mean[0]
+            x_s[1] -= mean[1]
+            x_s[1] /= std[1]
+            
+            if np.abs(std[0]) > 1e-12 :
+                x_s[0] /= std[0]
+                
         res = ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s)
         beta.append(res[0])
         sigma.append(res[1] + var_moy )
@@ -271,7 +245,7 @@ def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body
     B_n = np.zeros((T.N_discr-2))
     T_n_tmp = np.zeros((T.N_discr-2))
 
-    tol, compteur, cmax = 1e-4, 0, 500
+    tol, compteur, cmax = 1e-4, 0, 6000
     err = err_beta = 1.
     
     while (np.abs(err) > tol) and (compteur <= cmax) :
@@ -290,6 +264,14 @@ def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body
         beta, sigma = [], []
         for j,t in enumerate(T_n) :
             x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
+            if scale == True :
+                x_s[0] -= mean[0]
+                x_s[1] -= mean[1]
+                x_s[1] /= std[1]
+
+                if np.abs(std[0]) > 1e-12 :
+                    x_s[0] /= std[0]
+                    
             res =  ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s)
             beta.append(res[0])
             sigma.append(res[1] + var_moy)
@@ -313,12 +295,12 @@ def T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body
     
     return T_nNext, beta_nNext, sigma
 #-------------------------------------------#
-def solver_ML(T, X_train, Y_train, var, h_op, phi_var_inv, N_sample, T_inf, body, verbose = False):
+def solver_ML(T, X, y, var, mean, std, h_op, phi_var_inv, N_sample, T_inf, body, verbose = False):
 #    X_train, Y_train, var = training_set(T, N_sample)
     T_inf_lambda = T_inf
     T_inf = map(T_inf, T.line_z) 
 
-    T_ML, beta_ML, sigma_ML = T_to_beta(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, T_inf, body)
+    T_ML, beta_ML, sigma_ML = T_to_beta(T, X, y, var, mean, std, phi_var_inv, h_op, N_sample, T_inf, body)
 
     T_true = True_Temp(T, T_inf, body)
 
