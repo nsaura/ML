@@ -44,7 +44,7 @@ if  __name__ == "__main__" :
     T.obs_pri_model()
     T.get_prior_statistics()
 
-    X,y,v = GPC.training_set(T, parser.N_sample)
+    X,y,v,m,s = GPC.training_set(T, parser.N_sample)
 
 dict_layers = {"I" : 2,\
                "N1" : 1000,\
@@ -213,8 +213,5 @@ def repeat(T, nn_obj, N_sample, lambda_lst, body_lst, verbose=False) :
         solver_NN(T, nn_obj, N_sample, T_inf, body, verbose=True)
     
     plt.show()
-#nn.error_computation(err_
-
-     
 
 

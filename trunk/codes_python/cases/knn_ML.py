@@ -36,7 +36,7 @@ T = ctc.Temperature_cst(parser)
 T.obs_pri_model()
 T.get_prior_statistics()
 
-X,y,v = GPC.training_set(T, parser.N_sample)
+X,y,v,m,s = GPC.training_set(T, parser.N_sample)
 
 def shuffle_train_split(T, X, y, scale = True): 
     permute_indices = np.random.permutation(np.arange(len(y)))
@@ -135,8 +135,12 @@ def T_to_beta(T, reg, mean, std, T_inf, body, scale = True) :
 def processing(T, N, T_inf, body, scale) :
 #    run knn_ML.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -N_sample 10
 
+    from sklearn.model_selection import GridSearchCV
+    
     X_train, X_test, y_train, y_test, mean, std = shuffle_train_split(T,X,y,scale=scale)
     reg = KNeighborsRegressor(n_neighbors=N).fit(X_train, y_train)
+
+    grid_search = GridSearchCV(SVC(), param_grid, cv=5) # Objet a entrainer et evaluer
 
     print("Test differences entre prediction et Y_test : ")
     print("{}".format(y_test - reg.predict(X_test)))
