@@ -151,20 +151,27 @@ keywordstyle=[0]{\color{red}},
 \begin{equation}
 \mathcal{D} = \left\{ \left( x_i, y_i \right) : i = 1,. . ., n \right\}
 \end{equation}
-\noindent Le procédé d'apprentissage (ou \textit{learning}), consiste à passer de $\mathcal{D}$, une connaissance \textit{spécifique}, à une connaissance \textit{généralisée} dans le but de \textit{mapper} n'importe qu'elle entrée avec une sortie cohérente, selon le problème étudié. On construit donc une fonctionnelle liant entrées et sorties. Cette fonctionnelle peut se construire de plusieurs façons. 
+\noindent Le procédé d'apprentissage (ou \textit{learning}), consiste à passer de $\mathcal{D}$, une connaissance \textit{spécifique}, à une connaissance \textit{généralisée} dans le but de \textit{mapper} n'importe qu'elle entrée avec une sortie cohérente, selon le problème étudié. On construit donc une fonctionnelle liant entrées et sorties. Cette fonctionnelle peut se construire de plusieurs façons. \\
+
+\noindent On distingue deux classes d'apprentissage supervisé : l'apprentissage paramétrique \cad $ $ dans lequel la forme de la fonctionnelle est attendue (polynômiale, Gaussienne), et, l'apprentissage non paramétrique \textit{i.e.}, dont aucune forme n'est supposée pour cette fonctionnelle.\\
+Les régression polynômiale sont des exemple d'apprentissage paramétrique, alors que les Plus Proches Voisins (KNN) ou le Gaussian Process en sont pour l'apprentissage non paramétrique.\\
+
 \section{Neural Networks}
 L'approche Neural Network consiste à n'utiliser que des combinaisons linéaires des entrées de chaque couche. Chaque site recevant cette entrée émet ensuite un signal à la couche de neurones suivante. Ce signal est une fonction non linéaire de l'entrée (voir plus loin ou autres notes sur les différentes fonctions d'activation). \\
 Mais de maniere générale les relations entre les entrées sont toujours linéaires.
+
+ 
+\pagebreak
 \section{Processus Gaussien (régression)}
 
-%\begin{figure}[!ht]
-%\centering 
-%\includegraphics[scale=0.5]{fig_ramuss_1.png}
-%\caption{Provient de \citep{rasmussen2006gaussian}}
-%\label{ramuss_1}
-%\end{figure}
+\begin{figure}[!ht]
+\centering 
+\includegraphics[scale=0.5]{fig_ramuss_1.png}
+\caption{Provient de \citep{rasmussen2006gaussian}}
+\label{ramuss_1}
+\end{figure}
 
-\noindent Cette idée généralise la notion de distribution Gaussienne (DG). De manière générale, lorsqu'une distribution de probabilité nous renseigne sur une \textbf{variable} ou un \textbf{vecteur} \textit{aléatoire}, un processus stochastique régit les \textit{propriétés} d'une distribution de \textbf{fonctions}. Sous des conditions particulières, les modèles de GP peuvent être mathématiquement équivalents aux splines, larges Neural Networks etc.. \\ 
+Cette idée généralise la notion de distribution Gaussienne (DG). De manière générale, lorsqu'une distribution de probabilité nous renseigne sur une \textbf{variable} ou un \textbf{vecteur} \textit{aléatoire}, un processus stochastique régit les \textit{propriétés} d'une distribution de \textbf{fonctions}. Sous des conditions particulières, les modèles de GP peuvent être mathématiquement équivalents aux splines, larges Neural Networks etc.. \\ 
 D'une manière plus formelle un GP est une collection de variables aléatoires dont on peut trouver, pour n'importe quel nombre d'entre elles, une distribution jointe, gaussienne.\\
 L'approche du processus Gaussien consiste à adapter la fonction liant les entrées. C'est-à-dire, initialement toutes les fonctions sont possibles, mais le processus Gaussiens nous permet de donner plus de poids à telle ou telle fonction en spécifiant les propriétés recherchées.\\
 Même si initialement toutes les fonctions sont possibles, en choisir une en particulier n'influe pas sur le résultat final. Les GP permettent d'obtenir une connaissance claire sur les statistiques de données ainsi que sur les relations (linéaires, etc). On parlera de \textit{tracabilité} du calcul. \\

@@ -1,0 +1,194 @@
+\documentclass[a4paper,12pt]{report} 
+\usepackage[utf8x]{inputenc}
+\usepackage[french]{babel}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{textcomp}
+\usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
+\usepackage{multicol}					% Pour utiliser \hfill
+\usepackage{ifthen}
+\usepackage{tabularx}	 				% Gestion avancée des tableaux
+%\usepackage{cleveref}
+
+\usepackage{enumitem}
+\usepackage{wrapfig}
+%\usepackage[squaren]{SIunits}
+%\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
+\usepackage[linkcolor=Indigo,colorlinks=true, citecolor=SaddleBrown, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage{listings}					% Pour citer du code
+\usepackage[justification=centering]{caption}
+\usepackage{sistyle} 
+\usepackage{numprint}
+\usepackage{wrapfig}
+\usepackage{cite}	
+\usepackage{url} 					% Pour citer les sites internet dans la
+%\usepackage{cleveref}
+\usepackage{setspace}
+
+\usepackage{graphicx}		 			% Inclusion des figures
+\graphicspath{{./pic/}}
+\usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
+
+%%% Commandes utiles définies
+\newcommand{\argmin}{\mathop{\mathrm{argmin}}}
+
+\newcommand{\bepar}[1]{
+	\left( #1 \right)  
+}
+
+\newcommand{\becro}[1]{
+	\left[ #1 \right]  
+}
+
+\newcommand{\rbk}[1]{\color{red}\textit{#1} \color{black}  
+}
+
+\usepackage{listings}					% Pour citer du code
+%%%%%%%%%%%%%%%%%%%
+%%% Élément pour citer des codes %%%
+\lstset{
+language=Python,
+basicstyle=\ttfamily\bfseries\small, %
+identifierstyle=\bfseries\color{black}, %
+keywordstyle=\color{blue}, %
+stringstyle=\color{black!90}, %
+commentstyle=\it\color{black!70}, %
+columns=flexible, %
+tabsize=4, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, % %
+numberstyle=\small, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b,
+otherkeywords={cross_val_score},
+keywords=[0]{cv},
+keywordstyle=[0]{\color{red}},
+}
+%%%%%%%%%%%%%%%%%%%%%
+\title{\navy \textbf{Notes bibliographiques : \\ Utilisation de ML pour la turbulence} \color{black}}%%%%%%%%%%%%%%%%%%%%
+\date{}
+%\usepackage{multicol}
+%\usepackage{etoolbox}
+%\patchcmd{\thebibliography}{\section*{\refname}}
+%    {\begin{multicols}{2}[\section*{\refname}]}{}{}
+%\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
+\usepackage[authoryear]{natbib}
+
+\usepackage{geometry}
+\geometry{hmargin=2cm, vmargin=2cm}
+
+%%%%%%%%%%%%%%%%%%%%
+%%% Couleurs %%%
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{midblue}{named}{MidnightBlue}
+\xdefinecolor{dsb}{named}{DarkSlateGray}
+\xdefinecolor{dgreen}{named}{DarkGreen}
+
+%%% 	Raccourcis 	%%%
+\newcommand{\keps}{$k-\varepsilon$}
+\newcommand\bk{\color{black}}
+\newcommand\brick{\color{brick}}
+\newcommand\navy{\color{navy}}
+\newcommand\midblue{\color{midblue}}
+\newcommand\dsb{\color{dsb}}
+\newcommand{\dgreen}{\color{dgreen}}
+\newcommand\red{\color{red}}
+
+%%%%%%%% Cigles
+\newcommand{\rap}{par rapport}
+\newcommand{\cad}{c'est-à-dire}
+\newcommand{\vav}{vis-à-vis}
+
+%%%%%%%% Autres
+
+%%%%%%%%%%%%%%%%%%%
+% Syntax: \colorboxed[<color model>]{<color specification>}{<math formula>}
+\newcommand*{\colorboxed}{}
+\def\colorboxed#1#{%
+  \colorboxedAux{#1}%
+}
+\newcommand*{\colorboxedAux}[3]{%
+  % #1: optional argument for color model
+  % #2: color specification
+  % #3: formula
+  \begingroup
+    \colorlet{cb@saved}{.}%
+    \color#1{#2}%
+    \boxed{%
+      \color{cb@saved}%
+      #3%
+    }%
+  \endgroup
+}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\textbf{Nathaniel} \brick \textbf{\textsc{Saura}}}
+\rhead{\markright}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\numberwithin{equation}{section} %%%% To count the equation like Section.Number
+
+
+
+\begin{document}
+\maketitle
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\newcolumntype{N}{@{}m{0pt}@{}}
+
+\noindent On se base sur \textbf{\citep{ling2016machine}} qui se pose la question de comment inculquer les propriétés d'invariance lors de l'apprentissage, et de voir si le faire améliore les prédictions.
+
+\begin{table}[h]
+		% Center the table
+		\centering
+		% Table itself: here we have two columns which are centered and have lines to the left, right and in the middle: |c|c|
+		\begin{tabular}{|M{.3\textwidth}|M{.68\textwidth}|N }
+		\hline
+		Auteur & Travaux &\\[.5cm] \hline
+		\textbf{\cite{milano2002neural}} & Used DNS results for a turbulent channel flow to train a \red NN \bk to reconstruct the \navy near wall flow \bk&\\[1.5cm] \hline
+		
+		\textbf{\cite{tracey2013application}} & ML algorithms (\red??\bk) to model the \navy Reynolds stress anisotopy\bk  &\\[1.5cm] \hline
+		
+		\textbf{\cite{tracey2015machine}} & \red NN \bk to \navy mimic the source terms from the SA turbulence model \bk &\\[1.5cm] \hline
+				
+		\textbf{\cite{duraisamy2015new}} & \red NN and GP \bk to \navy model intermittency in transitional turbulence \bk &\\[1.5cm] \hline 		
+		
+		\textbf{\cite{zhang2015machine}} & Used \red NN and GP \bk to \navy model turbulence Production in channel flow \bk &\\[1.5cm] \hline
+				
+		\textbf{\cite{ling2015evaluation}} & Used \red Random Forests (RF) \bk to \navy predict regions of high model from uncertainty in RANS results.\bk &\\[1.5cm] \hline 
+		
+		
+		\end{tabular} 
+		\vspace{0.5cm}
+		\caption{Tableau retraçant les études NN vs Turbulence faites auparavant 
+		\label{tab:simParameters}}
+\end{table}
+
+\pagebreak
+
+\subsection*{\textbf{\cite{duraisamy2015new}} : }
+Dans cet article on veut trouver un facteur correctif pour reconstruire les intermittences de la tubulence. La façon de faire passe par de l'inférence puis une généralisation de cette inférence en utilisant les réseaux de neurones et les GP.\\
+Ils insistent sur le fait que les entrées doivent être des quantités locales et adimensionnés (on pourra consulter \cite{tracey2015machine} partie 3 Méthodologie).\\
+La raison de cette insistance est la suivante : on veut que la sortie $f(\textbf{q})$ soit utilisable dès que $\textbf{q}$ se réalise, peu importe le problème.\\
+
+\noindent Les paramètres influant le plus sur la sortie de la ML sont choisis au travers le procédé \textit{hill-climbing} \cite{kohavi1997wrappers} (à lire). La fonction d'erreur est la SSE qui compare la sortie prédite par rapport à la sortie atendue (lors de l'apprentissage).\\
+Les hyperparamètres amenant à une IA optimale sont déterminés par 10-fold Cross Validation (voir \cite{muller2016introduction}, chapitre 5 et 6). Cette cross-validation est donc faite pour déterminer les valeurs des paramètres qui ont été sélectionnés par le \textit{hill-climbing}.\\
+-----\\[1cm]
+
+\subsubsection*{À la recherche des invariants}
+\noindent D'après \citep{ling2016machine} les \textit{features} ainsi choisis ne respectent pas les invariances en rotation et que le modèle n'a été entraîné que pour une seule configuration d'écoulement.\\
+Il s'est avéré qu'entraîner un NN avec la même base de données, en "orientant" les entrées tout en les associant à la même sortie, on forçait les invariances rotationnelles (voir \cite{LEFIK20033265}).\\
+
+\cite{tracey2013application} et \cite{ling2015evaluation} utilisent des entrées qui sont des invariants Galilééns, le coix de ces entrées a été fait en suivant "le sens physique".
+\pagebreak
+
+\bibliographystyle{apalike}
+\bibliography{bibliotheque}
+
+\end{document}
