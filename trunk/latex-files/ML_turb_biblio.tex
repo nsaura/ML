@@ -135,7 +135,8 @@ keywordstyle=[0]{\color{red}},
 
 \numberwithin{equation}{section} %%%% To count the equation like Section.Number
 
-
+\usepackage{accents}
+\newcommand{\vect}[1]{\accentset{\Rightarrow}{#1}}
 
 \begin{document}
 \maketitle
@@ -151,6 +152,11 @@ keywordstyle=[0]{\color{red}},
 		\begin{tabular}{|M{.3\textwidth}|M{.68\textwidth}|N }
 		\hline
 		Auteur & Travaux &\\[.5cm] \hline
+
+		\textbf{\cite{ling2015evaluation}} & Used \red Random Forests (RF) \bk to \navy predict regions of high model from uncertainty in RANS results.\bk &\\[1.5cm] \hline
+
+		\textbf{\cite{ling2016machine}} &Use of \red RF et NN\bk. In the previous work, Ling et \textit{al.} predict the Reynolds Stress Anisotropy $\textbf{A} = \frac{1}{2k} \overline{\textbf{u} \otimes \textbf{u}} - \frac{1}{3}\textbf{Id}$ en un point à partir des images de \textbf{S} et \textbf{R} par les vecteurs d'une base d'invariants bien choisie, en tout point du domaine, ou aux points dont l'incertitude est la plus grande. Les entrées peuvent être aussi bien les invariants de la base que les 9 composantes non nulles cumulées de $\textbf{S}$ et $\textbf{R}$&\\[3.5cm] \hline		
+		
 		\textbf{\cite{milano2002neural}} & Used DNS results for a turbulent channel flow to train a \red NN \bk to reconstruct the \navy near wall flow \bk&\\[1.5cm] \hline
 		
 		\textbf{\cite{tracey2013application}} & ML algorithms (\red??\bk) to model the \navy Reynolds stress anisotopy\bk  &\\[1.5cm] \hline
@@ -161,9 +167,6 @@ keywordstyle=[0]{\color{red}},
 		
 		\textbf{\cite{zhang2015machine}} & Used \red NN and GP \bk to \navy model turbulence Production in channel flow \bk &\\[1.5cm] \hline
 				
-		\textbf{\cite{ling2015evaluation}} & Used \red Random Forests (RF) \bk to \navy predict regions of high model from uncertainty in RANS results.\bk &\\[1.5cm] \hline 
-		
-		
 		\end{tabular} 
 		\vspace{0.5cm}
 		\caption{Tableau retraçant les études NN vs Turbulence faites auparavant 
@@ -179,13 +182,76 @@ La raison de cette insistance est la suivante : on veut que la sortie $f(\textbf
 
 \noindent Les paramètres influant le plus sur la sortie de la ML sont choisis au travers le procédé \textit{hill-climbing} \cite{kohavi1997wrappers} (à lire). La fonction d'erreur est la SSE qui compare la sortie prédite par rapport à la sortie atendue (lors de l'apprentissage).\\
 Les hyperparamètres amenant à une IA optimale sont déterminés par 10-fold Cross Validation (voir \cite{muller2016introduction}, chapitre 5 et 6). Cette cross-validation est donc faite pour déterminer les valeurs des paramètres qui ont été sélectionnés par le \textit{hill-climbing}.\\
------\\[1cm]
+-----\\[0.5cm]
 
-\subsubsection*{À la recherche des invariants}
+\subsection*{À la recherche des invariants}
 \noindent D'après \citep{ling2016machine} les \textit{features} ainsi choisis ne respectent pas les invariances en rotation et que le modèle n'a été entraîné que pour une seule configuration d'écoulement.\\
 Il s'est avéré qu'entraîner un NN avec la même base de données, en "orientant" les entrées tout en les associant à la même sortie, on forçait les invariances rotationnelles (voir \cite{LEFIK20033265}).\\
 
-\cite{tracey2013application} et \cite{ling2015evaluation} utilisent des entrées qui sont des invariants Galilééns, le coix de ces entrées a été fait en suivant "le sens physique".
+\noindent \cite{tracey2013application} et \cite{ling2015evaluation} utilisent des entrées qui sont des invariants Galiléens, le choix de ces entrées a été fait en suivant "le sens physique".
+
+\subsubsection{Invariance Galiléenne}
+\noindent Les invariances galiléennes traduisent l'invariance des lois de mouvement par translation ou rotation du référentiel. Dans le cas de la mécanique des fluides, toute variable scalaire de l'écoulement (pression, norme de la vitesse) sera invariant par translation, rotation ou réflection du repère de référence.\\
+
+\noindent Les propriétés de symétrie d'un système physique représentent des contraintes à partir desquelles on peut déterminer les lois de mouvement du système. On comprend alors l'importance de respecter les symétries d'un problème. Inversement, les lois de mouvement sont intrinsèquement liés avec des propriétés d'invariance (qui traduisent les symétries du problème).\\
+
+Une fonction est invariante \rap $ $ à une certaine transformation, si lorsque les entrées sont assujetties à ces transformations, leur image par cette fonction reste inchangée.\\
+Prenons le groupe des matrices définies comme étant des rotations en 3D : $\mathcal{SO} \left( 3 \right)$. 
+Une fonction scalaire $f\left(\vec{v}, \textbf{A} \right)$ est dite «rotationnellement invariante» si 
+\begin{equation*}
+f\left( \textbf{Q}\,\vec{v}, \, \textbf{Q} \textbf{A} \textbf{Q}^{\text{T}}\right) = f\left (\vec{v}, \mathbf{A} \right) \text{,\hspace{2mm}} \forall \textbf{Q} \in \mathcal{SO}\left ( 3\right )  
+\end{equation*}
+Le groupe $\mathcal{SO} \left( 3 \right)$ est d'importance capitale, en effet puisqu'il représente toutes les rotations possibles en être invariant est la définition de l'isotropie. Ainsi, une fonction $f$ invariante par ce type de transformation sera dite isotropique.\\
+On peut juxtaposer une deuxième définition à ce type de fonction : une fonction isotropique est une fonction qui peut être projetée dans une base d'invariants du groupe $\mathcal{SO} \left( 3 \right)$, par définition une combinaison linéaire d'invariants de $\mathcal{SO} \left( 3 \right)$ sera un invariant de ce groupe (une fonction isotropique) l'inverse moins évident reste vrai.\\
+De façon générale, la base $\left( \text{Tr}\left( \mathbf{A}\right), \text{Tr}\left( \mathbf{A}^2\right), \text{Tr}\left( \mathbf{A}^3\right) \right ) $ est une base d'invariant pour le groupe isotropique. On appelle cette base la base intègre ou \textit{integrity basis} (IB). \\
+
+\noindent Sachant cela, on peut comprendre l'idée de \textbf{\textit{\cite{ling2016reynolds}}} :
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.5]{TBNN.png}
+\caption{Tensor embedded NN from \citep{kutz2017deep} et \citep{ling2016reynolds}}
+\label{TBNN}
+\end{figure}
+ 
+\noindent \cite{pope1975more} propose de modifier l'hypothèse de Boussinesq qui consistait à écrire 
+\begin{equation*}
+\overline{u_i' u_j'} = \frac{2}{3} k \delta_{ij} - 2 \nu_t \overline{S_{ij}}
+\end{equation*}
+ Il propose plutôt de calculer 
+\begin{equation*}
+\overline{u_i' u_j'} = \frac{2}{3} k \delta_{ij} + k\sum_\lambda G^\lambda T^\lambda_{ij} 
+\end{equation*}
+Avec une forme bien particulière pour $G$ et $T$. La première est une fonction des invariants du problème qui sont dans le cas tridimensionnel : 
+\begin{equation*}
+\mathbf{\Omega}= \left \{ \{\textbf{S}^2\}, \{\textbf{R}^2\}, \{\textbf{S}^3\}, \{\textbf{R}^2\textbf{S}\}, \{\textbf{R}^2 \textbf{S}^2\}\right \} 
+\end{equation*}
+La notation $\{ \}$ symbolise la trace du tenseur concerné. À noter, que l'invariant $\{\textbf{S}\}$ n'est pas utilisé directement mais indirectement au travers l'utilisation du $\{\textbf{S}^3\}$. Également, les tenseurs considérés $\textbf{S}$ et $\textbf{R}$ sont définis par 
+\begin{align*}
+\textbf{S} &= \frac{k}{2\varepsilon}\left(\nabla_x\textbf{U} + \nabla^T_x\textbf{U} \right) \\[0.2cm]
+\textbf{R} &= \frac{k}{2 \varepsilon}\left(\nabla_x\textbf{U} - \nabla^T_x\textbf{U} \right) 
+\end{align*}
+
+\noindent $T$ est composée de 10 tenseurs dans le cas tridimensionnel. Les 10 tenseurs proposés par \cite{pope1975more} et repris par \cite{ling2016reynolds} sont :
+\begin{align*}
+\textbf{T}^{(1)} &= \textbf{S} \\
+\textbf{T}^{(2)} &= \textbf{S}\textbf{R} - \textbf{R}\textbf{S} \\
+\textbf{T}^{(3)} &= \textbf{S}^2 - \dfrac{1}{3}\, \textbf{I} \cdot Tr \left( \textbf{S}^2 \right)\\
+\textbf{T}^{(4)} &= \textbf{R}^2 - \frac{1}{3}\, \textbf{I} \cdot Tr \left( \textbf{R}^2 \right)\\
+\textbf{T}^{(5)} &= \textbf{R}\textbf{S}^2 - \textbf{S}^2\textbf{R}\\
+\textbf{T}^{(6)} &= \textbf{R}^2\textbf{S} + \textbf{S}^2\textbf{R} - \frac{2}{3}\, \textbf{I}\cdot Tr\left(\textbf{S}\textbf{R}^2 \right) \\
+\textbf{T}^{(7)} &= \textbf{R}\textbf{S}\textbf{R}^2 - \textbf{R}^2\textbf{S}\textbf{R} \\
+\textbf{T}^{(8)} &= \textbf{S}\textbf{R}\textbf{S}^2 - \textbf{S}^2\textbf{R}\textbf{S} \\
+\textbf{T}^{(9)} &= \textbf{R}^2\textbf{S}^2 + \textbf{S}^2\textbf{R}^2 - \frac{2}{3}\, \textbf{I}\cdot Tr\left(\textbf{S}^2\textbf{R}^2 \right)\\
+\textbf{T}^{(10)} &= \textbf{R}\textbf{S}^2\textbf{R}^2 - \textbf{R}^2\textbf{S}^2\textbf{R}
+\end{align*}
+
+\noindent Si $T$ peut être calculé en cours de processus, le calcul de $G$ reste encore obscur et justement les coefficients par rapport aux invariants sont définis par le training du NN utilisé ici avec 8 HL \footnote{La dernière HL en aura 10.}, 30 nœuds fans chaque et un lr de $2.5 \times 10^{-6}$. \\
+
+Comme on peut le voir figure \eqref{TBNN}, les invariants sont définis en entrée du réseau, suivent un processus classique propre au Feed-Forward NN. La dernière HL représentera les combinaisons linéaires de coefficients et de la base $\mathbf{\Omega}$. \\
+L'output s'écrira alors : $$ b_{ij} = \sum_{n=1}^{10} g^{(n)}(\lambda_1,..,\lambda_5) T_{ij}^{(n)}$$
+Ainsi on aura complètement reconstruit l'anisotropie que les solver RANS n'arrivent pas à retrouver, tout en s'assurant que ce tenseur vérifie bien les invariances Galiléennes.
+
 \pagebreak
 
 \bibliographystyle{apalike}
