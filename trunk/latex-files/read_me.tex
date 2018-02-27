@@ -59,7 +59,7 @@ breakautoindent=true, %
 captionpos=b
 }
 %%%%%%%%%%%%%%%%%%%%%
-\title{Read me parser de \brick \textit{class\_temp\_ML.py}\bk }%%%%%%%%%%%%%%%%%%%%
+\title{Avancement des codes Read me 2.0 }%%%%%%%%%%%%%%%%%%%%
 \date{}
 \usepackage{multicol}
 \usepackage{etoolbox}
@@ -69,7 +69,7 @@ captionpos=b
 
 
 \usepackage{geometry}
-\geometry{hmargin=2cm, vmargin=2cm}
+\geometry{hmargin=2cm, vmargin=1.5cm}
 
 %%%%%%%%%%%%%%%%%%%%
 %%% Couleurs %%%
@@ -131,42 +131,71 @@ Le parser sert à définir des options à notre code pour limiter les codages en
 \noindent Les options de la classe sont disponibles en lançant sur ipython : \brick run class\_temp\_ML -h \bk. La sortie est : 
 
 \begin{lstlisting}
-In [41]: run class_temp_ML.py -h
-usage: class_temp_ML.py [-h] [--T_inf_lst T_INF_LST [T_INF_LST ...]]
-                        [--N_discr N_DISCR] [--H H] [--delta_t DT]
-                        [--kappa KAPPA] [--number_realization NUM_REAL]
-                        [--tolerance TOL] [--beta_prior BETA_PRIOR]
-                        [--datapath DATAPATH] [--covariance_model COV_MOD]
+In [1]: run script_data_generation.py -h
+usage: script_data_generation.py [-h] [--T_inf_lst T_INF_LST [T_INF_LST ...]]
+                                 [--N_discr N_DISCR]
+                                 [--compteur_max_adjoint CPT_MAX_ADJ]
+                                 [--N_sample N_SAMPLE]
+                                 [--GPN_sample GPN_SAMPLE]
+                                 [--max_epoch N_EPOCH] [--H H] [--delta_t DT]
+                                 [--kappa KAPPA]
+                                 [--number_realization NUM_REAL]
+                                 [--tolerance TOL] [--g_sup_max G_SUP_MAX]
+                                 [--beta_prior BETA_PRIOR]
+                                 [--learning_rate LR] [--datapath DATAPATH]
+                                 [--covariance_model COV_MOD]
+                                 [--logbook_path LOGBOOK_PATH]
 
-You can initialize a case you want to study
+This parser will be used in several steps both in inference and ML
+postprocessing Each entry is detailed in the help, and each of it has the most
+common default value. (run ... .py -h)
 
 optional arguments:
   -h, --help            show this help message and exit
   --T_inf_lst T_INF_LST [T_INF_LST ...], -T_inf_lst T_INF_LST [T_INF_LST ...]
-                        List of different T_inf. Default : [5, 10, 15, 20, 25,
-                        30, 35, 40, 45, 50]
+                        List of different T_inf. Default : 50
   --N_discr N_DISCR, -N N_DISCR
                         Define the number of discretization points : default
-                        33
+                        71
+  --compteur_max_adjoint CPT_MAX_ADJ, -cptmax CPT_MAX_ADJ
+                        Define compteur_max (-cptmax) for adjoint method:
+                        default 100
+  --N_sample N_SAMPLE, -N_sample N_SAMPLE
+                        Define the number of dupplication : default 3
+  --GPN_sample GPN_SAMPLE, -GPN_sample GPN_SAMPLE
+                        Define the number of distribution (beta, cholesky)
+                        samples: default 3
+  --max_epoch N_EPOCH, -epoch N_EPOCH
+                        Define the number of training epoch in NN
+                        optimization: default 50
   --H H, -H H           Define the convection coefficient h
   --delta_t DT, -dt DT  Define the time step disctretization. Default to
-                        0.00100
+                        0.00010
   --kappa KAPPA, -kappa KAPPA
                         Define the diffusivity number kappa. Default to 1.00
   --number_realization NUM_REAL, -num_real NUM_REAL
-                        Define the number of realization of epsilon(T) you
-                        want to pick up. Default to 10
+                        Define how many samples of epsilon(T) to draw for
+                        exact model. Default to 100
   --tolerance TOL, -tol TOL
                         Define the tolerance on the optimization error.
                         Default to 0.00001000
+  --g_sup_max G_SUP_MAX, -g_sup G_SUP_MAX
+                        Define the criteria on grad_J to stop the
+                        optimization. Default to 0.00100
   --beta_prior BETA_PRIOR, -beta_prior BETA_PRIOR
                         beta_prior: first guess on the optimization solution.
                         Value default to 1
+  --learning_rate LR, -lr LR
+                        Define the learning rate for the NN back-propagation.
+                        Value default to 0
   --datapath DATAPATH, -dp DATAPATH
                         Define the directory where the data will be stored and
                         read. Default to ./data
   --covariance_model COV_MOD, -cov_mod COV_MOD
-                        Define the covariance model. Default to diag
+                        Define the covariance model. Default to full
+  --logbook_path LOGBOOK_PATH, -p LOGBOOK_PATH
+                        Define the logbook's path. Default to ./logbooks/
+
 \end{lstlisting}
 
 \pagebreak
