@@ -23,7 +23,10 @@ def find_divisor(N) :
 
 def error_rate(p, t):
     return np.mean(p != t)
-    
+
+
+## Notes en fin de codes !!!
+
 class Neural_Network():
 ###-------------------------------------------------------------------------------
     def __init__(self, lr, N_={}, max_epoch=10) :
@@ -265,26 +268,34 @@ class Neural_Network():
         
         self.minimize_loss = self.train_op.minimize(self.loss)
 ###-------------------------------------------------------------------------------
-    def training_session(self, batched = True) :
+    def training_session(self, tol, batched = False) :
 #       Initialization ou ré-initialization ;)
         init = tf.global_variables_initializer()
         self.sess.run(init)
         
         costs = []
+        
         err, epoch = 1., 0
+        
+        tol = tol
         
         if batched == False :
 #            with tf.Session() as sess:        
             
-            for epoch in range(self.max_epoch) :
+            while epoch <= self.max_epoch and err > tol:
                 self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
-                costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
-                                                                 self.t : self.y_train}))
+                
+                err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
+                                                          self.t : self.y_train})
+                costs.append(err)
                 if np.isnan(costs[-1]) : raise IOError("Warning, Epoch {}, lr = {}.. nan"\
                                                     .format(epoch, self.lr))
                 if epoch % 10 == 0 :
-                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, costs[-1]))
-            print costs
+                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
+                
+                epoch += 1
+
+            print costs[-10:]
 #            self.saver.save(sess, self.savefile)
         else :  
             N_raw_Xtrain = self.X_train.shape[0]
@@ -329,7 +340,17 @@ if __name__=="__main__":
     TF.error_computation("cross_entropy")
     
     TF.optimisation()
-    
+
+
+##-------------------------------------------------- NOTES --------------------------------------------------##
+
+
+## Notes intéressantes de Methods of Model Based Process Control :
+
+# "The back propagation-based learning algorithm [..] varies only the weights of the neural network to achieve the desired mapping
+# To overcome dependence of the learning process on the initial settings and for further improvement of the mapping accuracy, we use a combination of backpropagation and a genetic algorithm. The key idea os to vary the properties of each neurom in the net simultaneously with the adaptation of the weigths
+# The processing properties of a neuron are determined by its activation function. 
+
 # Exemple OLS + L1 regression :
 # From https://stackoverflow.com/questions/36706379/how-to-exactly-add-l1-regularisation-to-tensorflow-error-function
 
