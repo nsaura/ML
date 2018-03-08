@@ -149,7 +149,7 @@ def ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s) :
 #-------------------------------------------#
 def True_Temp(T, T_inf, body) :
     """
-    T_inf doit avoir être un type lambda. Boucle conditionnelle qui check ça
+    T_inf doit être une liste
     """
     T_n_obs =  list(map(lambda x : 0., T.line_z) )
     T_nNext_obs = T_n_obs
@@ -187,6 +187,7 @@ def True_Temp(T, T_inf, body) :
 def True_Beta(T, temp, T_inf) :
     """
     Pour comparer beta_true et beta_ML
+    T_inf est une liste
     """
     t1 = np.asarray([ 1./T.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * temp[i]) + np.exp(0.02*temp[i])) *10**(-4) for i in range(T.N_discr-2)])
     t2 = np.asarray([T.h / T.eps_0*(T_inf[i] - temp[i])/(T_inf[i]**4 - temp[i]**4)  for i in range(T.N_discr-2)]) 
