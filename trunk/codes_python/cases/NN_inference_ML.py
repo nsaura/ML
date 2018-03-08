@@ -62,6 +62,16 @@ dict_layers = {"I" : 2,\
 N_hidden_layer = len(dict_layers.keys()) - 1
 #nn = NNC.Neural_Network(parser.lr, N_=dict_layers, max_epoch=parser.N_epoch)
 ###-------------------------------------------------------------------------------
+def recentre(x_s, X_train_mean, X_train_std):
+    
+    x_s[0] -= X_train_mean[0]
+    if np.abs(X_train_std[0]) > 1e-12 : 
+        x_s[0] /= X_train_std[0] 
+    
+    x_s[1] -= X_train_mean[1]
+    x_s[1] = x_s[1] / X_train_std[1]
+    
+    return x_s.reshape(1,-1)
 ###-------------------------------------------------------------------------------
 def build_case(lr, X, y, act, opti, loss, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, **kwargs) :
     # build_case(1e-3, X, y , act="relu", opti="RMS", loss="OLS", decay=0.7, momentum=0.8, max_epoch=1000) marche très bien avec [10, 15, 20, 25, 30, 35, 40, 45, 50]
@@ -115,19 +125,20 @@ def grid_search(dict_layers):
 #-------------------------------------------#
 #-------------------------------------------#
 def T_to_beta_NN(T, nn_obj, T_inf, body):
-    T_n = np.asarray(map(lambda x : -4*T_inf[(T.N_discr-2)/2]*x*(x-1), T.line_z) )
+    T_n = np.asarray(map(lambda x : 0., T.line_z) )
     beta= []    
         
     for j,t in enumerate(T_n) :
         x_s = np.array([[T_inf[j], t]]) ## T_inf, T(z)
+        x_s = recentre(x_s[0], nn_obj.train_mean, nn_obj.train_std)
         beta.append(nn_obj.sess.run(nn_obj.y_pred_model, feed_dict={nn_obj.x: x_s})[0,0])
-        
+    
     beta_n = np.asarray(beta)
     
     B_n = np.zeros((T.N_discr-2))
     T_n_tmp = np.zeros((T.N_discr-2))
 
-    tol, compteur, cmax = 1e-6, 0, 10000 
+    tol, compteur, cmax = 1e-7, 0, 15000 
     err = err_beta = 1.
     
     while (np.abs(err) > tol) and (compteur <= cmax) :
@@ -143,15 +154,17 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
           
         T_nNext = np.dot(np.linalg.inv(T.A1), B_n)
         
-        beta, sigma = [], []
+        beta = []
         for j,t in enumerate(T_n) :
             x_s = np.array([[T_inf[j], t]]) ## T_inf, T(z)
-            if nn_obj.scale == True :
-#                print("Rescale")
-                x_s = nn_obj.mean_std_new_input(x_s) # recentre par rapport à la moyenne en cours
-            beta.append(nn_obj.sess.run(nn_obj.y_pred_model, feed_dict={nn_obj.x: x_s}))
+            x_s = recentre(x_s[0], nn_obj.train_mean, nn_obj.train_std)
+            beta.append(nn_obj.sess.run(nn_obj.y_pred_model, feed_dict={nn_obj.x: x_s})[0,0])
+        
+#        print ("beta premiere iteration :\n {}".format(beta))
         
         beta_nNext = np.asarray(beta)
+        if compteur % 20 == 0 :
+            print("État : cpt = {}, err = {}, err_beta = {}".format(compteur, err, err_beta))
 #        print ("Iteration {}".format(compteur))
 #        print ("beta.shape = {}".format(np.shape(beta)))
 #        print ("beta_nNext.shape = {}".format(np.shape(beta_nNext)))        
@@ -159,7 +172,8 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
 #        print("T_curr shape ={}".format(T_nNext.shape))
         
         err = np.linalg.norm(T_nNext - T_n, 2) # Norme euclidienne
-    
+        err_beta = np.linalg.norm(beta_nNext - beta_n, 2)
+        
     print ("Calculs complétés pour {}. Statut de la convergence :".format(body))
     print ("Erreur sur la température = {} ".format(err))    
     print ("Iterations = {} ".format(compteur))
@@ -179,20 +193,28 @@ def solver_NN(T, nn_obj, N_sample, T_inf, body, verbose = False) :
     T_true = T_true.reshape(n)
     T_ML = T_ML.reshape(n)
     T_base = GPC.beta_to_T(T, T.beta_prior, T_inf, body+"_base")
+    
+    true_beta = GPC.True_Beta(T, T_true, map(T_inf_lambda, T.line_z))
     #    T_nmNext= T_nmNext.reshape(n)
     #    T_nMNext= T_nMNext.reshape(n)
     
     if verbose == True :
-        plt.figure("Beta_True vs Beta_ML; N_sample = {}; T_inf = {}".format(N_sample, body)) 
+        plt.figure("T_True vs T_ML; N_sample = {}; T_inf = {}".format(N_sample, body)) 
         plt.plot(T.line_z, T_true, label="True T_field for T_inf={}".format(body), c='k', linestyle='--')
         plt.plot(T.line_z, T_ML, label="ML T_field".format(body), marker='o', fillstyle='none', linestyle='none', c='r')
         plt.plot(T.line_z, T_base, label="Base solution", c='green')
         plt.legend(loc='best')
         
-        title = osp.join(osp.abspath("./res_all_T_inf"),"Beta_True_vs_Beta_ML_N_sample_{}_T_inf_{}".format(N_sample, body))
+        title = osp.join(osp.abspath("./res_all_T_inf"),"T_True_vs_T_ML_N_sample_{}_T_inf_{}".format(N_sample, body))
         
         plt.savefig(title)
         
+        plt.figure("Beta_NN_vs_True_s" %(body))
+        plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML_%s_%s" %(model_name, body))
+        plt.plot(T.line_z, true_beta, label="True_%s_%s" %(model_name, body), linestyle='--', c='k')
+        plt.legend(loc = "best")
+        
+        title = osp.join(osp.abspath("./res_all_T_inf"),"beta_True_vs_beta_NN_N_sample_{}_T_inf_{}".format(N_sample, body))
         
     NN_out = dict()
     NN_out["NN_T_ML"]  = T_ML   
