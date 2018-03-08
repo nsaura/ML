@@ -108,10 +108,13 @@ class Neural_Network():
         self.scale = scale
 ###-------------------------------------------------------------------------------
     def mean_std_new_input(self, x_s):
+        
         for i in range(len(x_s)) :
             x_s[i] -= self.train_mean[i]
-            if np.abs(self.train_std[i]) > 1e-12:
+            
+            if np.abs(self.train_std[i]) > 1e-12 :
                 x_s[i] /= self.train_std[i]
+        
         return x_s       
 ###-------------------------------------------------------------------------------
     def w_b_real_init(self):
@@ -303,15 +306,12 @@ class Neural_Network():
             batch_sz = find_divisor(N_raw_Xtrain)[-3]
             n_batches = N_raw_Xtrain // batch_sz   
             
-            test_target = tf.equal(self.y_pred_model, self.y_test)
-            
             for epoch in range(self.max_epoch) :
                 for jj in range(n_batches) :
                     X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
                     y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
                     
                     self.sess.run(self.minimize_loss,feed_dict=({self.x : X_batch, self.t : y_batch}))
-                    self.sess.run(test_target, feed_dict={self.x : self.X_test})
                     
                     costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
                                                                      self.t : self.y_train}))
