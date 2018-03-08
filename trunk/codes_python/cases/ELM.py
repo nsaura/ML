@@ -78,7 +78,7 @@ T.obs_pri_model()
 T.get_prior_statistics()
 
 X,y,v,m,s = GPC.training_set(T, parser.N_sample)
-X_train, X_test, y_train, y_test, m, s = shuffle_train_split(T, X, y, False)
+X_train, X_test, y_train, y_test, m, s = shuffle_train_split(T, X, y, True)
 
 # Taille des entrées et sorties, Nombre de HN dans la HL
 N_in = 2
