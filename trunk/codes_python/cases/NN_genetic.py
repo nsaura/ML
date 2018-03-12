@@ -35,6 +35,10 @@ GPC = reload(GPC)
 NNC = reload(NNC)
 NNI = reload(NNI)
 
+##
+#On suit le tutoriel de https://blog.coast.ai/lets-evolve-a-neural-network-with-a-genetic-algorithm-code-included-8809bece164
+##
+
 parser = cfa.parser()
 #run NN_genetic.py -T_inf_lst 5 10 15 20 -N_sample 1
 
@@ -136,7 +140,6 @@ def evolve(lst_network_parameters) :
     On veillera à ne pas prendre exclusivement les meilleurs. Prendre les pires ajoutera de l'aléatoire et nous permettra de converger vers la  combinaison de paramètres la plus efficace  
     """
     costs = [(individual(kset).costs[-1], kset) for kset in lst_network_parameters]
-    
     costs = [x[1] for x in sorted(costs, key=lambda x: x[0], reverse=True)]
     
     return costs
