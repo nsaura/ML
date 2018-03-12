@@ -690,7 +690,8 @@ class Temperature_cst() :
 ##----------------------------------------------------##        
     def adjoint_bfgs(self, inter_plot=False, verbose = False) : 
         """
-        
+        inter_plot to see the evolution of the inference
+        verbose to print different informqtion during the optimization
         """
         print("Début de l\'optimisation maison\n")
         if self.bool_method["stat"] == False : self.get_prior_statistics() 
@@ -860,7 +861,7 @@ class Temperature_cst() :
                 
                 # Sinon on ne stagne pas : procédure normale Armijo et Strong Wolf condition (Nocedal and Wright)
                 else :  
-                    alpha, al2_cor = self.backline_search(J, grad_J, g_n, beta_n ,d_n ,cpt, g_sup, rho=1e-2,c=0.5)
+                    alpha, al2_cor = self.backline_search(J, grad_J, g_n, beta_n ,d_n ,cpt, g_sup, rho=1e-2,c=0.5, w_pm = 0.9)
                     if al2_cor  :
                         al2_lst.append(cpt)
                         # Armijo et Strong Wolf verfiées (obsolète)
@@ -883,7 +884,6 @@ class Temperature_cst() :
                 
                 # Incrémentation de H_n conformément au BFGS (Nocedal and Wright et scipy)
                 H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
-                    
                 self.debug["curr_hess_%s" %(str(cpt))] = H_nNext_inv
                 
                 # Calcule des résidus
@@ -979,7 +979,6 @@ class Temperature_cst() :
                 beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) ) # équation 11
             
             beta_var.append(bfgs_adj_bf[sT_inf]) # Pour faire 250, on rajoute beta_final
-            
             # Beta var est une liste de listes. Chacune de ces liste mesure self.N_discr - 2 et contient la valeur
             # les samples tirées plus haut.
             # Pour les tracés, on calcule les minimum et maximum de toutes ces listes pour chaque point.
@@ -1080,13 +1079,415 @@ class Temperature_cst() :
         
         self.bfgs_adj_mins_dict   =   bfgs_adj_mins_dict
         self.bfgs_adj_maxs_dict   =   bfgs_adj_maxs_dict
-        
         self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
         
         # obsolète et inutile mais sait-on jamais
         self.al2_lst    =    al2_lst
         self.corr_chol  =   corr_chol
-    
+        #########
+        #- Fin -#
+        #########
+###---------------------------------------------------## 
+    def adjoint_circle(self, inter_plot=False, verbose = False) : 
+        """
+        inter_plot to see the evolution of the inference
+        verbose to print different informqtion during the optimization
+        """
+        print("Début de l\'optimisation maison\n")
+        if self.bool_method["stat"] == False : self.get_prior_statistics() 
+        
+        self.debug = dict()
+        # Le code a été pensé pour être lancé avec plusieurs valeurs de T_inf dans la liste T_inf_lst.
+        # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
+        # cours. De cette façon, on peut passer d'une température à une autre, et donc recommencer une optimisation 
+        # pour T_inf différente, sans craindre de perdre les résultats de la T_inf précédente
+
+        bfgs_adj_grad,   bfgs_adj_gamma     =   dict(), dict()
+        bfgs_adj_bmap,   bfgs_adj_bf        =   dict(), dict()
+        bfgs_adj_hessinv,bfgs_adj_cholesky  =   dict(), dict()
+        
+        bfgs_adj_mins,   bfgs_adj_maxs  =   dict(),  dict()
+        
+        bfgs_adj_mins_dict, bfgs_adj_maxs_dict = dict(), dict()
+        bfgs_adj_sigma_post  = dict()
+        
+        self.too_low_err_hess = dict()
+        sup_g_stagne = False
+
+        s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0]) # vecteur aléatoire
+        
+        c = lambda ck, k : 1. - ck/float(k)**5 if k!= 0 else 1.
+        
+        for T_inf in self.T_inf_lst :
+            sT_inf      =   "T_inf_%d" %(T_inf) # Clé pour simplifier
+            sigmas      =   np.sqrt(np.diag(self.cov_obs_dict[sT_inf])) #Std obs
+            curr_d      =   self.T_obs_mean[sT_inf] # Temperature moyenne sur les self.num_real tirages
+            
+            # On récupère  les covariances 
+            cov_obs     =   self.cov_obs_dict[sT_inf] if self.cov_mod=='diag' else\
+                            self.full_cov_obs_dict[sT_inf]
+            
+            cov_pri     =   self.cov_pri_dict[sT_inf]
+            
+            inv_cov_pri =   np.linalg.inv(cov_pri)  
+            inv_cov_obs =   np.linalg.inv(cov_obs)
+            
+            # On construit la fonction de coût en trois temps
+            J_1 =   lambda beta :\
+            0.5*np.dot(np.dot(curr_d - self.h_beta(beta, T_inf).T, inv_cov_obs), (curr_d - self.h_beta(beta, T_inf)))
+            
+            J_2 =   lambda beta :\
+            0.5*np.dot(np.dot((beta - self.beta_prior).T, inv_cov_pri), (beta - self.beta_prior))   
+                                        
+            ## Fonction de coût
+            J = lambda beta : J_1(beta) + J_2(beta)  
+            
+            # Calcule de dJ/dbeta avec méthode adjoint equation (13) avec (12)
+            grad_J = lambda beta :\
+            np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            
+            err_beta = err_hess = err_j = 1            
+            cpt, cptMax =   0, self.cpt_max_adj
+            
+            sup_g_lst = [] # Pour tester si la correction a stagné
+            corr_chol = [] # Pour comptabiliser les fois ou la hessienne n'était pas définie positive
+            al2_lst  =  [] # Comptabilise les fois où les DEUX conditions de Wolfe sont vérifiés
+            
+            print("J(beta_prior) = {} \t T_inf = {}".format(J(self.beta_prior), T_inf))
+            
+            ########################
+            ##-- Initialisation --##
+            ########################
+
+            beta_n  =   self.beta_prior
+            g_n     =   grad_J(beta_n)
+            
+            g_sup = np.linalg.norm(g_n, np.inf)
+            sup_g_lst.append(np.linalg.norm(g_n, np.inf))
+            
+            print ("\x1b[1;37;44mSup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf))) # Affichage surligné bleu
+
+            # Hessienne (réinitialisé plus tard)
+            H_n_inv =   np.eye(self.N_discr-2)
+            Ak = H_n_inv
+            self.debug["first_hess"] = H_n_inv
+            
+            # Tracé des différentes figures (Evolutions de béta et du gradient en coursc d'optimization)
+            fig, ax = plt.subplots(1,2,figsize=(13,7))
+            ax[0].plot(self.line_z, beta_n, label="beta_prior")
+            ax[1].plot(self.line_z, g_n,    label="gradient prior")
+            
+            self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
+            dir_lst =   []
+            c_nPrev = 1.
+            ######################
+            ##-- Optimisation --##
+            ######################
+            
+            while (cpt<cptMax) and g_sup > self.g_sup_max :
+                if cpt > 0 :
+                ########################
+                ##-- Incrementation --##
+                ######################## 
+                    beta_n  =   beta_nNext
+                   
+                    g_n     =   g_nNext
+                    g_sup   =   np.linalg.norm(g_n, np.inf) # norme infini du gradient
+                    
+                    H_n_inv =   H_nNext_inv
+                    c_nPrev = c_n
+                    
+                    #MAJ des figures avec nouveaux tracés
+                    plt.figure("Evolution de l'erreur %s" %(sT_inf))
+                    plt.scatter(cpt, g_sup, c='black')
+                    if inter_plot == True :
+                        plt.pause(0.05)
+
+                    ax[0].plot(self.line_z, beta_n, label="beta cpt%d_%s" %(cpt, sT_inf))
+                    ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
+                    
+                    # MAJ de la liste des gradient.                      
+                    sup_g_lst.append(g_sup)
+                    if len(sup_g_lst) > 6 :
+                        lst_ = sup_g_lst[(len(sup_g_lst)-5):] # Prend les 5 dernières valeurs des sup_g
+                        mat = [[abs(i - j) for i in lst_] for j in lst_] # Matrices des différences val par val
+                        sup_g_stagne = (np.linalg.norm(mat, 2) <= 1e-2) # True ? -> alpha = 1 sinon backline_search
+                    
+                    # Affichage des données itérations précédentes, initialisant celle à venir
+                    print("Compteur = %d" %(cpt))
+                    print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
+                    print("Stagne ? {}".format(sup_g_stagne))
+                    
+                    if verbose == True :
+                        print ("beta cpt {}:\n{}".format(cpt,beta_n))
+                        print("grad n = {}".format(g_n))                            
+                        print("beta_n = \n  {} ".format(beta_n))
+                        print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
+                                                           err_beta, err_hess) )
+                        print ("Hess cpt {}:\n{}".format(cpt, H_n_inv))
+                #################
+                ##-- Routine --##
+                #################
+                # Calcule : -np.dot(grad_J(bk), d_n). 
+                # GD pour Gradient Descent.  Doit être négatif (voir après et Nocedal et Wright)
+                GD = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
+                                    np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]                
+                ## Calcule de la direction 
+                A_k = self.aij_circle(H_n_inv)
+                c_n = c(c_nPrev, cpt)               
+                Bk = (1.-c_n)*A_k + c_n*H_n_inv
+                
+                if self.positive_definite_test(Bk) :
+                    D_k = B_k
+                else :
+                    D_k = A_k
+                
+                d_n = - np.dot(D_k, g_n)
+                test_ =(GD(D_k) < 0) ## Booléen GD ou pas ?
+                
+                print("d_n descent direction : {}".format(test_))    
+                
+
+                print("d_n :\n {}".format(d_n))
+                
+                ## Calcule de la longueur de pas 
+                ## Peut nous faire gagner du temps de calcule
+                if (sup_g_stagne == True and cpt > 20) : 
+#                    if g_sup < 1e-2 and cpt > 150 : # Pour accélérer sortie de programme
+#                        # Dans ce cas on suppose qu'on n'aura pas mieux
+#                        break
+                    
+                    alpha = 1. 
+                    print("\x1b[1;37;44mgradient stagne : coup de pouce alpha = 1. \x1b[0m")
+                    
+                    time.sleep(0.7) # Pour avoir le temps de voir qu'il y a eu modif           
+                
+                # Sinon on ne stagne pas : procédure normale Armijo et Strong Wolf condition (Nocedal and Wright)
+                else :  
+                    alpha, al2_cor = self.backline_search(J, grad_J, g_n, beta_n ,d_n ,cpt, g_sup, rho=1e-2,c=0.5, w_pm = 0.9)
+                    if al2_cor  :
+                        al2_lst.append(cpt)
+                        # Armijo et Strong Wolf verfiées (obsolète)
+                        
+                ## Calcule des termes n+1
+                dbeta_n =  alpha*d_n
+                beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
+
+                g_nNext =   grad_J(beta_nNext)
+                # On construit s_nNext et y_nNext conformément au BFGS
+                s_nNext =   (beta_nNext - beta_n)
+                y_nNext =   g_nNext - g_n
+
+                ## Pour la première itération on peut prendre (voir Nocedal and Wright (page chapitre)) :
+                if cpt == 0 :
+                    fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
+                    fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
+                    
+                    H_n_inv *= fac_H
+                
+                # Incrémentation de H_n conformément au BFGS (Nocedal and Wright et scipy)
+                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+                self.debug["curr_hess_%s" %(str(cpt))] = H_nNext_inv
+                
+                # Calcule des résidus
+                err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
+                err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
+                
+                # Erreur sur J entre l'ancien beta et le nouveau                 
+                err_j    =   J(beta_nNext) - J(beta_n)
+                
+                if verbose == True :
+                    print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
+                    print("err_beta = {} cpt = {}".format(err_beta, cpt))
+                    print ("err_hess = {}".format(err_hess))
+                
+                # Implémentation de liste pour vérifier si besoin
+                self.alpha_lst.append(alpha)
+                err_hess_lst.append(err_hess) 
+                err_beta_lst.append(err_beta)
+                dir_lst.append(np.linalg.norm(d_n, 2))
+                
+                print("\n")
+                cpt +=  1    
+                # n --> n+1 si non convergence, sort de la boucle sinon 
+                
+            ######################
+            ##-- Post Process --##
+            ######################
+            H_last  =   H_nNext_inv
+            g_last  =   g_nNext
+            beta_last=  beta_nNext
+            d_n_last = d_n
+            
+            # On remplit le dictionnaire dont les entrées sont écrites dans le carnet de bord (voir write_logbook)
+            logout_last = dict()
+            logout_last["cpt_last"]    =   cpt   
+            logout_last["J(beta_last)"]=   J(beta_last)
+            logout_last["beta_last"]   =   beta_last
+            logout_last["g_sup_max"]   =   g_sup
+            logout_last["g_last"]      =   g_last
+            
+            logout_last["Corr_chol"]   =   len(corr_chol)
+            logout_last["Residu_hess"] =   err_hess
+            logout_last["Residu_beta"] =   err_beta
+            
+            # Affichage récapitulatif pour se rassurer ou ...            
+            print ("\x1b[1;35;47mFinal Sup_g = {}\nFinal beta = {}\nFinal direction {}\x1b[0m".format(\
+                g_sup, beta_last, d_n_last))
+            
+            # Tracés beta_last et grad_J(beta_last)
+            ax[1].plot(self.line_z, g_last, label="gradient last")
+            ax[0].plot(self.line_z, beta_last, label="beta_n last")
+            
+            # Construction de la C_bmap
+            try :
+
+                R   =   np.linalg.cholesky(H_last)
+            except np.linalg.LinAlgError : # i.e si H_last n'est pas MPD -> modification
+                H_last = self.cholesky_for_MPD(H_last, fac = 5.)
+                corr_chol.append(cpt)
+                R   =   H_last
+            
+            bfgs_adj_bmap[sT_inf]   =   beta_last # beta_map
+            bfgs_adj_grad[sT_inf]   =   g_last  
+            
+            bfgs_adj_hessinv[sT_inf]    =   H_last# Hessienne inverse finale  
+            bfgs_adj_cholesky[sT_inf]   =   R
+            
+            bfgs_adj_bf[sT_inf]     =   bfgs_adj_bmap[sT_inf] + np.dot(R, s) # beta_finale voir après 
+            
+            # On utilise une fonction codée plus haut : pd_write_csv 
+            # On écrit la covariance a posteriori dans un fichier pour l'utiliser dans le ML
+            write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf))
+            if osp.exists(write_cov) :
+                add_title = 1
+                if osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv") == False :
+                    write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv"
+
+                # Si on rentre dans le prochaine boucle, le fichier est de la forme T_inf_nombre, reste à savoir à combien il en est
+                while osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv") :
+                    add_title += 1
+                write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv"
+                
+                print write_cov
+            
+            self.pd_write_csv(write_cov, pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
+            print("%s written" %(write_cov))
+
+            beta_var = []
+            sigma_post = []
+            
+            # On va à présent faire des tirages (sample) à partir de beta_map et de Cholesky
+            for i in range(249):
+                s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+                beta_var.append( bfgs_adj_bmap[sT_inf] + np.dot(R, s) ) # équation 11
+            
+            beta_var.append(bfgs_adj_bf[sT_inf]) # Pour faire 250, on rajoute beta_final
+            # Beta var est une liste de listes. Chacune de ces liste mesure self.N_discr - 2 et contient la valeur
+            # les samples tirées plus haut.
+            # Pour les tracés, on calcule les minimum et maximum de toutes ces listes pour chaque point.
+            
+            for i in range(self.N_discr-2) :
+                bfgs_adj_mins[sT_inf + str("{:03d}".format(i))] = (min([j[i] for j in beta_var]))
+                bfgs_adj_maxs[sT_inf + str("{:03d}".format(i))] = (max([j[i] for j in beta_var]))
+                # Les clés sont moches mais permettent de garder un ordre de 0 à self.N_discr - 2
+                sigma_post.append(np.std([j[i] for j in beta_var])) 
+                # Pour une itération, i (point de discrétisation) est fixé et on parcours les liste contenues dans
+                # beta_var. De cette façon on raisonne sur le i-ème élément de tous les samples.
+                # On calcule également l'écart type de chaque point.  
+                 
+            bfgs_adj_sigma_post[sT_inf] = sigma_post 
+            
+            # On rassemble les valeurs des mins relatives à tous les points de discrétisation dans une seule liste
+            bfgs_adj_mins_lst =  [bfgs_adj_mins["T_inf_%d%03d" %(T_inf, i) ]\
+                                            for i in range(self.N_discr-2)]   
+            bfgs_adj_maxs_lst =  [bfgs_adj_maxs["T_inf_%d%03d" %(T_inf, i) ]\
+                                            for i in range(self.N_discr-2)]
+            
+            # Puis on les garde pour la température en cours
+            bfgs_adj_mins_dict[sT_inf] = bfgs_adj_mins_lst 
+            bfgs_adj_maxs_dict[sT_inf] = bfgs_adj_maxs_lst
+            
+            plt.legend(loc="best") # légende des figures tracé plus haut
+            
+            try :
+                # On va récapituler différentes évolutions au cours de l'optimization
+                fiig, axxes = plt.subplots(2,2,figsize=(8,8))
+                
+                axxes[0][0].set_title("alpha vs iterations T_inf %d " %(T_inf))
+                axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o',\
+                                            linestyle='none', markersize=8)
+                axxes[0][0].set_xlabel("Iterations")
+                axxes[0][0].set_ylabel("alpha")
+                
+                axxes[0][1].set_title("err_hess vs iterations ")
+                axxes[0][1].plot(range(cpt), err_hess_lst, marker='s',\
+                                            linestyle='none', markersize=8)
+                axxes[0][1].set_xlabel("Iterations")
+                axxes[0][1].set_ylabel("norm(H_nNext_inv - H_n_inv, 2)")
+                
+                axxes[1][0].set_title("err_beta vs iterations ")
+                axxes[1][0].plot(range(cpt), err_beta_lst, marker='^',\
+                                            linestyle='none', markersize=8)
+                axxes[1][0].set_xlabel("Iterations")
+                axxes[1][0].set_ylabel("beta_nNext - beta_n")            
+                
+                axxes[1][1].set_title("||d_n|| vs iterations")
+                axxes[1][1].plot(range(cpt), dir_lst, marker='v',\
+                                            linestyle='none', markersize=8)
+                axxes[1][1].set_xlabel("Iteration")
+                axxes[1][1].set_ylabel("Direction")            
+            
+            except ValueError :
+                break
+            
+            # On précise que le cas en cours a été traité. On pourra alors le tracé (voir class_functions_aux.py subplot_cst) et l'écrire
+            self.bool_method["adj_bfgs_"+sT_inf] = True
+            
+            # On l'écrit
+            f = open(self.logout_title, "a")
+            f.write("\nADJ_BFGS\n")
+            f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(sT_inf))
+            for item in logout_last.iteritems() :
+                f.write("{} = {} \n".format(item[0], item[1])) # Voir adjoint_bfgs dans la section Post Process
+            self.bool_written["adj_bfgs_"+sT_inf] == True
+            f.close()
+            
+            # On écrit les erreurs 
+            f = open(self.err_title, "a")
+            f.write("\nADJ_BFGS\n")
+            f.write("\n\x1b[1;37;43mMethod status for %s: \x1b[0m\n" %(sT_inf))
+            f.write("\nErreur grad\tErreur Hess\tErreur Beta\n")
+            for g,h,j in zip(sup_g_lst, err_hess_lst, err_beta_lst) :
+                f.write("{:.7f} \t {:.7f} \t {:.7f}\n".format(g, h, j))
+            f.close()
+            
+        ## Fin boucle sur température 
+        # Finalisation des fichiers
+        for f in {open(self.err_title, "a"), open(self.logout_title, "a")} :
+            f.write("\nFin de la simulation")
+            f.close()
+        
+        ##############################
+        ##-- Passages en attribut --##
+        ##############################
+        
+        # Passage en attribut des dictionnaires comprenant les résultats respectifs pour chaque val de T_inf_lst
+        self.bfgs_adj_bf     =   bfgs_adj_bf
+        self.bfgs_adj_bmap   =   bfgs_adj_bmap
+        self.bfgs_adj_grad   =   bfgs_adj_grad
+        self.bfgs_adj_gamma  =   bfgs_adj_gamma
+        
+        self.bfgs_adj_hessinv=  bfgs_adj_hessinv
+        self.bfgs_adj_cholesky= bfgs_adj_cholesky
+        
+        self.bfgs_adj_mins_dict   =   bfgs_adj_mins_dict
+        self.bfgs_adj_maxs_dict   =   bfgs_adj_maxs_dict
+        self.bfgs_adj_sigma_post     =   bfgs_adj_sigma_post
+        
+        # obsolète et inutile mais sait-on jamais
+        self.al2_lst    =    al2_lst
+        self.corr_chol  =   corr_chol
         #########
         #- Fin -#
         #########
@@ -1119,7 +1520,9 @@ class Temperature_cst() :
 ######                                            ######
 ##----------------------------------------------------## 
 ##----------------------------------------------------## 
-    def backline_search(self, J, g_J, djk, xk, dk, cpt_ext, g_sup, rho=1., c=0.5) :
+    def backline_search(self, J, g_J, djk, xk, dk, cpt_ext, g_sup, rho=1., c=0.5, w_pm = 0.9) :
+        # c is the armijo parameter
+        # w_pm is the wolfe parameter
         alpha = alpha_lo = alpha_hi = 1.
         correction = False
         bool_curv  = False
@@ -1131,7 +1534,7 @@ class Temperature_cst() :
                 (J(xk) + c * alpha * np.dot(djk.T, dk)) 
         # Strong Wolf Condition
         curv  = lambda alpha : (np.linalg.norm(g_J(xk + alpha*dk))) <=\
-                (0.9*np.linalg.norm(djk,2))  
+                (w_pm*np.linalg.norm(djk,2))  
         
         cpt, cptmax = 0, 10
         
@@ -1193,6 +1596,43 @@ class Temperature_cst() :
             # On sait qu'ils sont True, on gagne du temps en ne recalculant pas armi(alpha) et curv(alpha)
         
         return alpha, correction
+##----------------------------------------------------##
+    def aij_circle(self, Bk, delta=1):
+        Bk_t = Bk.transpose()
+        a_ij = a_ji = np.zeros((len(self.line_z),len(self.line_z)), dtype = np.float)
+        
+        # construction a_ij
+        for i in range(len(self.line_z) ) :
+            for j in range(len(self.line_z) ) :
+                if j < i :
+                    a_ij[i,j] = Bk[i,j]
+                if j == i :
+                    sum1 = sum([np.abs(Bk[s, j]) for s in range(i,len(self.line_z))])
+                    if j > 1 :
+                        sum2 = sum([np.abs(Bk[i, t]) for t in range(j-1)]) 
+                    else : 
+                        sum2 = 0
+                    a_ij[i,j] = 0.5*(sum1 + sum2 + delta)
+                if j > i :
+                    a_ij[i,j] = 0.
+
+        # Construction de a_ji    
+        for i in range(len(  self.line_z)) :
+            for j in range(len(  self.line_z)) :
+                if j < i :
+                    a_ij[i,j] = Bk_t[i,j]
+                if j == i :
+                    sum1 = sum([np.abs(Bk_t[s, j]) for s in range(i,len( self.line_z) )])
+                    if j > 1 :
+                        sum2 = sum([np.abs(Bk_t[i, t]) for t in range(j-2)]) 
+                    else : 
+                        sum2 = 0
+                    a_ij[i,j] = 0.5*(sum1 + sum2 + delta)
+                if j > i :
+                    a_ij[i,j] = 0.
+        print np.array([[a_ij[i,j] + a_ji[i,j] for i in range(len(self.line_z))] for j in range(len(self.line_z))])
+        return np.array([[a_ij[i,j] + a_ji[i,j] for i in range(len(self.line_z))] for j in range(len(self.line_z))])
+        
 ##----------------------------------------------------##   
 ##----------------------------------------------------##              
 ######                                            ######
@@ -1280,7 +1720,6 @@ if __name__ == "__main__" :
 #    temp.get_prior_statistics()
 #    
 #    temp.adjoint_bfgs(inter_plot=True)
-    
 ########
 #              
 ##----------------------------------------------------##
