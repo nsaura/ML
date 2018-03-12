@@ -169,7 +169,7 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
     def feed_forward(self, activation="relu"):
         Z = dict()
-        act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu"]
+        act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu", "selu"]
         # to have leakyrelu upgrade tensorflow :  sudo pip install tensorflow==1.4.0-rc0 
         ### A wide variety of models are availables to compute the neuronal outputs.
         ### We chose that way of implementation : the main work is done only if str_act
@@ -177,7 +177,7 @@ class Neural_Network():
         #####   Must read and cite articles or documentations related to activation fcts
         
         # cross entropy most likely to be used in classification wit sigmoid
-        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu] ) :
+        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu] ) :
             if str_act == activation :
                 Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
                 print ("act function chosen %s \t VS. \t act function wanted %s" %(str_act, activation))
@@ -208,12 +208,13 @@ class Neural_Network():
         
         After execution of this method, the NN object will have the NN.train_op attribute 
         """
-        considered_training = {"RMS" : tf.train.RMSPropOptimizer,\
-                               "GD": tf.train.GradientDescentOptimizer,\
-                               "SGD": tf.train.GradientDescentOptimizer\
+        considered_optimizer = {"RMS" : tf.train.RMSPropOptimizer,\
+                                "Adam" : tf.train.AdamOptimizer,\
+                                "GD": tf.train.GradientDescentOptimizer,\
+                                "SGD": tf.train.GradientDescentOptimizer\
                               }
-        if train_mod not in considered_training.keys() :
-            raise IndexError("{} n\'est pas dans les cas considérés. l\'argument train mod doit faire partie de la liste {}".format(train_mod, considered_training.keys()))
+        if train_mod not in considered_optimizer.keys() :
+            raise IndexError("{} n\'est pas dans les cas considérés. l\'argument train mod doit faire partie de la liste {}".format(train_mod, considered_optimizer.keys()))
         
         print("{} optimizer wanted".format(train_mod))
         
@@ -227,7 +228,7 @@ class Neural_Network():
                 for k, v in zip(parameters.keys(), parameters.values()):
                     print("parmeters[{}] = {}".format(k,v))
                     
-                self.train_op = considered_training[train_mod](\
+                self.train_op = considered_optimizer[train_mod](\
                                                                self.lr,\
                                                                momentum=parameters["momentum"],\
                                                                decay=parameters["decay"]\
@@ -236,15 +237,30 @@ class Neural_Network():
                 print("Seems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
                 Use the default one instead with lr = {} though".format(self.lr))
                 self.train_op = tf.train.RMSPropOptimizer(self.lr)
+        if train_mod=="Adam" :
+#       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
+            try :
+                for k, v in zip(parameters.keys(), parameters.values()):
+                    print("parmeters[{}] = {}".format(k,v))
+                    
+                self.train_op = considered_optimizer[train_mod](\
+                                                               self.lr,\
+                                                               beta1=parameters["beta1"],\
+                                                               beta2=parameters["beta2"],\
+                                                               epsilon = parameters["epsilon"]\
+                                                              )
+            except KeyError:
+                print("AdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001".format(self.lr))
+                self.train_op = tf.train.AdamOptimizer(self.lr)        
         
         if train_mod == "GD" or train_mod == "SGD":
 #            Si on utilise le batch pour l'entrainement ils reviennent au même
-            self.train_op = considered_training[train_mod](self.lr) 
+            self.train_op = considered_optimizer[train_mod](self.lr) 
         
         self.train_mod = train_mod
-#        for k, train in zip(considered_training.keys(), considered_training.values()) :
+#        for k, train in zip(considered_optimizer.keys(), considered_optimizer.values()) :
 ###-------------------------------------------------------------------------------      
-    def cost_computation(self, err_type, SL_type="regression", **kwargs) :
+    def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum", **kwargs) :
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
 #        REGRESSION pbs     : L2 regularisation -> OLS  :   tf.reduce_sum(tf.square(y_pred - targets))
 #                             L1 regression     -> AVL  :   tf.reduce_sum(tf.abs(y_pred - targets))
@@ -258,7 +274,20 @@ class Neural_Network():
             if err_type not in expected_loss :
                 raise IndexError("{} n\'est pas dans les cas considérés. La fonction de cout doit appartenir à la liste {}".format(err_type, expected_loss.keys()))
 
-            self.loss = tf.reduce_sum(expected_loss[err_type](self.y_pred_model - self.t))
+            if reduce_type == "mean" :
+                self.loss = tf.reduce_mean(expected_loss[err_type](self.y_pred_model - self.t))
+                print ("The loss function will compute the averaged sum over all the errors")
+            elif reduce_type == "sum" :
+                self.loss = tf.reduce_sum(expected_loss[err_type](self.y_pred_model - self.t))
+                print ("The loss function will compute sum over all the errors")
+            else :
+                raise AttributeError("Define a reduce_type between sum and mean")
+#https://stackoverflow.com/questions/43822715/tensorflow-cost-function
+#    Also tf.reduce_sum(cost) will do what you want, I think it is better to use tf.reduce_mean(). Here are a few reasons why:
+#    you get consistent loss independent of your matrix size. On average you will get reduce_sum 4 times bigger for a two times bigger matrix
+#    less chances you will get nan by overflowing
+
+
         
         self.err_type  = err_type 
 ###-------------------------------------------------------------------------------          
