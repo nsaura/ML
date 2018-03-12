@@ -39,7 +39,7 @@ plt.ion()
 # On n'a cependant pas besoin de relancer l'inférence
 # Puisque les distributions importantes ont été écrites
 if  __name__ == "__main__" :
-#    run script_comparaison.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -N_sample 10 -epoch 1500
+#   run NN_inference_ML.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -N_sample 5 
     T = ctc.Temperature_cst(parser) 
     T.obs_pri_model()
     T.get_prior_statistics()
@@ -73,7 +73,7 @@ def recentre(x_s, X_train_mean, X_train_std):
     
     return x_s.reshape(1,-1)
 ###-------------------------------------------------------------------------------
-def build_case(lr, X, y, act, opti, loss, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, **kwargs) :
+def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, **kwargs) :
     # build_case(1e-3, X, y , act="relu", opti="RMS", loss="OLS", decay=0.7, momentum=0.8, max_epoch=1000) marche très bien avec [10, 15, 20, 25, 30, 35, 40, 45, 50]
 
     nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch)
@@ -92,7 +92,7 @@ def build_case(lr, X, y, act, opti, loss, N_=dict_layers, max_epoch=parser.N_epo
 #        dico[item[0]] = item[1]
     nn_obj.def_training(opti, **kwargs)
 #       nn.train_op
-    nn_obj.cost_computation(loss)
+    nn_obj.cost_computation(loss, reduce_type=reduce_type)
     nn_obj.def_optimization()
 #       nn.minimize_loss
     nn_obj.training_session(tol=1e-3, batched=False)
@@ -100,7 +100,6 @@ def build_case(lr, X, y, act, opti, loss, N_=dict_layers, max_epoch=parser.N_epo
 #    plt.figure("Evolution de l\'erreur %s" %(loss))
 #    plt.plot(range(len(nn_obj.costs)), nn_obj.costs, c='r', marker='o', alpha=0.3,\
 #            linestyle="none")
-    
     return nn_obj
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -209,9 +208,9 @@ def solver_NN(T, nn_obj, N_sample, T_inf, body, verbose = False) :
         
         plt.savefig(title)
         
-        plt.figure("Beta_NN_vs_True_s" %(body))
-        plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML_%s_%s" %(model_name, body))
-        plt.plot(T.line_z, true_beta, label="True_%s_%s" %(model_name, body), linestyle='--', c='k')
+        plt.figure("Beta_NN_vs_True_%s" %(body))
+        plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML_NN_%s" %(body))
+        plt.plot(T.line_z, true_beta, label="True_NN_%s" %(body), linestyle='--', c='k')
         plt.legend(loc = "best")
         
         title = osp.join(osp.abspath("./res_all_T_inf"),"beta_True_vs_beta_NN_N_sample_{}_T_inf_{}".format(N_sample, body))
