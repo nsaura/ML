@@ -350,10 +350,7 @@ class Neural_Network():
         self.costs = costs
 ###-------------------------------------------------------------------------------
     def predict(self, x_s):
-        with tf.Session() as sess:
-      # restore the model
-            self.saver.restore(sess, self.savefile)
-            P = sess.run(self.y_pred_model, feed_dict={x: x_s})
+        P = self.sess.run(self.y_pred_model, feed_dict={self.x: x_s})
         return P
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------

@@ -317,6 +317,15 @@ class Temperature_cst() :
         return T_nNext 
 ##---------------------------------------------------
     def true_beta(self, T, T_inf) : 
+        """
+        Calcul de beta théorique pour un cas considéré
+        
+        Args : 
+        T : champ de température obs ou inferré  
+        T_inf : valeur de T_inf 
+        ## Attention : cette version ne marche que lorsque T_inf est un scalaire ! ##
+            On utilisera la version GPC pour traiter le cas T_inf variable 
+        """
         # dans t1 on ne rajoute pas le bruit contrairement à l'équation 36
         t1 = np.asarray([ 1./self.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * T[i]) + np.exp(0.02*T[i])) *10**(-4) for i in range(self.N_discr-2)])
         t2 = np.asarray([self.h / self.eps_0*(T_inf - T[i])/(T_inf**4 - T[i]**4)  for i in range(self.N_discr-2)]) 
