@@ -47,19 +47,32 @@ if  __name__ == "__main__" :
     X,y,v,m,s = GPC.training_set(T, parser.N_sample)
 
 dict_layers = {"I" : 2,\
-               "N1" : 1000,\
-               "N2" : 500,\
-               "N3" : 100,\
-               "N4" : 100,\
-               "N5" : 100,\
-               "N6" : 100,\
-               "N7" : 100,\
-               "N8" : 100,\
-               "N9" : 100,\
-               "N10": 100,\
+               "N1" : 100,\
+               "N2" : 50,\
+               "N3" : 10,\
+               "N4" : 10,\
+               "N5" : 10,\
+               "N6" : 10,\
+               "N7" : 10,\
+               "N8" : 10,\
+               "N9" : 10,\
+               "N10": 10,\
                "O"  : 1}
-                   
-N_hidden_layer = len(dict_layers.keys()) - 1
+
+#dict_layers = {"I" : 2,\
+#               "N1" : 1000,\
+#               "N2" : 500,\
+#               "N3" : 100,\
+#               "N4" : 100,\
+#               "N5" : 100,\
+#               "N6" : 100,\
+#               "N7" : 100,\
+#               "N8" : 100,\
+#               "N9" : 100,\
+#               "N10": 100,\
+#               "O"  : 1}
+
+N_hidden_layer = len(dict_layers.keys()) - 2
 #nn = NNC.Neural_Network(parser.lr, N_=dict_layers, max_epoch=parser.N_epoch)
 ###-------------------------------------------------------------------------------
 def recentre(x_s, X_train_mean, X_train_std):
@@ -75,6 +88,10 @@ def recentre(x_s, X_train_mean, X_train_std):
 ###-------------------------------------------------------------------------------
 def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, **kwargs) :
     # build_case(1e-3, X, y , act="relu", opti="RMS", loss="OLS", decay=0.7, momentum=0.8, max_epoch=1000) marche très bien avec [10, 15, 20, 25, 30, 35, 40, 45, 50]
+    # nn_adam_mean = build_case(1e-3, X, y , act="relu", opti="Adam", loss="OLS", decay=0.7, momentum=0.8, max_epoch=2000, reduce_type="mean")
+#    nn_adam_mean = build_case(1e-3, X, y , act="relu", opti="Adam", loss="OLS", decay=0.7, momentum=0.8, max_epoch=4000, reduce_type="mean")
+
+#   Ce cas nous donne une erreur totale moyennée  0.00099802657]
 
     nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch)
     
@@ -97,9 +114,34 @@ def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch
 #       nn.minimize_loss
     nn_obj.training_session(tol=1e-3, batched=False)
     
+    beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
+    test_line = range(len(nn_obj.X_test))
+    
+    plt.figure("Comaparaison sur le test set")
+    plt.plot(test_line, beta_test_preds, label="Prediction sur Test set", marker='+',\
+    fillstyle='none', linestyle='none', c='r')
+    plt.plot(test_line, nn_obj.y_test, label="Expected value", marker='o', fillstyle='none',\
+                linestyle='none', c='k')   
+    plt.legend()
 #    plt.figure("Evolution de l\'erreur %s" %(loss))
 #    plt.plot(range(len(nn_obj.costs)), nn_obj.costs, c='r', marker='o', alpha=0.3,\
 #            linestyle="none")
+    deviation = np.array([ abs(beta_test_preds[j] - nn_obj.y_test[j]) for j in test_line])
+    error_estimation = sum(deviation)
+#    error_estimation /= (len(nn_obj.X_test) -1)
+    
+    plt.figure("Deviation of the prediction")
+    plt.plot(nn_obj.y_test, nn_obj.y_test, c='k', label="reference line")
+    plt.plot(nn_obj.y_test, nn_obj.y_test, c='b', marker='+', label="wanted value",linestyle='none')
+    plt.plot(nn_obj.y_test, beta_test_preds, c='r', marker='o', linestyle='none', label="predicted value", ms=3)
+    plt.legend(loc="best") 
+
+    print("Modèle utilisant N_dict_layer = {}".format(N_))
+    print("Fonction d'activation : {}\n Fonction de coût : {}\n\
+           Méthode d'optimisation : {}".format(act, loss, opti))
+    print ("Moyenne de la somme des écart sur le test set = {}".format(error_estimation))
+    
+    
     return nn_obj
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -180,7 +222,7 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
     return T_nNext, beta_nNext
 #-------------------------------------------#
 #-------------------------------------------#
-def solver_NN(T, nn_obj, N_sample, T_inf, body, verbose = False) :
+def solver_NN(T, nn_obj, T_inf, body,  N_sample= parser.N_sample, verbose = False) :
     T_inf_lambda = T_inf
     T_inf = map(T_inf, T.line_z) 
 
@@ -210,10 +252,23 @@ def solver_NN(T, nn_obj, N_sample, T_inf, body, verbose = False) :
         
         plt.figure("Beta_NN_vs_True_%s" %(body))
         plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML_NN_%s" %(body))
+        plt.plot(T.line_z, T.beta_prior, label="beta prior", c='yellow')
         plt.plot(T.line_z, true_beta, label="True_NN_%s" %(body), linestyle='--', c='k')
         plt.legend(loc = "best")
         
         title = osp.join(osp.abspath("./res_all_T_inf"),"beta_True_vs_beta_NN_N_sample_{}_T_inf_{}".format(N_sample, body))
+        
+        T_rel_error = np.array([np.abs(T_true[i] - T_ML[i])/T_true[i] for i in range(T.N_discr-2)])
+        beta_rel_error = np.array([np.abs(true_beta[i] - beta_ML[i])/true_beta[i] for i in range(T.N_discr-2)])
+        
+        fig, axes = plt.subplots(1,2,figsize=(15,5))
+        axes[0].plot(T.line_z, T_rel_error*100)
+        axes[1].plot(T.line_z, beta_rel_error*100)
+        
+        axes[0].set_ylabel("Pourcentage d'erreur")
+        axes[1].set_ylabel("Pourcentage d'erreur")
+        axes[0].set_title("Erreur relative entre T_ML et T_true (pourcentage)")
+        axes[1].set_title("Erreur relative entre beta_ML et beta_true (pourcentage)")
         
     NN_out = dict()
     NN_out["NN_T_ML"]  = T_ML   

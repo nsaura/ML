@@ -50,10 +50,17 @@ def training_set(T, N_sample, scale=False, shuffle=False):
     for t in T.T_inf_lst :
         sT_inf = "T_inf_" + str(t)  # Clé pour les dictionnaires de l'objet T
         
-        bmap_ = "adj_bfgs_beta_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+        if t != 50 :        
+            bmap_ = "opti_scipy_beta_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+            chol_ = "opti_scipy_cholesky_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+            print ("Pour T_inf = {}, Opti selectionné".format(t))
+            
+        else :
+            bmap_ = "adj_bfgs_beta_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+            chol_ = "adj_bfgs_cholesky_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+            print ("Pour T_inf = {}, Adj_BFGS selectionné".format(t))
+            
         bmap_ = osp.join("./data/matrices",bmap_)
-        
-        chol_ = "adj_bfgs_cholesky_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
         chol_ = osp.join("./data/matrices",chol_)
             
         if osp.exists(bmap_) == False or osp.exists(chol_) == False :
@@ -186,8 +193,18 @@ def True_Temp(T, T_inf, body) :
 #-------------------------------------------#    
 def True_Beta(T, temp, T_inf) :
     """
-    Pour comparer beta_true et beta_ML
-    T_inf est une liste
+    Calcul de beta théorique pour un cas considéré
+
+    Args  :
+    -------
+    T     : Objet de la classe Temperature
+    temp  : Champ de température obs ou inferré
+    T_inf : Champ de température T_inf. 
+            Doit être une liste
+            
+    Return :
+    -------
+    beta_theorique
     """
     t1 = np.asarray([ 1./T.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * temp[i]) + np.exp(0.02*temp[i])) *10**(-4) for i in range(T.N_discr-2)])
     t2 = np.asarray([T.h / T.eps_0*(T_inf[i] - temp[i])/(T_inf[i]**4 - temp[i]**4)  for i in range(T.N_discr-2)]) 
