@@ -448,7 +448,7 @@ Ce qui nous permet de réécrire
 \end{align*}
 
 \noindent On exprime à présent $\nu_t^L$, la viscosité turbulente opitmale, en minimisant l'écart entre \textbf{b} et sa partie linéaire : $$\nu_t^L = \underset{\nu_t}{\text{argmin}} \norm{\textbf{b} - \nu_t\textbf{S}} $$
-Avec $\norm{\, {•} \, }$ la norme au sens de Frobenius : $\norm{\textbf{S}} = \sqrt{S_{ij}S_{ij}}$. La minimisation précédente revient en fait à calculer $$ \nu_t^L = 2\,  \frac{\textbf{b}:\textbf{S}}{\norm{\textbf{S}} \norm{\textbf{S}}}$$ Où \textbf{b} : \textbf{S} $= b_{ij}S_{ij}$.
+Avec $\norm{\, \cdot \, }$ la norme au sens de Froebenius : $\norm{\textbf{S}} = \sqrt{S_{ij}S_{ij}}$. La minimisation précédente revient en fait à calculer $$ \nu_t^L = 2\,  \frac{\textbf{b}:\textbf{S}}{\norm{\textbf{S}} \norm{\textbf{S}}}$$ Où \textbf{b} : \textbf{S} $= b_{ij}S_{ij}$.
 On rappelle enfin l'équation dite de \textsc{rans} :
 $$ \frac{D\overline{U} }{Dt} + \nabla \overline{P} - \nu \nabla^2 \overline{U} = \nabla \cdot \tau$$
 \noindent Toutes les grandeurs ayant été introduites, on construit les features \textbf{q}.\\[2mm]
