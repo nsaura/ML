@@ -160,4 +160,32 @@ captionpos=b
 	
 \end{itemize}
 
+\pagebreak
+
+\section*{Idées au 19/03/18}
+\navy \subsection*{Fait et à faire } \bk
+\begin{itemize}
+	\item[1 - ] RANS
+	\begin{itemize}
+		\item[--] RANS invariant Xiao méthode 
+	\end{itemize}
+	\item[1 - \todo] Réfléchir à un moyen d'automatiser la récupération de l'écart type de ces données ainsi que les équivalents postérieurs aux calculs de \textsc{class\_temp\_ml} ; \\
+
+	\item[2 - \done] Trois routines d'optimisations dont deux efficaces : \textsc{optimization} et \textsc{adjoint\_method} fonctionnant pour une covariance diagonale
+	\item[2 - \todo] Comprendre les différences fondamentales entre ces deux méthodes, en quoi elles expliquent les différences sur les résultats.
+	\item[- - \todo] Implémenter le générateur de $\beta_{\text{post}}$ et regarder les amplitudes possibles pour $\beta_{\text{map}}$ comme il a été fait pour \textsc{optimization}.
+	\begin{itemize}
+		\item[--] Calculer la hessienne inverse évaluée en $\beta_{\text{map}} $ et obtenir la covariance $C_{\text{map}}$
+		\item[--] Décomposer avec Cholesky $C_{\text{map}}$ et obtenir le générateur $\beta_{\text{post}}$
+		\item[--] Calculer les max et min puis tracer  \\
+	\end{itemize}
+	
+	\item[3 - \done] Obtenir le $\beta$ optimisant le problème réduit par rapport au problème de référence ainsi que le $\sigma$ correspondant. \\
+	Superposition de l'image de $\beta_{\text{map}}$ par le système défectueux, avec la solution du problème exacte. \\
+	
+	\item[\warn \warn] Optimiser des temps de calcul dans les différentes méthodes et routines \\
+	Optimiser les chemins de sauvegardes et garder trace de graphes
+	
+\end{itemize}
+
 \end{document}
