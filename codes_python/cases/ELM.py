@@ -83,7 +83,7 @@ X_train, X_test, y_train, y_test, m, s = shuffle_train_split(T, X, y, True)
 # Taille des entrées et sorties, Nombre de HN dans la HL
 N_in = 2
 N_ou = 1
-N_hn = 10000
+N_hn = 9000
 
 # Déclaration des matrices
 A = np.random.randn(N_in, N_hn)
@@ -151,7 +151,7 @@ def T_to_beta_ELM(T, output, T_inf, body, m, s, scale=True):
     B_n = np.zeros((T.N_discr-2))
     T_n_tmp = np.zeros((T.N_discr-2))
 
-    tol, compteur, cmax = 1e-6, 0, 10000 
+    tol, compteur, cmax = 1e-7, 0, 20000 
     err = err_beta = 1.
     
     while (np.abs(err) > tol) and (compteur <= cmax) :

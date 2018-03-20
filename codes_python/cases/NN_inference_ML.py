@@ -35,7 +35,7 @@ parser = cfa.parser()
 
 plt.ion()
 
-# On déclare un objet de la classe T pour pouvoir avoir accès à des grandeurs propres à la méthode.
+# On déclare un objet de la classe T pour pouvoir avoir accès à des grandeurs propres à lClassa méthode.
 # On n'a cependant pas besoin de relancer l'inférence
 # Puisque les distributions importantes ont été écrites
 if  __name__ == "__main__" :
@@ -112,35 +112,46 @@ def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch
     nn_obj.cost_computation(loss, reduce_type=reduce_type)
     nn_obj.def_optimization()
 #       nn.minimize_loss
-    nn_obj.training_session(tol=1e-3, batched=False)
+    try :
+        nn_obj.training_session(tol=1e-3, batched=False)
+    
+    except KeyboardInterrupt :
+        print "Session closed"
+        nn_obj.sess.close()
     
     beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
     test_line = range(len(nn_obj.X_test))
     
-    plt.figure("Comaparaison sur le test set")
-    plt.plot(test_line, beta_test_preds, label="Prediction sur Test set", marker='+',\
-    fillstyle='none', linestyle='none', c='r')
-    plt.plot(test_line, nn_obj.y_test, label="Expected value", marker='o', fillstyle='none',\
-                linestyle='none', c='k')   
-    plt.legend()
+    try :
+        verbose = kwargs["verbose"]
+    except KeyError :
+        verbose = False
+    
+    deviation = np.array([ abs(beta_test_preds[j] - nn_obj.y_test[j]) for j in test_line])
+    error_estimation = sum(deviation)
+
+    if verbose == True :
+        plt.figure("Comaparaison sur le test set")
+        plt.plot(test_line, beta_test_preds, label="Prediction sur Test set", marker='+',\
+        fillstyle='none', linestyle='none', c='r')
+        plt.plot(test_line, nn_obj.y_test, label="Expected value", marker='o', fillstyle='none', linestyle='none', c='k')   
+        plt.legend()
 #    plt.figure("Evolution de l\'erreur %s" %(loss))
 #    plt.plot(range(len(nn_obj.costs)), nn_obj.costs, c='r', marker='o', alpha=0.3,\
 #            linestyle="none")
-    deviation = np.array([ abs(beta_test_preds[j] - nn_obj.y_test[j]) for j in test_line])
-    error_estimation = sum(deviation)
 #    error_estimation /= (len(nn_obj.X_test) -1)
     
-    plt.figure("Deviation of the prediction")
-    plt.plot(nn_obj.y_test, nn_obj.y_test, c='k', label="reference line")
-    plt.plot(nn_obj.y_test, nn_obj.y_test, c='b', marker='+', label="wanted value",linestyle='none')
-    plt.plot(nn_obj.y_test, beta_test_preds, c='r', marker='o', linestyle='none', label="predicted value", ms=3)
-    plt.legend(loc="best") 
+        plt.figure("Deviation of the prediction")
+        plt.plot(nn_obj.y_test, nn_obj.y_test, c='k', label="reference line")
+        plt.plot(nn_obj.y_test, nn_obj.y_test, c='b', marker='+', label="wanted     value",linestyle='none')
+        plt.plot(nn_obj.y_test, beta_test_preds, c='r', marker='o', linestyle='none',   label="predicted value", ms=3)
+        plt.legend(loc="best") 
 
-    print("Modèle utilisant N_dict_layer = {}".format(N_))
-    print("Fonction d'activation : {}\n Fonction de coût : {}\n\
-           Méthode d'optimisation : {}".format(act, loss, opti))
-    print ("Moyenne de la somme des écart sur le test set = {}".format(error_estimation))
-    
+#    print("Modèle utilisant N_dict_layer = {}".format(N_))\\
+    print("Modèle pour H_NL = {}, H_NN = {} \n".format(len(N_.keys())-2, N_["N1"]))
+    print("Fonction d'activation : {}\n Fonction de cout : {}\n\
+    Méthode d'optimisation : {}".format(act, loss, opti))
+    print ("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
     
     return nn_obj
 ###-------------------------------------------------------------------------------
