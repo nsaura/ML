@@ -27,9 +27,13 @@ def error_rate(p, t):
 
 ## Notes en fin de codes !!!
 
+config = tf.ConfigProto(
+        device_count = {'GPU': 0}
+    )
+
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, N_={}, max_epoch=10) :
+    def __init__(self, lr, N_={}, max_epoch=10, verbose=False) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
@@ -56,7 +60,9 @@ class Neural_Network():
         self.max_epoch = max_epoch
         
         self.savefile= "./session"
-        self.sess = tf.InteractiveSession()
+        self.sess = tf.InteractiveSession(config=config)
+        
+        self.verbose= verbose 
 ###-------------------------------------------------------------------------------        
     def train_and_split(self, X, y, random_state=0, strat=True, scale=False, shuffle=True):
 #        Stratify option allows to have a loyal representation of the datasets (couples of data,target)
@@ -180,7 +186,7 @@ class Neural_Network():
         for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu] ) :
             if str_act == activation :
                 Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
-                print ("act function chosen %s \t VS. \t act function wanted %s" %(str_act, activation))
+                print ("fonction d'activation considérée : %s" %(activation))
                 for i in xrange(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
                     curr_zkey, prev_zkey = "z%d" %(i), "z%d" %(i-1)
                     wkey = "w%d" %(i)
@@ -192,7 +198,8 @@ class Neural_Network():
             raise AttributeError ("\"{}\" activation function is unknown.\nActivation function must be one of {}".format(activation, act_func_lst))
         
         ### We constructed operations 
-        print("Z\'s construits")
+#        print("Z\'s construits")
+        self.activation = activation
         self.Z = Z
 ###-------------------------------------------------------------------------------      
     def def_training(self, train_mod, **kwargs) :
@@ -216,7 +223,7 @@ class Neural_Network():
         if train_mod not in considered_optimizer.keys() :
             raise IndexError("{} n\'est pas dans les cas considérés. l\'argument train mod doit faire partie de la liste {}".format(train_mod, considered_optimizer.keys()))
         
-        print("{} optimizer wanted".format(train_mod))
+        print("Optimiseur choisi : {}".format(train_mod))
         
         parameters = dict()        
         for k in kwargs :
@@ -260,11 +267,11 @@ class Neural_Network():
         self.train_mod = train_mod
 #        for k, train in zip(considered_optimizer.keys(), considered_optimizer.values()) :
 ###-------------------------------------------------------------------------------      
-    def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum", **kwargs) :
+    def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum",   **kwargs) :
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
 #        REGRESSION pbs     : L2 regularisation -> OLS  :   tf.reduce_sum(tf.square(y_pred - targets))
 #                             L1 regression     -> AVL  :   tf.reduce_sum(tf.abs(y_pred - targets))
-
+        
         if SL_type == "classification" :
             self.loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=self.y_pred_model, label=self.t))
             
@@ -288,10 +295,9 @@ class Neural_Network():
 #    less chances you will get nan by overflowing
 
 
-        
         self.err_type  = err_type 
 ###-------------------------------------------------------------------------------          
-    def def_optimization(self, verbose = True):
+    def def_optimization(self, verbose = False):
 #    https://github.com/vsmolyakov/experiments_with_python/blob/master/chp03/tensorflow_optimizers.ipynb
         if verbose == True :
             print("Récapitulatif sur la fonction de coût et la méthode de minimisation :\n")
@@ -322,7 +328,7 @@ class Neural_Network():
                 costs.append(err)
                 if np.isnan(costs[-1]) : raise IOError("Warning, Epoch {}, lr = {}.. nan"\
                                                     .format(epoch, self.lr))
-                if epoch % 10 == 0 :
+                if epoch % 200 == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
                 
                 epoch += 1
