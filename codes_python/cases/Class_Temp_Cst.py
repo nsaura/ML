@@ -360,11 +360,14 @@ class Temperature_cst() :
                 obs_filename = osp.join(self.datapath, obs_filename) 
                 pri_filename = osp.join(self.datapath, pri_filename)
                 
+#                print obs_filename
+#                print pri_filename
                 tol ,err_obs, err_pri, compteur = 1e-8, 1.0, 1.0, 0                
                 
                 # L'utilité de faire attention aux titres des fichiers c'est qu'on n'est plus obligé de les recalculer à toutes les SIMULATIONS (et non itération)
                 # Une fois calculée les champs de températures sont enregistrés
                 if osp.isfile(obs_filename) and osp.isfile(pri_filename) :
+#                    print "exists"
                     continue
                 
                 # Initialisation des champs T que l'on va ensuite faire converger 
