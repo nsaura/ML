@@ -49,7 +49,7 @@ global_keys = ["N_HL", "N_HN", "Act", "Opt"]
 
 nn_params["N_HL"] = [10, 30, 50, 75, 100, 120, 150, 200, 300, 400, 500]
 nn_params["N_HN"] = [100*i for i in range(1,8)]
-nn_params["Act"]  = ["leakyrelu", "relu", "selu", "sigmoid"]
+nn_params["Act"]  = ["leakyrelu", "relu", "selu"]
 nn_params["Opt"]  = ["RMS", "Adam", "RMS"]
 
 lr = 1e-3
@@ -197,7 +197,7 @@ def evolve(network_configurations, len_pop, random_select, mutate_chance,  retai
             mutate(elt)
             
     # On utilise la fonction breed pour compléter la nouvelle génération
-    N_children = len(network_configurations) - len(parents) - 1
+    N_children = len(network_configurations) - len(parents)
     children = []
     
     while len(children) < N_children :
@@ -210,13 +210,13 @@ def evolve(network_configurations, len_pop, random_select, mutate_chance,  retai
     
     parents.extend(children)
     
-    final_key = sorted_costs[-1]
-#    print "final_key", final_key
-    
-    for kset in costs :
-        if kset[1] == final_key :
-            print kset
-            parents.append(kset[1])
+#    final_key = sorted_costs[-1]
+##    print "final_key", final_key
+#    
+#    for kset in costs :
+#        if kset[1] == final_key :
+#            print kset
+#            parents.append(kset[1])
     
 #    print "parents augmented ", parents
 #    print ("post added the worst case\n len parents = {}, len_pop = {}".format(len(parents), len_pop))
@@ -336,6 +336,20 @@ def solver_NN(T, nn_obj, T_inf, body,  N_sample= parser.N_sample, verbose = Fals
 
 def main(len_pop, gen_max, nn_params=nn_params, max_epoch=1000) :
     
+    def check_params(params) :
+        elt_mere = params[0]
+        check = []
+        for elt in params :
+            check.append(elt == elt_mere)
+        
+        if False in check :
+            go_on = True
+        
+        else :
+            go_on = False
+        
+        return go_on
+        
     gen_tree = dict()
     
     params_ = first_shuffle(len_pop, nn_params)
@@ -370,11 +384,19 @@ def main(len_pop, gen_max, nn_params=nn_params, max_epoch=1000) :
             print("Cout n_prev = ".format(alpha_Prev[1]))
             print("Cout n_curr = ".format(alpha[1]))
             
-        bests.append[params_[0]]
+        bests.append(params_[0])
             
         time.sleep(3)
         
         alpha_Prev = alpha    
+        
+        go_on = check(params_)
+        if go_on == False :
+            print("Cases are all the same. The winner is : \n{}".format(params_[0])
+            break
         gen += 1
+        
+    return (params_, bests, gen_tree)
     
-    return params_, bests
+    
+# Il semblerait que la combi {'Opt': 'Adam', 'Act': 'selu', 'N_HL': 120, 'N_HN': 400} soit la meilleure
