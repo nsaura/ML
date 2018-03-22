@@ -616,7 +616,7 @@ class Temperature_cst() :
             
             # Calcule de dJ/dbeta avec méthode adjoint equation (13) avec (12)
             grad_J = lambda beta :\
-            np.dot(self.PSI(beta, T_inf), np.diag(self.DR_DBETA(beta,T_inf)) ) + self.DJ_DBETA(beta ,T_inf)
+            np.dot(self.PSI(beta, T_inf), self.DR_DBETA(beta,T_inf) ) + self.DJ_DBETA(beta ,T_inf)
             
             #################
             ##-- Routine --##
