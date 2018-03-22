@@ -133,8 +133,7 @@ def resolution(Nx=202, tf=10, L = float(3))  :
                 plt.ylim((-0.75, 1.4))  
                 plt.pause(0.01)
     return cpt
-###----- Fin du programme ---- ###
-
+###--------------------------------------------------------------------###
 def see_moy_u(cpt=202, Nx = 202, L = float(3)) :
     u = dict()
     CFL = 1 
