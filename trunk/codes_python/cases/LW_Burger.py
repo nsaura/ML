@@ -57,7 +57,7 @@ def intermediaires (var, flux ,incr, r) :
     f_p = 0.5 * ( var[incr+1] + var[incr] ) - 0.5 * r * ( flux[incr+1] - flux[incr] )
     return f_m,f_p
 ###--------------------------------------------------------------------###
-def resolution(Nx=202, tf=10, L = float(3))  : 
+def resolution(Nx=202, tf=10, L = float(3), write = False)  : 
     ## Déf des données du probleme 
     CFL = 1 
     dx = L/(Nx-1)
@@ -91,11 +91,12 @@ def resolution(Nx=202, tf=10, L = float(3))  :
         plt.ylim((-0.75, 1.4))
         plt.pause(0.01)
         
-        pd_write_csv("u_it0_%d.csv" %(j), u)
+        if write == True :  pd_write_csv("u_it0_%d.csv" %(j), u)
             
         t = cpt = 0
         while t < tf :
             i=1
+            fu = np.asarray([0.5*u_x**2 for u_x in u])
             while i <= Nx-2 :
                 u_m, u_p = intermediaires(u, fu, i, r)
                 
@@ -103,8 +104,6 @@ def resolution(Nx=202, tf=10, L = float(3))  :
                 fu_p =  0.5*u_p**2
                         
                 u_nNext.append( u[i] - r*( fu_p - fu_m ) + bruit[i] )
-                fu = np.asarray([0.5*u_x**2 for u_x in u])
-                                         
                 i += 1  # On passe à la case d'après
             
 #            print ("size u_nNext it 0 = %d" %(np.size(u_nNext)))
@@ -120,7 +119,7 @@ def resolution(Nx=202, tf=10, L = float(3))  :
 #            print np.size(u)
             
             cpt += 1
-            pd_write_csv("u_it%d_%d.csv" %(cpt, j), u)
+            if write == True : pd_write_csv("u_it%d_%d.csv" %(cpt, j), u)
             
             t+=dt # Itération temporelle suivante
             
