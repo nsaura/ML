@@ -28,7 +28,7 @@
 \graphicspath{{./pic/}}
 \usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
 
-%%% Commandes utiles définies
+%%% Commandes utiles définies%
 \newcommand{\argmin}{\mathop{\mathrm{argmin}}}
 
 \newcommand{\bepar}[1]{
@@ -352,11 +352,11 @@ Ils testent deux types de réseaux de neurones : le MLP classique et le TBNN qui
 \noindent Cette forme de neurones à pour but l'écriture du tenseur anisotropique comme une combinaison linéaire d'une base de tenseur bien particulière.  Les coefficients de cette combinaison sont différentes fonctions des invariants du problème. L'article se base sur les travaux de \cite{pope1975more} et de \cite{smith1965isotropic}.\\
 On alors propose de modifier l'hypothèse de Boussinesq qui consistait à écrire 
 \begin{equation*}
-\bar{u_i' u_j'} = \frac{2}{3} k \delta_{ij} - 2 \nu_t \bar{S_{ij}}
+\overline{u_i' u_j'} = \frac{2}{3} k \delta_{ij} - 2 \nu_t \bar{S_{ij}}
 \end{equation*}
  Il propose plutôt de calculer 
 \begin{equation*}
-\frac{\bar{u_i' u_j'} }{2k}= \frac{1}{3} \delta_{ij} + \sum_\lambda G^\lambda T^\lambda_{ij} 
+\frac{\overline!{u_i' u_j'} }{2k}= \frac{1}{3} \delta_{ij} + \sum_\lambda G^\lambda T^\lambda_{ij} 
 \end{equation*}
 Avec une forme bien particulière pour $G$ et $T$. La première est une fonction des invariants du problème qui sont dans le cas tridimensionnel : 
 \begin{equation*}
@@ -468,6 +468,43 @@ La base intègre contient ici 47 éléments listées dans l'annexe B de l'articl
 \end{itemize}
 
 \subsubsection*{Output du ML}
+\textit{On cherche ici à faire apprendre à la machine l'écart entre les résultat de la simulation RANS en cours par rapport à une véritable DNS. L'apprentissage se fait alors en indiquant que pour une simulation RANS donnée, dont sont extraites les entrées discutées plus haut, et dont nous disposons la DNS, les sorties doivent être les différences entre 6 grandeurs particulières qui sont le thème de cette section}.
+\\[2mm]
+
+\noindent L'output de l'algorithme sera l'ensemble noté $ \Delta \tau $. Cet ensemble contient des éléments invariants par rotation (comme les entrées) et veut reconstruire le champ anisotropique en renseignant sur l'écart prédit entre le tenseur de Reynolds de la simulation, et le tenseur de Reynolds de la DNS (si on l'avait lancée). \\
+On écrit cet écart comme une fonctionnelle de six variables \textit{physiquement interprétables} construites à partir de la décomposition suivante du tenseur de Reynolds :
+$$ \tau = 2k\bepar{\frac{1}{3} \textbf{I} + \textbf{b}} = 2k \bepar{\frac{1}{3} \textbf{I} + \textbf{V}\Lambda\textbf{V}^T}$$ 
+Avec $\textbf{V} = \becro{v_1, v_2, v_3}$ la matrice des vecteurs propres et $\mathbf{\Lambda} =\text{diag}\becro{\lambda_1, \lambda_2, \lambda_3}$ la matrice ayant pour diagonale les valeurs propres de \textbf{b}.\\
+Dans l'optique de gagner en sens physique, on va exprimer les valeurs propres dans une base de coordonnées barycentriques pour ensuite pouvoir quantifier le caractère de l'écoulement à partir d'un triangle d'état de l'écoulement. Cette base vérifie : \begin{align*}
+C_1 &= \lambda_1 - \lambda_2\\
+C_2 &= 2(\lambda_2 - \lambda_3)\\
+C_3 &= 3\lambda_3 +1
+\end{align*}
+Tel que $$C_1 + C_2 + C_3 = 1 $$  
+Ensuite pour projeter l'écoulement (au travers ses valeurs propres) dans le triangle d'état, on pondère chacune de ces trois coordonnées par celles des sommets du triangle dont les coordonnées sont $$\becro{(\xi_1c, \eta_1); (\xi_2, \eta_2); (\xi_3, \eta_3)} = \becro{\xi_{1c}, \xi_{2c}, \xi_{3c}}$$ Le triangle d'état ou de \textit{dimensionnalité de la turbulence} est représenté figure ci-dessous. On peut voir par exemple que le tenseur de Reynolds obtenu dans la résolution RANS standard est proche d'une turbulence isotropique.
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[scale=0.41]{triangle_vertices.png}
+\end{figure}
+
+On écrira alors $$\vec{\xi} = \xi_{1c}C_1 + \xi_{2c}C_2 + \xi_{3c}C_3$$
+Et on placera le cas étudié dans ce triangle grâce aux coordonnées ainsi calculées. L'avantage de ce triange encore une fois est le fait qu'il soit facile à comprendre et qu'il donne beaucoup d'informations sur la nature de la turbulence dans le cas considéré.\\
+Les composantes d'une telle projection sont alors évaluées dans ce modèle et l'écart entre les composantes $\xi$ et $\eta$ sont sélectionnés pour être deux des output de l'IA : $$\Delta \xi\text{ et }\Delta \eta$$
+  Une troisième quantité est la différence logarithmique entre l'énergie cinétique turbulente (TKE) de la simulation RANS et de la DNS. Dans l'apprentissage, on fournit les inputs de la simulation et on y fait correspondre L'exposant $^*$ faisant allusion à la TKE ciblée. $$\Delta \log(k) = \log\bepar{\frac{k^*}{k^{\text{RANS}}}}$$ 
+  
+\noindent On construit ensuite les trois dernières sorties de l'algorithme en utilisant cette fois les vecteurs propres du tenseur anisotropique \textbf{V}. On sait qu'il existe une base dans laquelle les vecteurs \textbf{V}$^{\text{RANS}}$ peuvent être projetés pour retrouver les bons vecteurs propres notés \textbf{V}$^*$.\\
+Cette base était intialement obtenu en utilisant les angles d'Euler, mais ici on propose l'utilisation d'unité quaternion  dont la représentation est plus générale puisque indépendant du référentiel.\\
+On consuit alors une base de vecteur $\textbf{n} = \becro{n_1,n_2,n_3}$ dont pour laquelle il existe un angle $\theta$ projetant $\textbf{V}$ sur $\textbf{V}^*$. On construit ensuite une unité quaternion \textbf{h} contractant la matrice de rotation liant les deux bases de vecteurs propres tel que :
+\begin{equation*}
+ \textbf{h} = \becro{\cos \frac{\theta}{2},\, n_1\sin\frac{\theta}{2}, \, n_2\sin\frac{\theta}{2}, \, n_3\sin\frac{\theta}{2}}^T  
+\end{equation*}   
+L'existence de cet angle est le résultat du théorème d'Euler qui enstipule l'existence parant du principe que les ensembles de vecteurs propres sont orthonormés et qu'ils partagent une même origine (\cite{wang2017physics}).\\
+Pour plus de généralités, et puisque nous cherchons des sorties invariantes, on préfère prédire ou apprendre selon, les vecteurs h$_1$, h$_2$ et h$_3$ (soit les trois derniers vecteurs de \textbf{h}) plutôt que n$_1$, n$_2$ et n$_3$ directement.\\
+Finalement les six sorties choisies invariantes choisies sont :
+\begin{equation*}
+\bepar{\Delta \log k, \Delta \xi, \Delta \eta, h_1, h_2, h_3}
+\end{equation*}
 \pagebreak
 
 \begin{table}[!ht]
