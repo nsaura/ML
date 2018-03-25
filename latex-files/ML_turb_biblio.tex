@@ -7,6 +7,7 @@
 \usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
 \usepackage{ifthen}
 \usepackage{tabularx}	 				% Gestion avancée des tableaux
+\usepackage{longtable}		
 %\usepackage{cleveref}
 
 \usepackage{enumitem}
@@ -160,6 +161,38 @@ keywordstyle=[0]{\color{red}},
 \newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
 \newcolumntype{N}{@{}m{0pt}@{}}
 
+\centering 
+\begin{longtable}{| M{.20\textwidth} | M{.80\textwidth} |N}
+\hline 
+		% Center the table	
+		% Table itself: here we have two columns which are centered and have lines to the left, right and in the middle: |c|c|
+Auteur & \centering Travaux &\\[.5cm] \hline
+
+\textbf{\cite{ling2015evaluation}} & \centering Used \red Random Forests (RF) \bk to \navy predict regions of high model from uncertainty in RANS results.\bk &\\[1.5cm] \hline
+		\textbf{\cite{ling2016machine}} &Use of \red RF \bk with Gini Impurity Score, max\_depth = 15  and 500 DT whose output are averaged, and \red NN\bk with sigmoid activation function. In the previous work, Ling et \textit{al.} predict the Reynolds Stress Anisotropy $\textbf{A} = \frac{1}{2k} \bar{\textbf{u} \otimes \textbf{u}} - \frac{1}{3}\textbf{Id}$ en un point à partir des images de \textbf{S} et \textbf{R} par les vecteurs d'une base d'invariants bien choisie, en tout point du domaine, ou aux points dont l'incertitude est la plus grande. Les entrées peuvent être aussi bien les invariants de la base que les 9 composantes non nulles cumulées de $\textbf{S}$ et $\textbf{R}$.&\\[4.5cm] \hline		
+		
+		\textbf{\cite{ling2016reynolds}} & Use of \red NN \bk embbeded with an invariant Tensor Layer element-wise mutliplied with the last HL of the Network. Use of leakyReLu act function. Trained with BPGD, the output is post-processed (see part.2, p.157). It has 8 HL, with each 30 nodes except for the last HL that has 10 nodes and $learning\_rate = 2.5 \times 10^{-7}$. «\textit{Cross Validation ensures robustness of the TBNN}». &\\[3.5cm]\hline		
+		
+		\textbf{\cite{milano2002neural}} & Used DNS results for a turbulent channel flow to train a \red NN \bk to reconstruct the \navy near wall flow \bk&\\[1.5cm] \hline
+		
+		\textbf{\cite{tracey2013application}} & ML algorithms (\red??\bk) to model the \navy Reynolds stress anisotopy\bk  &\\[1.5cm] \hline
+		
+		\textbf{\cite{tracey2015machine}} & \red NN \bk to \navy mimic the source terms from the SA turbulence model \bk &\\[1.5cm] \hline
+				
+		\textbf{\cite{duraisamy2015new}} & \red NN and GP \bk to \navy model intermittency in transitional turbulence \bk &\\[1.5cm] \hline 		
+		
+		\textbf{\cite{zhang2015machine}} & Used \red NN and GP \bk to \navy model turbulence Production in channel flow \bk &\\[1.5cm] \hline
+		
+		\textbf{\cite{singh2017machine}} &Use \red NN \bk to augment SA model to predict turbulent flow over airfoils (strong adverse pressure gradient). First of all use adjoint-based full field inference to infer $\beta$ the correction needed between SA and DNS or Exp. The \red NN \bk proposed here has 2 HL with 100 nodes each, using sigmoid act function. The training used BPGD minimizing an Sum Squarred Error problem.&\\[3cm] \hline 
+		
+		\textbf{\cite{wu2018data}} & Use of \red RF \bk to predict $\bepar{\Delta \log k, \Delta \xi, \Delta \eta, h_1, h_2, h_3}$, 6 components thanks to 50 invariant inputs whose 47 build from \cite{pope1975more} and \cite{ling2016reynolds} similar ideas but widened for taking into account changes in TKE or Pressure \& three more added to gain physical interpretability and help the RF to construct new leafs. The number of trees of the Forest was set at 300. &\\[2cm]\hline
+		
+%		\caption{Tableau retraçant les études NN vs Turbulence faites auparavant 
+%		\label{tab:simParameters}}
+\end{longtable}
+
+\pagebreak
+\raggedright
 %\noindent On se base sur \textbf{\citep{ling2016machine}} qui se pose la question de comment inculquer les propriétés d'invariance lors de l'apprentissage, et de voir si le faire améliore les prédictions.
 \subsection*{\textbf{\cite{singh2017machine}} : }
 \noindent L'idée de cet article peut être schématisée par la figure suivante (extraite de l'article) :
@@ -451,7 +484,7 @@ Ce qui nous permet de réécrire
 Avec $\norm{\, \cdot \, }$ la norme au sens de Froebenius : $\norm{\textbf{S}} = \sqrt{S_{ij}S_{ij}}$. La minimisation précédente revient en fait à calculer $$ \nu_t^L = 2\,  \frac{\textbf{b}:\textbf{S}}{\norm{\textbf{S}} \norm{\textbf{S}}}$$ Où \textbf{b} : \textbf{S} $= b_{ij}S_{ij}$.
 On rappelle enfin l'équation dite de \textsc{rans} :
 $$ \frac{D\overline{U} }{Dt} + \nabla \overline{P} - \nu \nabla^2 \overline{U} = \nabla \cdot \tau$$
-\noindent Toutes les grandeurs ayant été introduites, on construit les features \textbf{q}.\\[2mm]
+\noindent Toutes les grandeurs ayant été introduites, on construit les features \textbf{Q}.\\[2mm]
 
 \subsubsection*{Features \textbf{q}}
 \noindent\cite{ling2016reynolds} en suivant \cite{pope1975more} écrivent \textbf{$\tau$} comme une fonctionnelle $\tau\bepar{\textbf{S},\, \mathbf{\Omega}}$ du tenseur de déformations \textbf{S} et du tenseur de rotations \textbf{$\Omega$}, considérant que les effets des gradients de pressions n'agissaient pas sur ce tenseur. \\
@@ -505,39 +538,23 @@ Finalement les six sorties choisies invariantes choisies sont :
 \begin{equation*}
 \bepar{\Delta \log k, \Delta \xi, \Delta \eta, h_1, h_2, h_3}
 \end{equation*}
-\pagebreak
+
+\subsubsection*{Retour sur la normalisation des entrées}
+On résume les normalisation des entrées dans le tableau suivant, les 47 invariants de $\mathcal{F}\bepar{\textbf{S}, \mathbf{\Omega}, \nabla p, \nabla k}$ sont disponibles dans l'annexe \textbf{B} de l'article \cite{wu2018data}
 
 \begin{table}[!ht]
-		% Center the table
-		\centering
-		% Table itself: here we have two columns which are centered and have lines to the left, right and in the middle: |c|c|
-		\begin{tabular}{|M{.2\textwidth}|M{.74\textwidth}|N }
-		\hline
-		Auteur & Travaux &\\[.5cm] \hline
-
-		\textbf{\cite{ling2015evaluation}} & Used \red Random Forests (RF) \bk to \navy predict regions of high model from uncertainty in RANS results.\bk &\\[1.5cm] \hline
-
-		\textbf{\cite{ling2016machine}} &Use of \red RF \bk with Gini Impurity Score, max\_depth = 15  and 500 DT whose output are averaged, and \red NN\bk with sigmoid activation function. In the previous work, Ling et \textit{al.} predict the Reynolds Stress Anisotropy $\textbf{A} = \frac{1}{2k} \bar{\textbf{u} \otimes \textbf{u}} - \frac{1}{3}\textbf{Id}$ en un point à partir des images de \textbf{S} et \textbf{R} par les vecteurs d'une base d'invariants bien choisie, en tout point du domaine, ou aux points dont l'incertitude est la plus grande. Les entrées peuvent être aussi bien les invariants de la base que les 9 composantes non nulles cumulées de $\textbf{S}$ et $\textbf{R}$.&\\[4.5cm] \hline		
-		
-		\textbf{\cite{ling2016reynolds}} & Use of \red NN \bk embbeded with an invariant Tensor Layer element-wise mutliplied with the last HL of the Network. Use of leakyReLu act function. Trained with BPGD, the output is post-processed (see part.2, p.157). It has 8 HL, with each 30 nodes except for the last HL that has 10 nodes and $learning\_rate = 2.5 \times 10^{-7}$. «\textit{Cross Validation ensures robustness of the TBNN}». &\\[3.5cm]\hline		
-		
-		\textbf{\cite{milano2002neural}} & Used DNS results for a turbulent channel flow to train a \red NN \bk to reconstruct the \navy near wall flow \bk&\\[1.5cm] \hline
-		
-		\textbf{\cite{tracey2013application}} & ML algorithms (\red??\bk) to model the \navy Reynolds stress anisotopy\bk  &\\[1.5cm] \hline
-		
-		\textbf{\cite{tracey2015machine}} & \red NN \bk to \navy mimic the source terms from the SA turbulence model \bk &\\[1.5cm] \hline
-				
-		\textbf{\cite{duraisamy2015new}} & \red NN and GP \bk to \navy model intermittency in transitional turbulence \bk &\\[1.5cm] \hline 		
-		
-		\textbf{\cite{zhang2015machine}} & Used \red NN and GP \bk to \navy model turbulence Production in channel flow \bk &\\[1.5cm] \hline
-		
-		\textbf{\cite{singh2017machine}} &Use \red NN \bk to augment SA model to predict turbulent flow over airfoils (strong adverse pressure gradient). First of all use adjoint-based full field inference to infer $\beta$ the correction needed between SA and DNS or Exp. The \red NN \bk proposed here has 2 HL with 100 nodes each, using sigmoid act function. The training used BPGD minimizing an Sum Squarred Error problem.&\\[3cm] \hline 
-				
-		\end{tabular} 
-		\vspace{0.5cm}
-		
-%		\caption{Tableau retraçant les études NN vs Turbulence faites auparavant 
-%		\label{tab:simParameters}}
+\centering
+	\begin{tabular}{M{0.15\textwidth}| M{.3\textwidth} M{0.18\textwidth} M{0.3\textwidth} N}
+	\hline
+	Entrée normalisée $\hat{\textbf{q}}$ & Desciption & Entrée de base & Facteur de Normalisation &\\[8mm]\hline
+	$\hat{\textbf{S}}$ & Tenseur de déf. & \textbf{S} &$ \displaystyle\frac{\varepsilon}{k}$ &\\[5mm] \hline
+	$\hat{\mathbf{\Omega}}$ & Tenseur de rot. & $\mathbf{\Omega}$  &$ \norm{\mathbf{\Omega}}$ &\\[5mm] \hline
+	$\widehat{\nabla p}$ & Grad. pression & $\nabla p$  &$ \rho \left \vert \textbf{U} \cdot \nabla \textbf{U} \right \vert$ &\\[5mm] \hline
+	$\widehat{k}$ & Grad. TKE & k &$ \displaystyle\frac{\varepsilon}{\sqrt{k}}$ &\\[5mm] \hline
+	$q_1$ & Distance vav. paroi & $\displaystyle \text{min}\bepar{\frac{\sqrt{k}\, d}{50 \nu}, 2}$  & Déjà adimensionné &\\[12mm] \hline
+	$q_2$ & Intensité turbulente (échelle spatiale) & k &$ \displaystyle\frac{1}{2}U_i U_i$ &\\[12mm] \hline
+	$\widehat{q_3}$ & $\displaystyle \frac{\text{Éechelle tempo. Turb}}{\text{Échelle tempo. def. moyenne}}$  & $\displaystyle \frac{k}{\varepsilon}$  &$ \displaystyle \frac{1}{\norm{\textbf{S}}}$ &\\[12mm] \hline
+	\end{tabular}
 \end{table}
 
 \pagebreak
