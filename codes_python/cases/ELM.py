@@ -83,7 +83,7 @@ X_train, X_test, y_train, y_test, m, s = shuffle_train_split(T, X, y, True)
 # Taille des entrées et sorties, Nombre de HN dans la HL
 N_in = 2
 N_ou = 1
-N_hn = 9000
+N_hn = 2000
 
 # Déclaration des matrices
 A = np.random.randn(N_in, N_hn)
@@ -95,7 +95,7 @@ t = tf.placeholder(tf.float32, (None, 1))
 w = tf.Variable(A.astype(np.float32))
 b = tf.Variable(b.astype(np.float32))
 
-activation = tf.nn.leaky_relu
+activation = tf.nn.selu
 H = activation(tf.matmul(x, w) + b)
 
 init = tf.global_variables_initializer()
@@ -122,7 +122,7 @@ sess.run(init)
 
 output = tf.matmul(H, beta)
 
-compare = tf.reduce_mean(tf.square(output - t))
+compare = tf.reduce_sum(tf.square(output - t))
 err = sess.run(compare, feed_dict={x:X_test, t:y_test})
 
 fig, axes = plt.subplots(1,2,figsize=(15,5))

@@ -13,8 +13,8 @@ def parser() :
     Each entry is detailed in the help, and each of it has the most common default value. (run ... .py -h)')
     ## VaV T_inf
     #lists
-    parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=[50],dest='T_inf_lst', 
-                        help='List of different T_inf. Default : 50\n' )
+    parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=[5*i for i in range (1,11)],dest='T_inf_lst', 
+                        help='List of different T_inf. Default : all\n' )
     # Ints                       
     parser.add_argument('--N_discr', '-N', action='store', type=int, default=71, dest='N_discr', 
                         help='Define the number of discretization points : default %(default)d \n' )
