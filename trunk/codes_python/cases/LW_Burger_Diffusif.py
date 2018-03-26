@@ -59,15 +59,19 @@ def intermediaires (var, flux ,incr, r) :
 ###--------------------------------------------------------------------###
 def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  : 
     ## Déf des données du probleme 
-    CFL = 0.5
+    CFL = 0.45 # cfl <= 0.5 
     dx = L/(Nx-1)
     dt =  dx * CFL
 
-    D = 1*10**(-1)
+    D = 1*10**(-5)
     dt_v = dx**2 / D * CFL
     
-    dt = min(dt, dt_v)   
-    
+    if dt < dt_v :
+        print "CFL lineaire"
+    else:
+        print "CFL visqueux"      
+        dt = dt_v
+        
     print dt 
     
     r = dt/dx
@@ -79,8 +83,7 @@ def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  :
     
     for j, bruit in enumerate(bruits) :
         # Initialisation des champs u (boucles while)
-        u = []
-        u_nNext = [] 
+        u, u_nNext = [], []
         plt.close()
         for i in range(len(X)) :
             if X[i] >=0 and X[i] <=1 :
@@ -92,7 +95,8 @@ def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  :
         fu = np.asarray([0.5*u_x**2 for u_x in u])
 #        print ("size u it 0 = %d" %(np.size(u)))
 #        print ("size fu it 0 = %d" %(np.size(fu)))
-
+        
+        
         # Tracés figure initialisation : 
         plt.figure("Resolution")
         plt.plot(X, u)
@@ -138,8 +142,8 @@ def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  :
             cpt += 1
             if write == True : pd_write_csv("u_it%d_%d.csv" %(cpt, j), u)
             
-            t+=dt # Itération temporelle suivante
-            
+            t += dt # Itération temporelle suivante
+
             u = np.asarray(u) 
             
             if cpt % 20 == 0 :
@@ -147,8 +151,9 @@ def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  :
                 plt.plot(X, u, c='k') 
                 plt.title("u vs X, iteration %d bruit %d" %(cpt, j)) 
                 plt.ylim((-0.75, 1.4))  
-                plt.pause(0.01)
-    return cpt
+                plt.pause(0.1)
+            if cpt == 500 :
+                break
 ###--------------------------------------------------------------------###
 def see_moy_u_diff(cpt=202, Nx = 202, L = float(3)) :
     u = dict()
