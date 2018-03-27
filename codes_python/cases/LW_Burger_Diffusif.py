@@ -74,6 +74,8 @@ def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  :
         
     print dt 
     
+    print D*dt/dx**2
+    
     r = dt/dx
     
     X = np.arange(0,L+dx,dx)
