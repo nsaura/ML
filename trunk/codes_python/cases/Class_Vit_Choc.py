@@ -105,6 +105,7 @@ class Vitesse_Choc() :
         dt = {"dt_v" : CFL / nu * dx**2,
               "dt_l" : CFL*dx}
         
+        
         if dt["dt_v"] < dt["dt_l"] :
             dt = dt["dt_v"]
             print ("dt visqueux")
@@ -112,6 +113,7 @@ class Vitesse_Choc() :
             dt = dt["dt_l"]
             print ("dt lineaire")
                 
+        CFL_v = nu*dt/dx**2
         tf = Nt * dt
         
         datapath    =   osp.abspath(parser.datapath)
@@ -129,13 +131,13 @@ class Vitesse_Choc() :
         
         #####
         
-        INF1 = np.diag(np.transpose([-dt/dx**2*nu/2 for i in range(Nx-3)]), -1)
-        SUP1 = np.diag(np.transpose([-dt/dx**2*nu/2 for i in range(Nx-3)]), 1) 
-        A_diag1 = np.diag(np.transpose([(1 + dt/dx**2*nu) for i in range(Nx-2)])) 
+        INF1 = np.diag(np.transpose([-CFL_v/2 for i in range(Nx-3)]), -1)
+        SUP1 = np.diag(np.transpose([-CFL_v/2 for i in range(Nx-3)]), 1) 
+        A_diag1 = np.diag(np.transpose([(1 + CFL_v) for i in range(Nx-2)])) 
 
-        INF2 = np.diag(np.transpose([dt/dx**2*nu/2 for i in range(Nx-3)]), -1) 
-        SUP2 = np.diag(np.transpose([dt/dx**2*nu/2 for i in range(Nx-3)]), 1)
-        A_diag2 = np.diag(np.transpose([(1 - dt/dx**2*nu) for i in range(Nx-2)]))
+        INF2 = np.diag(np.transpose([CFL_v/2 for i in range(Nx-3)]), -1) 
+        SUP2 = np.diag(np.transpose([CFL_v/2 for i in range(Nx-3)]), 1)
+        A_diag2 = np.diag(np.transpose([(1 - CFL_v) for i in range(Nx-2)]))
         
         self.A1 = A_diag1 + INF1 + SUP1
         self.A2 = A_diag2 + INF2 + SUP2
@@ -158,6 +160,7 @@ class Vitesse_Choc() :
         self.nu,    self.CFL    =   nu, CFL
         self.dx,    self.dt     =   dx, dt        
         self.Nx,    self.Nt     =   Nx, Nt
+        self.CFL_v  = CFL_v
         
         self.nu_str = str(self.nu).replace(".","_")
         self.CFL_str = str(self.CFL).replace(".","_")
@@ -336,9 +339,9 @@ class Vitesse_Choc() :
                     
                 fu = np.asarray([0.5*u_x**2 for u_x in u])
                 
-                der_sec = [self.CFL*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
-                der_sec.insert(0, self.CFL*(u[1] - 2*u[0] + u[-1]))
-                der_sec.insert(len(der_sec), self.CFL*(u[0] - 2*u[-1] + u[-2]))
+                der_sec = [self.CFL_v*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
+                der_sec.insert(0, self.CFL_v*(u[1] - 2*u[0] + u[-1]))
+                der_sec.insert(len(der_sec), self.CFL_v*(u[0] - 2*u[-1] + u[-2]))
 
                 for i in range(1,self.Nx-1) : # Pour prendre en compte le point Nx-2
                     u_m, u_p = intermediaires(u, fu, i, r)
@@ -450,7 +453,7 @@ class Vitesse_Choc() :
         u_n_beta = u_n
         
         t = 0
-        for it in range(0, self.itmax, 10) :
+        for it in range(0, self.itmax) :
             if it >0 :
                 beta_n = beta_n_opti
                 u_n = u_n_beta
@@ -466,14 +469,14 @@ class Vitesse_Choc() :
                 cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it)])
             
             J = lambda beta : 0.5 * (np.dot( np.dot((u_obs_nt - self.u_beta(beta, u_n)), cov_obs_nt_inv), (u_obs_nt - self.u_beta(beta, u_n))) +\
-                                             np.dot( (beta).dot(Id), (beta) )\
+                                             np.dot( (beta -beta_n).dot(Id), (beta-beta_n) )\
                                     )
             DR_DU = fun_DR_DU()
             DR_DU_inv = np.linalg.inv(DR_DU)
-            DJ_DU = lambda beta : np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
+            DJ_DU = lambda beta : -np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
 
             DR_DBETA = Id 
-            DJ_DBETA = lambda beta : np.dot(Id, beta)
+            DJ_DBETA = lambda beta : np.dot(Id, beta-beta_n)
             
             DJ = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
             
