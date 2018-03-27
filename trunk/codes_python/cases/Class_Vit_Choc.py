@@ -298,8 +298,7 @@ class Vitesse_Choc() :
         u_nNext= list(u_nNext)
         
         u_nNext.insert(0, u_nNext[-1])
-        u_nNext[1] = u_nNext[0]
-        u_nNext.insert(-1, u_nNext[-2])
+        u_nNext.insert(len(u_nNext), u_n[1])
         
         return np.array(u_nNext)
 ##---------------------------------------------------         
@@ -309,15 +308,16 @@ class Vitesse_Choc() :
             # Initialisation des champs u (boucles while)
             u, u_nNext = [], []
             plt.close()
-            for i in range(len(self.line_x)) :
-                if self.line_x[i] >=0 and self.line_x[i] <=1 :
-                    u.append(1 + bruit[i])
-                if self.line_x[i] > 1 :
-                    u.append(0 + bruit[i])
-                i+=1
+#            for i in range(len(self.line_x)) :
+#                if self.line_x[i] >=0 and self.line_x[i] <=1 :
+#                    u.append(1 + bruit[i])
+#                if self.line_x[i] > 1 :
+#                    u.append(0 + bruit[i])
+#                i+=1
+            
+            u = np.sin(2*np.pi/self.L*self.line_x) + bruit
             
             r = self.dt/self.dx
-            
             # Tracés figure initialisation : 
             if plot == True :
                 plt.figure("Resolution")
@@ -355,8 +355,7 @@ class Vitesse_Choc() :
                 u_nNext  = []
                 
                 u[0] = u[-1]
-                u[1] = u[0]
-                u[-1]= u[-2]
+                u[-1]= u[1]
     
                 u = np.asarray(u) 
             
@@ -371,7 +370,7 @@ class Vitesse_Choc() :
                         plt.clf()
                         plt.plot(self.line_x, u, c='k') 
                         plt.title("u vs X, iteration %d bruit %d" %(it, j)) 
-                        plt.ylim((-0.75, 1.4))  
+                        plt.ylim((-1.5, 1.5))  
                         plt.pause(0.1)  
                 
 ##---------------------------------------------------
@@ -459,17 +458,18 @@ class Vitesse_Choc() :
                 u_n = u_n_beta
                 
             t1 = time.time()
-            u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it)]
-            cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it)]
+            
+            u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it+1)]
+            cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)]
             
             try :
                 cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
             except np.linalg.LinAlgError :
                 print "diag"
-                cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it)])
+                cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it+1)])
             
             J = lambda beta : 0.5 * (np.dot( np.dot((u_obs_nt - self.u_beta(beta, u_n)), cov_obs_nt_inv), (u_obs_nt - self.u_beta(beta, u_n))) +\
-                                             np.dot( (beta -beta_n).dot(Id), (beta-beta_n) )\
+                                             np.dot( (beta - beta_n).dot(Id), (beta-beta_n) ) \
                                     )
             DR_DU = fun_DR_DU()
             DR_DU_inv = np.linalg.inv(DR_DU)
