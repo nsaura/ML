@@ -82,18 +82,17 @@ def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  :
 
     bruits = [0.0005 * np.random.randn(Nx) for time in range(10)]
     
-    
     for j, bruit in enumerate(bruits) :
         # Initialisation des champs u (boucles while)
         u, u_nNext = [], []
         plt.close()
-        for i in range(len(X)) :
-            if X[i] >=0 and X[i] <=1 :
-                u.append(1 + bruit[i])
-            if X[i] > 1 :
-                u.append(0 + bruit[i])
-            i+=1
-            
+#        for i in range(len(X)) :
+#            if X[i] >=0 and X[i] <=1 :
+#                u.append(1 + bruit[i])
+#            if X[i] > 1 :
+#                u.append(0 + bruit[i])
+#            i+=1
+        u = np.sin(2*np.pi/L*X) + bruit
         fu = np.asarray([0.5*u_x**2 for u_x in u])
 #        print ("size u it 0 = %d" %(np.size(u)))
 #        print ("size fu it 0 = %d" %(np.size(fu)))
@@ -138,8 +137,7 @@ def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  :
             
             # Conditions aux limites 
             u[0] = u[-1]
-            u[1] = u[0]
-            u[-1]= u[-2]
+            u[-1]= u[1]
             
             cpt += 1
             if write == True : pd_write_csv("u_it%d_%d.csv" %(cpt, j), u)
@@ -182,4 +180,104 @@ def see_moy_u_diff(cpt=202, Nx = 202, L = float(3)) :
         plt.title("u vs X, iteration %d moyenne des bruits" %(it)) 
         plt.ylim((-0.75, 1.4))  
         plt.pause(0.1)        
+###--------------------------------------------------------------------###
+def crank_nicholson(Nx=202, L = float(3), itmax = 10, write=False):
+    dx = L/(Nx-1)
+    CFL = 0.2
+    nu = 1.*10**(-2)
+    
+    dt = {"dt_v" : CFL / nu * dx**2,
+          "dt_l" : CFL*dx}
+
+    if dt["dt_v"] < dt["dt_l"] :
+        dt = dt["dt_v"]
+        print ("dt visqueux")
+    else :
+        dt = dt["dt_l"]
+        print ("dt lineaire")
+    
+    fac = nu * dt / dx**2 
+    
+    r = dt / dx
+    X = np.arange(0,L+dx,dx)
+    
+    INF1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), -1)
+    SUP1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), 1) 
+    A_diag1 = np.diag(np.transpose([(1 + fac) for i in range(Nx-2)])) 
+
+    INF2 = np.diag(np.transpose([fac/2 for i in range(Nx-3)]), -1) 
+    SUP2 = np.diag(np.transpose([fac/2 for i in range(Nx-3)]), 1)
+    A_diag2 = np.diag(np.transpose([(1 - fac) for i in range(Nx-2)]))
+    
+    SCDSUP = np.diag(np.transpose([-r for i in range(Nx-3)]), 1)
+    SCD = np.diag(np.transpose([r for i in range(Nx-2)]))
+    
+    A1 = A_diag1 + INF1 + SUP1
+    A2 = A_diag2 + INF2 + SUP2
+    A3 = SCD + SCDSUP    
+    
+#    A1 = np.zeros((Nx,Nx))
+#    A2 = np.zeros((Nx,Nx))
+#    A3 = np.zeros((Nx,Nx))
+#    
+#    A1[0,0] = A1[-1,-1] = 1
+#    A2[0,-2] = A2[-1,1] = 1
+#    
+#    A1[1:Nx-1, 1:Nx-1] = In1
+#    A2[1:Nx-1, 1:Nx-1] = In2
+#    A3[1:Nx-1, 1:Nx-1] = InSCD
+    
+    ## On fait la résolution sur A1, A2, A3 qui prennent en compte les conditions aux limites
+    bruits = [0.0005 * np.random.randn(Nx) for time in range(5)]
+    bruit = bruits[np.random.randint(5)]
+    
+#    u_n = np.sin(2*np.pi/L*X)
+    u= []
+#    for i in range(len(X)) :
+#        if X[i] >=1 and X[i] <=1.4 :
+#            u.append(1 + bruit[i])
+#        else :
+#            u.append(0 + bruit[i])
+#        i+=1    
+    u_n = np.sin(2*np.pi/(L-dx)*(X-dx)) 
+
+    # Tracés figure initialisation : 
+    plt.figure("Resolution")
+    plt.plot(X, u_n)
+    plt.title("U vs X iteration 0 bruit %d" %(0))
+    plt.ylim((-2.5, 2.4))
+    plt.pause(0.01)
+
+    vec_ci = np.zeros((Nx-2))
+    for it in range(itmax) :
+
+        vec_ci[0] = fac/2 * u_n[-2]
+        vec_ci[-1]= fac * u_n[1] 
+        
+        u_n_2 = np.array([0.5*ux**2 for ux in u_n])
+        
+        u_n_tmp = np.dot(A2, u_n)
+        scd_term = np.dot(A3, u_n_2)
+        
+        B_n = np.zeros((Nx))
+         
+        for i in range(Nx-2) :
+            B_n[i] = u_n_tmp[i] + scd_term[i]
+
+        u_nNext = np.dot(np.linalg.inv(A1), B_n)
+        
+        u_n = u_nNext
+        print it 
+        print u_n
+        
+        if it % 1 == 0 :
+            plt.clf()
+            plt.plot(X, u_n, c='k') 
+            plt.title("u vs X, iteration %d bruit %d" %(it, 0)) 
+            plt.ylim((-1.5, 1.5))  
+            plt.pause(0.1)
+        if it == 500 :
+            break
+            
+    return u_nNext
 
