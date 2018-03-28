@@ -91,20 +91,16 @@ class Vitesse_Choc() :
         This object has been made to solve optimization problem.
         """
 #        np.random.seed(1000) ; #plt.ion()
-        
-        if parser.cov_mod not in ['full', 'diag'] :
-            raise AttributeError("\x1b[7;1;255mcov_mod must be either diag or full\x1b[0m")
-        
+#        if parser.cov_mod not in ['full', 'diag'] :
+#            raise AttributeError("\x1b[7;1;255mcov_mod must be either diag or full\x1b[0m")
         Nx,  Nt   =   parser.Nx, parser.Nt,    
         CFL, nu   =   parser.CFL,     parser.nu
         
         L = parser.L
-        
         dx = L/(Nx-1)
         
         dt = {"dt_v" : CFL / nu * dx**2,
               "dt_l" : CFL*dx}
-        
         
         if dt["dt_v"] < dt["dt_l"] :
             dt = dt["dt_v"]
@@ -113,8 +109,10 @@ class Vitesse_Choc() :
             dt = dt["dt_l"]
             print ("dt lineaire")
                 
-        CFL_v = nu*dt/dx**2
+        fac = nu*dt/dx**2
         tf = Nt * dt
+        
+        r = dt / dx
         
         datapath    =   osp.abspath(parser.datapath)
         num_real    =   parser.num_real
@@ -130,21 +128,38 @@ class Vitesse_Choc() :
         ## Ces cas doivent faire l'objet de méthodes particulières avec la redéfinitions des fonctions A1 et A2 
         
         #####
-        
-        INF1 = np.diag(np.transpose([-CFL_v/2 for i in range(Nx-3)]), -1)
-        SUP1 = np.diag(np.transpose([-CFL_v/2 for i in range(Nx-3)]), 1) 
-        A_diag1 = np.diag(np.transpose([(1 + CFL_v) for i in range(Nx-2)])) 
+        INF1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), -1)
+        SUP1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), 1) 
+        A_diag1 = np.diag(np.transpose([(1 + fac) for i in range(Nx-2)])) 
 
-        INF2 = np.diag(np.transpose([CFL_v/2 for i in range(Nx-3)]), -1) 
-        SUP2 = np.diag(np.transpose([CFL_v/2 for i in range(Nx-3)]), 1)
-        A_diag2 = np.diag(np.transpose([(1 - CFL_v) for i in range(Nx-2)]))
+        INF2 = np.diag(np.transpose([fac/2 for i in range(Nx-3)]), -1) 
+        SUP2 = np.diag(np.transpose([fac/2 for i in range(Nx-3)]), 1)
+        A_diag2 = np.diag(np.transpose([(1 - fac) for i in range(Nx-2)]))
         
-        self.A1 = A_diag1 + INF1 + SUP1
-        self.A2 = A_diag2 + INF2 + SUP2
+        SCDSUP = np.diag(np.transpose([-r for i in range(Nx-3)]), 1)
+        SCD = np.diag(np.transpose([r for i in range(Nx-2)]))
         
+        In1 = A_diag1 + INF1 + SUP1
+        In2 = A_diag2 + INF2 + SUP2
+        InSCD = SCD + SCDSUP    
+        
+        A1 = np.zeros((Nx,Nx))
+        A2 = np.zeros((Nx,Nx))
+        A3 = np.zeros((Nx,Nx))
+        
+        A1[0,0] = A1[-1,-1] = 1
+        A2[0,-1] = A2[-1,0] = 1
+        
+        A1[1:Nx-1, 1:Nx-1] = In1
+        A2[1:Nx-1, 1:Nx-1] = In2
+        A3[1:Nx-1, 1:Nx-1] = InSCD
         #####
         
-        bruits = [0.0005 * np.random.randn(Nx) for time in range(num_real)]
+        self.A1 = A1
+        self.A2 = A2
+        self.A3 = A3
+        
+        bruits = [0.0009 * np.random.randn(Nx) for time in range(num_real)]
         self.bruits = bruits
         
         self.line_x = np.arange(0,L+dx, dx)
@@ -160,7 +175,7 @@ class Vitesse_Choc() :
         self.nu,    self.CFL    =   nu, CFL
         self.dx,    self.dt     =   dx, dt        
         self.Nx,    self.Nt     =   Nx, Nt
-        self.CFL_v  = CFL_v
+        self.fac  = fac
         
         self.nu_str = str(self.nu).replace(".","_")
         self.CFL_str = str(self.CFL).replace(".","_")
@@ -274,6 +289,21 @@ class Vitesse_Choc() :
             data = data.reshape(data.shape[0])
         return data
 ##---------------------------------------------------
+    def init_u(self, type_init): 
+        u = []
+        if type_init == "choc" :
+            for i in range(len(self.line_x)) :
+                if self.line_x[i] >=1 and self.line_x[i] <=1.4 :
+                    u.append(1)
+                else :
+                    u.append(0)
+            u = np.array(u)
+            
+        if type_init == "sin" :
+            u = np.sin(2*np.pi/self.L*self.line_x)
+        
+        return u
+##---------------------------------------------------
     def pd_write_csv(self, filename, data) :
         """
         Argument :
@@ -287,20 +317,31 @@ class Vitesse_Choc() :
         pd.DataFrame(data).to_csv(path, index=False, header= True)
 ##---------------------------------------------------   
     def u_beta(self, beta, u_n, verbose=False) :
-        u_n_tmp = np.dot(self.A2, u_n[1:self.Nx-1])
-        B_n = np.zeros((self.Nx-2))
-         
-        for i in range(self.Nx-2) :
-            B_n[i] = u_n_tmp[i] + self.dt*(beta[i+1])
+        r = self.dt / self.dx
+        
+        INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
+        SUP2 = np.diag(np.transpose([-r*beta[i] + self.fac/2 for i in range(self.Nx-3)]), 1)
+        A_diag2 = np.diag(np.transpose([(r*beta[i] + 1 - self.fac) for i in range(self.Nx-2)]))
+        
+        In2 = A_diag2 + INF2 + SUP2
+        
+        A2 = np.zeros((self.Nx,self.Nx))
+        A2[0,-1] = A2[-1,0] = 1
+        A2[1:self.Nx-1, 1:self.Nx-1] = In2
 
-        u_nNext = np.dot(np.linalg.inv(self.A1), B_n)
+        u_n_2 = np.array([0.5*ux**2 for ux in u_n])
         
-        u_nNext= list(u_nNext)
+        u_n_tmp = np.dot(A2, u_n)
+#        scd_term = np.dot(self.A3, u_n_2) # à la blace du beta
         
-        u_nNext.insert(0, u_nNext[-1])
-        u_nNext.insert(len(u_nNext), u_n[1])
+#        B_n = np.zeros((self.Nx))
+         
+#        for i in range(self.Nx-2) :
+#            B_n[i] = u_n_tmp[i]
+
+        u_nNext = np.dot(np.linalg.inv(self.A1), u_n_tmp)
         
-        return np.array(u_nNext)
+        return u_nNext
 ##---------------------------------------------------         
     def obs_res(self, write=False, plot=False)  : 
         ## Déf des données du probleme 
@@ -308,14 +349,9 @@ class Vitesse_Choc() :
             # Initialisation des champs u (boucles while)
             u, u_nNext = [], []
             plt.close()
-#            for i in range(len(self.line_x)) :
-#                if self.line_x[i] >=0 and self.line_x[i] <=1 :
-#                    u.append(1 + bruit[i])
-#                if self.line_x[i] > 1 :
-#                    u.append(0 + bruit[i])
-#                i+=1
             
-            u = np.sin(2*np.pi/self.L*self.line_x) + bruit
+            u = self.init_u("sin") 
+#            u = np.sin(2*np.pi/self.L*self.line_x) + bruit
             
             r = self.dt/self.dx
             # Tracés figure initialisation : 
@@ -323,7 +359,7 @@ class Vitesse_Choc() :
                 plt.figure("Resolution")
                 plt.plot(self.line_x, u)
                 plt.title("U vs X iteration 0 bruit %d" %(j))
-                plt.ylim((-0.75, 1.4))
+                plt.ylim((-1.5, 1.5))
                 plt.pause(0.01)
             
             if write == True : 
@@ -339,9 +375,9 @@ class Vitesse_Choc() :
                     
                 fu = np.asarray([0.5*u_x**2 for u_x in u])
                 
-                der_sec = [self.CFL_v*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
-                der_sec.insert(0, self.CFL_v*(u[1] - 2*u[0] + u[-1]))
-                der_sec.insert(len(der_sec), self.CFL_v*(u[0] - 2*u[-1] + u[-2]))
+                der_sec = [self.fac*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
+                der_sec.insert(0, self.fac*(u[1] - 2*u[0] + u[-1]))
+                der_sec.insert(len(der_sec), self.fac*(u[0] - 2*u[-1] + u[-2]))
 
                 for i in range(1,self.Nx-1) : # Pour prendre en compte le point Nx-2
                     u_m, u_p = intermediaires(u, fu, i, r)
@@ -354,7 +390,7 @@ class Vitesse_Choc() :
                 u[1:self.Nx-1] = u_nNext  
                 u_nNext  = []
                 
-                u[0] = u[-1]
+                u[0] = u[-2]
                 u[-1]= u[1]
     
                 u = np.asarray(u) 
@@ -426,16 +462,17 @@ class Vitesse_Choc() :
         
         self.stats_done = True
 ##---------------------------------------------------
-    def minimization(self):
+    def minimization(self, solver, maxiter):
+        import numdifftools as nd
         plt.figure("Evolution")
         if self.stats_done == False :
             self.get_obs_statistics(True)
             print("Get_Obs_Statistics lunched")
         
-        def fun_DR_DU () :
+        def fun_DR_DU (beta) :
             INF1 = 0.5*np.diag([-self.nu/self.dx**2 for i in range(self.Nx - 1)], -1)
-            SUP1 = 0.5*np.diag([-self.nu/self.dx**2 for i in range(self.Nx - 1)], +1)
-            A1   = np.diag([-1./self.dt + self.nu/self.dx**2 for i in range(self.Nx)])
+            SUP1 = 0.5*np.diag([beta[i]/self.dx - self.nu/self.dx**2 for i in range(self.Nx - 1)], +1)
+            A1   = np.diag([-1./self.dt - beta[i]/self.dx + self.nu/self.dx**2 for i in range(self.Nx)])
             return A1 + INF1 + SUP1
             
         beta_n = self.beta_prior
@@ -449,10 +486,8 @@ class Vitesse_Choc() :
         self.U_beta_n_dict = dict()
         self.optimization_time = dict()
         
-        u_n_beta = u_n
-        
         t = 0
-        for it in range(0, self.itmax) :
+        for it in range(0, self.itmax-1) :
             if it >0 :
                 beta_n = beta_n_opti
                 u_n = u_n_beta
@@ -462,34 +497,46 @@ class Vitesse_Choc() :
             u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it+1)]
             cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)]
             
-            try :
-                cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
-            except np.linalg.LinAlgError :
-                print "diag"
-                cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it+1)])
+            if it == 0 :
+                u_n = self.u_beta(beta_n, u_obs_nt)
+            
+#            try :
+#                cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
+#            except np.linalg.LinAlgError :
+            print "diag"
+            cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it+1)])
             
             J = lambda beta : 0.5 * (np.dot( np.dot((u_obs_nt - self.u_beta(beta, u_n)), cov_obs_nt_inv), (u_obs_nt - self.u_beta(beta, u_n))) +\
-                                             np.dot( (beta - beta_n).dot(Id), (beta-beta_n) ) \
+                                             1e-3*np.dot( (beta -beta_n).dot(Id), (beta -beta_n) ) \
                                     )
-            DR_DU = fun_DR_DU()
-            DR_DU_inv = np.linalg.inv(DR_DU)
-            DJ_DU = lambda beta : -np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
-
-            DR_DBETA = Id 
-            DJ_DBETA = lambda beta : np.dot(Id, beta-beta_n)
+#            DR_DU = fun_DR_DU(beta_n)
+#            DR_DU_inv = np.linalg.inv(DR_DU)
+#            DJ_DU = lambda beta : -np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
+#            uu = [(u_n[i+1] - u_n[i]) / self.dx for i in range(len(u_n)-1)]
+#            uu.insert(len(uu), (u_n[0] - u_n[len(uu)] / self.dx))
+#            
+#            DR_DBETA = np.diag(uu)
+#            DJ_DBETA = lambda beta : 1e-3*np.dot(Id, beta -beta_n)
+#            
+#            DJ = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
             
-            DJ = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
+            DJ = nd.Gradient(J)
             
             print ("Opti Minimization it = %d" %(it))
             
-            print("DR_DU_inv \n{}".format(DR_DU_inv))
-            print("it = {}, DJ_DU =\n{}".format(it, DJ_DU(beta_n)))
-            print("it = {}, DJ_DBETA=\n{}".format(it, DJ_DBETA(beta_n)))
-            
-            print("\nit = {}, DJ =\n{}".format(it, DJ(beta_n)))
+#            print("DR_DU_inv \n{}".format(DR_DU_inv))
+#            print("it = {}, DJ_DU =\n{}".format(it, DJ_DU(beta_n)))
+#            print("it = {}, DJ_DBETA=\n{}".format(it, DJ_DBETA(beta_n)))
+#            
+#            print("\nit = {}, DJ =\n{}".format(it, DJ(beta_n)))
             # Pour ne pas oublier :            
             # On cherche beta faisant correspondre les deux solutions au temps 1. Le beta final est ensuite utilisé pour calculer u_beta au temps 1 !
-            optimi_obj_n = op.minimize(J, self.beta_prior, jac=DJ, method="BFGS", tol = 1.e-12, options={"maxiter" : 200})
+            for i in range(len(beta_n)) :
+                beta_n[i] *= np.random.random()    
+
+            optimi_obj_n = op.minimize(J, self.beta_prior, jac= DJ, method=solver, options={"maxiter" : maxiter})
+            
+            print("\x1b[1;37;44mDifference de beta it {} = {}\x1b[0m".format(it, np.linalg.norm(beta_n - optimi_obj_n.x, np.inf)))
             beta_n_opti = optimi_obj_n.x
             
             u_n_beta = self.u_beta(beta_n_opti, u_n)
@@ -504,7 +551,7 @@ class Vitesse_Choc() :
 #            self.opti_obj["opti_obj_it%d" %(it)] = optimi_obj_n
             self.U_beta_n_dict["u_beta_it%d" %(it)] = self.u_beta(beta_n_opti, u_n)
                         
-            if it % 20 ==0 :
+            if it % 10 ==0 :
                 plt.clf()
                 plt.plot(self.line_x, u_obs_nt, label="LW it = %d" %(it),\
                         marker='o', fillstyle='none', linestyle='none',\
@@ -512,8 +559,9 @@ class Vitesse_Choc() :
                 plt.plot(self.line_x, self.U_beta_n_dict["u_beta_it%d" %(it)], label='Opti it %d'%(it),\
                         c='k')
                 plt.legend(loc = "best")
-                plt.ylim((-0.75, 1.4))
+                plt.ylim((-1.5, 1.5))
                 plt.pause(0.1)
+            
 #---------------------------------------------------------------------        
     def adjoint_bfgs(self, inter_plot=False, verbose = False) : 
         """
@@ -579,7 +627,7 @@ class Vitesse_Choc() :
                                     )
             DR_DU = fun_DR_DU()
             DR_DU_inv = np.linalg.inv(DR_DU)
-            DJ_DU = lambda beta : np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
+            DJ_DU = lambda beta : - np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
 
             DR_DBETA = Id 
             DJ_DBETA = lambda beta : np.dot(Id, beta - beta_n)
@@ -896,6 +944,7 @@ class Vitesse_Choc() :
         return L
 ##----------------------------------------------------##
 if __name__ == '__main__' :
+#    run Class_Vit_Choc.py -nu 2.5e-5 -itmax 200 -CFL 0.4 -num_real 5
     parser = parser()
     plt.close("all")
     
