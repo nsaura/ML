@@ -171,11 +171,13 @@ class Vitesse_Choc() :
         self.num_real = num_real
         self.cov_mod = cov_mod
         
+        r = dt/dx
+        
         self.L ,    self.tf     =   L , tf
         self.nu,    self.CFL    =   nu, CFL
         self.dx,    self.dt     =   dx, dt        
         self.Nx,    self.Nt     =   Nx, Nt
-        self.fac  = fac
+        self.fac,   self.r      =   fac, r
         
         self.nu_str = str(self.nu).replace(".","_")
         self.CFL_str = str(self.CFL).replace(".","_")
@@ -316,12 +318,22 @@ class Vitesse_Choc() :
             path = osp.splitext(path)[0] + ".csv"
         pd.DataFrame(data).to_csv(path, index=False, header= True)
 ##---------------------------------------------------   
-    def u_beta(self, beta, u_n, verbose=False) :
-        r = self.dt / self.dx
+    def u_beta(self, beta, u_n, typeJ = "grad", verbose=False) :
         
-        INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
-        SUP2 = np.diag(np.transpose([-r*beta[i] + self.fac/2 for i in range(self.Nx-3)]), 1)
-        A_diag2 = np.diag(np.transpose([(r*beta[i] + 1 - self.fac) for i in range(self.Nx-2)]))
+        if typeJ == "grad" : 
+            INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
+            SUP2 = np.diag(np.transpose([-self.r*beta[i] + self.fac/2 for i in range(self.Nx-3)]), 1)
+            A_diag2 = np.diag(np.transpose([(self.r*beta[i] + 1 - self.fac) for i in range(self.Nx-2)]))
+        
+        if typeJ == "u" : 
+            INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
+            SUP2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), 1)
+            A_diag2 = np.diag(np.transpose([(- self.dt*beta[i] + 1 - self.fac) for i in range(self.Nx-2)]))
+        
+        if typeJ == "1" :
+            INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
+            SUP2 = np.diag(np.transpose([ self.fac/2 for i in range(self.Nx-3)]), 1)
+            A_diag2 = np.diag(np.transpose([1 - self.fac for i in range(self.Nx-2)]))
         
         In2 = A_diag2 + INF2 + SUP2
         
@@ -462,18 +474,46 @@ class Vitesse_Choc() :
         
         self.stats_done = True
 ##---------------------------------------------------
-    def minimization(self, solver, maxiter):
-        import numdifftools as nd
+    def minimization(self, solver, maxiter, typeJ="grad"):
         plt.figure("Evolution")
         if self.stats_done == False :
             self.get_obs_statistics(True)
             print("Get_Obs_Statistics lunched")
         
-        def fun_DR_DU (beta) :
-            INF1 = 0.5*np.diag([-self.nu/self.dx**2 for i in range(self.Nx - 1)], -1)
-            SUP1 = 0.5*np.diag([beta[i]/self.dx - self.nu/self.dx**2 for i in range(self.Nx - 1)], +1)
-            A1   = np.diag([-1./self.dt - beta[i]/self.dx + self.nu/self.dx**2 for i in range(self.Nx)])
+        def DR_DU (beta, typeJ="grad") :
+            if typeJ == "grad":
+                INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx - 1)], -1)
+                SUP1 = 0.5*np.diag([beta[i]*self.r - self.fac/2. for i in range(self.Nx - 1)], +1)
+                A1   = np.diag([self.fac - (1. + beta[i]*self.r) for i in range(self.Nx)])
+            
+            if typeJ == "u" :   
+                INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx - 1)], -1)
+                SUP1 = 0.5*np.diag([- self.fac/2. for i in range(self.Nx - 1)], +1)
+                A1   = np.diag([beta[i]*self.dt - 1. + self.fac for i in range(self.Nx)])
+            
+            if typeJ == "1" :
+                INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx - 1)], -1)
+                SUP1 = 0.5*np.diag([- self.fac/2. for i in range(self.Nx - 1)], +1)
+                A1   = np.diag([-1. + self.fac for i in range(self.Nx)])
+            
             return A1 + INF1 + SUP1
+        
+        
+        def dR_dbeta(beta, u_n, typeJ = "grad"):
+            DR_DBETA = np.zeros((self.Nx, self.Nx))
+            
+            if typeJ == "grad":
+                uu = [(u_n[i+1] - u_n[i]) * self.r for i in range(len(u_n)-1)]
+                uu.insert(len(uu), (u_n[0] - u_n[len(uu)] * self.r))
+                DR_DBETA = np.diag(uu)
+            
+            if typeJ == "u" :
+                DR_DBETA = np.diag(u_n)
+                    
+            if typeJ == "1":
+                DR_DBETA = np.diag([-self.dt for i in range(len(u_n))])
+            
+            return DR_DBETA
             
         beta_n = self.beta_prior
         u_n = self.U_moy_obs["u_moy_it0"]
@@ -487,6 +527,7 @@ class Vitesse_Choc() :
         self.optimization_time = dict()
         
         t = 0
+        reg_fac = 1
         for it in range(0, self.itmax-1) :
             if it >0 :
                 beta_n = beta_n_opti
@@ -498,7 +539,7 @@ class Vitesse_Choc() :
             cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)]
             
             if it == 0 :
-                u_n = self.u_beta(beta_n, u_obs_nt)
+                u_n = self.u_beta(beta_n, u_obs_nt, typeJ = typeJ)
             
 #            try :
 #                cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
@@ -506,16 +547,28 @@ class Vitesse_Choc() :
             print "diag"
             cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it+1)])
             
-            J = lambda beta : 0.5 * (np.dot( np.dot((u_obs_nt - self.u_beta(beta, u_n)), cov_obs_nt_inv), (u_obs_nt - self.u_beta(beta, u_n))) +\
-                                             1e-3*np.dot( (beta -beta_n).dot(Id), (beta -beta_n) ) \
+            J = lambda beta : 0.5 * (np.dot( np.dot((u_obs_nt - self.u_beta(beta, u_n, typeJ=typeJ)).T, cov_obs_nt_inv), (u_obs_nt - self.u_beta(beta, u_n, typeJ=typeJ))) +\
+                                             reg_fac*np.dot( np.transpose(beta -beta_n).dot(Id), (beta -beta_n) ) \
                                     )
+                                    
+#            J2 = lambda beta : 0.5 * ( np.dot(np.dot((u_obs_nt - self.u_beta(beta, u_n)).T, Id), (u_obs_nt - self.u_beta(beta, u_n))) +\
+#                                             reg_fac*np.dot( np.transpose(beta -beta_n).dot(Id), (beta - beta_n) ) ) ## L2 et L2
+            ### On construit l'adjoint pour J2
+
+            dr_du = DR_DU(beta_n, typeJ = typeJ)
+            DR_DU_inv = np.linalg.inv(dr_du)
+            
+            DJ_DU = lambda beta : -np.dot(cov_obs_nt_inv, (u_obs_nt - self.u_beta(beta, u_n, typeJ=typeJ)))
+            DJ_DBETA = lambda beta : reg_fac*np.dot(Id, beta - beta_n)
+            
+            DR_DBETA = dR_dbeta(beta_n, u_n, typeJ=typeJ)
+            
+            DJ2 = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
+            
 #            DR_DU = fun_DR_DU(beta_n)
 #            DR_DU_inv = np.linalg.inv(DR_DU)
 #            DJ_DU = lambda beta : -np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
-#            uu = [(u_n[i+1] - u_n[i]) / self.dx for i in range(len(u_n)-1)]
-#            uu.insert(len(uu), (u_n[0] - u_n[len(uu)] / self.dx))
 #            
-#            DR_DBETA = np.diag(uu)
 #            DJ_DBETA = lambda beta : 1e-3*np.dot(Id, beta -beta_n)
 #            
 #            DJ = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
@@ -534,12 +587,12 @@ class Vitesse_Choc() :
             for i in range(len(beta_n)) :
                 beta_n[i] *= np.random.random()    
 
-            optimi_obj_n = op.minimize(J, self.beta_prior, jac= DJ, method=solver, options={"maxiter" : maxiter})
+            optimi_obj_n = op.minimize(J, self.beta_prior, jac = DJ, method=solver, options={"maxiter" : maxiter})
             
             print("\x1b[1;37;44mDifference de beta it {} = {}\x1b[0m".format(it, np.linalg.norm(beta_n - optimi_obj_n.x, np.inf)))
             beta_n_opti = optimi_obj_n.x
             
-            u_n_beta = self.u_beta(beta_n_opti, u_n)
+            u_n_beta = self.u_beta(beta_n_opti, u_n, typeJ=typeJ)
 
             t2 = time.time()
             print (optimi_obj_n)
@@ -549,7 +602,7 @@ class Vitesse_Choc() :
             
             self.beta_n_dict["beta_it%d" %(it)]  = beta_n_opti
 #            self.opti_obj["opti_obj_it%d" %(it)] = optimi_obj_n
-            self.U_beta_n_dict["u_beta_it%d" %(it)] = self.u_beta(beta_n_opti, u_n)
+            self.U_beta_n_dict["u_beta_it%d" %(it)] = self.u_beta(beta_n_opti, u_n, typeJ=typeJ)
                         
             if it % 10 ==0 :
                 plt.clf()
@@ -561,7 +614,6 @@ class Vitesse_Choc() :
                 plt.legend(loc = "best")
                 plt.ylim((-1.5, 1.5))
                 plt.pause(0.1)
-            
 #---------------------------------------------------------------------        
     def adjoint_bfgs(self, inter_plot=False, verbose = False) : 
         """
@@ -944,7 +996,7 @@ class Vitesse_Choc() :
         return L
 ##----------------------------------------------------##
 if __name__ == '__main__' :
-#    run Class_Vit_Choc.py -nu 2.5e-5 -itmax 200 -CFL 0.4 -num_real 5
+#    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 52 -Nt 52
     parser = parser()
     plt.close("all")
     
