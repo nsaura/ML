@@ -504,7 +504,7 @@ class Vitesse_Choc() :
             
             if typeJ == "grad":
                 uu = [(u_n[i+1] - u_n[i]) * self.r for i in range(len(u_n)-1)]
-                uu.insert(len(uu), (u_n[0] - u_n[len(uu)] * self.r))
+                uu.insert(len(uu), (u_n[0] - u_n[len(uu)] )*self.r)
                 DR_DBETA = np.diag(uu)
             
             if typeJ == "u" :
@@ -514,7 +514,41 @@ class Vitesse_Choc() :
                 DR_DBETA = np.diag([-self.dt for i in range(len(u_n))])
             
             return DR_DBETA
+      
+      def dJ_du(beta, u, typeJ= "grad") :
+        if typeJ == "grad":
+            dij_lw = [ 1-self.r/8.*\
+                        (\
+                            2*(u[i+1] - u[i-1])\
+                            -self.r*(u[i+1]**2 - 2*u[i]*(u[i+1] + u[i-1]) +u[i-1]**2)\
+                            -r**2*u[i]*(u[i+1]**2 - u[i-1]**2)
+                        )\
+                        for i in range(1,len(u)-1)\
+                    ]
             
+            dijM1_lw = [self.r/8. *\
+                        (\
+                            2*(u[i-1] + u[i])\
+                            + self.r*(u[i-1]*(2*u[i] + 3*u[i-1])-u[i]**2)\
+                            - self.r**2*u[i-1]*(u[i]**2 - u[i-1]**2)\
+                        )\
+                        for i in range(1,len(u))\
+                       ]
+            
+            
+            dijP1_lw = [-self.r/8.*\
+                        (\
+                            2*(u[i]+ u[i+1])\
+                            - self.r(u[i+1]*(2*u[i] + 3*u[i+1]) -u[i]**2)\
+                            + self.r**2*u[i+1]*(u[i+1]**2 - u[i]**2)\
+                        )\
+                        for i in range(len(u)-1)\
+                       ]
+           
+           dij_CN = [self.fac-(1+beta[i]*self.r) for i in range(len(u))]
+           dijM1_CN = [-self.fac*0.5 for i in range(1, len(u))]
+           dijP1_CN = [beta[i] * self.r - self.fac*0.5 for i in range(len(u)-1)]
+        
         beta_n = self.beta_prior
         u_n = self.U_moy_obs["u_moy_it0"]
         

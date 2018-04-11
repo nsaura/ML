@@ -170,7 +170,7 @@ keywordstyle=[0]{\color{red}},
 \end{equation}
 Et le modèle inexact :
 \begin{equation} \tag{2 - inexact}
-\mathcal{R} = \partial_t u + \mathbf{\beta \partial_x u} - \nu \partial_{xx}u = 0 \label{pb_inex}
+\mathcal{R} = \partial_t u + \beta \partial_x u - \nu \partial_{xx}u = 0 \label{pb_inex}
 \end{equation}
 Avec $\beta$ le terme que l'on cherche à inférer.\\
 
@@ -195,11 +195,11 @@ Avec $\displaystyle r = \frac{\Delta t}{\Delta x}$ et $ \displaystyle\alpha = \f
    
 \noindent  On exprime les termes de \eqref{adjoint} : 
 \begin{equation}
-\frac{\partial \mathcal{J}^n_i }{\partial \beta^n_j} = \lambda \delta_{ij} \bepar{\beta_i^n - \beta_i^{\text{p}}}
+\frac{\partial \mathcal{J}^n }{\partial \beta^n_j} = \lambda \delta_{ij} \bepar{\beta_i^n - \beta_i^{\text{p}}}
 \end{equation}
 \red
 \begin{equation}
-\frac{\partial \mathcal{J}^n_i}{\partial u_j^n} = -I_{d_{N_x}} \bepar{U^n_{\text{obs, j}} - U^n_{\beta, j}} ^*
+\frac{\partial \mathcal{J}^n}{\partial u_j^n} = -\text{C}_\text{obs}^{-1} \bepar{U^n_{\text{obs, j}} - U^n_{\beta, j}} ^*
 \end{equation}
 \bk
 \begin{equation}
@@ -235,32 +235,32 @@ Or puisque $\displaystyle \underline{\texttt{f}}_{i+1}^n = \frac{\uin{i+1}{n} ²
 On exprime alors les carrés de ces deux expressions, et on réécrit la deuxième étapes avec les nouvelles expressions. On obtient alors :
 \begin{align*}
 \uin{i}{n+1} =\  &\uin{i}{n} \\
- +\ & \frac{1}{4} \bepar{\bepar{\ui{i+1}}^2 + 2\, \ui{n}\bepar{\ui{i+1} - \ui{i-1}} - \bepar{\ui{i-1}}^2} \\
-- & \frac{r}{4}\bepar{\bepar{\ui{i}}^2\bepar{\ui{i+1} -2\, \ui{i} - \ui{i-1}} + \bepar{\ui{i+1}}^2\bepar{\ui{i+1} - \ui{i}} + \bepar{\ui{i-1}}^2\bepar{\ui{i} - \ui{i-1}}} \\
-+\ & \frac{r^2}{16} \bepar{\bepar{\ui{i+1}}^4 -2\,\bepar{\ui{i}}^2 \bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i-1}}^2} - \bepar{\ui{i-1}}^4}
+ -\ & \frac{r}{8} \bepar{\bepar{\ui{i+1}}^2 + 2\, \ui{n}\bepar{\ui{i+1} - \ui{i-1}} - \bepar{\ui{i-1}}^2} \\
++ & \frac{r^2}{8}\bepar{\bepar{\ui{i+1}}^3 +\ui{i}\bepar{\bepar{\ui{i+1}}^2 + \bepar{\ui{i-1}}^2} - \bepar{ \ui{i}}^2\bepar{\ui{i+1} + \ui{i-1}} + \bepar{\ui{i-1}}^3 } \\
+-\ & \frac{r^3}{32} \bepar{\bepar{\ui{i+1}}^4 -2\,\bepar{\ui{i}}^2 \bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i-1}}^2} - \bepar{\ui{i-1}}^4}
 \end{align*}
 On dérive alors cette expression :
 \begin{align*}
 \frac{\partial \bepar{\uin{i}{n+1}}^\text{LW}}{\partial \ui{j} } &= \\
  \dij{i} \\
-+\ & \frac{1}{4} \bepar{2\, \ui{i+1} \dij{i+1} + 2\, \dij{i}\bepar{\ui{i+1} - \ui{i-1}} + 2\, \ui{i}\bepar{\dij{i+1}- \dij{i-1}} - 2\, \ui{i-1} \dij{i-1}} \\
--\ & \frac{r}{4} \bepar{ 2\, \ui{i}\dij{i} \bepar{\ui{i+1} - 2\, \ui{i} - \ui{i-1} } + 2\, \ui{i+1}\dij{i+1} \bepar{\ui{i+1} - \ui{i}} + 2\, \ui{i-1}\dij{i-1} \bepar{\ui{i} - \ui{i-1}}} \\
--\ & \frac{r}{4} \bepar{\bepar{\ui{i}}^2\bepar{\dij{i+1} -2\, \dij{i} - \dij{i-1}} + \bepar{\ui{i+1}}^2\bepar{\dij{i+1} - \dij{i}} + \bepar{\ui{i-1}}^2\bepar{\dij{i} - \dij{i-1}}} \\
-+\ & \frac{r^4}{4}\bepar{\bepar{\ui{i+1}}^3 \dij{i+1} -\bepar{\ui{i-1}}^3\dij{i-1} -\ui{i}\dij{i}\bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i-1}}^2}- \bepar{\ui{i}}^2\bepar{\ui{i+1}\dij{i+1} - \ui{i-1}\dij{i-1}} }
+-\ & \frac{r}{8} \bepar{2\, \ui{i+1} \dij{i+1} + 2\, \dij{i}\bepar{\ui{i+1} - \ui{i-1}} + 2\, \ui{i}\bepar{\dij{i+1}- \dij{i-1}} - 2\, \ui{i-1} \dij{i-1}} \\
++\ & \frac{r^2}{8} \bepar{ 3\bepar{\ui{i+1}}^2\dij{i+1} + \dij{i}\bepar{\bepar{\ui{i+1}}^2 + \bepar{\ui{i-1}}^2} + 2\ui{i}\bepar{\ui{i+1}\dij{i+1} + \ui{i-1}\dij{i-1}}} \\
++\ & \frac{r^2}{8} \bepar{3\bepar{\ui{i-1}}^2\dij{i-1} -2\dij{i}\ui{i}\bepar{\ui{i+1} + \ui{i-1}} - \bepar{\ui{i}}^2\,\bepar{\dij{i+1} + \dij{i-1}}} \\
+-\ & \frac{r^3}{8}\bepar{\bepar{\ui{i+1}}^3 \dij{i+1} -\ui{i}\dij{i}\bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i-1}}^2}- \bepar{\ui{i}}^2\bepar{\ui{i+1}\dij{i+1} - \ui{i-1}\dij{i-1}} -\bepar{\ui{i-1}}^3\dij{i-1} }
 \end{align*}
 On peut écrire ceci de manière matricielle comme une matrice tridiagonale dont les éléments sont :
 \begin{equation} 
- 1 + \frac{1}{2}\bepar{\ui{i+1} - \ui{i-1}} - \frac{r}{4} \becro{\bepar{\ui{i-1}}^2 - 6\,\bepar{\ui{i}}^2 - \bepar{\ui{i+1}}^2 + \ui{i} \bepar{2\bepar{\ui{i+1} + \ui{i-1}} - r \bepar{\bepar{\ui{i+1}} ^2 - \bepar{\ui{i-1}} ^2 }}} 
+ 1 - \frac{r}{8}\, \becro{2\bepar{\ui{i+1} - \ui{i-1}} - r \bepar{\bepar{\ui{i+1}}^2 + -2\ui{i}\bepar{\ui{i+1} + \ui{i-1}} + \bepar{\ui{i-1}}^2} -r^2\ui{i}\bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i-1}}^2 }}
  \red \tag{ $\dij{i}$ }
  \end{equation} 
  
  \begin{equation} 
- -\frac{1}{2}\bepar{\ui{i}+\ui{i-1}} - \frac{r}{4} \becro{2\ui{i-1}\bepar{\ui{i} - \ui{i-1}} -\bepar{\ui{i}}^2 -\bepar{\ui{i-1}}^2 - r\bepar{\bepar{\ui{i}}^2\ui{i-1} - \bepar{\ui{i-1}}^3 }}
+ \frac{r}{8}\becro{ 2\bepar{\ui{i}+\ui{i-1}} + r\bepar{\ui{i-1}\bepar{2\ui{i} + 3\ui{i-1}} -\bepar{\ui{i}}^2} -r^2\, \ui{i-1}\bepar{\bepar{\ui{i}}^2 - \bepar{\ui{i-1}}^2} }
  \red \tag{$\dij{i-1}$ }
  \end{equation}
  
  \begin{equation}
- \frac{1}{2}\bepar{\ui{i+1} + \ui{i}} - \frac{r}{4} \becro{\bepar{\ui{i}}^2 + \bepar{\ui{i+1}}^2 + 2\ui{i+1}\bepar{\ui{i+1} - \ui{i}} - r\bepar{\bepar{\ui{i+1}}^3 - \bepar{\ui{i}}^2\ui{i+1}}}
+ - \frac{r}{8}\, \becro{2\bepar{\ui{i+1} + \ui{i}} - r\,\bepar{\ui{i+1} \bepar{2\ui{i} + 3\ui{i+1}} -\bepar{\ui{i}}^2} + r^2\ui{i+1}\bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i}}^2}}
  \red \tag{$\dij{i+1}$ }
  \end{equation}
  
@@ -268,12 +268,12 @@ On peut écrire ceci de manière matricielle comme une matrice tridiagonale dont
  \begin{align*}
  \frac{\partial \bepar{\uin{i}{n+1}}^\text{CN}}{\partial \ui{j} } & = \dij{i}\bepar{1 - \alpha +  \beta r} + \dij{i+1}\bepar{\frac{\alpha}{2} - \beta r} + \dij{i-1}\frac{\alpha}{2}
  \end{align*}
-Finalement  
- \begin{equation} \tag{$\partial \mathcal{J}^n_{u_j^n}$ }
- \frac{\partial \mathcal{J}^n_i}{\partial u_j^n} = \frac{\partial \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}}^T \text{C}_\text{obs}^{-1} \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}}}{\partial u_j^n} \label{djuj}
- \end{equation}
- En remplaçant $\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}$ par \textbf{X}, on peut écrire \ref{djuj} comme $\displaystyle \frac{d\textbf{X}^T\textbf{A}\textbf{X}}{d\textbf{X}}$ et utilisé le résultat suivant
- \begin{equation*}
- \frac{d\textbf{X}^T\textbf{A}\textbf{X}}{d\textbf{X}} = \textbf{X}^T\bepar{\textbf{A} + \textbf{A}^T}
- \end{equation*}
+%Finalement  
+% \begin{equation} \tag{$\partial \mathcal{J}^n_{u_j^n}$ }
+% \frac{\partial \mathcal{J}^n_i}{\partial u_j^n} = \frac{\partial \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}}^T \text{C}_\text{obs}^{-1} \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}}}{\partial u_j^n} \label{djuj}
+% \end{equation}
+% En remplaçant $\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}$ par \textbf{X}, on peut écrire \ref{djuj} comme $\displaystyle \frac{d\textbf{X}^T\textbf{A}\textbf{X}}{d\textbf{X}}$ et utilisé le résultat suivant
+% \begin{equation*}
+% \frac{d\textbf{X}^T\textbf{A}\textbf{X}}{d\textbf{X}} = \textbf{X}^T\bepar{\textbf{A} + \textbf{A}^T}
+% \end{equation*}
 \end{document}
