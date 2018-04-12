@@ -184,7 +184,7 @@ def see_moy_u_diff(cpt=202, Nx = 202, L = float(3)) :
 def crank_nicholson(Nx=202, L = float(3), itmax = 10, write=False):
     dx = L/(Nx-1)
     CFL = 0.2
-    nu = 1.*10**(-2)
+    nu = 5.*10**(-2)
     
     dt = {"dt_v" : CFL / nu * dx**2,
           "dt_l" : CFL*dx}
@@ -199,8 +199,9 @@ def crank_nicholson(Nx=202, L = float(3), itmax = 10, write=False):
     fac = nu * dt / dx**2 
     
     r = dt / dx
-    X = np.arange(0,L+dx,dx)
+    X = np.arange(0,L+dx,dx) 
     
+    # Les matrice ne dépend pas des problèmes aux limites. On la limite aux points en dehors des limites
     INF1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), -1)
     SUP1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), 1) 
     A_diag1 = np.diag(np.transpose([(1 + fac) for i in range(Nx-2)])) 
@@ -216,17 +217,6 @@ def crank_nicholson(Nx=202, L = float(3), itmax = 10, write=False):
     A2 = A_diag2 + INF2 + SUP2
     A3 = SCD + SCDSUP    
     
-#    A1 = np.zeros((Nx,Nx))
-#    A2 = np.zeros((Nx,Nx))
-#    A3 = np.zeros((Nx,Nx))
-#    
-#    A1[0,0] = A1[-1,-1] = 1
-#    A2[0,-2] = A2[-1,1] = 1
-#    
-#    A1[1:Nx-1, 1:Nx-1] = In1
-#    A2[1:Nx-1, 1:Nx-1] = In2
-#    A3[1:Nx-1, 1:Nx-1] = InSCD
-    
     ## On fait la résolution sur A1, A2, A3 qui prennent en compte les conditions aux limites
     bruits = [0.0005 * np.random.randn(Nx) for time in range(5)]
     bruit = bruits[np.random.randint(5)]
@@ -239,8 +229,10 @@ def crank_nicholson(Nx=202, L = float(3), itmax = 10, write=False):
 #        else :
 #            u.append(0 + bruit[i])
 #        i+=1    
-    u_n = np.sin(2*np.pi/(L-dx)*(X-dx)) 
-
+    u = np.sin(2*np.pi*X/L) + 0.5
+    u_n = u[1:Nx-1]
+    
+    X = X[1:Nx-1]
     # Tracés figure initialisation : 
     plt.figure("Resolution")
     plt.plot(X, u_n)
@@ -251,22 +243,26 @@ def crank_nicholson(Nx=202, L = float(3), itmax = 10, write=False):
     vec_ci = np.zeros((Nx-2))
     for it in range(itmax) :
 
-        vec_ci[0] = fac/2 * u_n[-2]
-        vec_ci[-1]= fac * u_n[1] 
+        vec_ci[0] = fac/2 * u[0]
+        vec_ci[-1]= fac/2 * u[-1]  
         
         u_n_2 = np.array([0.5*ux**2 for ux in u_n])
         
         u_n_tmp = np.dot(A2, u_n)
         scd_term = np.dot(A3, u_n_2)
         
-        B_n = np.zeros((Nx))
+        B_n = np.zeros((Nx-2))
          
         for i in range(Nx-2) :
             B_n[i] = u_n_tmp[i] + scd_term[i]
 
         u_nNext = np.dot(np.linalg.inv(A1), B_n)
         
-        u_n = u_nNext
+        u[1:Nx-1] = u_nNext
+        u[0] = u[-2]
+        u[-1] = u[1] 
+        
+        u_n = u[1:Nx-1]
         print it 
         print u_n
         
