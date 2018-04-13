@@ -177,9 +177,21 @@ class Vitesse_Choc() :
         if osp.exists(osp.join(datapath, "burger_post_cov")) == False :
             os.mkdir(osp.join(datapath, "burger_post_cov"))
         
+        beta_datapath = osp.join(datapath, "betas")
+        
+        if osp.exists(beta_datapath) == False :
+            os.mkdir(beta_datapath)
+        
         self.datapath   =   datapath
+        self.beta_datapath = beta_datapath
         self.cov_path   =   osp.join(datapath, "burger_post_cov")
-
+        
+        self.beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.beta_datapath,\
+            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.csv".format(type_i, CFL, it))
+        
+        self.u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.beta_datapath,\
+            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.csv".format(type_i, CFL, it))
+        
         self.stats_done = False    
                 
 #        for t in self.T_inf_lst :
@@ -372,6 +384,7 @@ class Vitesse_Choc() :
         u_n_tmp = np.dot(A2, u_n)
         u_n_tmp[-1] = u_n_tmp[1]
         u_n_tmp[0] = u_n_tmp[-2]
+        
 #        scd_term = np.dot(self.A3, u_n_2) # à la blace du beta
         
 #        B_n = np.zeros((self.Nx))
@@ -380,6 +393,7 @@ class Vitesse_Choc() :
 #            B_n[i] = u_n_tmp[i]
 
         u_nNext = np.dot(np.linalg.inv(self.A1), u_n_tmp)
+        
         
         return u_nNext
 ##---------------------------------------------------         
@@ -691,7 +705,11 @@ class Vitesse_Choc() :
             
             self.beta_n_dict["beta_it%d" %(it)]  = beta_n_opti
 #            self.opti_obj["opti_obj_it%d" %(it)] = optimi_obj_n
-            self.U_beta_n_dict["u_beta_it%d" %(it)] = self.u_beta(beta_n_opti, u_n, typeJ=typeJ)
+            self.U_beta_n_dict["u_beta_it%d" %(it)] = u_n_beta
+            
+            self.pd_write_csv(self.beta_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), beta_n_opti)
+            
+            self.pd_write_csv(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_n_beta)
             
             hess_beta = optimi_obj_n.hess_inv
             cholesky_beta = np.linalg.cholesky(hess_beta)
@@ -1128,6 +1146,7 @@ class Vitesse_Choc() :
 ##----------------------------------------------------##
 if __name__ == '__main__' :
 #    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 52 -Nt 52
+#    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10
     parser = parser()
     plt.close("all")
     
