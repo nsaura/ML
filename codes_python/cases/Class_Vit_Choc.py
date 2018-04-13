@@ -505,19 +505,22 @@ class Vitesse_Choc() :
         
         self.stats_done = True
 ##---------------------------------------------------
+##---------------------------------------------------
+##---------------------------------------------------
+
     def minimization(self, solver, maxiter, typeJ="grad", step=10):
-        fig, axes= plt.subplots(1, 2, figsize = (20,15))
+        fig, axes= plt.subplots(1, 2, figsize = (8,8))
         evol = 0
         if self.stats_done == False :
             self.get_obs_statistics(True)
             print("Get_Obs_Statistics lunched")
-            
+        #---------------------------------------------    
         #---------------------------------------------
         def DR_DU (beta, typeJ="grad") :
             if typeJ == "grad":
-                INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx - 3)], -1)
-                SUP1 = 0.5*np.diag([beta[i]*self.r - self.fac/2. for i in range(self.Nx - 3)], +1)
-                A1   = np.diag([self.fac - (1. + beta[i]*self.r) for i in range(self.Nx-2)])
+                INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx-1)], -1)
+                SUP1 = 0.5*np.diag([beta[i]*self.r - self.fac/2. for i in range(self.Nx - 1)], +1)
+                A1   = np.diag([self.fac - (1. + beta[i]*self.r) for i in range(self.Nx)])
             
             if typeJ == "u" :   
                 INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx - 1)], -1)
@@ -528,15 +531,18 @@ class Vitesse_Choc() :
                 INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx - 1)], -1)
                 SUP1 = 0.5*np.diag([- self.fac/2. for i in range(self.Nx - 1)], +1)
                 A1   = np.diag([-1. + self.fac for i in range(self.Nx)])
-            
-            return A1 + INF1 + SUP1
+        
+            drdu = A1 + INF1 + SUP1
+        
+            return np.linalg.inv(drdu)
+        #---------------------------------------------
         #---------------------------------------------
         def dR_dbeta(beta, u_n, typeJ = "grad"):
             DR_DBETA = np.zeros((self.Nx, self.Nx))
             
             if typeJ == "grad":
                 uu = [(u_n[i+1] - u_n[i]) * self.r for i in range(len(u_n)-1)]
-                uu.insert(len(uu), (u_n[0] - u_n[len(uu)] )*self.r)
+                uu.insert(len(uu), (u_n[1] - u_n[len(uu)] )*self.r)
                 DR_DBETA = np.diag(uu)
             
             if typeJ == "u" :
@@ -547,50 +553,56 @@ class Vitesse_Choc() :
             
             return DR_DBETA
         #---------------------------------------------
+        #---------------------------------------------
         def d_unp1_d_un(beta, u, typeJ= "grad") :
             if typeJ == "grad":
-                dij_lw = [ 1-self.r/8.*\
+                dij_LW = [ 1-self.r/8.*\
                             (\
                                 2*(u[i+1] - u[i-1])\
                                 -self.r*(u[i+1]**2 - 2*u[i]*(u[i+1] + u[i-1]) +u[i-1]**2)\
-                                -r**2*u[i]*(u[i+1]**2 - u[i-1]**2)
+                                -self.r**2*u[i]*(u[i+1]**2 - u[i-1]**2)
                             )\
                             for i in range(1,len(u)-1)\
                          ]
-                dij_LW.insert(0, 0)
-                dij_LW.insert(len(dij_LW), 0)
+#                dij_LW.insert(0, dij_LW[-1])
+#                dij_LW.insert(len(dij_LW), dij_LW[1])
                 dij_LW = np.asarray(dij_LW)
 
-                dijM1_lw = [self.r/8. *\
+                dijM1_LW = [self.r/8. *\
                             (\
                                 2*(u[i-1] + u[i])\
                                 + self.r*(u[i-1]*(2*u[i] + 3*u[i-1])-u[i]**2)\
                                 - self.r**2*u[i-1]*(u[i]**2 - u[i-1]**2)\
                             )\
-                            for i in range(1,len(u))\
+                            for i in range(2,len(u)-1)\
                           ]
-                dijM1_LW = np.asarray(dijM1_LW)
-
-                dijP1_lw = [-self.r/8.*\
+                i=0
+                dijP1_LW = [-self.r/8.*\
                             (\
                                 2*(u[i]+ u[i+1])\
-                                - self.r(u[i+1]*(2*u[i] + 3*u[i+1]) -u[i]**2)\
+                                - self.r*(u[i+1]*(2*u[i] + 3*u[i+1]) -u[i]**2)\
                                 + self.r**2*u[i+1]*(u[i+1]**2 - u[i]**2)\
                             )\
-                            for i in range(len(u)-1)\
+                            for i in range(1,len(u)-2)\
                           ]
-                dijP1_LW = np.asarray(dijP1_LW)
 
-                dij_CN = np.asarray([self.fac-(1+beta[i]*self.r) for i in range(len(u))])
+                dij_CN = np.asarray([self.fac-(1+beta[i]*self.r) for i in range(1,len(u)-1)])
 
-                dijM1_CN = np.asarray([-self.fac*0.5 for i in range(1, len(u))])
-                dijP1_CN = np.asarray([beta[i] * self.r - self.fac*0.5 for i in range(len(u)-1)])
+                dijM1_CN = np.asarray([-self.fac*0.5 for i in range(2, len(u)-1)])
+                dijP1_CN = np.asarray([beta[i] * self.r - self.fac*0.5 for i in range(1,len(u)-2)])
 
                 dij = dij_LW + dij_CN
                 diM1j = dijM1_LW + dijM1_CN
-                diP1j = dijP1_Lw + dijP1_CN
+                diP1j = dijP1_LW + dijP1_CN
                 
-                dJ_dU = np.diag(dij) + np.diag(diM1j, -1) + np.diag(diP1j, 1)
+                IndJ_Du = np.diag(dij) + np.diag(diM1j, -1) + np.diag(diP1j, 1)
+                Dj_Du = np.zeros((self.Nx, self.Nx))
+                
+                Dj_Du[0,0] = dij[-1] #ie N-2 sur le total
+                Dj_Du[-1,-1] = dij[0] #ie le 1 sur le total
+                
+                return Dj_Du
+        #---------------------------------------------
         #---------------------------------------------
         beta_n = self.beta_prior
         u_n = self.U_moy_obs["u_moy_it0"]
@@ -618,12 +630,12 @@ class Vitesse_Choc() :
             if it == 0 :
                 u_n = self.u_beta(beta_n, u_obs_nt, typeJ = typeJ)
             
-            print "diag"
+            print ("diag")
 
             cov_obs_nt = self.diag_cov_obs_dict["diag_cov_obs_it%d"%(it+1)]
             cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
             
-            print cov_obs_nt_inv.shape
+            print (cov_obs_nt_inv.shape)
             #Pour avoir la bonne taille de matrice
             Uu = lambda beta : u_obs_nt - self.u_beta(beta, u_n, typeJ=typeJ) 
             
@@ -633,28 +645,24 @@ class Vitesse_Choc() :
             
             DJ = nd.Gradient(J)
                                    
-#            J2 = lambda beta : 0.5 * ( np.dot(np.dot((u_obs_nt - self.u_beta(beta, u_n)).T, Id), (u_obs_nt - self.u_beta(beta, u_n))) +\
-#                                             reg_fac*np.dot( np.transpose(beta -beta_n).dot(Id), (beta - beta_n) ) ) ## L2 et L2
+##            J2 = lambda beta : 0.5 * ( np.dot(np.dot((u_obs_nt - self.u_beta(beta, u_n)).T, Id), (u_obs_nt - self.u_beta(beta, u_n))) +\
+##                                             reg_fac*np.dot( np.transpose(beta -beta_n).dot(Id), (beta - beta_n) ) ) ## L2 et L2
 
-            dr_du = DR_DU(beta_n, typeJ = typeJ)
-            DR_DU_inv = np.linalg.inv(dr_du)
-            
-            DJ_DU = lambda beta : -np.dot(cov_obs_nt_inv, (u_obs_nt - self.u_beta(beta, u_n, typeJ=typeJ)))
-            DJ_DBETA = lambda beta : reg_fac*np.dot(Id, beta - beta_n)
-            
-            DR_DBETA = dR_dbeta(beta_n, u_n, typeJ=typeJ)
-            
-            DJ2 = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
+#            DJ_DU = lambda beta : np.dot(cov_obs_nt_inv, d_unp1_d_un(beta, u = u_n)).dot(Uu(beta))
+##            DJ_DU = nd.gradient(J)(u_n)
+#            DJ_DBETA = lambda beta : reg_fac*np.dot(Id, beta - beta_n)
+#            
+#            DJ2 = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU(beta, typeJ=typeJ) ), dR_dbeta(beta, u_n, typeJ=typeJ))
             
 #            DR_DU = fun_DR_DU(beta_n)
 #            DR_DU_inv = np.linalg.inv(DR_DU)
-#            DJ_DU = lambda beta : -np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
+#            DJ_DU = d_unp1_d_un(
 #            
 #            DJ_DBETA = lambda beta : 1e-3*np.dot(Id, beta -beta_n)
 #            
 #            DJ = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
             
-            DJ = nd.Gradient(J)
+#            DJ = nd.Gradient(J)
             
             print ("Opti Minimization it = %d" %(it))
             
@@ -709,7 +717,7 @@ class Vitesse_Choc() :
                 mins.append(min(fields_v["%03d" %(k)]))
                 maxs.append(max(fields_v["%03d" %(k)]))
             
-            print np.shape(maxs), np.shape(mins)
+            print (np.shape(maxs), np.shape(mins))
             
             if it % step == 0 :
                 if evol == 2 :
@@ -737,9 +745,6 @@ class Vitesse_Choc() :
                     
                 plt.pause(0.01)
                 evol += 1
-                
-                
-
 #---------------------------------------------------------------------        
     def adjoint_bfgs(self, inter_plot=False, verbose = False) : 
         """
@@ -797,7 +802,7 @@ class Vitesse_Choc() :
             try :
                 cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
             except np.linalg.LinAlgError :
-                print "diag"
+                print( "diag" )
                 cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it)])
             
             J = lambda beta : 0.5 * (np.dot( np.dot((u_obs_nt - self.u_beta(beta, u_n)), cov_obs_nt_inv), (u_obs_nt - self.u_beta(beta, u_n))) +\
