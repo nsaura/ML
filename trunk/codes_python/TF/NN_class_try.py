@@ -306,7 +306,7 @@ class Neural_Network():
         
         self.minimize_loss = self.train_op.minimize(self.loss)
 ###-------------------------------------------------------------------------------
-    def training_session(self, tol, batched = False) :
+    def training_session(self, tol, batched = False, step=10) :
 #       Initialization ou ré-initialization ;)
         init = tf.global_variables_initializer()
         self.sess.run(init)
@@ -328,7 +328,7 @@ class Neural_Network():
                 costs.append(err)
                 if np.isnan(costs[-1]) : raise IOError("Warning, Epoch {}, lr = {}.. nan"\
                                                     .format(epoch, self.lr))
-                if epoch % 200 == 0 :
+                if epoch % step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
                 
                 epoch += 1
