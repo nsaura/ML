@@ -127,7 +127,7 @@ class Vitesse_Choc() :
         
         ## Matrices des coefficients pour la résolution
         ## Attention ces matrices ne prennent pas les points où sont définies les conditions initiales
-        ## Ces cas doivent faire l'objet de méthodes particulières avec la redéfinitions des fonctions A1 et A2 
+        ## Ces cas doivent faire l'objet de méthodes particulières avec la redéfinition des fonctions A1 et A2 
         
         #####
         INF1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), -1)
@@ -174,24 +174,31 @@ class Vitesse_Choc() :
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
 
-        if osp.exists(osp.join(datapath, "burger_post_cov")) == False :
-            os.mkdir(osp.join(datapath, "burger_post_cov"))
+        bmatrice_path = osp.join(datapath, "burger_matrices")
         
-        beta_datapath = osp.join(datapath, "betas")
+        self.cov_path = osp.join(bmatrice_path, "post_cov")
+        self.beta_path = osp.join(bmatrice_path, "betas")
+        self.chol_path = osp.join(bmatrice_path, "cholesky")
+        self.inferred_U = osp.join(bmatrice_path, "U")
         
-        if osp.exists(beta_datapath) == False :
-            os.mkdir(beta_datapath)
-        
+        if osp.exists(osp.join(bmatrice_path)) == False :
+            os.mkdir(bmatrice_path)
+            os.mkdir(self.cov_path)
+            os.mkdir(self.chol_path)
+            os.mkdir(self.beta_path)
+            os.mkdir(self.inferred_U)
+
         self.datapath   =   datapath
-        self.beta_datapath = beta_datapath
-        self.cov_path   =   osp.join(datapath, "burger_post_cov")
         
-        self.beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.beta_datapath,\
-            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.csv".format(type_i, CFL, it))
+        self.beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.beta_path,\
+            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.npy".format(type_i, CFL, it))
         
-        self.u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.beta_datapath,\
-            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.csv".format(type_i, CFL, it))
+        self.u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.inferred_U,\
+            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.npy".format(type_i, CFL, it))
         
+        self.chol_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.chol_path,\
+            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.npy".format(type_i, CFL, it))
+
         self.stats_done = False    
                 
 #        for t in self.T_inf_lst :
@@ -272,23 +279,34 @@ class Vitesse_Choc() :
         """
         self.g_sup_max = new_criteria
         print("g_sup_max is now {}".format(self.g_sup_max))   
-##---------------------------------------------------
-    def pd_read_csv(self, filename) :
-        """
-        Argument :
-        ----------
-        filename : the file's path with or without the extension which is csv in any way. 
-        """
-        if osp.splitext(filename)[-1] is not ".csv" :
-            filename = osp.splitext(filename)[0] + ".csv"
-        data = pd.read_csv(filename).get_values()
-        data = pd.read_csv(filename).get_values()
-#        print data
-#        print data.shape
-        if np.shape(data)[1] == 1 : 
-            data = data.reshape(data.shape[0])
-        return data
-##---------------------------------------------------
+###---------------------------------------------------
+#    def csv_reader(self, filename) :
+#        if osp.splitext(filename)[-1] is not ".csv" :
+#            filename = osp.splitext(filename)[0] + ".csv"
+#            
+#        dtg = []
+#        f = csv.reader(open(filename))
+#        
+#        for line in f :
+#            dtg.append(float(line[0]))
+#        
+#        return np.asarray(dtg)
+###---------------------------------------------------
+#    def pd_read_csv(self, filename) :
+#        """
+#        Argument :
+#        ----------
+#        filename : the file's path with or without the extension which is csv in any way. 
+#        """
+#        if osp.splitext(filename)[-1] is not ".csv" :
+#            filename = osp.splitext(filename)[0] + ".csv"
+#        
+#        data = pd.read_csv(filename).get_values()
+##        print data
+##        print data.shape
+#        data = data.reshape(data.shape[0] )
+#        return data
+###---------------------------------------------------
     def init_u(self): 
         u = []
         if self.type_init == "choc":
@@ -306,17 +324,17 @@ class Vitesse_Choc() :
             u = np.sin(2*np.pi/self.L*self.line_x) + 0.5
         return u
 ##---------------------------------------------------
-    def pd_write_csv(self, filename, data) :
-        """
-        Argument :
-        ----------
-        filename:   the path where creates the csv file;
-        data    :   the data to write in the file
-        """
-        path = osp.join(self.datapath, filename)
-        if osp.splitext(path)[-1] is not ".csv" :
-            path = osp.splitext(path)[0] + ".csv"
-        pd.DataFrame(data).to_csv(path, index=False, header= True)
+#    def pd_write_csv(self, filename, data) :
+#        """
+#        Argument :
+#        ----------
+#        filename:   the path where creates the csv file;
+#        data    :   the data to write in the file
+#        """
+#        path = osp.join(self.datapath, filename)
+#        if osp.splitext(path)[-1] is not ".csv" :
+#            path = osp.splitext(path)[0] + ".csv"
+#        pd.DataFrame(data).to_csv(path, index=False, header= False)
 ##---------------------------------------------------   
 #    def u_beta(self, beta, u_n, typeJ = "grad", verbose=False) :
 #        
@@ -382,8 +400,7 @@ class Vitesse_Choc() :
 #        u_n_2 = np.array([0.5*ux**2 for ux in u_n])
         
         u_n_tmp = np.dot(A2, u_n)
-        u_n_tmp[-1] = u_n_tmp[1]
-        u_n_tmp[0] = u_n_tmp[-2]
+        
         
 #        scd_term = np.dot(self.A3, u_n_2) # à la blace du beta
         
@@ -393,7 +410,8 @@ class Vitesse_Choc() :
 #            B_n[i] = u_n_tmp[i]
 
         u_nNext = np.dot(np.linalg.inv(self.A1), u_n_tmp)
-        
+        u_nNext[-1] = u_nNext[1]
+        u_nNext[0] = u_nNext[-2]
         
         return u_nNext
 ##---------------------------------------------------         
@@ -416,13 +434,14 @@ class Vitesse_Choc() :
                 plt.ylim((-2.5, 2.5))
                 plt.pause(0.01)
             
+            # pd_write_csv --->> np.save
             if write == True : 
-                filename = osp.join(self.datapath, "u_it0_%d_Nt%d_Nx%d_CFL%s_nu%s_%s"%(j ,self.Nt ,self.Nx, self.CFL_str, self.nu_str, self.type_init))
-                self.pd_write_csv(filename, u)
+                filename = osp.join(self.datapath, "u_it0_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(j ,self.Nt ,self.Nx, self.CFL_str, self.nu_str, self.type_init))
+                np.save(filename, u)
                 
             t = it = 0
             while it < self.itmax :
-                filename = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.csv"%(it+1, j, self.Nt, self.Nx, self.CFL_str, self.nu_str, self.type_init))
+                filename = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(it+1, j, self.Nt, self.Nx, self.CFL_str, self.nu_str, self.type_init))
                 if osp.exists(filename) == True :
                     it += 1
                     continue
@@ -450,7 +469,7 @@ class Vitesse_Choc() :
                 u = np.asarray(u) 
             
                 if write == True : 
-                    self.pd_write_csv(filename, u)
+                    np.save(filename, u)
                 
                 it += 1
                 t += self.dt # Itération temporelle suivante
@@ -476,26 +495,26 @@ class Vitesse_Choc() :
 
             # Calcul de la moyenne pour l'itération en cours
             for n in range(self.num_real) :
-                file_to_get = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s"%(it, n, self.Nt, self.Nx, self.CFL_str, self.nu_str, init))
-                u_t_n = self.pd_read_csv(file_to_get)
+                file_to_get = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(it, n, self.Nt, self.Nx, self.CFL_str, self.nu_str, init))
+                u_t_n = np.load(file_to_get)
                 for i in range(len(u_t_n)) : u_sum[i] += u_t_n[i] / float(self.num_real)
                 
             U_moy_obs["u_moy_it%d" %(it)] = u_sum
             full_cov = np.zeros((self.Nx, self.Nx))        
             
             # Calcul de la covariance associée à l'itération
-            full_cov_filename = osp.join(self.cov_path, "full_cov_obs_it%d_Nt%d_Nx%d_CFL%s_nu%s_%s.csv"%(it, self.Nt, self.Nx, self.CFL_str, self.nu_str, init)) 
-            diag_cov_filename = osp.join(self.cov_path, "diag_cov_obs_it%d_Nt%d_Nx%d_CFL%s_nu%s_%s.csv"%(it, self.Nt, self.Nx, self.CFL_str, self.nu_str, init)) 
+            full_cov_filename = osp.join(self.cov_path, "full_cov_obs_it%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(it, self.Nt, self.Nx, self.CFL_str, self.nu_str, init)) 
+            diag_cov_filename = osp.join(self.cov_path, "diag_cov_obs_it%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(it, self.Nt, self.Nx, self.CFL_str, self.nu_str, init)) 
             
             if osp.exists(full_cov_filename) == True and osp.exists(diag_cov_filename) :
-                full_cov_obs_dict["full_cov_obs_it%d"%(it)] = self.pd_read_csv(full_cov_filename) 
-                diag_cov_obs_dict["diag_cov_obs_it%d"%(it)] = self.pd_read_csv(diag_cov_filename)
+                full_cov_obs_dict["full_cov_obs_it%d"%(it)] = np.load(full_cov_filename) 
+                diag_cov_obs_dict["diag_cov_obs_it%d"%(it)] = np.load(diag_cov_filename)
 #                print ("Lecture %s" %(cov_filename))
                 continue
             
             for n in range(self.num_real) :
-                file_to_get = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s" %(it, n, self.Nt, self.Nx, self.CFL_str, self.nu_str, init))
-                u_t_n = self.pd_read_csv(file_to_get)
+                file_to_get = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy" %(it, n, self.Nt, self.Nx, self.CFL_str, self.nu_str, init))
+                u_t_n = np.load(file_to_get)
                 
                 for ii in range(self.Nx)  :
                     for jj in range(self.Nx) : 
@@ -507,10 +526,10 @@ class Vitesse_Choc() :
             if write == True :
 #                print ("Ecriture %s" %(cov_filename))
                 if osp.exists(diag_cov_filename) == False :
-                    self.pd_write_csv(diag_cov_filename, np.diag(np.diag(full_cov)))
+                    np.save(diag_cov_filename, np.diag(np.diag(full_cov)))
                 
                 if osp.exists(full_cov_filename) == False :
-                    self.pd_write_csv(full_cov_filename, full_cov)
+                    np.save(full_cov_filename, full_cov)
                     
         self.U_moy_obs = U_moy_obs
         
@@ -521,8 +540,7 @@ class Vitesse_Choc() :
 ##---------------------------------------------------
 ##---------------------------------------------------
 ##---------------------------------------------------
-
-    def minimization(self, solver, maxiter, typeJ="grad", step=10):
+    def minimization(self, maxiter, solver="BFGS", typeJ="grad", step=10):
         fig, axes= plt.subplots(1, 2, figsize = (8,8))
         evol = 0
         if self.stats_done == False :
@@ -707,12 +725,13 @@ class Vitesse_Choc() :
 #            self.opti_obj["opti_obj_it%d" %(it)] = optimi_obj_n
             self.U_beta_n_dict["u_beta_it%d" %(it)] = u_n_beta
             
-            self.pd_write_csv(self.beta_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), beta_n_opti)
-            
-            self.pd_write_csv(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_n_beta)
+            np.save(self.beta_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), beta_n_opti)
+            np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_n_beta)
             
             hess_beta = optimi_obj_n.hess_inv
             cholesky_beta = np.linalg.cholesky(hess_beta)
+            
+            np.save(self.chol_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), cholesky_beta)
             
             sigma = dict()
             mins, maxs = [], []
@@ -756,8 +775,10 @@ class Vitesse_Choc() :
                     axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it), c='grey', marker="+")
                     axes[1].plot(self.line_x[:-1], self.U_beta_n_dict["u_beta_it%d" %(it)][:-1], label='Opti it %d'%(it),\
                         marker='o', fillstyle='none', linestyle='none', c='b')
-
+                
                 axes[0].legend(loc="best")
+
+                axes[1].set_ylim((-2.0, 2.0))
                 axes[1].legend(loc = "best")
 #                plt.ylim((-2.5, 2.5))
                     
