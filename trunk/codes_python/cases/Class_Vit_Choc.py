@@ -183,6 +183,8 @@ class Vitesse_Choc() :
         
         if osp.exists(osp.join(bmatrice_path)) == False :
             os.mkdir(bmatrice_path)
+        
+        if osp.exists(self.inferred_U) == False :
             os.mkdir(self.cov_path)
             os.mkdir(self.chol_path)
             os.mkdir(self.beta_path)
@@ -191,13 +193,13 @@ class Vitesse_Choc() :
         self.datapath   =   datapath
         
         self.beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.beta_path,\
-            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.npy".format(type_i, CFL, it))
+            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
         self.u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.inferred_U,\
-            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.npy".format(type_i, CFL, it))
+            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
         self.chol_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.chol_path,\
-            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{}.npy".format(type_i, CFL, it))
+            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
 
         self.stats_done = False    
                 
