@@ -482,8 +482,9 @@ class Vitesse_Choc() :
                         plt.plot(self.line_x[0:self.Nx-1], u[0:self.Nx-1], c='k') 
                         plt.grid()
                         plt.title("u vs X, iteration %d bruit %d" %(it, j)) 
-                        plt.ylim((-2.5, 2.5))  
-                        plt.xticks()
+                        plt.xticks(np.arange(0, self.L-self.dx, 0.25))
+#                        plt.yticks(np.arange(-2.5, 2.5, 0.5))
+                        plt.ylim(-2.5,2.5)
                         plt.pause(0.1)  
                 
 ##---------------------------------------------------

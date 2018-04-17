@@ -436,6 +436,43 @@ En général le $\eta$ de base dans le SGD est plus petit que celui du GD.
 
 \noindent Ces algorithmes sont deux versions du premier : le terme stochastique fait allusion au fait que l'on effectue un GD seulement sur un sous ensemble du training set. On oppose alors la \textit{\textbf{justesse}} du GD à la \textit{\textbf{rapidité}} du SGD (tout en fournissant de bons résultats).  
 
+\pagebreak
+
+\navy \chapter{Notions et explications mathématiques} \bk
+\section{Information Theory (IT)} 
+\noindent Information is a quantity that provides partial or total answer to a given question. Globally, the information theory quantifies this answer and gives tools to have qualitative describtion of the information. This theory is in the heart of compression problem, communication, encription.\\
+According to \citep{Goodfellow-et-al-2016} learning an event that was unlikely to occur provide more \textit{information} that an even that was likely to occur. E.g., learning that the sun rose is less informative that learning that an solar eclipse occured.\\
+Another example : knowing that the letter j is a part of a five letter english word gives more information that knowing that the letter e is a paart of it, because is a more common letter than j.\\
+To release some misunderstanding we can \textit{quantify} the information and especially that information gained knowing an event.\\
+The relevant formalism appears to be probability and conditionnal probability.\\
+Given a set$A = \bepar{a_1, a_2, ..., a_n}$ with $p_i$ their respective probability, and $B \subset A$. The information gained knowing that outcome belongs to $B$ is denoted $G\bepar{B|A}$ and worth $$ G\bepar{B|A} = \log \frac{1}{p\bepar{B}} = -\log p\bepar{B} $$ with $\displaystyle p\left (B\right ) = \sum_{i \in B} p_i$. The numerator is 1 because we know the event is in $A$, so there is no doubt.\\
+If we now consider $B \subset C \subset A$ then $$G\bepar{B|C} = \log \frac{p\bepar{C}}{p\bepar{B}} = - \log \frac{p\bepar{B}}{p\bepar{C}}$$
+The logarithm is justified because the information gained with two independant events is the information gained from both individual events.\\
+We will next \textit{quantify} information with three laws (\citep{Goodfellow-et-al-2016}) :
+\begin{itemize}
+\item[--] Likely events should have low information content, obvious event none
+\item[--] Less likely events should have higher information content
+\item[--] Independant events should have additive information 
+\end{itemize}
+\pagebreak
+\brick \subsection{Shannon entropy} \bk
+\noindent We define the information carries by a single element by the \textit{self-information} $I(x) = -\log p\bepar{x} $.\\
+We can quantify the amount of uncertainty in an entire probability distribution using the \textbf{Shannon entropy} $$ H(x) = \mathbb{E}_{x\sim P}\becro{I(x)} = - \mathbb{E}_{x\sim P}\becro{\log P(x)} $$ In other words the Shannon entropy of a distribution is the expected amount of information in an event drawn from that distribution. \\
+If we express the logrithm in base 2, then this entropy gives you the average number of bits needed to encode a symbol drawn form a distribution P.\\
+We can have a more explicit form of $H(x)$ in which the expected value is explicit: $$ H(x) = - \int_{x\in\Omega} p(x) \log p(x)\, dx \text{\hspace{2mm} or \hspace{2mm} } -\sum_{i \in A} p_i \log p_i$$  
+\brick \subsection{Kullback–Leibler divergence (DL)} \bk
+Now we want to quantify the difference on entropy between two distributions, we define the KL entropy : $$D_{\text{KL}}\bepar{P||Q} = \mathbb{E} \becro{\log P(x) - \log Q(x)}=\mathbb{E}_{x\sim P}\becro{\log \frac{P(x)}{Q(x)}}$$ This is the measure of extra amount of information needed to send a message containing symbols drawn from probability distribution P, with a code design\\
+This KL can be called information divergence or relative entropy. It is a way of comparing a \textit{true} distribution and an arbitrarily distribution q(x). \\
+In a compresssion problem, if p is the real message and q is the compressed target data then the DL divergence is the average number of additional bits (if log is base 2) par datum necessary for the compression.\\
+ It is also viewed as the unnecessary surprised : if one knows that p is the true distribution, and one believes (has a prior) that q is the true distribution; then the second person will be more «surprised» than the first one; the extend of which prior is wrong can be quantified in term of how unnecessarily surprised it's expected to make him (Wikipedia).\\
+  
+\noindent This quantity has some interesting properties :
+\begin{itemize}
+ \item[--] \textit{\textbf{Non negative}}: This quantity is necessarily positive and can be zero when $p(x) = q(x)$ (no need more information, no surprise). \\[1mm]
+ \item[--] \textbf{\textit{Asymmetric}}$$ D_{\text{KL}}\bepar{P||Q} \neq D_{\text{KL}}\bepar{Q||P} $$
+\end{itemize}
+
+\pagebreak
 
 \navy \chapter{Notes ML : \cite{muller2016introduction}} \bk
 \brick \subsection{Classification}\bk
