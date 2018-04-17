@@ -9,14 +9,18 @@ import sys, warnings, argparse
 import os
 import os.path as osp
 
+from matplotlib.pyplot import cm
+
 from scipy import optimize as op
 from itertools import cycle
-import matplotlib.cm as cm
+
 
 import numdifftools as nd
 
 import time
 import glob
+
+#run burger_NN.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10
 
 ## Import de la classe TF ##
 nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
@@ -26,6 +30,7 @@ import NN_class_try as NNC
 import Class_Vit_Choc as cvc
 
 cvc = reload(cvc)
+NNC = reload(NNC)
 
 #def x_y_burger () :
 parser = cvc.parser()
@@ -92,22 +97,33 @@ u_beta_chol = dict()
 lst_pairs_bu = sorted(lst_pairs_bu)
 lst_pairs_bc = sorted(lst_pairs_bc)
 
-for pbu, pbc in zip(lst_pairs_bu, lst_pairs_bc) :
+plt.figure("betas")
+
+num_real = 10
+
+#color=cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0]))
+color=iter(cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0])))
+
+for it, (pbu, pbc) in enumerate(zip(lst_pairs_bu, lst_pairs_bc)) :
     beta = np.load(pbu[0])
     chol = np.load(pbc[1])
     u = np.load(pbu[1])
-
+    
+    c = next(color)
     if osp.splitext(pbu[1])[0][-3:] != "000" :
-        for i in range(4) :
+        for i in range(num_real) :
             beta_chol[str(i)] = beta_last + chol_last.dot(np.random.rand(len(beta_last)))            
-            print np.shape(beta_chol[str(i)])
+#            print np.shape(beta_chol[str(i)])
             u_beta_chol[str(i)] = cb.u_beta(beta_chol[str(i)], u_last)
-           
+    
+        plt.plot(cb.line_x[1:cb.Nx-1], beta[1:cb.Nx-1], c=c, label="beta iteration %d" %(it))
+    
     for j in range(1, len(u)-1) :
-        X = np.block([[X], [u[j-1], u[j], u[j+1]]])
-        y = np.block([[y], [beta[j]]])
         if osp.splitext(pbu[1])[0][-3:] != "000" :
-            for i in range(4) :
+            X = np.block([[X], [u[j-1], u[j], u[j+1]]])
+            y = np.block([[y], [beta[j]]])
+            
+            for i in range(num_real) :
                 bb = beta_chol[str(i)]
                 uu = u_beta_chol[str(i)]
                 X = np.block([[X], [uu[j-1], uu[j], uu[j+1]]])
@@ -119,6 +135,7 @@ for pbu, pbc in zip(lst_pairs_bu, lst_pairs_bc) :
     
 X = np.delete(X, 0, axis=0)
 y = np.delete(y, 0, axis=0)
+plt.legend(ncol=3)
 
 dict_layers = {"I" : 3,\
                "N1" : 100,\
@@ -144,7 +161,7 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     nn_obj.cost_computation(loss, reduce_type=reduce_type)
     nn_obj.def_optimization()
     try :
-        nn_obj.training_session(tol=1e-3, batched=False, step=50)
+        nn_obj.training_session(tol=1e-3, batched=False, step=50, verbose=True)
     
     except KeyboardInterrupt :
         print "Session closed"
@@ -188,4 +205,8 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
 
 
 #nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=5000, reduce_type="sum", verbose=True)
-#def NN_solver(nn_obj):
+
+#def NN_solver(nn_obj, parser):
+    
+    
+    

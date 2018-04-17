@@ -306,7 +306,7 @@ class Neural_Network():
         
         self.minimize_loss = self.train_op.minimize(self.loss)
 ###-------------------------------------------------------------------------------
-    def training_session(self, tol, batched = False, step=10) :
+    def training_session(self, tol, batched = False, step=10, verbose = False) :
 #       Initialization ou ré-initialization ;)
         init = tf.global_variables_initializer()
         self.sess.run(init)
@@ -316,6 +316,9 @@ class Neural_Network():
         err, epoch = 1., 0
         
         tol = tol
+        
+        if verbose == True :
+            plt.figure("Cost Evolution")
         
         if batched == False :
 #            with tf.Session() as sess:        
@@ -330,7 +333,9 @@ class Neural_Network():
                                                     .format(epoch, self.lr))
                 if epoch % step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                
+                    if verbose == True :
+                        plt.plot(epoch, costs[-1], marker='o', color='steelblue', linestyle='--')
+                        plt.pause(0.001)
                 epoch += 1
 
             print costs[-10:]
