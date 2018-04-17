@@ -206,7 +206,30 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
 
 #nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=5000, reduce_type="sum", verbose=True)
 
-#def NN_solver(nn_obj, parser):
+def NN_solver(nn_obj, cb=cb):
+    beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
+            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+        
+    u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.inferred_U,\
+            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+        
+    chol_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.chol_path,\
+            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
     
-    
-    
+    # Initialisation it = 1
+    u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=1))
+    for it in range(cb.itmax) :
+        beta = []
+        for j in range(1, cb.Nx-1) :
+            xs = np.array([u[j-1], u[j], u[j+1]]).reshape(-1,3)
+            beta.append(nn_obj.predict(xs)[0,0])
+        
+
+        print beta, type(beta), np.shape(beta)
+        u_nNext = cb.u_beta(np.asarray(beta), u)
+        u = u_nNext
+        u[0] = u[-2]
+        u[-1] = u[1]
+        
+        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it), c='k')
+        plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted", marker='o', fillstyle = 'none', linestyle= 'none', c='steelblue') 

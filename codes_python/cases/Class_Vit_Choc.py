@@ -378,11 +378,11 @@ class Vitesse_Choc() :
 #        return u_n
 ##---------------------------------------------------
     def u_beta(self, beta, u_n, typeJ = "grad", verbose=False) :
-        
+#        print beta.size, beta.shape
         if typeJ == "grad" : 
             INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
-            SUP2 = np.diag(np.transpose([-self.r*beta[i+1] + self.fac/2 for i in range(self.Nx-3)]), 1)
-            A_diag2 = np.diag(np.transpose([(self.r*beta[i+1] + 1 - self.fac) for i in range(self.Nx-2)]))
+            SUP2 = np.diag(np.transpose([-self.r*beta[i] + self.fac/2 for i in range(self.Nx-3)]), 1)
+            A_diag2 = np.diag(np.transpose([(self.r*beta[i] + 1 - self.fac) for i in range(self.Nx-2)]))
         
         if typeJ == "u" : 
             INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
@@ -663,7 +663,7 @@ class Vitesse_Choc() :
             cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)] # Pour avoir la bonne taille de matrice
             
             if it == 0 :
-                u_n = self.u_beta(beta_n, u_obs_nt, typeJ = typeJ)
+                u_n = self.u_beta(beta_n[1:cb.Nx-1], u_obs_nt, typeJ = typeJ)
             
             print ("diag")
 
@@ -672,7 +672,7 @@ class Vitesse_Choc() :
             
             print (cov_obs_nt_inv.shape)
             #Pour avoir la bonne taille de matrice
-            Uu = lambda beta : u_obs_nt - self.u_beta(beta, u_n, typeJ=typeJ) 
+            Uu = lambda beta : u_obs_nt - self.u_beta(beta[1:cb.Nx-1], u_n, typeJ=typeJ) 
             
             J = lambda beta : 0.5 * (np.dot( np.dot(Uu(beta).T, cov_obs_nt_inv), Uu(beta)) +\
                                              reg_fac*np.dot( np.transpose(beta - beta_n).dot(Id), (beta - beta_n) ) \
@@ -716,7 +716,7 @@ class Vitesse_Choc() :
             print("\x1b[1;37;44mDifference de beta it {} = {}\x1b[0m".format(it, np.linalg.norm(beta_n - optimi_obj_n.x, np.inf)))
             beta_n_opti = optimi_obj_n.x
             
-            u_n_beta = self.u_beta(beta_n_opti, u_n, typeJ=typeJ)
+            u_n_beta = self.u_beta(beta_n_opti[1:self.Nx-1], u_n, typeJ=typeJ)
 
             t2 = time.time()
             print (optimi_obj_n)
@@ -788,250 +788,250 @@ class Vitesse_Choc() :
                 plt.pause(0.01)
                 evol += 1
 #---------------------------------------------------------------------        
-    def adjoint_bfgs(self, inter_plot=False, verbose = False) : 
-        """
-        inter_plot to see the evolution of the inference
-        verbose to print different informqtion during the optimization
-        """
-        print("Début de l\'optimisation maison\n")
-        
-        self.debug = dict()
-        # Le code a été pensé pour être lancé avec plusieurs valeurs de T_inf dans la liste T_inf_lst.
-        # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
-        # cours. De cette façon, on peut passer d'une température à une autre, et donc recommencer une optimisation 
-        # pour T_inf différente, sans craindre de perdre les résultats de la T_inf précédente
+#    def adjoint_bfgs(self, inter_plot=False, verbose = False) : 
+#        """
+#        inter_plot to see the evolution of the inference
+#        verbose to print different informqtion during the optimization
+#        """
+#        print("Début de l\'optimisation maison\n")
+#        
+#        self.debug = dict()
+#        # Le code a été pensé pour être lancé avec plusieurs valeurs de T_inf dans la liste T_inf_lst.
+#        # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
+#        # cours. De cette façon, on peut passer d'une température à une autre, et donc recommencer une optimisation 
+#        # pour T_inf différente, sans craindre de perdre les résultats de la T_inf précédente
 
-        bfgs_adj_grad =   dict()
-        bfgs_adj_bmap =   dict()
-        
-        self.too_low_err_hess = dict()
-        sup_g_stagne = False
+#        bfgs_adj_grad =   dict()
+#        bfgs_adj_bmap =   dict()
+#        
+#        self.too_low_err_hess = dict()
+#        sup_g_stagne = False
 
-        plt.figure("Evolution")
-        if self.stats_done == False :
-            self.get_obs_statistics(True)
-            print("Get_Obs_Statistics lunched")
-        
-        def fun_DR_DU () :
-            INF1 = 0.5*np.diag([-self.nu/self.dx**2 for i in range(self.Nx - 1)], -1)
-            SUP1 = 0.5*np.diag([-self.nu/self.dx**2 for i in range(self.Nx - 1)], +1)
-            A1   = np.diag([-1./self.dt + self.nu/self.dx**2 for i in range(self.Nx)])
-            return A1 + INF1 + SUP1
-            
-        beta_n = self.beta_prior
-        u_n = self.U_moy_obs["u_moy_it0"]
-        
-        Id = np.eye(self.Nx)
-#        alpha = 1.e-4 # facteur de régularisation
-        
-        self.opti_obj = dict
-        self.beta_n_dict = dict()
-        self.U_beta_n_dict = dict()
-        self.optimization_time = dict()
-        
-        u_n_beta = u_n
-        
-        t = 0
-        for it in range(self.itmax) :
-            if it >0 :
-                beta_n = beta_nNext
-                u_n = u_n_beta
-                
-            t1 = time.time()
-            u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it)]
-            cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it)]
-            
-            try :
-                cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
-            except np.linalg.LinAlgError :
-                print( "diag" )
-                cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it)])
-            
-            J = lambda beta : 0.5 * (np.dot( np.dot((u_obs_nt - self.u_beta(beta, u_n)), cov_obs_nt_inv), (u_obs_nt - self.u_beta(beta, u_n))) +\
-                                             np.dot( (beta-beta_n).dot(Id), (beta-beta_n) )\
-                                    )
-            DR_DU = fun_DR_DU()
-            DR_DU_inv = np.linalg.inv(DR_DU)
-            DJ_DU = lambda beta : - np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
-
-            DR_DBETA = Id 
-            DJ_DBETA = lambda beta : np.dot(Id, beta - beta_n)
-            
-            DJ = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
-            
-            print ("ADJ Minimization it = %d" %(it))
-            
-            sup_g_lst = [] # Pour tester si la correction a stagné
-            corr_chol = [] # Pour comptabiliser les fois ou la hessienne n'était pas définie positive
-            
-            print("J(beta_prior) = {} \t it = {}".format(J(self.beta_prior), it))
-            
-            g_n = DJ(beta_n)
-            
-            g_sup = np.linalg.norm(g_n, np.inf)
-            sup_g_lst.append(np.linalg.norm(g_n, np.inf))
-            
-            print ("\x1b[1;37;44mSup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf))) # Affichage surligné bleu
-
-            # Hessienne (réinitialisé plus tard)
-            H_n_inv = np.eye(self.Nx)
-            self.debug["first_hess"] = H_n_inv
-            
-            # Tracé des différentes figures (Evolutions de béta et du gradient en coursc d'optimization)
-#            fig, ax = plt.subplots(1,2,figsize=(13,7))
-#            ax[0].plot(self.line_x, beta_n, label="beta_prior")
-#            ax[1].plot(self.line_x, g_n,    label="gradient prior")
-            
-            self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
-            dir_lst =   []
-            
-            ######################
-            ##-- Optimisation --##
-            ######################
-            cpt = 0
-            while (cpt<500) and g_sup > 1e-14 :
-                if cpt > 0 :
-                ########################
-                ##-- Incrementation --##
-                ######################## 
-                    beta_n  =   beta_nNext
-                    g_n     =   g_nNext
-                    g_sup   =   np.linalg.norm(g_n, np.inf) # norme infini du gradient
-                    
-                    H_n_inv   =   H_nNext_inv
-
-                    #MAJ des figures avec nouveaux tracés
-#                    plt.figure("Evolution de l'erreur")
-#                    plt.scatter(cpt, g_sup, c='black')
-#                    if inter_plot == True :
-#                        plt.pause(0.05)
-
-#                    ax[0].plot(self.line_x, beta_n, label="beta cpt%d_%d" %(cpt, it))
-#                    ax[1].plot(self.line_x, g_n, label="grad cpt%d" %(cpt), marker='s')
-                    
-                    # MAJ de la liste des gradient.                      
-                    sup_g_lst.append(g_sup)
-                    if len(sup_g_lst) > 6 :
-                        lst_ = sup_g_lst[(len(sup_g_lst)-5):] # Prend les 5 dernières valeurs des sup_g
-                        mat = [[abs(i - j) for i in lst_] for j in lst_] # Matrices des différences val par val
-                        sup_g_stagne = (np.linalg.norm(mat, 2) <= 1e-2) # True ? -> alpha = 1 sinon backline_search
-                    
-                    # Affichage des données itérations précédentes, initialisant celle à venir
-                    print("Compteur = %d" %(cpt))
-                    print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
-                    print("Stagne ? {}".format(sup_g_stagne))
-                    
-#                    if verbose == True :
-#                        print ("beta cpt {}:\n{}".format(cpt,beta_n))
-#                        print("grad n = {}".format(g_n))                            
-#                        print("beta_n = \n  {} ".format(beta_n))
-#                        print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
-#                                                           err_beta, err_hess) )
-#                        print ("Hess cpt {}:\n{}".format(cpt, H_n_inv))
-
-                GD = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
-                                    np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]  
-                                                  
-                ## Calcule de la direction 
-                d_n     =   - np.dot(H_n_inv, g_n)
-                test_   =   (GD(H_n_inv) < 0) ## Booléen GD ou pas ?
-                
-                print("d_n descent direction : {}".format(test_))    
-                
-                if test_  == False : 
-                    # Si GD == False : H_n n'est pas définie positive (Matrix Positive Definite)
-                    self.positive_definite_test(H_n_inv, verbose=False) # Permet de vérifier diagnostique (obsolète)
-
-                    H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.) # Corr CF Nocedal Wright (page ou chap ?)
-                    print("cpt = {}\t cholesky for MPD used.")
-                    print("new d_n descent direction : {}".format(test(H_n_inv) < 0))
-                    
-                    d_n     =   - np.dot(H_n_inv, g_n)  # Nouvelle direction conforme
-                    corr_chol.append(cpt) # Compteur pour lequel H_n n'était pas MPD (pour post_process) 
-
-                print("d_n :\n {}".format(d_n))
-                
-                ## Calcule de la longueur de pas 
-                ## Peut nous faire gagner du temps de calcule
-                if (sup_g_stagne == True and cpt > 20) : 
-                    
-                    alpha = 1. 
-                    print("\x1b[1;37;44mgradient stagne : coup de pouce alpha = 1. \x1b[0m")
-                    
-                    time.sleep(0.7) # Pour avoir le temps de voir qu'il y a eu modif           
-
-                else :  
-                    alpha, al2_cor = self.backline_search(J, DJ, g_n, beta_n ,d_n ,cpt, g_sup, rho=1e-2,c=0.5, w_pm = 0.9)
-                    if al2_cor  :
-                        al2_lst.append(cpt)
-                        # Armijo et Strong Wolf verfiées (obsolète)
-                        
-                ## Calcule des termes n+1
-                dbeta_n =  alpha*d_n
-                beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
-
-                g_nNext =   DJ(beta_nNext)
-                # On construit s_nNext et y_nNext conformément au BFGS
-                s_nNext =   (beta_nNext - beta_n)
-                y_nNext =   g_nNext - g_n
-
-                ## Pour la première itération on peut prendre (voir Nocedal and Wright (page chapitre)) :
-                if cpt == 0 :
-                    fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
-                    fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
-                    
-                    H_n_inv *= fac_H
-                
-                # Incrémentation de H_n conformément au BFGS (Nocedal and Wright et scipy)
-                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
-                self.debug["curr_hess_%s" %(str(cpt))] = H_nNext_inv
-                
-#                # Calcule des résidus
-#                err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
-#                err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
+#        plt.figure("Evolution")
+#        if self.stats_done == False :
+#            self.get_obs_statistics(True)
+#            print("Get_Obs_Statistics lunched")
+#        
+#        def fun_DR_DU () :
+#            INF1 = 0.5*np.diag([-self.nu/self.dx**2 for i in range(self.Nx - 1)], -1)
+#            SUP1 = 0.5*np.diag([-self.nu/self.dx**2 for i in range(self.Nx - 1)], +1)
+#            A1   = np.diag([-1./self.dt + self.nu/self.dx**2 for i in range(self.Nx)])
+#            return A1 + INF1 + SUP1
+#            
+#        beta_n = self.beta_prior
+#        u_n = self.U_moy_obs["u_moy_it0"]
+#        
+#        Id = np.eye(self.Nx)
+##        alpha = 1.e-4 # facteur de régularisation
+#        
+#        self.opti_obj = dict
+#        self.beta_n_dict = dict()
+#        self.U_beta_n_dict = dict()
+#        self.optimization_time = dict()
+#        
+#        u_n_beta = u_n
+#        
+#        t = 0
+#        for it in range(self.itmax) :
+#            if it >0 :
+#                beta_n = beta_nNext
+#                u_n = u_n_beta
 #                
-#                # Erreur sur J entre l'ancien beta et le nouveau                 
-#                err_j    =   J(beta_nNext) - J(beta_n)
-#                
-#                if verbose == True :
-#                    print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
-#                    print("err_beta = {} cpt = {}".format(err_beta, cpt))
-#                    print ("err_hess = {}".format(err_hess))
-#                
-#                # Implémentation de liste pour vérifier si besoin
-#                self.alpha_lst.append(alpha)
-#                err_hess_lst.append(err_hess) 
-#                err_beta_lst.append(err_beta)
-#                dir_lst.append(np.linalg.norm(d_n, 2))
-#                
-                print("\n")
-                cpt +=  1    
-                
-            # Pour ne pas oublier :            
-            # On cherche beta faisant correspondre les deux solutions au temps 1. Le beta final est ensuite utilisé pour calculer u_beta au temps 1 !
-            u_n_beta = self.u_beta(beta_nNext, u_n)
+#            t1 = time.time()
+#            u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it)]
+#            cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it)]
+#            
+#            try :
+#                cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
+#            except np.linalg.LinAlgError :
+#                print( "diag" )
+#                cov_obs_nt_inv = np.linalg.inv(self.diag_cov_obs_dict["diag_cov_obs_it%d" %(it)])
+#            
+#            J = lambda beta : 0.5 * (np.dot( np.dot((u_obs_nt - self.u_beta(beta, u_n)), cov_obs_nt_inv), (u_obs_nt - self.u_beta(beta, u_n))) +\
+#                                             np.dot( (beta-beta_n).dot(Id), (beta-beta_n) )\
+#                                    )
+#            DR_DU = fun_DR_DU()
+#            DR_DU_inv = np.linalg.inv(DR_DU)
+#            DJ_DU = lambda beta : - np.dot(cov_obs_nt, (u_obs_nt - self.u_beta(beta, u_n)))
 
-            t2 = time.time()
-            print ("it {}, optimization time : {:.3f}".format(it, abs(t2-t1)))
-            
-            self.optimization_time["it%d" %(it)] = abs(t2-t1)
-            
-            self.beta_n_dict["beta_it%d" %(it)]  = beta_nNext
-#            self.opti_obj["opti_obj_it%d" %(it)] = optimi_obj_n
-            self.U_beta_n_dict["u_beta_it%d" %(it)] = self.u_beta(beta_nNext, u_n)
-                        
-            if it % 20 ==0 :
-                plt.clf()
-                plt.plot(self.line_x, u_obs_nt, label="LW it = %d" %(it),\
-                        marker='o', fillstyle='none', linestyle='none',\
-                        c='r')
-                plt.plot(self.line_x, u_n_beta, label='Opti it %d'%(it),\
-                        c='k')
-                plt.legend(loc = "best")
-                plt.ylim((-0.75, 1.4))
-                plt.pause(0.1)
-                # n --> n+1 si non convergence, sort de la boucle sinon 
-#--------------------------------------------------------------------- 
+#            DR_DBETA = Id 
+#            DJ_DBETA = lambda beta : np.dot(Id, beta - beta_n)
+#            
+#            DJ = lambda beta : DJ_DBETA(beta) - np.dot( np.dot(DJ_DU(beta), DR_DU_inv), DR_DBETA)
+#            
+#            print ("ADJ Minimization it = %d" %(it))
+#            
+#            sup_g_lst = [] # Pour tester si la correction a stagné
+#            corr_chol = [] # Pour comptabiliser les fois ou la hessienne n'était pas définie positive
+#            
+#            print("J(beta_prior) = {} \t it = {}".format(J(self.beta_prior), it))
+#            
+#            g_n = DJ(beta_n)
+#            
+#            g_sup = np.linalg.norm(g_n, np.inf)
+#            sup_g_lst.append(np.linalg.norm(g_n, np.inf))
+#            
+#            print ("\x1b[1;37;44mSup grad : %f \x1b[0m" %(np.linalg.norm(g_n, np.inf))) # Affichage surligné bleu
+
+#            # Hessienne (réinitialisé plus tard)
+#            H_n_inv = np.eye(self.Nx)
+#            self.debug["first_hess"] = H_n_inv
+#            
+#            # Tracé des différentes figures (Evolutions de béta et du gradient en coursc d'optimization)
+##            fig, ax = plt.subplots(1,2,figsize=(13,7))
+##            ax[0].plot(self.line_x, beta_n, label="beta_prior")
+##            ax[1].plot(self.line_x, g_n,    label="gradient prior")
+#            
+#            self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
+#            dir_lst =   []
+#            
+#            ######################
+#            ##-- Optimisation --##
+#            ######################
+#            cpt = 0
+#            while (cpt<500) and g_sup > 1e-14 :
+#                if cpt > 0 :
+#                ########################
+#                ##-- Incrementation --##
+#                ######################## 
+#                    beta_n  =   beta_nNext
+#                    g_n     =   g_nNext
+#                    g_sup   =   np.linalg.norm(g_n, np.inf) # norme infini du gradient
+#                    
+#                    H_n_inv   =   H_nNext_inv
+
+#                    #MAJ des figures avec nouveaux tracés
+##                    plt.figure("Evolution de l'erreur")
+##                    plt.scatter(cpt, g_sup, c='black')
+##                    if inter_plot == True :
+##                        plt.pause(0.05)
+
+##                    ax[0].plot(self.line_x, beta_n, label="beta cpt%d_%d" %(cpt, it))
+##                    ax[1].plot(self.line_x, g_n, label="grad cpt%d" %(cpt), marker='s')
+#                    
+#                    # MAJ de la liste des gradient.                      
+#                    sup_g_lst.append(g_sup)
+#                    if len(sup_g_lst) > 6 :
+#                        lst_ = sup_g_lst[(len(sup_g_lst)-5):] # Prend les 5 dernières valeurs des sup_g
+#                        mat = [[abs(i - j) for i in lst_] for j in lst_] # Matrices des différences val par val
+#                        sup_g_stagne = (np.linalg.norm(mat, 2) <= 1e-2) # True ? -> alpha = 1 sinon backline_search
+#                    
+#                    # Affichage des données itérations précédentes, initialisant celle à venir
+#                    print("Compteur = %d" %(cpt))
+#                    print("\x1b[1;37;44mSup grad : {}\x1b[0m".format(g_sup))
+#                    print("Stagne ? {}".format(sup_g_stagne))
+#                    
+##                    if verbose == True :
+##                        print ("beta cpt {}:\n{}".format(cpt,beta_n))
+##                        print("grad n = {}".format(g_n))                            
+##                        print("beta_n = \n  {} ".format(beta_n))
+##                        print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
+##                                                           err_beta, err_hess) )
+##                        print ("Hess cpt {}:\n{}".format(cpt, H_n_inv))
+
+#                GD = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
+#                                    np.dot(H_n_inv, g_n[:, np.newaxis]))[0,0]  
+#                                                  
+#                ## Calcule de la direction 
+#                d_n     =   - np.dot(H_n_inv, g_n)
+#                test_   =   (GD(H_n_inv) < 0) ## Booléen GD ou pas ?
+#                
+#                print("d_n descent direction : {}".format(test_))    
+#                
+#                if test_  == False : 
+#                    # Si GD == False : H_n n'est pas définie positive (Matrix Positive Definite)
+#                    self.positive_definite_test(H_n_inv, verbose=False) # Permet de vérifier diagnostique (obsolète)
+
+#                    H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.) # Corr CF Nocedal Wright (page ou chap ?)
+#                    print("cpt = {}\t cholesky for MPD used.")
+#                    print("new d_n descent direction : {}".format(test(H_n_inv) < 0))
+#                    
+#                    d_n     =   - np.dot(H_n_inv, g_n)  # Nouvelle direction conforme
+#                    corr_chol.append(cpt) # Compteur pour lequel H_n n'était pas MPD (pour post_process) 
+
+#                print("d_n :\n {}".format(d_n))
+#                
+#                ## Calcule de la longueur de pas 
+#                ## Peut nous faire gagner du temps de calcule
+#                if (sup_g_stagne == True and cpt > 20) : 
+#                    
+#                    alpha = 1. 
+#                    print("\x1b[1;37;44mgradient stagne : coup de pouce alpha = 1. \x1b[0m")
+#                    
+#                    time.sleep(0.7) # Pour avoir le temps de voir qu'il y a eu modif           
+
+#                else :  
+#                    alpha, al2_cor = self.backline_search(J, DJ, g_n, beta_n ,d_n ,cpt, g_sup, rho=1e-2,c=0.5, w_pm = 0.9)
+#                    if al2_cor  :
+#                        al2_lst.append(cpt)
+#                        # Armijo et Strong Wolf verfiées (obsolète)
+#                        
+#                ## Calcule des termes n+1
+#                dbeta_n =  alpha*d_n
+#                beta_nNext = beta_n + dbeta_n  # beta_n - alpha*d_n              
+
+#                g_nNext =   DJ(beta_nNext)
+#                # On construit s_nNext et y_nNext conformément au BFGS
+#                s_nNext =   (beta_nNext - beta_n)
+#                y_nNext =   g_nNext - g_n
+
+#                ## Pour la première itération on peut prendre (voir Nocedal and Wright (page chapitre)) :
+#                if cpt == 0 :
+#                    fac_H = np.dot(y_nNext[np.newaxis, :], s_nNext[:, np.newaxis])
+#                    fac_H /= np.dot(y_nNext[np.newaxis, :], y_nNext[:, np.newaxis])
+#                    
+#                    H_n_inv *= fac_H
+#                
+#                # Incrémentation de H_n conformément au BFGS (Nocedal and Wright et scipy)
+#                H_nNext_inv = self.Next_hess(H_n_inv, y_nNext, s_nNext)
+#                self.debug["curr_hess_%s" %(str(cpt))] = H_nNext_inv
+#                
+##                # Calcule des résidus
+##                err_beta =   np.linalg.norm(beta_nNext - beta_n, 2)
+##                err_hess =   np.linalg.norm(H_n_inv - H_nNext_inv, 2)
+##                
+##                # Erreur sur J entre l'ancien beta et le nouveau                 
+##                err_j    =   J(beta_nNext) - J(beta_n)
+##                
+##                if verbose == True :
+##                    print ("J(beta_nNext) = {}\t and err_j = {}".format(J(beta_nNext), err_j))
+##                    print("err_beta = {} cpt = {}".format(err_beta, cpt))
+##                    print ("err_hess = {}".format(err_hess))
+##                
+##                # Implémentation de liste pour vérifier si besoin
+##                self.alpha_lst.append(alpha)
+##                err_hess_lst.append(err_hess) 
+##                err_beta_lst.append(err_beta)
+##                dir_lst.append(np.linalg.norm(d_n, 2))
+##                
+#                print("\n")
+#                cpt +=  1    
+#                
+#            # Pour ne pas oublier :            
+#            # On cherche beta faisant correspondre les deux solutions au temps 1. Le beta final est ensuite utilisé pour calculer u_beta au temps 1 !
+#            u_n_beta = self.u_beta(beta_nNext, u_n)
+
+#            t2 = time.time()
+#            print ("it {}, optimization time : {:.3f}".format(it, abs(t2-t1)))
+#            
+#            self.optimization_time["it%d" %(it)] = abs(t2-t1)
+#            
+#            self.beta_n_dict["beta_it%d" %(it)]  = beta_nNext
+##            self.opti_obj["opti_obj_it%d" %(it)] = optimi_obj_n
+#            self.U_beta_n_dict["u_beta_it%d" %(it)] = self.u_beta(beta_nNext, u_n)
+#                        
+#            if it % 20 ==0 :
+#                plt.clf()
+#                plt.plot(self.line_x, u_obs_nt, label="LW it = %d" %(it),\
+#                        marker='o', fillstyle='none', linestyle='none',\
+#                        c='r')
+#                plt.plot(self.line_x, u_n_beta, label='Opti it %d'%(it),\
+#                        c='k')
+#                plt.legend(loc = "best")
+#                plt.ylim((-0.75, 1.4))
+#                plt.pause(0.1)
+#                # n --> n+1 si non convergence, sort de la boucle sinon 
+##--------------------------------------------------------------------- 
 ###---------------------------------------------------##   
 ######                                            ######
 ######    Fonctions pour calculer la Hessienne    ######
