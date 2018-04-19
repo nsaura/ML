@@ -403,15 +403,8 @@ class Vitesse_Choc() :
         
         u_n_tmp = np.dot(A2, u_n)
         
-        
-#        scd_term = np.dot(self.A3, u_n_2) # à la blace du beta
-        
-#        B_n = np.zeros((self.Nx))
-         
-#        for i in range(self.Nx-2) :
-#            B_n[i] = u_n_tmp[i]
-
         u_nNext = np.dot(np.linalg.inv(self.A1), u_n_tmp)
+
         u_nNext[-1] = u_nNext[1]
         u_nNext[0] = u_nNext[-2]
         
@@ -677,7 +670,8 @@ class Vitesse_Choc() :
             J = lambda beta : 0.5 * (np.dot( np.dot(Uu(beta).T, cov_obs_nt_inv), Uu(beta)) +\
                                              reg_fac*np.dot( np.transpose(beta - beta_n).dot(Id), (beta - beta_n) ) \
                                     )
-            
+                                    
+            # On utilise les différence finies pour l'instant
             DJ = nd.Gradient(J)
                                    
 ##            J2 = lambda beta : 0.5 * ( np.dot(np.dot((u_obs_nt - self.u_beta(beta, u_n)).T, Id), (u_obs_nt - self.u_beta(beta, u_n))) +\
@@ -707,15 +701,18 @@ class Vitesse_Choc() :
 #            
 #            print("\nit = {}, DJ =\n{}".format(it, DJ(beta_n)))
             # Pour ne pas oublier :            
-            # On cherche beta faisant correspondre les deux solutions au temps 1. Le beta final est ensuite utilisé pour calculer u_beta au temps 1 !
-            for i in range(len(beta_n)) :
+            
+            # On cherche beta faisant correspondre les deux solutions au temps it + 1. Le beta final est ensuite utilisé pour calculer u_beta au temps it 
+            for i in range(len(beta_n)) : # Un peu de bruit
                 beta_n[i] *= np.random.random()    
 
+            # Minimization 
             optimi_obj_n = op.minimize(J, self.beta_prior, jac=DJ, method=solver, options={"maxiter" : maxiter})
             
             print("\x1b[1;37;44mDifference de beta it {} = {}\x1b[0m".format(it, np.linalg.norm(beta_n - optimi_obj_n.x, np.inf)))
             beta_n_opti = optimi_obj_n.x
             
+            #On ne prend pas les béta dans les ghost cell
             u_n_beta = self.u_beta(beta_n_opti[1:self.Nx-1], u_n, typeJ=typeJ)
 
             t2 = time.time()
@@ -724,18 +721,21 @@ class Vitesse_Choc() :
             
             self.optimization_time["it%d" %(it)] = abs(t2-t1)
             
+            # On enregistre pour garder une trace après calculs
             self.beta_n_dict["beta_it%d" %(it)]  = beta_n_opti
-#            self.opti_obj["opti_obj_it%d" %(it)] = optimi_obj_n
             self.U_beta_n_dict["u_beta_it%d" %(it)] = u_n_beta
             
-            np.save(self.beta_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), beta_n_opti)
+            # On enregistre beta_n, u_n_beta et cholesky
+                # Enregistrement vecteur entier
+            np.save(self.beta_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), beta_n_opti) 
             np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_n_beta)
             
+                # Calcule de Cholesky et enregistrement
             hess_beta = optimi_obj_n.hess_inv
             cholesky_beta = np.linalg.cholesky(hess_beta)
-            
             np.save(self.chol_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), cholesky_beta)
-            
+
+            # On calcule l'amplitude en utilisant cholesky pour savoir si les calculs sont convergés ou pas             
             sigma = dict()
             mins, maxs = [], []
             
@@ -745,11 +745,13 @@ class Vitesse_Choc() :
                 fields_v["%03d" %(j)] = []
             
             cpt = 0
+            # Tirage avec s un vecteur aléatoire tirée d'une distribution N(0,1)
             while cpt <100 :
                 s = np.random.randn(self.Nx)
                 beta_i = beta_n_opti + np.dot(cholesky_beta, s)
                 cpt += 1
-
+            
+            # On enregistre les valeurs des tirages pour chaque i pour trouver les extrema
                 for j in range(len(beta_i)): 
                     fields_v["%03d" %(j)].append(beta_i[j])
                 
@@ -757,7 +759,7 @@ class Vitesse_Choc() :
                 mins.append(min(fields_v["%03d" %(k)]))
                 maxs.append(max(fields_v["%03d" %(k)]))
             
-            print (np.shape(maxs), np.shape(mins))
+#            print (np.shape(maxs), np.shape(mins))
             
             if it % step == 0 :
                 if evol == 2 :
@@ -783,7 +785,6 @@ class Vitesse_Choc() :
 
                 axes[1].set_ylim((-2.0, 2.0))
                 axes[1].legend(loc = "best")
-#                plt.ylim((-2.5, 2.5))
                     
                 plt.pause(0.01)
                 evol += 1

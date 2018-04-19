@@ -75,16 +75,23 @@ dict_layers = {"I" : 2,\
 N_hidden_layer = len(dict_layers.keys()) - 2
 #nn = NNC.Neural_Network(parser.lr, N_=dict_layers, max_epoch=parser.N_epoch)
 ###-------------------------------------------------------------------------------
-def recentre(x_s, X_train_mean, X_train_std):
+def recentre(xs, X_train_mean, X_train_std):
+    """
+    This function refocuses the input before prediction. It needs three arguments :
     
-    x_s[0] -= X_train_mean[0]
-    if np.abs(X_train_std[0]) > 1e-12 : 
-        x_s[0] /= X_train_std[0] 
+    xs              :   The input to refocuses
+    X_train_mean    :   The mean vector calculated according to the training set
+    X_train_std     :   The standard deviation vector calculated according to the training set   
     
-    x_s[1] -= X_train_mean[1]
-    x_s[1] = x_s[1] / X_train_std[1]
-    
-    return x_s.reshape(1,-1)
+    xs is a vector of shape [N] 
+    X_train_mean and X_train_std are vectors of whose shape is [N_features]
+    """
+    for i in range(np.size(X_train_mean)) :
+        xs[i] -= X_train_mean[i]
+        if np.abs(X_train_std[i]) > 1e-12 :
+            xs[i] /= X_train_std[i]
+
+    return xs
 ###-------------------------------------------------------------------------------
 def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, **kwargs) :
     # build_case(1e-3, X, y , act="relu", opti="RMS", loss="OLS", decay=0.7, momentum=0.8, max_epoch=1000) marche très bien avec [10, 15, 20, 25, 30, 35, 40, 45, 50]
@@ -113,7 +120,13 @@ def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch
     nn_obj.def_optimization()
 #       nn.minimize_loss
     try :
-        nn_obj.training_session(tol=1e-3, batched=False)
+        b_sz = kwargs["batch_sz"]
+        print ("Batch size = ", b_sz)
+        if "color" in kwargs.keys() :
+            nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True, color = kwargs["color"])
+        
+        else :
+            nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True)
     
     except KeyboardInterrupt :
         print "Session closed"
@@ -208,8 +221,9 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
         
         beta = []
         for j,t in enumerate(T_n) :
-            x_s = np.array([[T_inf[j], t]]) ## T_inf, T(z)
-            x_s = recentre(x_s[0], nn_obj.train_mean, nn_obj.train_std)
+            x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
+            x_s = recentre(x_s, nn_obj.train_mean, nn_obj.train_std)
+            x_s = x_s.reshape(-1,1)
             beta.append(nn_obj.sess.run(nn_obj.y_pred_model, feed_dict={nn_obj.x: x_s})[0,0])
         
 #        print ("beta premiere iteration :\n {}".format(beta))
