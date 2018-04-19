@@ -36,6 +36,9 @@ NNC = reload(NNC)
 parser = cvc.parser()
 cb = cvc.Vitesse_Choc(parser)
 
+cb.obs_res(True, True)
+#cb.minimization(maxiter=50, step=5)
+
 u_name = cb.u_name
 b_name = cb.beta_name
 
@@ -99,7 +102,7 @@ lst_pairs_bc = sorted(lst_pairs_bc)
 
 plt.figure("betas")
 
-num_real = 10
+num_real = 5
 
 #color=cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0]))
 color=iter(cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0])))
@@ -139,18 +142,32 @@ plt.legend(ncol=3)
 
 dict_layers = {"I" : 3,\
                "N1" : 100,\
-               "N2" : 50,\
-               "N3" : 50,\
-               "N4" : 50,\
-               "N5" : 50,\
-               "N6" : 50,\
-               "N7" : 50,\
-               "N8" : 50,\
-               "N9" : 50,\
-               "N10": 50,\
+               "N2" : 100,\
+               "N3" : 100,\
+               "N4" : 100,\
+               "N5" : 100,\
+               "N6" : 100,\
                "O"  : 1}
 
-def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=False, **kwargs) :
+def recentre(xs, X_train_mean, X_train_std):
+    """
+    This function refocuses the input before prediction. It needs three arguments :
+    
+    xs              :   The input to refocuses
+    X_train_mean    :   The mean vector calculated according to the training set
+    X_train_std     :   The standard deviation vector calculated according to the training set   
+    
+    xs is a vector of shape [N] 
+    X_train_mean and X_train_std are vectors of whose shape is [N_features]
+    """
+    for i in range(np.size(X_train_mean)) :
+        xs[i] -= X_train_mean[i]
+        if np.abs(X_train_std[i]) > 1e-12 :
+            xs[i] /= X_train_std[i]
+
+    return xs
+
+def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, **kwargs) :
     plt.ion()
     nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch)
     
@@ -161,7 +178,9 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     nn_obj.cost_computation(loss, reduce_type=reduce_type)
     nn_obj.def_optimization()
     try :
-        nn_obj.training_session(tol=1e-3, batched=False, step=50, verbose=True)
+        b_sz = kwargs["batch_sz"]
+        print b_sz
+        nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True)
     
     except KeyboardInterrupt :
         print "Session closed"
@@ -204,6 +223,7 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     return nn_obj
 
 
+#nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=20000, reduce_type="sum", verbose=True)
 #nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=5000, reduce_type="sum", verbose=True)
 
 def NN_solver(nn_obj, cb=cb):
@@ -218,10 +238,13 @@ def NN_solver(nn_obj, cb=cb):
     
     # Initialisation it = 1
     u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=1))
-    for it in range(cb.itmax) :
+    for it in range(1, cb.itmax) :
         beta = []
         for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j-1], u[j], u[j+1]]).reshape(-1,3)
+            xs = np.array([u[j-1], u[j], u[j+1]])
+            if nn_obj.scale == True :
+                xs = recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
+            xs = xs.reshape(-1,3)
             beta.append(nn_obj.predict(xs)[0,0])
         
 
@@ -231,5 +254,65 @@ def NN_solver(nn_obj, cb=cb):
         u[0] = u[-2]
         u[-1] = u[1]
         
-        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it), c='k')
-        plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted", marker='o', fillstyle = 'none', linestyle= 'none', c='steelblue') 
+        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it))[1:cb.Nx-1], label="True it = %d" %(it), c='k')
+        plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c='steelblue') 
+        plt.legend()
+        plt.pause(5)
+        plt.clf()
+
+def processing(nn_obj, cb=cb, n_neigh = 3) :
+#    run knn_ML.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -N_sample 10
+
+    from sklearn.neighbors import KNeighborsRegressor
+        
+    reg = KNeighborsRegressor(n_neighbors=n_neigh).fit(nn_obj.X_train, nn_obj.y_train)
+    
+    beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
+            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+        
+    u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.inferred_U,\
+            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+        
+    chol_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.chol_path,\
+            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+    
+    # Initialisation it = 1
+    u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=0))
+    for it in range(1, cb.itmax) :
+        beta = []
+        for j in range(1, cb.Nx-1) :
+            xs = np.array([u[j-1], u[j], u[j+1]])
+            if nn_obj.scale == True :
+                xs = recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
+            xs = xs.reshape(-1,3)
+            beta.append(nn_obj.predict(xs)[0,0])
+            print beta
+
+        print beta, type(beta), np.shape(beta)
+        u_nNext = cb.u_beta(np.asarray(beta), u)
+        u = u_nNext
+#        u[0] = u[-2]
+#        u[-1] = u[1]
+        
+        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it))[1:cb.Nx-1], label="True it = %d" %(it), c='k')
+        plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted it = %d"%(it), marker='o', fillstyle = 'none', linestyle= 'none', c='steelblue') 
+        plt.legend()
+        plt.pause(5)
+        plt.clf()
+#    grid_search = GridSearchCV(SVC(), param_grid, cv=5) # Objet a entrainer et evaluer
+
+    print("Test differences entre prediction et Y_test : ")
+    print("{}".format(y_test - reg.predict(X_test)))
+#    
+#    
+#    
+#    plt.ion()
+#    plt.figure("KNN vs True")
+#    plt.plot(T.line_z, T_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
+#    plt.plot(T.line_z, T_true, label='True', linestyle='--', c='k')
+#    plt.legend()
+
+#    plt.figure("beta KNN vs True")
+#    plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
+#    plt.plot(T.line_z, true_beta, label='True', linestyle='--', c='k')
+#    plt.legend()
