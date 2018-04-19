@@ -663,7 +663,7 @@ class Vitesse_Choc() :
             cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)] # Pour avoir la bonne taille de matrice
             
             if it == 0 :
-                u_n = self.u_beta(beta_n[1:cb.Nx-1], u_obs_nt, typeJ = typeJ)
+                u_n = self.u_beta(beta_n[1:self.Nx-1], u_obs_nt, typeJ = typeJ)
             
             print ("diag")
 
@@ -672,7 +672,7 @@ class Vitesse_Choc() :
             
             print (cov_obs_nt_inv.shape)
             #Pour avoir la bonne taille de matrice
-            Uu = lambda beta : u_obs_nt - self.u_beta(beta[1:cb.Nx-1], u_n, typeJ=typeJ) 
+            Uu = lambda beta : u_obs_nt - self.u_beta(beta[1:self.Nx-1], u_n, typeJ=typeJ) 
             
             J = lambda beta : 0.5 * (np.dot( np.dot(Uu(beta).T, cov_obs_nt_inv), Uu(beta)) +\
                                              reg_fac*np.dot( np.transpose(beta - beta_n).dot(Id), (beta - beta_n) ) \
