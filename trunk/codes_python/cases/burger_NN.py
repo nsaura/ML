@@ -86,11 +86,11 @@ for b in b_files :
 #    for i in range (10) :
 #        print lst_pairs[np.random.randint(len(lst_pairs))]
 
-X = np.zeros((3))
+X = np.zeros((4))
 y = np.zeros((1))
 
-print lst_pairs_bu[0][0]
-print X[0]
+print (lst_pairs_bu[0][0])
+print (X[0])
 #return X, y 
 # pairs :   p[0] -> beta
 #           p[1] -> u
@@ -112,24 +112,28 @@ for it, (pbu, pbc) in enumerate(zip(lst_pairs_bu, lst_pairs_bc)) :
     chol = np.load(pbc[1])
     u = np.load(pbu[1])
     
+    u_mean = np.zeros_like(u[1:cb.Nx-1])
     c = next(color)
+    
     if osp.splitext(pbu[1])[0][-3:] != "000" :
         for i in range(num_real) :
             beta_chol[str(i)] = beta_last + chol_last.dot(np.random.rand(len(beta_last)))            
 #            print np.shape(beta_chol[str(i)])
             u_beta_chol[str(i)] = cb.u_beta(beta_chol[str(i)], u_last)
-    
-        plt.plot(cb.line_x[1:cb.Nx-1], beta[1:cb.Nx-1], c=c, label="beta iteration %d" %(it))
-    
+            
+#            for k in range(0, len(u)-2) : #Pour aller de 1 à Nx-1 vav de u-beta_chol mais commencer aux bons endroits
+#                u_mean[k] += u_beta_chol[str(i)][k+1] / float(num_real)
+            
     for j in range(1, len(u)-1) :
         if osp.splitext(pbu[1])[0][-3:] != "000" :
-            X = np.block([[X], [u[j-1], u[j], u[j+1]]])
+            X = np.block([[X], [u[j-1], u[j], u[j+1], np.mean(u)]])
             y = np.block([[y], [beta[j]]])
             
             for i in range(num_real) :
                 bb = beta_chol[str(i)]
                 uu = u_beta_chol[str(i)]
-                X = np.block([[X], [uu[j-1], uu[j], uu[j+1]]])
+                
+                X = np.block([[X], [uu[j-1], uu[j], uu[j+1], np.mean(uu)]])
                 y = np.block([[y], [bb[j]]])
         
     u_last = u
@@ -140,13 +144,11 @@ X = np.delete(X, 0, axis=0)
 y = np.delete(y, 0, axis=0)
 plt.legend(ncol=3)
 
-dict_layers = {"I" : 3,\
-               "N1" : 100,\
-               "N2" : 100,\
-               "N3" : 100,\
-               "N4" : 100,\
-               "N5" : 100,\
-               "N6" : 100,\
+dict_layers = {"I" : 4,\
+               "N1" : 1000,\
+               "N2" : 500,\
+               "N3" : 500,\
+               "N4" : 500,\
                "O"  : 1}
 
 def recentre(xs, X_train_mean, X_train_std):
@@ -179,12 +181,17 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     nn_obj.def_optimization()
     try :
         b_sz = kwargs["batch_sz"]
-        print b_sz
-        nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True)
-    
+        print("Batch size = ", b_sz)
+        if "color" in kwargs.keys() :
+            nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True, color = kwargs["color"])
+        
+        else :
+            nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True)
+
     except KeyboardInterrupt :
-        print "Session closed"
+        print ("Session closed")
         nn_obj.sess.close()
+
     beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
     test_line = range(len(nn_obj.X_test))
     
@@ -217,7 +224,7 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     print("Modèle pour H_NL = {}, H_NN = {} \n".format(len(N_.keys())-2, N_["N1"]))
     print("Fonction d'activation : {}\n Fonction de cout : {}\n\
     Méthode d'optimisation : {}".format(act, loss, opti))
-    print ("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
+    print("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
     
     plt.show()
     return nn_obj
@@ -238,17 +245,19 @@ def NN_solver(nn_obj, cb=cb):
     
     # Initialisation it = 1
     u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=1))
+    plt.figure()
     for it in range(1, cb.itmax) :
         beta = []
+        u_mean = np.mean(u)
         for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j-1], u[j], u[j+1]])
+            xs = np.array([u[j-1], u[j], u[j+1], u_mean])
             if nn_obj.scale == True :
                 xs = recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
-            xs = xs.reshape(-1,3)
+            xs = xs.reshape(-1, 4)
             beta.append(nn_obj.predict(xs)[0,0])
         
 
-        print beta, type(beta), np.shape(beta)
+        print(beta, type(beta), np.shape(beta))
         u_nNext = cb.u_beta(np.asarray(beta), u)
         u = u_nNext
         u[0] = u[-2]
@@ -286,9 +295,9 @@ def processing(nn_obj, cb=cb, n_neigh = 3) :
                 xs = recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
             xs = xs.reshape(-1,3)
             beta.append(nn_obj.predict(xs)[0,0])
-            print beta
+            print(beta)
 
-        print beta, type(beta), np.shape(beta)
+        print(beta, type(beta), np.shape(beta))
         u_nNext = cb.u_beta(np.asarray(beta), u)
         u = u_nNext
 #        u[0] = u[-2]
