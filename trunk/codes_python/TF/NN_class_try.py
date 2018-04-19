@@ -256,24 +256,24 @@ class Neural_Network():
                                                                decay=parameters["decay"]\
                                                                 )
             except KeyError:
-                print("Seems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
-                Use the default one instead with lr = {} though".format(self.lr))
+                print("\x1b[1;37;43mSeems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
+                Use the default one instead with lr = {} though\x1b[0m".format(self.lr))
                 self.train_op = tf.train.RMSPropOptimizer(self.lr)
         if train_mod=="Adam" :
 #       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
 #            try :
             for k, v in zip(parameters.keys(), parameters.values()):
                 print("parmeters[{}] = {}".format(k,v))
-                
-            self.train_op = considered_optimizer[train_mod](\
-                                                           self.lr,\
-                                                           beta1=parameters["beta1"],\
-                                                           beta2=parameters["beta2"],\
-                                                           epsilon = parameters["epsilon"]\
-                                                          )
-    #            except KeyError:
-#                print("AdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001".format(self.lr))
-#            self.train_op = tf.train.AdamOptimizer(self.lr)        
+            
+            try :    
+                self.train_op = considered_optimizer[train_mod](\
+                                                               self.lr,\
+                                                               beta1=parameters["beta1"],\
+                                                               beta2=parameters["beta2"],\
+                                                              )
+            except KeyError:
+                print("\x1b[1;37;43mAdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001\x1b[0m".format(self.lr))
+            self.train_op = tf.train.AdamOptimizer(self.lr)        
         
         if train_mod == "GD" or train_mod == "SGD":
 #            Si on utilise le batch pour l'entrainement ils reviennent au même
@@ -337,7 +337,7 @@ class Neural_Network():
         
         self.minimize_loss = self.train_op.minimize(self.loss)
 ###-------------------------------------------------------------------------------
-    def training_session(self, tol, batch_sz, step=10, verbose = False) :
+    def training_session(self, tol, batch_sz, step=10, verbose = False, **kwargs) :
 #       Initialization ou ré-initialization ;)
         init = tf.global_variables_initializer()
         self.sess.run(init)
@@ -347,6 +347,11 @@ class Neural_Network():
         err, epoch = 1., 0
         
         tol = tol
+        
+        if "color" in kwargs.keys() or "c" in kwargs.keys():
+            color = kwargs["color"]
+        else :
+            color = "darkseagreen"
         
         if verbose == True :
             plt.figure("Cost Evolution")
@@ -365,7 +370,7 @@ class Neural_Network():
                 if epoch % step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
                     if verbose == True :
-                        plt.plot(epoch, costs[-1], marker='o', color='yellow', linestyle='--')
+                        plt.plot(epoch, costs[-1], marker='o', color=color, linestyle='--')
                         plt.pause(0.001)
                 epoch += 1
 
@@ -387,14 +392,13 @@ class Neural_Network():
                     
                 costs.append(err)
                 
-#                print costs[-1]                                   
                 if np.isnan(costs[-1]) : 
                     raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
                 
-                if epoch % step == 0 :
+                if epoch % step == 0 and epoch != 0:
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
                     if verbose == True :
-                        plt.plot(epoch, costs[-1], marker='o', color='black', linestyle='--')
+                        plt.plot(epoch, costs[-1], marker='o', color=color, linestyle='--')
                         plt.pause(0.001)
                 
                 if np.abs(costs[-1]) < 1e-4 :
@@ -406,6 +410,12 @@ class Neural_Network():
     def predict(self, x_s):
         P = self.sess.run(self.y_pred_model, feed_dict={self.x: x_s})
         return P
+###-------------------------------------------------------------------------------
+    def visualize_graph(self):
+        writer = tf.summary.FileWriter('logs', self.sess.graph)
+        writer.close()
+        
+        print("Graph written. See tensorboard --logdir=\"logs\"")
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 if __name__=="__main__":
