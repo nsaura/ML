@@ -93,35 +93,50 @@ class Neural_Network():
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
         
-        X_std        =  X_train.std(axis=0)
+        X_train_std        =  X_train.std(axis=0)
         X_train_mean =  X_train.mean(axis=0)
 #       Sometimes scaling datas leads to better generalization
+        
         if scale == True :
-            X_train[:,0] = (X_train[:,0]  - X_train_mean[0])
-            X_test[:,0]  = (X_test[:,0]   - X_train_mean[0])
+            X_train_scaled = np.zeros_like(X_train)
+            X_test_scaled = np.zeros_like(X_test)
+            
+            for i in range(X_train_mean.shape[0]) :
+                X_train_scaled[:, i] = X_train[:, i] - X_train_mean[i]
+                X_test_scaled[:, i] = X_test[:, i] - X_train_mean[i]
+                
+                if np.abs(X_train_std[i]) > 1e-12 :
+                    X_train_scaled[:,i] /= X_train_std[i]
+                    X_test_scaled[:,i] /= X_train_std[i]
+            
+            print ("Scaling done")
+            print ("X_train_mean = \n{}\n X_train_std = \n{}".format(X_train_mean, X_train_std))
+            X_train = X_train_scaled
+            X_test = X_test_scaled
+#            X_train[:,0] = (X_train[:,0]  - X_train_mean[0])
+#            X_test[:,0]  = (X_test[:,0]   - X_train_mean[0])
 
-            if np.abs(X_std[0]) > 1e-12 :    
-                X_train[:,0]/= X_std[0]
-                X_test[:,0]  /= X_std[0]  
+#            if np.abs(X_std[0]) > 1e-12 :    
+#                X_train[:,0]/= X_train_std[0]
+#                X_test[:,0]  /= X_train_std[0]  
 
-            X_train[:,1] = (X_train[:,1]  - X_train_mean[1]) /   X_std[1]
-            X_test[:,1]  = (X_test[:,1]   - X_train_mean[1]) /   X_std[1]
+#            X_train[:,1] = (X_train[:,1]  - X_train_mean[1]) /   X_train_std[1]
+#            X_test[:,1]  = (X_test[:,1]   - X_train_mean[1]) /   X_train_std[1]
         
 #       We finish by "selfing" Training Set and Testing Set
         self.X_train, self.y_train  =   X_train, y_train
         self.X_test, self.y_test    =   X_test , y_test
-        self.train_mean, self.train_std =  X_train_mean, X_std
+        self.X_train_mean, self.X_train_std =  X_train_mean, X_train_std
         self.scale = scale
-###-------------------------------------------------------------------------------
-    def mean_std_new_input(self, x_s):
-        
-        for i in range(len(x_s)) :
-            x_s[i] -= self.train_mean[i]
-            
-            if np.abs(self.train_std[i]) > 1e-12 :
-                x_s[i] /= self.train_std[i]
-        
-        return x_s       
+####-------------------------------------------------------------------------------
+#    def mean_std_new_input(self, x_s):
+#        for i in range(len(x_s)) :
+#            x_s[i] -= self.X_train_mean[i]
+#            
+#            if np.abs(self.X_train_std[i]) > 1e-12 :
+#                x_s[i] /= self.X_train_std[i]
+#        
+#        return x_s       
 ###-------------------------------------------------------------------------------
     def w_b_real_init(self):
         ### We use X_train.shape
@@ -246,19 +261,19 @@ class Neural_Network():
                 self.train_op = tf.train.RMSPropOptimizer(self.lr)
         if train_mod=="Adam" :
 #       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
-            try :
-                for k, v in zip(parameters.keys(), parameters.values()):
-                    print("parmeters[{}] = {}".format(k,v))
-                    
-                self.train_op = considered_optimizer[train_mod](\
-                                                               self.lr,\
-                                                               beta1=parameters["beta1"],\
-                                                               beta2=parameters["beta2"],\
-                                                               epsilon = parameters["epsilon"]\
-                                                              )
-            except KeyError:
-                print("AdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001".format(self.lr))
-                self.train_op = tf.train.AdamOptimizer(self.lr)        
+#            try :
+            for k, v in zip(parameters.keys(), parameters.values()):
+                print("parmeters[{}] = {}".format(k,v))
+                
+            self.train_op = considered_optimizer[train_mod](\
+                                                           self.lr,\
+                                                           beta1=parameters["beta1"],\
+                                                           beta2=parameters["beta2"],\
+                                                           epsilon = parameters["epsilon"]\
+                                                          )
+    #            except KeyError:
+#                print("AdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001".format(self.lr))
+#            self.train_op = tf.train.AdamOptimizer(self.lr)        
         
         if train_mod == "GD" or train_mod == "SGD":
 #            Si on utilise le batch pour l'entrainement ils reviennent au même
@@ -277,18 +292,34 @@ class Neural_Network():
             
         else :
             expected_loss = {"OLS" : tf.square,\
-                             "AVL" : tf.abs}
+                             "AVL" : tf.abs,\
+                             "Ridge": "below",\
+                             "Lasso": "below"}
             if err_type not in expected_loss :
                 raise IndexError("{} n\'est pas dans les cas considérés. La fonction de cout doit appartenir à la liste {}".format(err_type, expected_loss.keys()))
+            
+            if err_type == "Ridge" or err_type == "ridge":
+                if "ridge_param" not in kwargs.keys() :
+                    ridge_param = float(input("Give a Ridge parameters " ) )
+                    ridge_param = tf.constant(ridge_param)
+                    if reduce_type == "mean" :
+                        ridge_loss = tf.reduce_mean(tf.square(self.x))
+                        self.loss = tf.expand_dims(tf.add(tf.reduce_mean(tf.square(self.y_pred_model - self.t)), tf.multiply(ridge_param, ridge_loss)), 0)
+                    
+                    if reduce_type == "sum" :
+                        ridge_loss = tf.reduce_sum(tf.square(self.x))
+                        self.loss = tf.expand_dims(tf.add(tf.reduce_sum(tf.square(self.y_pred_model - self.t)), tf.multiply(ridge_param, ridge_loss)), 0)
 
-            if reduce_type == "mean" :
-                self.loss = tf.reduce_mean(expected_loss[err_type](self.y_pred_model - self.t))
-                print ("The loss function will compute the averaged sum over all the errors")
-            elif reduce_type == "sum" :
-                self.loss = tf.reduce_sum(expected_loss[err_type](self.y_pred_model - self.t))
-                print ("The loss function will compute sum over all the errors")
             else :
-                raise AttributeError("Define a reduce_type between sum and mean")
+                if reduce_type == "mean" :
+                    self.loss = tf.reduce_mean(expected_loss[err_type](self.y_pred_model - self.t))
+                    print ("The loss function will compute the averaged sum over all the errors")
+                elif reduce_type == "sum" :
+                    self.loss = tf.reduce_sum(expected_loss[err_type](self.y_pred_model - self.t))
+                    print ("The loss function will compute sum over all the errors")
+                else :
+                    raise AttributeError("Define a reduce_type between sum and mean")
+                
 #https://stackoverflow.com/questions/43822715/tensorflow-cost-function
 #    Also tf.reduce_sum(cost) will do what you want, I think it is better to use tf.reduce_mean(). Here are a few reasons why:
 #    you get consistent loss independent of your matrix size. On average you will get reduce_sum 4 times bigger for a two times bigger matrix
@@ -306,7 +337,7 @@ class Neural_Network():
         
         self.minimize_loss = self.train_op.minimize(self.loss)
 ###-------------------------------------------------------------------------------
-    def training_session(self, tol, batched = False, step=10, verbose = False) :
+    def training_session(self, tol, batch_sz, step=10, verbose = False) :
 #       Initialization ou ré-initialization ;)
         init = tf.global_variables_initializer()
         self.sess.run(init)
@@ -320,7 +351,7 @@ class Neural_Network():
         if verbose == True :
             plt.figure("Cost Evolution")
         
-        if batched == False :
+        if batch_sz == 0 or batch_sz=='none' :
 #            with tf.Session() as sess:        
             
             while epoch <= self.max_epoch and err > tol:
@@ -334,29 +365,41 @@ class Neural_Network():
                 if epoch % step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
                     if verbose == True :
-                        plt.plot(epoch, costs[-1], marker='o', color='steelblue', linestyle='--')
+                        plt.plot(epoch, costs[-1], marker='o', color='yellow', linestyle='--')
                         plt.pause(0.001)
                 epoch += 1
 
             print costs[-10:]
 #            self.saver.save(sess, self.savefile)
-        else :  
-            N_raw_Xtrain = self.X_train.shape[0]
-#            print N_raw_Xtrain
-            batch_sz = find_divisor(N_raw_Xtrain)[-3]
-            n_batches = N_raw_Xtrain // batch_sz   
-            
+        if batch_sz > 0 :  
+#            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
             for epoch in range(self.max_epoch) :
-                for jj in range(n_batches) :
-                    X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
-                    y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
+                rand_index = np.random.choice(len(self.X_train), size=batch_sz)   
+
+                X_batch = self.X_train[rand_index]
+                y_batch = self.y_train[rand_index]
+            
+#                X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
+#                y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
+                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})  
+                err = self.sess.run(self.loss, feed_dict=({self.x: self.X_train,\
+                                                           self.t: self.y_train}))
                     
-                    self.sess.run(self.minimize_loss,feed_dict=({self.x : X_batch, self.t : y_batch}))
-                    
-                    costs.append(self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
-                                                                     self.t : self.y_train}))
-                    if np.isnan(costs[-1]) : raise IOError( "Warning, Epoch {} \t batch {}, \t lr = {}\
-                                    \n Explode".format(epoch, jj, self.lr) )
+                costs.append(err)
+                
+#                print costs[-1]                                   
+                if np.isnan(costs[-1]) : 
+                    raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
+                
+                if epoch % step == 0 :
+                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
+                    if verbose == True :
+                        plt.plot(epoch, costs[-1], marker='o', color='black', linestyle='--')
+                        plt.pause(0.001)
+                
+                if np.abs(costs[-1]) < 1e-4 :
+                    print "Final Cost "
+                    continue
             print costs[-10:]
         self.costs = costs
 ###-------------------------------------------------------------------------------
