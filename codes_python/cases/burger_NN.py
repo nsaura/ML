@@ -100,8 +100,6 @@ u_beta_chol = dict()
 lst_pairs_bu = sorted(lst_pairs_bu)
 lst_pairs_bc = sorted(lst_pairs_bc)
 
-plt.figure("betas")
-
 num_real = 5
 
 #color=cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0]))
@@ -145,12 +143,17 @@ y = np.delete(y, 0, axis=0)
 plt.legend(ncol=3)
 
 dict_layers = {"I" : 4,\
-               "N1" : 1000,\
-               "N2" : 500,\
-               "N3" : 500,\
-               "N4" : 500,\
+               "N1" : 100,\
+               "N2" : 100,\
+               "N3" : 100,\
+               "N4" : 100,\
+               "N5" : 100,\
+               "N6" : 100,\
                "O"  : 1}
+#for j in range(5,100) :
+#    dict_layers["N%d" % j] = 10
 
+print dict_layers
 def recentre(xs, X_train_mean, X_train_std):
     """
     This function refocuses the input before prediction. It needs three arguments :
@@ -169,24 +172,19 @@ def recentre(xs, X_train_mean, X_train_std):
 
     return xs
 
-def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, **kwargs) :
+def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, step=50, **kwargs) :
     plt.ion()
-    nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch)
+    print kwargs
+    nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch, **kwargs)
     
     nn_obj.train_and_split(X,y,strat=False,shuffle=True, scale=scale)
     nn_obj.tf_variables()
     nn_obj.feed_forward(activation=act)
-    nn_obj.def_training(opti, **kwargs)
+    nn_obj.def_training(opti)
     nn_obj.cost_computation(loss, reduce_type=reduce_type)
     nn_obj.def_optimization()
     try :
-        b_sz = kwargs["batch_sz"]
-        print("Batch size = ", b_sz)
-        if "color" in kwargs.keys() :
-            nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True, color = kwargs["color"])
-        
-        else :
-            nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True)
+        nn_obj.training_session(tol=1e-3, verbose=True)
 
     except KeyboardInterrupt :
         print ("Session closed")
@@ -228,7 +226,6 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     
     plt.show()
     return nn_obj
-
 
 #nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=20000, reduce_type="sum", verbose=True)
 #nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=5000, reduce_type="sum", verbose=True)

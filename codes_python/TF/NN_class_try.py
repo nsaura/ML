@@ -33,7 +33,7 @@ config = tf.ConfigProto(
 
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, N_={}, max_epoch=10, verbose=False) :
+    def __init__(self, lr, N_={}, max_epoch=10, verbose=False, step=10, file_to_update = "", **kwargs) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
@@ -62,7 +62,19 @@ class Neural_Network():
         self.savefile= "./session"
         self.sess = tf.InteractiveSession(config=config)
         
+        self.file_to_update = file_to_update 
+        
+        self.batched = True if "b_sz" in kwargs.keys() or "batch_sz" in kwargs.keys() else False
+        
+        try :
+            self.color = kwargs["color"]
+        except KeyError :
+            self.color= 'orchid'
+        
         self.verbose= verbose 
+        self.kwargs = kwargs
+        
+        self.step = step
 ###-------------------------------------------------------------------------------        
     def train_and_split(self, X, y, random_state=0, strat=True, scale=False, shuffle=True):
 #        Stratify option allows to have a loyal representation of the datasets (couples of data,target)
@@ -87,13 +99,12 @@ class Neural_Network():
         
         strat_done = False
         if strat == True :
-            X_train, X_test, y_train, y_test = train_test_split(X, y, 
-                                                stratify=y, random_state=random_state)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, random_state=random_state)
             strat_done = True
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
         
-        X_train_std        =  X_train.std(axis=0)
+        X_train_std  =  X_train.std(axis=0)
         X_train_mean =  X_train.mean(axis=0)
 #       Sometimes scaling datas leads to better generalization
         
@@ -124,10 +135,10 @@ class Neural_Network():
 #            X_test[:,1]  = (X_test[:,1]   - X_train_mean[1]) /   X_train_std[1]
         
 #       We finish by "selfing" Training Set and Testing Set
-        self.X_train, self.y_train  =   X_train, y_train
-        self.X_test, self.y_test    =   X_test , y_test
-        self.X_train_mean, self.X_train_std =  X_train_mean, X_train_std
         self.scale = scale
+        self.X_test, self.y_test    =   X_test , y_test
+        self.X_train, self.y_train  =   X_train, y_train
+        self.X_train_mean, self.X_train_std =  X_train_mean, X_train_std
 ####-------------------------------------------------------------------------------
 #    def mean_std_new_input(self, x_s):
 #        for i in range(len(x_s)) :
@@ -162,6 +173,8 @@ class Neural_Network():
                         self.N_["O"]) / self.N_[prev_key]
                 biases_d[self.blastkey] = np.zeros(self.N_["O"])
                 err = True
+                print err
+                
             jj += 1
 
         self.w_dict = w_dict
@@ -202,7 +215,7 @@ class Neural_Network():
             if str_act == activation :
                 Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
                 print ("fonction d'activation considérée : %s" %(activation))
-                for i in xrange(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
+                for i in range(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
                     curr_zkey, prev_zkey = "z%d" %(i), "z%d" %(i-1)
                     wkey = "w%d" %(i)
                     bkey = "b%d" %(i)
@@ -211,13 +224,13 @@ class Neural_Network():
                 
         if Z == {}:
             raise AttributeError ("\"{}\" activation function is unknown.\nActivation function must be one of {}".format(activation, act_func_lst))
-        
+        self.temp_weights = self.w_tf_d
         ### We constructed operations 
 #        print("Z\'s construits")
         self.activation = activation
         self.Z = Z
 ###-------------------------------------------------------------------------------      
-    def def_training(self, train_mod, **kwargs) :
+    def def_training(self, train_mod) :
         """
         Define a training model. Use kwargs to specify particular training parameters.\n
         Documentation took from http://tflearn.org
@@ -241,8 +254,8 @@ class Neural_Network():
         print("Optimiseur choisi : {}".format(train_mod))
         
         parameters = dict()        
-        for k in kwargs :
-            parameters[k] = kwargs[k]
+        for k in self.kwargs :
+            parameters[k] = self.kwargs[k]
         
         if train_mod=="RMS" :
 #       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
@@ -282,7 +295,7 @@ class Neural_Network():
         self.train_mod = train_mod
 #        for k, train in zip(considered_optimizer.keys(), considered_optimizer.values()) :
 ###-------------------------------------------------------------------------------      
-    def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum",   **kwargs) :
+    def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum") :
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
 #        REGRESSION pbs     : L2 regularisation -> OLS  :   tf.reduce_sum(tf.square(y_pred - targets))
 #                             L1 regression     -> AVL  :   tf.reduce_sum(tf.abs(y_pred - targets))
@@ -293,13 +306,18 @@ class Neural_Network():
         else :
             expected_loss = {"OLS" : tf.square,\
                              "AVL" : tf.abs,\
+                             "VSGD": "below",\
                              "Ridge": "below",\
                              "Lasso": "below"}
             if err_type not in expected_loss :
                 raise IndexError("{} n\'est pas dans les cas considérés. La fonction de cout doit appartenir à la liste {}".format(err_type, expected_loss.keys()))
             
-            if err_type == "Ridge" or err_type == "ridge":
-                if "ridge_param" not in kwargs.keys() :
+            if err_type == "VSGD":
+                print ("Voir plus loin")
+                self.loss = 1
+            
+            elif err_type == "Ridge" or err_type == "ridge":
+                if "ridge_param" not in self.kwargs.keys() :
                     ridge_param = float(input("Give a Ridge parameters " ) )
                     ridge_param = tf.constant(ridge_param)
                     if reduce_type == "mean" :
@@ -325,7 +343,7 @@ class Neural_Network():
 #    you get consistent loss independent of your matrix size. On average you will get reduce_sum 4 times bigger for a two times bigger matrix
 #    less chances you will get nan by overflowing
 
-
+        self.reduce_type = reduce_type
         self.err_type  = err_type 
 ###-------------------------------------------------------------------------------          
     def def_optimization(self, verbose = False):
@@ -335,30 +353,41 @@ class Neural_Network():
             print("La méthode utilisée pour minimiser les erreurs entre les prédictions et les target est :{} -> {}\n".format(self.train_mod, self.train_op))
             print("La fonction de coût pour évaluer ces erreurs est {} -> {}".format(self.err_type, self.loss))
         
-        self.minimize_loss = self.train_op.minimize(self.loss)
+        if self.err_type != "VSGD" :
+            self.minimize_loss = self.train_op.minimize(self.loss)
 ###-------------------------------------------------------------------------------
-    def training_session(self, tol, batch_sz, step=10, verbose = False, **kwargs) :
+    def training_session(self, tol, verbose = False) :
 #       Initialization ou ré-initialization ;)
         init = tf.global_variables_initializer()
         self.sess.run(init)
         
+        if "VSGD" in self.kwargs.keys():
+            if self.err_type == "VSGD" or self.err_type == "Vanilla" :
+                sum_weight = 0
+                ww = self.sess.run(self.w_tf_d)
+                reg = float(input("Enter Vanila regularization coefficient "))
+                if self.reduce_type == "mean" :
+                    meansq = tf.reduce_mean(tf.square(self.y_pred_model - self.t))
+                    for w in ww.iteritems() :
+                        sum_weight += np.mean(w[1])
+                    self.loss = tf.expand_dims(tf.add(meansq, reg*0.5*sum_weight), 0)
+            
+                if self.reduce_type == "sum":
+                    meansq = tf.reduce_sum(tf.square(self.y_pred_model - self.t))
+                    for w in ww.iteritems() :
+                        sum_weight += np.sum(w[1])
+                    self.loss = tf.expand_dims(tf.add(meansq, reg*0.5*sum_weight), 0)
+
+            self.minimize_loss = self.train_op.minimize(self.loss)
+
         costs = []
-        
-        err, epoch = 1., 0
-        
-        tol = tol
-        
-        if "color" in kwargs.keys() or "c" in kwargs.keys():
-            color = kwargs["color"]
-        else :
-            color = "darkseagreen"
+        err, epoch, tol = 1., 0, tol
         
         if verbose == True :
             plt.figure("Cost Evolution")
         
-        if batch_sz == 0 or batch_sz=='none' :
+        if self.batched == False :
 #            with tf.Session() as sess:        
-            
             while epoch <= self.max_epoch and err > tol:
                 self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
                 
@@ -367,19 +396,22 @@ class Neural_Network():
                 costs.append(err)
                 if np.isnan(costs[-1]) : raise IOError("Warning, Epoch {}, lr = {}.. nan"\
                                                     .format(epoch, self.lr))
-                if epoch % step == 0 :
+                if epoch % self.step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
                     if verbose == True :
-                        plt.plot(epoch, costs[-1], marker='o', color=color, linestyle='--')
+                        plt.plot(epoch, costs[-1], marker='o', color=self.color, linestyle='--')
                         plt.pause(0.001)
+#                    print ("{} : \n{}".format(epoch, self.sess.run(self.w_tf_d[self.wlastkey])))
+                    
                 epoch += 1
 
             print costs[-10:]
 #            self.saver.save(sess, self.savefile)
-        if batch_sz > 0 :  
+        else :
 #            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
             for epoch in range(self.max_epoch) :
-                rand_index = np.random.choice(len(self.X_train), size=batch_sz)   
+#                print(self.kwargs["batch_sz"])
+                rand_index = np.random.choice(len(self.X_train), size=self.kwargs["batch_sz"])   
 
                 X_batch = self.X_train[rand_index]
                 y_batch = self.y_train[rand_index]
@@ -395,10 +427,10 @@ class Neural_Network():
                 if np.isnan(costs[-1]) : 
                     raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
                 
-                if epoch % step == 0 and epoch != 0:
+                if epoch % self.step == 0 and epoch != 0:
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
                     if verbose == True :
-                        plt.plot(epoch, costs[-1], marker='o', color=color, linestyle='--')
+                        plt.plot(epoch, costs[-1], marker='o', color=self.color, linestyle='--')
                         plt.pause(0.001)
                 
                 if np.abs(costs[-1]) < 1e-4 :
@@ -415,7 +447,10 @@ class Neural_Network():
         writer = tf.summary.FileWriter('logs', self.sess.graph)
         writer.close()
         
+        weights = tf.trainable_variables()
         print("Graph written. See tensorboard --logdir=\"logs\"")
+        print self.sess.run(weights)
+        
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 if __name__=="__main__":
