@@ -1,5 +1,13 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
+
+# Author : NS
+# Use of Various Help From SO and CV; stack community
+
+# **    To run                                                                                      **
+# **    run burger_NN.py -nu 2.5e-2 -itmax 100 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10    
+# **                                                                                                **
+
 import numpy as np
 import pandas as pd
 
@@ -14,13 +22,12 @@ from matplotlib.pyplot import cm
 from scipy import optimize as op
 from itertools import cycle
 
-
 import numdifftools as nd
 
 import time
 import glob
 
-#run burger_NN.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10
+import Class_write_case as cwc
 
 ## Import de la classe TF ##
 nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
@@ -29,118 +36,142 @@ sys.path.append(nnc_folder)
 import NN_class_try as NNC
 import Class_Vit_Choc as cvc
 
-cvc = reload(cvc)
 NNC = reload(NNC)
+cvc = reload(cvc)
+cwc = reload(cwc)
 
-#def x_y_burger () :
 parser = cvc.parser()
 cb = cvc.Vitesse_Choc(parser)
 
 cb.obs_res(True, True)
-#cb.minimization(maxiter=50, step=5)
 
-u_name = cb.u_name
-b_name = cb.beta_name
+# Dataset Construction
+def xy_burger (cb=cb) :
+    #cb.minimization(maxiter=50, step=5)
 
-root = osp.split(cb.beta_path)[0]
+    u_name = cb.u_name
+    b_name = cb.beta_name
 
-uloc = cb.inferred_U
-betaloc = cb.beta_path
-cholloc = cb.chol_path
+    root = osp.split(cb.beta_path)[0]
 
-# On va se servir de ça
-b_files = glob.glob(betaloc+'/*')
-u_files = glob.glob(uloc+'/*')
-c_files = glob.glob(cholloc+'/*')
+    uloc = cb.inferred_U
+    betaloc = cb.beta_path
+    cholloc = cb.chol_path
 
-b_u = dict()
-b_c = dict()
-lst_pairs_bu = []
-lst_pairs_bc = []
+    # On va se servir de ça
+    b_files = glob.glob(betaloc+'/*')
+    u_files = glob.glob(uloc+'/*')
+    c_files = glob.glob(cholloc+'/*')
 
-l = osp.split(b_files[0])[1].split("_")
-ll = [i.split(":") for i in l[1:-1]]
+    b_u = dict()
+    b_c = dict()
+    lst_pairs_bu = []
+    lst_pairs_bc = []
 
-# Init
-for elt in ll :
-    b_u[elt[0]] = []
-    b_c[elt[0]] = []
-    
-for b in b_files :
-    to_find = osp.split(b)[1][4:]
-    
-    u_to_find = uloc + "/U" + to_find
-    
-    if osp.exists(u_to_find) :
-        lst_pairs_bu.append((b, u_files[u_files.index(u_to_find)]))
-    else :
-        print ("%s does not exist" %(u_to_find))
+    l = osp.split(b_files[0])[1].split("_")
+    ll = [i.split(":") for i in l[1:-1]]
 
-    c_to_find = cholloc + "/chol" + to_find
-    
-    if osp.exists(c_to_find)  :
-        lst_pairs_bc.append((b, c_files[c_files.index(c_to_find)]))
-    else :
-        print ("%s does not exist" %(c_to_find))
-# For checking    
-#    for i in range (10) :
-#        print lst_pairs[np.random.randint(len(lst_pairs))]
+    # To be able to modify u,b and c_files we have first to copy them 
+    u_sorted = sorted(u_files, key= lambda x: int(osp.splitext(x)[0][-3:]))
+    b_sorted = sorted(b_files, key= lambda x: int(osp.splitext(x)[0][-3:]))
+    c_sorted = sorted(c_files, key= lambda x: int(osp.splitext(x)[0][-3:]))
 
-X = np.zeros((4))
-y = np.zeros((1))
 
-print (lst_pairs_bu[0][0])
-print (X[0])
-#return X, y 
-# pairs :   p[0] -> beta
-#           p[1] -> u
-beta_chol = dict()
-u_beta_chol = dict()
-
-lst_pairs_bu = sorted(lst_pairs_bu)
-lst_pairs_bc = sorted(lst_pairs_bc)
-
-num_real = 5
-
-#color=cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0]))
-color=iter(cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0])))
-
-for it, (pbu, pbc) in enumerate(zip(lst_pairs_bu, lst_pairs_bc)) :
-    beta = np.load(pbu[0])
-    chol = np.load(pbc[1])
-    u = np.load(pbu[1])
-    
-    u_mean = np.zeros_like(u[1:cb.Nx-1])
-    c = next(color)
-    
-    if osp.splitext(pbu[1])[0][-3:] != "000" :
-        for i in range(num_real) :
-            beta_chol[str(i)] = beta_last + chol_last.dot(np.random.rand(len(beta_last)))            
-#            print np.shape(beta_chol[str(i)])
-            u_beta_chol[str(i)] = cb.u_beta(beta_chol[str(i)], u_last)
+    cpt_rm = 0
+    for u, b, c in zip(u_sorted, b_sorted, c_sorted) :
+        cond = lambda f : int(osp.splitext(f)[0][-3:]) > cb.itmax-1
+        if cond(u) and cond(b) and cond(c) :
+            u_files.remove(u)
+            b_files.remove(b)
+            c_files.remove(c)
+            print "RM"
             
-#            for k in range(0, len(u)-2) : #Pour aller de 1 à Nx-1 vav de u-beta_chol mais commencer aux bons endroits
-#                u_mean[k] += u_beta_chol[str(i)][k+1] / float(num_real)
-            
-    for j in range(1, len(u)-1) :
-        if osp.splitext(pbu[1])[0][-3:] != "000" :
-            X = np.block([[X], [u[j-1], u[j], u[j+1], np.mean(u)]])
-            y = np.block([[y], [beta[j]]])
-            
-            for i in range(num_real) :
-                bb = beta_chol[str(i)]
-                uu = u_beta_chol[str(i)]
-                
-                X = np.block([[X], [uu[j-1], uu[j], uu[j+1], np.mean(uu)]])
-                y = np.block([[y], [bb[j]]])
+            cpt_rm += 1
+    print ("%d files removed from u.b and c_files lists" %(cpt_rm))
+
+    #print ("u_files = \n{}b_files = \n{}c_files = {}\n".format(u_files, b_files, c_files))
+
+    # Init
+    for elt in ll :
+        b_u[elt[0]] = []
+        b_c[elt[0]] = []
         
-    u_last = u
-    beta_last = beta  
-    chol_last = chol
+    for b in b_files :
+        to_find = osp.split(b)[1][4:]
+        
+        u_to_find = uloc + "/U" + to_find
+        
+        if osp.exists(u_to_find) :
+            lst_pairs_bu.append((b, u_files[u_files.index(u_to_find)]))
+        else :
+            print ("%s does not exist" %(u_to_find))
+
+        c_to_find = cholloc + "/chol" + to_find
+        
+        if osp.exists(c_to_find)  :
+            lst_pairs_bc.append((b, c_files[c_files.index(c_to_find)]))
+        else :
+            print ("%s does not exist" %(c_to_find))
+    # For checking    
+    #    for i in range (10) :
+    #        print lst_pairs[np.random.randint(len(lst_pairs))]
+
+    X = np.zeros((4))
+    y = np.zeros((1))
+
+    print (lst_pairs_bu[0][0])
+    print (X[0])
+    #return X, y 
+    # pairs :   p[0] -> beta
+    #           p[1] -> u
+    beta_chol = dict()
+    u_beta_chol = dict()
+
+    lst_pairs_bu = sorted(lst_pairs_bu)
+    lst_pairs_bc = sorted(lst_pairs_bc)
+
+    num_real = 5
+
+    #color=cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0]))
+    color=iter(cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0])))
+
+    for it, (pbu, pbc) in enumerate(zip(lst_pairs_bu, lst_pairs_bc)) :
+        beta = np.load(pbu[0])
+        chol = np.load(pbc[1])
+        u = np.load(pbu[1])
+        
+        u_mean = np.zeros_like(u[1:cb.Nx-1])
+        c = next(color)
+        
+        if osp.splitext(pbu[1])[0][-3:] != "000" :
+            for i in range(num_real) :
+                beta_chol[str(i)] = beta_last + chol_last.dot(np.random.rand(len(beta_last)))            
+    #            print np.shape(beta_chol[str(i)])
+                u_beta_chol[str(i)] = cb.u_beta(beta_chol[str(i)], u_last)
+                
+    #            for k in range(0, len(u)-2) : #Pour aller de 1 à Nx-1 vav de u-beta_chol mais commencer aux bons endroits
+    #                u_mean[k] += u_beta_chol[str(i)][k+1] / float(num_real)
+                
+        for j in range(1, len(u)-1) :
+            if osp.splitext(pbu[1])[0][-3:] != "000" :
+                X = np.block([[X], [u[j-1], u[j], u[j+1], np.mean(u)]])
+                y = np.block([[y], [beta[j]]])
+                
+                for i in range(num_real) :
+                    bb = beta_chol[str(i)]
+                    uu = u_beta_chol[str(i)]
+                    
+                    X = np.block([[X], [uu[j-1], uu[j], uu[j+1], np.mean(uu)]])
+                    y = np.block([[y], [bb[j]]])
+            
+        u_last = u
+        beta_last = beta  
+        chol_last = chol
+        
+    X = np.delete(X, 0, axis=0)
+    y = np.delete(y, 0, axis=0)
     
-X = np.delete(X, 0, axis=0)
-y = np.delete(y, 0, axis=0)
-plt.legend(ncol=3)
+    return X, y
 
 dict_layers = {"I" : 4,\
                "N1" : 100,\
@@ -225,6 +256,49 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     print("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
     
     plt.show()
+    
+#    lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, step=50, **kwargs
+    
+    f = cwc.File("traceback_burger_nn.ods")
+    f.read_file()
+    
+    data = {}
+    
+    data["LR"] = lr
+    data["Optimizer"] = opti
+    data["Maxepoch"] = max_epoch
+    data["Loss_Function"] = act
+    data["Sequence_NN"] = dict_layers
+    data["Final_cost"] = cb.costs[-1]
+    
+    if cb.batched == True :
+        data["Batch_sz"] = kwargs["batch_sz"]
+    
+    else :
+        data["Batch_sz"] = None
+        
+    if opti == "Adam":
+        data["Beta1"] = kwargs["beta1"]
+        data["Beta2"] = kwargs["beta2"]
+        
+        data["decay"] = None
+        data["momentum"] = None
+        
+    if opti == "RMS":
+        data["decay"] = kwargs["decay"]
+        data["momentum"] = kwargs["momentum"]
+        
+        data["Beta1"] = None
+        data["Beta2"] = None
+    
+    if opti == "GD" or "SGD":
+        data["Beta1"] = None
+        data["Beta2"] = None
+        data["decay"] = None
+        data["momentum"] = None
+    
+    print data 
+    f.write_in_file(data)
     return nn_obj
 
 #nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=20000, reduce_type="sum", verbose=True)

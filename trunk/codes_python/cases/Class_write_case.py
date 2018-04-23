@@ -1,6 +1,5 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
-
 import pandas as pd
 import ezodf as ez
 import os
@@ -94,7 +93,7 @@ class File():
         self.doc.save()
 #------------------------------------------------------------------------------
 if __name__ == '__main__' :
-    f = File("./some_odf_spreadsheet.ods")
+    f = File("./traceback_burger_nn.ods")
     f.read_file()
     
     
