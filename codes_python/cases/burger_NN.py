@@ -269,7 +269,7 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     data["Maxepoch"] = max_epoch
     data["Loss_Function"] = act
     data["Sequence_NN"] = dict_layers
-    data["Final_cost"] = cb.costs[-1]
+    data["Final_cost"] = nn_obj.costs[-1]
     
     if cb.batched == True :
         data["Batch_sz"] = kwargs["batch_sz"]
