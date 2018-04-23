@@ -1,5 +1,10 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
+
+## Author NS
+# Helps from https://pythonhosted.org/ezodf/spreadsheetdocument.html#document-management
+#            https://pythonhosted.org/ezodf/tableobjects.html#Table
+
 import pandas as pd
 import ezodf as ez
 import os
@@ -78,8 +83,8 @@ class File():
         row = {}
 
         for item in row_data.iteritems() :
-            print ("Numero d'indice modifier par {} : {}".format(item[0], self.key_to_num[item[0]]))
-            print ("valeur : {}".format(item[1]))
+#            print ("Numero d'indice modifier par {} : {}".format(item[0], self.key_to_num[item[0]]))
+#            print ("valeur : {}".format(item[1]))
             row["%03d" % self.key_to_num[item[0]]] = item[1]
         
         self.doc.sheets[0].append_rows(1)
