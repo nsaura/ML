@@ -2,12 +2,13 @@
 # -*- coding: latin-1 -*-
 
 # Author : NS
-# Use of Various Help From SO and CV; stack community
+# Use of Various Helps From SO and CV; stack community
+# Ridge https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.ipynb
+# Vanilla Gradient descent https://towardsdatascience.com/improving-vanilla-gradient-descent-f9d91031ab1d
 
-# **    To run                                                                                      **
-# **    run burger_NN.py -nu 2.5e-2 -itmax 100 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10    
-# **                                                                                                **
-
+# To run
+# run burger_NN.py -nu 2.5e-2 -itmax 100 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10    
+# 
 import numpy as np
 import pandas as pd
 
@@ -17,15 +18,15 @@ import sys, warnings, argparse
 import os
 import os.path as osp
 
+from itertools import cycle
 from matplotlib.pyplot import cm
 
 from scipy import optimize as op
-from itertools import cycle
 
 import numdifftools as nd
 
-import time
 import glob
+import time
 
 import Class_write_case as cwc
 
@@ -84,7 +85,7 @@ def xy_burger (cb=cb) :
             u_files.remove(u)
             b_files.remove(b)
             c_files.remove(c)
-            print "RM"
+#            print "RM"
             
             cpt_rm += 1
     print ("%d files removed from u.b and c_files lists" %(cpt_rm))
@@ -173,6 +174,8 @@ def xy_burger (cb=cb) :
     
     return X, y
 
+X, y = xy_burger(cb)
+
 dict_layers = {"I" : 4,\
                "N1" : 100,\
                "N2" : 100,\
@@ -202,6 +205,8 @@ def recentre(xs, X_train_mean, X_train_std):
             xs[i] /= X_train_std[i]
 
     return xs
+
+#nn_RMS_sum = build_case(1e-4, X, y , act="relu", opti="RMS", loss="OLS", decay=0.5, momentum=0.8, max_epoch=25000, reduce_type="sum", verbose=True, step=50, color="blue",batch_sz=200)
 
 def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, step=50, **kwargs) :
     plt.ion()
@@ -265,37 +270,44 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     data = {}
     
     data["LR"] = lr
+    data["Activation"]=act
     data["Optimizer"] = opti
     data["Maxepoch"] = max_epoch
-    data["Loss_Function"] = act
+    data["Loss_Function"] = loss
     data["Sequence_NN"] = dict_layers
     data["Final_cost"] = nn_obj.costs[-1]
     
-    if cb.batched == True :
+    if nn_obj.batched == True :
         data["Batch_sz"] = kwargs["batch_sz"]
     
     else :
-        data["Batch_sz"] = None
+        data["Batch_sz"] = " "
         
     if opti == "Adam":
+        print "Adam"
+        print kargs["beta1"]
+        print kargs["beta2"]
+        
         data["Beta1"] = kwargs["beta1"]
         data["Beta2"] = kwargs["beta2"]
         
-        data["decay"] = None
-        data["momentum"] = None
+        data["Decay"] = " "
+        data["Momentum"] = " "
         
     if opti == "RMS":
-        data["decay"] = kwargs["decay"]
-        data["momentum"] = kwargs["momentum"]
+        print "RMS"
+        print kwargs["decay"], kwargs["momentum"]
+        data["Decay"] = kwargs["decay"]
+        data["Momentum"] = kwargs["momentum"]
         
-        data["Beta1"] = None
-        data["Beta2"] = None
+        data["Beta1"] = " "
+        data["Beta2"] = " "
     
-    if opti == "GD" or "SGD":
-        data["Beta1"] = None
-        data["Beta2"] = None
-        data["decay"] = None
-        data["momentum"] = None
+    if opti == "GD" or opti == "SGD":
+        data["Beta1"] = " "
+        data["Beta2"] = " "
+        data["Decay"] = " "
+        data["Momentum"] = " "
     
     print data 
     f.write_in_file(data)
