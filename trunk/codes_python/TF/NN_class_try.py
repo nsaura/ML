@@ -33,7 +33,7 @@ config = tf.ConfigProto(
 
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, N_={}, max_epoch=10, verbose=False, step=10, file_to_update = "", **kwargs) :
+    def __init__(self, lr, N_={}, max_epoch=10, verbose=False, file_to_update = "", **kwargs) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
@@ -70,11 +70,16 @@ class Neural_Network():
             self.color = kwargs["color"]
         except KeyError :
             self.color= 'orchid'
+
+        try :
+            self.step = kwargs["step"]
         
+        except KeyError :
+            self.step = 50    
+            
         self.verbose= verbose 
         self.kwargs = kwargs
         
-        self.step = step
 ###-------------------------------------------------------------------------------        
     def train_and_split(self, X, y, random_state=0, strat=True, scale=False, shuffle=True):
 #        Stratify option allows to have a loyal representation of the datasets (couples of data,target)
