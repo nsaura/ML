@@ -1176,7 +1176,7 @@ if __name__ == '__main__' :
     plt.close("all")
     
     cb = Vitesse_Choc(parser)
-    cb.obs_res(True, True)
+#    cb.obs_res(True, True)
 #    cb.obs_res(write=False, plot=True)
 #    cb.get_obs_statistics(write=True)
     
