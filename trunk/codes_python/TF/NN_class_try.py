@@ -250,6 +250,7 @@ class Neural_Network():
         """
         considered_optimizer = {"RMS" : tf.train.RMSPropOptimizer,\
                                 "Adam" : tf.train.AdamOptimizer,\
+                                "Nadam" : tf.keras.optimizers.Nadam,\
                                 "GD": tf.train.GradientDescentOptimizer,\
                                 "SGD": tf.train.GradientDescentOptimizer\
                               }
@@ -262,12 +263,12 @@ class Neural_Network():
         for k in self.kwargs :
             parameters[k] = self.kwargs[k]
         
+         for k, v in zip(parameters.keys(), parameters.values()):
+                    print("parmeters[{}] = {}".format(k,v))
+        
         if train_mod=="RMS" :
 #       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
             try :
-                for k, v in zip(parameters.keys(), parameters.values()):
-                    print("parmeters[{}] = {}".format(k,v))
-                    
                 self.train_op = considered_optimizer[train_mod](\
                                                                self.lr,\
                                                                momentum=parameters["momentum"],\
@@ -277,12 +278,10 @@ class Neural_Network():
                 print("\x1b[1;37;43mSeems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
                 Use the default one instead with lr = {} though\x1b[0m".format(self.lr))
                 self.train_op = tf.train.RMSPropOptimizer(self.lr)
+        
         if train_mod=="Adam" :
 #       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
 #            try :
-            for k, v in zip(parameters.keys(), parameters.values()):
-                print("parmeters[{}] = {}".format(k,v))
-            
             try :    
                 self.train_op = considered_optimizer[train_mod](\
                                                                self.lr,\
@@ -293,6 +292,20 @@ class Neural_Network():
                 print("\x1b[1;37;43mAdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001\x1b[0m".format(self.lr))
             self.train_op = tf.train.AdamOptimizer(self.lr)        
         
+        if train_mod=="Nadam" :
+            try :
+                self.train_op = considered_optimizer[train_mod](\
+                                                               self.lr,\
+                                                               beta_1=parameters["beta1"],\
+                                                               beta_2=parameters["beta2"],\
+                                                               schedule_decay=parameters["decay"]
+            except KeyError :
+                try :
+                    print("\x1b[1;37;43mNadamOptimizer goes with default schedule decay. lr = {}, beta1 = {}, beta2 = {} \x1b[0m".format(self.lr, parameters["beta1"], parameters["beta2"]))
+                    
+                except KeyError :
+                    print("\x1b[1;37;43mNadamOptimizer goes with default mode. lr = {} and  beta1 = 0.9, beta2 = 0.999, schedule_decay = 0.04 \x1b[0m".format(self.lr))
+            self.train_op = tf.train.AdamOptimizer(self.lr) 
         if train_mod == "GD" or train_mod == "SGD":
 #            Si on utilise le batch pour l'entrainement ils reviennent au même
             self.train_op = considered_optimizer[train_mod](self.lr) 
