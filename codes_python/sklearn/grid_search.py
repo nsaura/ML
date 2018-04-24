@@ -19,7 +19,6 @@ X, y = iris.data, iris.target
 
 
 X_trainval, X_test, y_trainval, y_test    = train_test_split(X, y, random_state=0)
-
 X_train, X_valid, y_train, y_valid  = train_test_split(X_trainval, y_trainval, random_state=1)
 
 print("Size of training: {}\t size of validation set: {}\t size of test set: {}".format(X_train.shape[0], X_valid.shape[0], X_test.shape[0]))
