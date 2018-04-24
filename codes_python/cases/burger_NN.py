@@ -285,8 +285,8 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
         
     if opti == "Adam":
         print "Adam"
-        print kargs["beta1"]
-        print kargs["beta2"]
+        print kwargs["beta1"]
+        print kwargs["beta2"]
         
         data["Beta1"] = kwargs["beta1"]
         data["Beta2"] = kwargs["beta2"]
