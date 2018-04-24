@@ -47,7 +47,7 @@ cb = cvc.Vitesse_Choc(parser)
 cb.obs_res(True, True)
 
 # Dataset Construction
-def xy_burger (cb=cb) :
+def xy_burger (num_real, cb=cb) :
     #cb.minimization(maxiter=50, step=5)
 
     u_name = cb.u_name
@@ -131,8 +131,6 @@ def xy_burger (cb=cb) :
     lst_pairs_bu = sorted(lst_pairs_bu)
     lst_pairs_bc = sorted(lst_pairs_bc)
 
-    num_real = 5
-
     #color=cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0]))
     color=iter(cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0])))
 
@@ -174,7 +172,7 @@ def xy_burger (cb=cb) :
     
     return X, y
 
-X, y = xy_burger(cb)
+X, y = xy_burger(input("num_real :" ), cb)
 
 dict_layers = {"I" : 4,\
                "N1" : 100,\
@@ -199,7 +197,7 @@ def recentre(xs, X_train_mean, X_train_std):
     xs is a vector of shape [N] 
     X_train_mean and X_train_std are vectors of whose shape is [N_features]
     """
-    for i in range(np.size(X_train_mean)) :
+    for i in range(np.size(X_train_mean)-1) :
         xs[i] -= X_train_mean[i]
         if np.abs(X_train_std[i]) > 1e-12 :
             xs[i] /= X_train_std[i]
@@ -334,8 +332,10 @@ def NN_solver(nn_obj, cb=cb):
         u_mean = np.mean(u)
         for j in range(1, cb.Nx-1) :
             xs = np.array([u[j-1], u[j], u[j+1], u_mean])
+            print xs
             if nn_obj.scale == True :
                 xs = recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
+            print xs
             xs = xs.reshape(-1, 4)
             beta.append(nn_obj.predict(xs)[0,0])
         
@@ -372,12 +372,13 @@ def processing(nn_obj, cb=cb, n_neigh = 3) :
     u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=0))
     for it in range(1, cb.itmax) :
         beta = []
+        u_mean = np.mean(u)
         for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j-1], u[j], u[j+1]])
+            xs = np.array([u[j-1], u[j], u[j+1], u_mean])
             if nn_obj.scale == True :
                 xs = recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
-            xs = xs.reshape(-1,3)
-            beta.append(nn_obj.predict(xs)[0,0])
+            xs = xs.reshape(-1,4)
+            beta.append(reg.predict(xs)[0,0])
             print(beta)
 
         print(beta, type(beta), np.shape(beta))

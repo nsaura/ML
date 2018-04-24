@@ -263,8 +263,8 @@ class Neural_Network():
         for k in self.kwargs :
             parameters[k] = self.kwargs[k]
         
-         for k, v in zip(parameters.keys(), parameters.values()):
-                    print("parmeters[{}] = {}".format(k,v))
+        for k, v in zip(parameters.keys(), parameters.values()):
+            print("parmeters[{}] = {}".format(k,v))
         
         if train_mod=="RMS" :
 #       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
@@ -298,7 +298,8 @@ class Neural_Network():
                                                                self.lr,\
                                                                beta_1=parameters["beta1"],\
                                                                beta_2=parameters["beta2"],\
-                                                               schedule_decay=parameters["decay"]
+                                                               schedule_decay=parameters["decay"]\
+                                                               ) 
             except KeyError :
                 try :
                     print("\x1b[1;37;43mNadamOptimizer goes with default schedule decay. lr = {}, beta1 = {}, beta2 = {} \x1b[0m".format(self.lr, parameters["beta1"], parameters["beta2"]))
