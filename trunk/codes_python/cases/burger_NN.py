@@ -281,20 +281,14 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     else :
         data["Batch_sz"] = " "
         
-    if opti == "Adam":
-        print "Adam"
-        print kwargs["beta1"]
-        print kwargs["beta2"]
-        
+    if opti == "Nadam" or opti == "Adam":
         data["Beta1"] = kwargs["beta1"]
         data["Beta2"] = kwargs["beta2"]
         
         data["Decay"] = " "
         data["Momentum"] = " "
         
-    if opti == "RMS":
-        print "RMS"
-        print kwargs["decay"], kwargs["momentum"]
+    if opti == "RMS" :
         data["Decay"] = kwargs["decay"]
         data["Momentum"] = kwargs["momentum"]
         
@@ -307,7 +301,7 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
         data["Decay"] = " "
         data["Momentum"] = " "
     
-    print data 
+#    print data 
     f.write_in_file(data)
     return nn_obj
 
