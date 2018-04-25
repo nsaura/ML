@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: latin-1 -*-
-
 from __future__ import division
 
 import numpy as np
@@ -250,10 +249,11 @@ class Neural_Network():
         """
         considered_optimizer = {"RMS" : tf.train.RMSPropOptimizer,\
                                 "Adam" : tf.train.AdamOptimizer,\
-                                "Nadam" : tf.keras.optimizers.Nadam,\
+                                "Nadam" : tf.keras.optimizers.Nadam(),\
                                 "GD": tf.train.GradientDescentOptimizer,\
                                 "SGD": tf.train.GradientDescentOptimizer\
                               }
+        self.default = False
         if train_mod not in considered_optimizer.keys() :
             raise IndexError("{} n\'est pas dans les cas considérés. l\'argument train mod doit faire partie de la liste {}".format(train_mod, considered_optimizer.keys()))
         
@@ -266,8 +266,15 @@ class Neural_Network():
         for k, v in zip(parameters.keys(), parameters.values()):
             print("parmeters[{}] = {}".format(k,v))
         
+        if train_mod == "GD" or train_mod == "SGD":
+            # Classical gradient descent. Insure to find global minimum, but may need a lot of time
+            # GD or S(tochastic) GD are relying on the same tf optimizer : 
+            self.train_op = considered_optimizer[train_mod](self.lr) 
+        
         if train_mod=="RMS" :
-#       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
+        # Maintain a moving (discounted) average of the square of gradients. 
+        # Divide gradient by the root of this average. 
+        # Quickly catch model common feature representation, and allow to have rare feature representation
             try :
                 self.train_op = considered_optimizer[train_mod](\
                                                                self.lr,\
@@ -278,10 +285,14 @@ class Neural_Network():
                 print("\x1b[1;37;43mSeems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
                 Use the default one instead with lr = {} though\x1b[0m".format(self.lr))
                 self.train_op = tf.train.RMSPropOptimizer(self.lr)
+                
+                parameters["momentum"]  =   0.0
+                parameters["decay"]     =   0.9    
+                
+                self.default = True
         
         if train_mod=="Adam" :
-#       Maintain a moving (discounted) average of the square of gradients. Divide gradient by the root of this average. 
-#            try :
+        # Classical Momentum added in RMSPROP algorithm
             try :    
                 self.train_op = considered_optimizer[train_mod](\
                                                                self.lr,\
@@ -290,9 +301,16 @@ class Neural_Network():
                                                               )
             except KeyError:
                 print("\x1b[1;37;43mAdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001\x1b[0m".format(self.lr))
-            self.train_op = tf.train.AdamOptimizer(self.lr)        
+                self.train_op = tf.train.AdamOptimizer(self.lr)  
+                
+                parameters["beta1"] = 0.9
+                parameters["beta2"] = 0.99
+                  
+                self.default = True
         
         if train_mod=="Nadam" :
+            # Adding Nesterov momentum in Adam with schedule_decay
+            # If each of the Nadam's argument is specified
             try :
                 self.train_op = considered_optimizer[train_mod](\
                                                                self.lr,\
@@ -301,18 +319,33 @@ class Neural_Network():
                                                                schedule_decay=parameters["decay"]\
                                                                ) 
             except KeyError :
+                # If schedule_decay is not specified
                 try :
-                    print("\x1b[1;37;43mNadamOptimizer goes with default schedule decay. lr = {}, beta1 = {}, beta2 = {} \x1b[0m".format(self.lr, parameters["beta1"], parameters["beta2"]))
-                    
+                    print("\x1b[1;37;43mNadamOptimizer goes with default schedule decay.\
+                    lr = {}, beta1 = {}, beta2 = {} \x1b[0m"\
+                            .format(self.lr, parameters["beta1"], parameters["beta2"]))
+                            
+                    self.train_op = considered_optimizer[train_mod](\
+                                                                    self.lr,\
+                                                                    beta_1=parameters["beta1"],\
+                                                                    beta_2=parameters["beta2"]\
+                                                                   )
+                # If nothing but lr is specified    
                 except KeyError :
-                    print("\x1b[1;37;43mNadamOptimizer goes with default mode. lr = {} and  beta1 = 0.9, beta2 = 0.999, schedule_decay = 0.04 \x1b[0m".format(self.lr))
-            self.train_op = tf.train.AdamOptimizer(self.lr) 
-        if train_mod == "GD" or train_mod == "SGD":
-#            Si on utilise le batch pour l'entrainement ils reviennent au même
-            self.train_op = considered_optimizer[train_mod](self.lr) 
-        
+                    print("\x1b[1;37;43mNadamOptimizer goes with default mode.\
+                    lr = {} and  beta1 = 0.9, beta2 = 0.999, schedule_decay = 0.04 \x1b[0m"\
+                            .format(self.lr))
+                    
+                    self.train_op = considered_optimizer[train_mod](self.lr) 
+                    
+                    parameters["beta1"] = 0.9
+                    parameters["beta2"] = 0.999
+                    
+                    self.default = True
+                    
+        # Selfing the optimizer with the wanted tuning 
         self.train_mod = train_mod
-#        for k, train in zip(considered_optimizer.keys(), considered_optimizer.values()) :
+        self.parameters = parameters
 ###-------------------------------------------------------------------------------      
     def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum") :
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
@@ -320,7 +353,9 @@ class Neural_Network():
 #                             L1 regression     -> AVL  :   tf.reduce_sum(tf.abs(y_pred - targets))
         
         if SL_type == "classification" :
-            self.loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=self.y_pred_model, label=self.t))
+            self.loss = tf.reduce_sum(\
+                tf.nn.softmax_cross_entropy_with_logits(logits=self.y_pred_model, label=self.t)\
+                                     )
             
         else :
             expected_loss = {"OLS" : tf.square,\
@@ -337,7 +372,7 @@ class Neural_Network():
             
             elif err_type == "Ridge" or err_type == "ridge":
                 if "ridge_param" not in self.kwargs.keys() :
-                    ridge_param = float(input("Give a Ridge parameters " ) )
+                    ridge_param = float(input("Give a Ridge parameter " ) )
                     ridge_param = tf.constant(ridge_param)
                     if reduce_type == "mean" :
                         ridge_loss = tf.reduce_mean(tf.square(self.x))
@@ -350,10 +385,10 @@ class Neural_Network():
             else :
                 if reduce_type == "mean" :
                     self.loss = tf.reduce_mean(expected_loss[err_type](self.y_pred_model - self.t))
-                    print ("The loss function will compute the averaged sum over all the errors")
+                    print ("%s: The loss function will compute the averaged sum over all the errors" % err_type)
                 elif reduce_type == "sum" :
                     self.loss = tf.reduce_sum(expected_loss[err_type](self.y_pred_model - self.t))
-                    print ("The loss function will compute sum over all the errors")
+                    print ("%s: The loss function will compute sum over all the errors" % err_type)
                 else :
                     raise AttributeError("Define a reduce_type between sum and mean")
                 
