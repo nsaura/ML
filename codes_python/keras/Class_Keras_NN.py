@@ -141,6 +141,7 @@ class K_Neural_Network () :
                 if j == 0 :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            activation= self.conv_str_to_acti[self.dict_layers[k][1]],\
+                                           activity_regularizer=keras.regularizers.l2(0.5),\
                                            kernel_initializer='random_uniform',\
                                            bias_initializer='zeros',\
                                            input_dim=self.dict_layers["I"]\
@@ -148,6 +149,7 @@ class K_Neural_Network () :
                 else :                    
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            activation= self.conv_str_to_acti[self.dict_layers[k][1]],\
+                                           activity_regularizer=keras.regularizers.l2(0.5),\
                                            kernel_initializer='random_uniform',\
                                            bias_initializer='zeros',\
                                            name='Dense-%s' %(k)\
@@ -164,6 +166,7 @@ class K_Neural_Network () :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            input_dim=self.dict_layers["I"],\
                                            activation=keras.layers.activations.relu,\
+                                           activity_regularizer=keras.regularizers.l2(0.5),\
                                            kernel_initializer='random_uniform',\
                                            bias_initializer ='zeros'\
                                           ))
@@ -171,6 +174,7 @@ class K_Neural_Network () :
                 else :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            activation=keras.layers.activations.relu,\
+                                           activity_regularizer=keras.regularizers.l2(0.5),\
                                            kernel_initializer='random_uniform',\
                                            bias_initializer ='zeros',\
                                            name='Dense-%s' %(k)\
@@ -354,6 +358,8 @@ if __name__ == '__main__' :
 
         print ("-"*20)
         
+        f = open("recap.txt", "w")
+        
         if par.opti=="SGD" :
             print ("\x1b[1;37;44mSGD Choosen\x1b[0m")
             print ("Parameters are :")
@@ -370,6 +376,7 @@ if __name__ == '__main__' :
                 
                 print ("\x1b[1;37;43mSGD: lr = %f, momentum = %f, decay = %f, nesterov = %r\x1b[0m"\
                             % (kwargs["lr"], kwargs["momentum"], kwargs["decay"], kwargs["nesterov"]))
+                
 
             else :
                 kwargs["lr"] = par.lr
@@ -472,6 +479,12 @@ if __name__ == '__main__' :
                 kwargs["beta1"] = par.beta1
                 kwargs["beta2"] = par.beta2
                 kwargs["schedule_decay"] = par.schedule_decay
+        
+        f.write("opti={}\n".format(par.opti))
+        for it in kwargs.iteritems() :
+                f.write("{}={}\n".format(it[0], it[1]))
+            
+        f.close()
         return kwargs 
     
     kwargs = defined_optimizer(parser)
@@ -486,16 +499,16 @@ if __name__ == '__main__' :
     
     
     dict_layers = {"I" : 4,\
-                   "N1" : [100,"relu"],\
-                   "N2" : [100,"relu"],\
-                   "N3" : [100,"relu"],\
-                   "N4" : [100,"relu"],\
-                   "N5" : [100,"relu"],\
-                   "N6" : [100,"relu"],\
-                   "N7" : [100,"relu"],\
-                   "N8" : [100,"relu"],\
-                   "N9" : [100,"relu"],\
-                   "N10" : [100,"relu"],\
+                   "N1" : [100, "relu"],\
+                   "N2" : [100, "relu"],\
+#                   "N3" : [10,"relu"],\
+#                   "N4" : [10,"relu"],\
+#                   "N5" : [10,"relu"],\
+#                   "N6" : [10,"relu"],\
+#                   "N7" : [10,"relu"],\
+#                   "N8" : [10,"relu"],\
+#                   "N9" : [10,"relu"],\
+#                   "N10" : [10,"relu"],\
                    "O"  : [1, "relu"]\
                   }
     
@@ -504,10 +517,8 @@ if __name__ == '__main__' :
     k_nn = K_Neural_Network(dict_layers, opti=par.opti, loss=par.loss, metrics=par.metrics, max_epoch=par.maxepoch,\
                             verbose=False, non_uniform_act=True, **kwargs) 
 
-    k_nn.train_and_split(X, y, shuffle=True, scale=True)
+#    k_nn.train_and_split(X, y, shuffle=True, scale=True)
     k_nn.build()
-    
-    
     
     temp = time.strftime("%m_%d_%Hh%M", time.localtime())
     model_name = "non-trained-model-1.h5"
