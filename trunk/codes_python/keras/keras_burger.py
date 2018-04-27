@@ -218,8 +218,7 @@ X, y = xy_burger(5, cb)
 keras_model = keras.models.load_model("non-trained-model-1.h5")
 
 X_train, X_test, y_train, y_test, mean, std = train_and_split(X, y, random_state=10, scale=True, shuffle=True)
-
-history = keras_model.fit(X_train, y_train, batch_size=256, epochs=500)
+history = keras_model.fit(X_train, y_train, batch_size=100, epochs=200)
 
 lenm = 3
 color = iter(cm.magma_r(lenm))
@@ -284,9 +283,22 @@ def NN_solver(model, X_train_mean, X_train_std, cb=cb, scale=True):
         plt.pause(5)
         plt.clf()
 
+import csv
+recap = {}
+r= csv.reader(open("recap.txt", "r"), delimiter='=')
+
+label_want = "Wanted"
+label_pred = "Predicted"
+for line in r:
+    recap[line[0]] = line[1]
+    label_want += "_%s_%s" % (line[0], line[1])
+    label_pred += "_%s_%s" % (line[0], line[1])
+
+print recap
+
 plt.figure("Comparaison prediction/Vraie valeure")
-plt.plot(y_test, y_test, label="Wanted", color='black')
-plt.plot(y_test, keras_model.predict(X_test), label="Predicted", linestyle="none", marker='o', c='green')
+plt.plot(y_test, y_test, label=label_want, color='black')
+plt.plot(y_test, keras_model.predict(X_test), label=label_pred, linestyle="none", marker='o', c='green')
 plt.legend(loc='best')
 
 #import time
