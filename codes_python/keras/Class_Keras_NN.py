@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 import keras 
 import tensorflow as tf
 
+import time
 import argparse
 
 plt.ion()
@@ -506,8 +507,12 @@ if __name__ == '__main__' :
     k_nn.train_and_split(X, y, shuffle=True, scale=True)
     k_nn.build()
     
-    k_nn.compile(save=True)
     
+    
+    temp = time.strftime("%m_%d_%Hh%M", time.localtime())
+    model_name = "non-trained-model-1.h5"
+    
+    k_nn.compile(save=True, name=model_name)
 #    k_nn.model.save("keras_model.h5")
     
 #    run Class_Keras_NN.py -lr 5e-4 -opti Adam -beta1 0.8

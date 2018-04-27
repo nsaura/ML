@@ -175,6 +175,10 @@ def xy_burger (num_real, cb=cb) :
 X, y = xy_burger(input("num_real :" ), cb)
 
 dict_layers = {"I" : 4,\
+#               "N1":10000,\
+#               "N2" : 100,\
+#               "O": 1\
+#              }
                "N1" : 100,\
                "N2" : 100,\
                "N3" : 100,\
