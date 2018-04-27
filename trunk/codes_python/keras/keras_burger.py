@@ -23,7 +23,7 @@ plt.ion()
 
 #run keras_burger.py -nu 2.5e-2 -itmax 100 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -dp "./../cases/data/burger_dataset/" -p "./../cases/logbooks/"
 
-model = keras.models.load_model("keras_model.h5")
+model = keras.models.load_model("non-trained-model-1.h5")
 
 ## Import de la classe cvc ##
 cvc_folder = osp.abspath(osp.dirname("../cases/Class_Vit_Choc.py"))
