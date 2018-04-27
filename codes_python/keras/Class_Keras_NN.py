@@ -510,6 +510,7 @@ if __name__ == '__main__' :
     
 #    k_nn.model.save("keras_model.h5")
     
+#    run Class_Keras_NN.py -lr 5e-4 -opti Adam -beta1 0.8
     
 #    import matplotlib as mtp
 #    plt.figure()
