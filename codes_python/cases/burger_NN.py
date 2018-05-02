@@ -221,93 +221,96 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     nn_obj.def_training(opti)
     nn_obj.cost_computation(loss, reduce_type=reduce_type)
     nn_obj.def_optimization()
-    try :
-        nn_obj.training_session(tol=1e-3, verbose=True)
-
-    except KeyboardInterrupt :
-        print ("Session closed")
-        nn_obj.sess.close()
-
-    beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
-    test_line = range(len(nn_obj.X_test))
     
-    try :
-        verbose = kwargs["verbose"]
-    except KeyError :
-        verbose = False
-    
-    deviation = np.array([ abs(beta_test_preds[j] - nn_obj.y_test[j]) for j in test_line])
-    error_estimation = sum(deviation)
-
-    if verbose == True :
-        plt.figure("Comaparaison sur le test set")
-        plt.plot(test_line, beta_test_preds, label="Prediction sur Test set", marker='+',\
-        fillstyle='none', linestyle='none', c='r')
-        plt.plot(test_line, nn_obj.y_test, label="Expected value", marker='o', fillstyle='none', linestyle='none', c='k')   
-        plt.legend()
-#    plt.figure("Evolution de l\'erreur %s" %(loss))
-#    plt.plot(range(len(nn_obj.costs)), nn_obj.costs, c='r', marker='o', alpha=0.3,\
-#            linestyle="none")
-#    error_estimation /= (len(nn_obj.X_test) -1)
-    
-        plt.figure("Deviation of the prediction")
-        plt.plot(nn_obj.y_test, nn_obj.y_test, c='k', label="reference line")
-        plt.plot(nn_obj.y_test, nn_obj.y_test, c='b', marker='+', label="wanted     value",linestyle='none')
-        plt.plot(nn_obj.y_test, beta_test_preds, c='r', marker='o', linestyle='none',   label="predicted value", ms=3)
-        plt.legend(loc="best") 
-
-#    print("Modèle utilisant N_dict_layer = {}".format(N_))\\
-    print("Modèle pour H_NL = {}, H_NN = {} \n".format(len(N_.keys())-2, N_["N1"]))
-    print("Fonction d'activation : {}\n Fonction de cout : {}\n\
-    Méthode d'optimisation : {}".format(act, loss, opti))
-    print("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
-    
-    plt.show()
-    
-#    lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, step=50, **kwargs
-    
-    f = cwc.File("traceback_burger_nn.ods")
-    f.read_file()
-    
-    data = {}
-    
-    data["LR"] = lr
-    data["Activation"]=act
-    data["Optimizer"] = opti
-    data["Maxepoch"] = max_epoch
-    data["Loss_Function"] = loss
-    data["Sequence_NN"] = dict_layers
-    data["Final_cost"] = nn_obj.costs[-1]
-    
-    if nn_obj.batched == True :
-        data["Batch_sz"] = kwargs["batch_sz"]
-    
-    else :
-        data["Batch_sz"] = " "
-        
-    if opti == "Nadam" or opti == "Adam":
-        data["Beta1"] = kwargs["beta1"]
-        data["Beta2"] = kwargs["beta2"]
-        
-        data["Decay"] = " "
-        data["Momentum"] = " "
-        
-    if opti == "RMS" :
-        data["Decay"] = kwargs["decay"]
-        data["Momentum"] = kwargs["momentum"]
-        
-        data["Beta1"] = " "
-        data["Beta2"] = " "
-    
-    if opti == "GD" or opti == "SGD":
-        data["Beta1"] = " "
-        data["Beta2"] = " "
-        data["Decay"] = " "
-        data["Momentum"] = " "
-    
-#    print data 
-    f.write_in_file(data)
     return nn_obj
+#    print nn_obj.X_train.shape
+#    try :
+#        nn_obj.training_session(tol=1e-3, verbose=True)
+
+#    except KeyboardInterrupt :
+#        print ("Session closed")
+#        nn_obj.sess.close()
+
+#    beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
+#    test_line = range(len(nn_obj.X_test))
+#    
+#    try :
+#        verbose = kwargs["verbose"]
+#    except KeyError :
+#        verbose = False
+#    
+#    deviation = np.array([ abs(beta_test_preds[j] - nn_obj.y_test[j]) for j in test_line])
+#    error_estimation = sum(deviation)
+
+#    if verbose == True :
+#        plt.figure("Comaparaison sur le test set")
+#        plt.plot(test_line, beta_test_preds, label="Prediction sur Test set", marker='+',\
+#        fillstyle='none', linestyle='none', c='r')
+#        plt.plot(test_line, nn_obj.y_test, label="Expected value", marker='o', fillstyle='none', linestyle='none', c='k')   
+#        plt.legend()
+##    plt.figure("Evolution de l\'erreur %s" %(loss))
+##    plt.plot(range(len(nn_obj.costs)), nn_obj.costs, c='r', marker='o', alpha=0.3,\
+##            linestyle="none")
+##    error_estimation /= (len(nn_obj.X_test) -1)
+#    
+#        plt.figure("Deviation of the prediction")
+#        plt.plot(nn_obj.y_test, nn_obj.y_test, c='k', label="reference line")
+#        plt.plot(nn_obj.y_test, nn_obj.y_test, c='b', marker='+', label="wanted     value",linestyle='none')
+#        plt.plot(nn_obj.y_test, beta_test_preds, c='r', marker='o', linestyle='none',   label="predicted value", ms=3)
+#        plt.legend(loc="best") 
+
+##    print("Modèle utilisant N_dict_layer = {}".format(N_))\\
+#    print("Modèle pour H_NL = {}, H_NN = {} \n".format(len(N_.keys())-2, N_["N1"]))
+#    print("Fonction d'activation : {}\n Fonction de cout : {}\n\
+#    Méthode d'optimisation : {}".format(act, loss, opti))
+#    print("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
+#    
+#    plt.show()
+#    
+##    lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, step=50, **kwargs
+#    
+#    f = cwc.File("traceback_burger_nn.ods")
+#    f.read_file()
+#    
+#    data = {}
+#    
+#    data["LR"] = lr
+#    data["Activation"]=act
+#    data["Optimizer"] = opti
+#    data["Maxepoch"] = max_epoch
+#    data["Loss_Function"] = loss
+#    data["Sequence_NN"] = dict_layers
+#    data["Final_cost"] = nn_obj.costs[-1]
+#    
+#    if nn_obj.batched == True :
+#        data["Batch_sz"] = kwargs["batch_sz"]
+#    
+#    else :
+#        data["Batch_sz"] = " "
+#        
+#    if opti == "Nadam" or opti == "Adam":
+#        data["Beta1"] = kwargs["beta1"]
+#        data["Beta2"] = kwargs["beta2"]
+#        
+#        data["Decay"] = " "
+#        data["Momentum"] = " "
+#        
+#    if opti == "RMS" :
+#        data["Decay"] = kwargs["decay"]
+#        data["Momentum"] = kwargs["momentum"]
+#        
+#        data["Beta1"] = " "
+#        data["Beta2"] = " "
+#    
+#    if opti == "GD" or opti == "SGD":
+#        data["Beta1"] = " "
+#        data["Beta2"] = " "
+#        data["Decay"] = " "
+#        data["Momentum"] = " "
+#    
+##    print data 
+#    f.write_in_file(data)
+#    return nn_obj
 
 #nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=20000, reduce_type="sum", verbose=True)
 #nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=5000, reduce_type="sum", verbose=True)

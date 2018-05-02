@@ -49,8 +49,8 @@ def parser() :
                         help='Define how many samples of epsilon(T) to draw for exact model. Default to %(default)d\n' )
     parser.add_argument('--g_sup_max', '-g_sup', action='store', type=float, default=0.001, dest='g_sup_max', 
                         help='Define the criteria on grad_J to stop the optimization. Default to %(default).5f \n' )
-    parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', default=1 ,dest='beta_prior',\
-                        help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
+    parser.add_argument('--lambda_prior', '-lambda_prior', type=float ,action='store', default=1 ,dest='lambda_prior',\
+                        help='lambda_prior: first guess on the optimization solution. Value default to %(default)d\n')
     
     # Strings
     parser.add_argument('--init_u', '-init_u', action='store', type=str, default='sin', dest='type_init', 
@@ -88,7 +88,7 @@ def intermediaires (var, flux ,incr, r) :
     f_p = 0.5 * ( var[incr+1] + var[incr] ) - 0.5 * r * ( flux[incr+1] - flux[incr] )
     return f_m,f_p
 
-class Vitesse_Choc() :
+class Karniadakis_burger() :
 ##---------------------------------------------------------------
     def __init__ (self, parser):
         """
@@ -125,27 +125,13 @@ class Vitesse_Choc() :
         g_sup_max   =   parser.g_sup_max
         itmax       =   parser.itmax
         
-        self.beta_prior = np.asarray([parser.beta_prior for i in range(Nx)]) 
+        self.lambda_prior = np.asarray([parser.lambda_prior for i in range(2)]) 
         
         ## Matrices des coefficients pour la résolution
         ## Attention ces matrices ne prennent pas les points où sont définies les conditions initiales
         ## Ces cas doivent faire l'objet de méthodes particulières avec la redéfinition des fonctions A1 et A2 
         
         #####
-        INF1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), -1)
-        SUP1 = np.diag(np.transpose([-fac/2 for i in range(Nx-3)]), 1) 
-        A_diag1 = np.diag(np.transpose([(1 + fac) for i in range(Nx-2)])) 
-        
-        In1 = A_diag1 + INF1 + SUP1
-        
-        A1 = np.zeros((Nx,Nx))
-        
-        A1[0,0] = A1[-1,-1] = 1
-        
-        A1[1:Nx-1, 1:Nx-1] = In1
-        #####
-        self.A1 = A1
-        
         bruits = [0.0009 * np.random.randn(Nx) for time in range(num_real)]
         self.bruits = bruits
         
@@ -178,27 +164,28 @@ class Vitesse_Choc() :
         if osp.exists(datapath) == False :
             os.mkdir(datapath)
         
-        bmatrice_path = osp.join(datapath, "burger_matrices")
-        case_path = osp.join(bmatrice_path, "cas_u")
+        karnia_path = osp.join(datapath, "karnia")
         
-        self.cov_path = osp.join(case_path, "post_cov")
-        self.beta_path = osp.join(case_path, "betas")
-        self.chol_path = osp.join(case_path, "cholesky")
-        self.inferred_U = osp.join(case_path, "U")
+        self.lambda_path = osp.join(karnia_path, "lambdas")
+        self.inferred_U = osp.join(karnia_path, "U")
+        self.chol_path = osp.join(karnia_path, "cholesky")
+        self.cov_path = osp.join(karnia_path, "post_cov")
         
-        if osp.exists(osp.join(case_path)) == False :
-            os.mkdir(bmatrice_path)
+        if osp.exists(osp.join(karnia_path)) == False :
+            os.mkdir(karnia_path)
         
-        if osp.exists(self.inferred_U) == False :
-            os.mkdir(self.cov_path)
-            os.mkdir(self.chol_path)
-            os.mkdir(self.beta_path)
-            os.mkdir(self.inferred_U)
+        exists = [False, False, False, False]
+        if False in exists :
+            for p in [self.chol_path, self.cov_path, self.lambda_path, self.inferred_U] :
+                try :
+                    os.mkdir(p)
+                except OSError :
+                    pass
 
-        self.datapath   =   datapath
+        self.datapath = datapath
         
-        self.beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.beta_path,\
-            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+        self.lambda_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.lambda_path,\
+            "lambda_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
         self.u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.inferred_U,\
             "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
@@ -210,42 +197,14 @@ class Vitesse_Choc() :
                 
         self.parser = parser
 ##---------------------------------------------------
-    def set_beta_prior(self, new_beta) :
+    def set_lambda_prior(self, new_lambda) :
         """
         Descr :
         ----------
-        Method designed to change the beta_prior array without running back the whole program.
+        Method designed to change the lambda_prior array without running back the whole program.
         """
-        self.beta_prior = np.asarray([new_beta for i in range(self.Nx)])
-        print("Beta prior is now \n{}".format(self.beta_prior))
-##---------------------------------------------------
-    def set_cov_mod(self, new_cov_mod) :
-        """
-        Descr :
-        ----------
-        Method designed to change the covariance form  without running back the whole program.
-        """
-        self.cov_mod = new_cov_mod
-        self.bool_method["stat"] = False
-        print("cov_mod is now \n{}".format(self.cov_mod))
-##---------------------------------------------------        
-    def set_cpt_max_adj(self, new_compteur) :
-        """
-        Descr :
-        ----------
-        Method designed to change the adjoint maximal increment value without running back the whole program.
-        """
-        self.cpt_max_adj = new_compteur
-        print("cpt_max_adj is now {}".format(self.cpt_max_adj))
-##---------------------------------------------------
-    def set_g_sup_max(self, new_criteria) :
-        """
-        Descr :
-        ----------
-        Method designed to change the adjoint criteria for exiting adjoint optimization without running back the whole program.
-        """
-        self.g_sup_max = new_criteria
-        print("g_sup_max is now {}".format(self.g_sup_max))   
+        self.lambda_prior = np.asarray([new_lambda for i in range(2)])
+        print("lambda_prior is now \n{}".format(self.lambda_prior))
 ###---------------------------------------------------
     def init_u(self): 
         u = []
@@ -264,38 +223,33 @@ class Vitesse_Choc() :
             u = np.sin(2*np.pi/self.L*self.line_x) + 0.5
         return u
 ##---------------------------------------------------
-    def u_beta(self, beta, u_n, verbose=False) :
-#        print beta.size, beta.shape
-        if self.typeJ == "grad" : 
-            INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
-            SUP2 = np.diag(np.transpose([-self.r*beta[i] + self.fac/2 for i in range(self.Nx-3)]), 1)
-            A_diag2 = np.diag(np.transpose([(self.r*beta[i] + 1 - self.fac) for i in range(self.Nx-2)]))
+    def u_lambda(self, lambdas, u_n, verbose=False) :
         
-        if self.typeJ == "u" : 
-            INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
-            SUP2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), 1)
-            A_diag2 = np.diag(np.transpose([(- self.dt*beta[i] + 1 - self.fac) for i in range(self.Nx-2)]))
+        u = u_n
+        r = self.dt/self.dx
         
-        if self.typeJ == "1" :
-            INF2 = np.diag(np.transpose([self.fac/2 for i in range(self.Nx-3)]), -1) 
-            SUP2 = np.diag(np.transpose([ self.fac/2 for i in range(self.Nx-3)]), 1)
-            A_diag2 = np.diag(np.transpose([1 - self.fac for i in range(self.Nx-2)]))
+        u_nNext  = []
         
-        In2 = A_diag2 + INF2 + SUP2
-        
-        A2 = np.zeros((self.Nx,self.Nx))
-        A2[1:self.Nx-1, 1:self.Nx-1] = In2
+        fu = np.asarray([lambdas[0]*0.5*u_x**2 for u_x in u])
+                
+        der_sec = [lambdas[1]*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
+        der_sec.insert(0, lambdas[1]*(u[1] - 2*u[0] + u[-1]))
+        der_sec.insert(len(der_sec), lambdas[1]*(u[0] - 2*u[-1] + u[-2]))
 
-#        u_n_2 = np.array([0.5*ux**2 for ux in u_n])
-        
-        u_n_tmp = np.dot(A2, u_n)
-        
-        u_nNext = np.dot(np.linalg.inv(self.A1), u_n_tmp)
+        for i in range(1,self.Nx-1) : # Pour prendre en compte le point Nx-2
+            u_m, u_p = intermediaires(u, fu, i, r)
+            fu_m =  lambdas[0]*0.5*u_m**2
+            fu_p =  lambdas[0]*0.5*u_p**2
 
-        u_nNext[-1] = u_nNext[1]
-        u_nNext[0] = u_nNext[-2]
+            u_nNext.append( u[i] - r*( fu_p - fu_m ) + der_sec[i] )
+                                        
+        # Conditions aux limites 
+        u[1:self.Nx-1] = u_nNext  
         
-        return u_nNext
+        u[0] = u[-2]
+        u[-1]= u[1]
+        
+        return u
 ##---------------------------------------------------         
     def obs_res(self, write=False, plot=False)  : 
         ## Déf des données du probleme 
@@ -431,119 +385,32 @@ class Vitesse_Choc() :
             print("Get_Obs_Statistics lunched")
         #---------------------------------------------    
         #---------------------------------------------
-        def DR_DU (beta) :
-            if self.typeJ == "grad":
-                INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx-1)], -1)
-                SUP1 = 0.5*np.diag([beta[i]*self.r - self.fac/2. for i in range(self.Nx - 1)], +1)
-                A1   = np.diag([self.fac - (1. + beta[i]*self.r) for i in range(self.Nx)])
-            
-            if self.typeJ == "u" :   
-                INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx - 1)], -1)
-                SUP1 = 0.5*np.diag([- self.fac/2. for i in range(self.Nx - 1)], +1)
-                A1   = np.diag([beta[i]*self.dt - 1. + self.fac for i in range(self.Nx)])
-            
-            if self.typeJ == "1" :
-                INF1 = 0.5*np.diag([-self.fac/2. for i in range(self.Nx - 1)], -1)
-                SUP1 = 0.5*np.diag([- self.fac/2. for i in range(self.Nx - 1)], +1)
-                A1   = np.diag([-1. + self.fac for i in range(self.Nx)])
         
-            drdu = A1 + INF1 + SUP1
-        
-            return np.linalg.inv(drdu)
-        #---------------------------------------------
-        #---------------------------------------------
-        def dR_dbeta(beta, u_n):
-            DR_DBETA = np.zeros((self.Nx, self.Nx))
-            
-            if self.typeJ == "grad":
-                uu = [(u_n[i+1] - u_n[i]) * self.r for i in range(len(u_n)-1)]
-                uu.insert(len(uu), (u_n[1] - u_n[len(uu)] )*self.r)
-                DR_DBETA = np.diag(uu)
-            
-            if self.typeJ == "u" :
-                DR_DBETA = np.diag(u_n)
-                    
-            if self.typeJ == "1":
-                DR_DBETA = np.diag([-self.dt for i in range(len(u_n))])
-            
-            return DR_DBETA
-        #---------------------------------------------
-        #---------------------------------------------
-        def d_unp1_d_un(beta, u) :
-            if self.typeJ == "grad":
-                dij_LW = [ 1-self.r/8.*\
-                            (\
-                                2*(u[i+1] - u[i-1])\
-                                -self.r*(u[i+1]**2 - 2*u[i]*(u[i+1] + u[i-1]) +u[i-1]**2)\
-                                -self.r**2*u[i]*(u[i+1]**2 - u[i-1]**2)
-                            )\
-                            for i in range(1,len(u)-1)\
-                         ]
-#                dij_LW.insert(0, dij_LW[-1])
-#                dij_LW.insert(len(dij_LW), dij_LW[1])
-                dij_LW = np.asarray(dij_LW)
-
-                dijM1_LW = [self.r/8. *\
-                            (\
-                                2*(u[i-1] + u[i])\
-                                + self.r*(u[i-1]*(2*u[i] + 3*u[i-1])-u[i]**2)\
-                                - self.r**2*u[i-1]*(u[i]**2 - u[i-1]**2)\
-                            )\
-                            for i in range(2,len(u)-1)\
-                          ]
-                i=0
-                dijP1_LW = [-self.r/8.*\
-                            (\
-                                2*(u[i]+ u[i+1])\
-                                - self.r*(u[i+1]*(2*u[i] + 3*u[i+1]) -u[i]**2)\
-                                + self.r**2*u[i+1]*(u[i+1]**2 - u[i]**2)\
-                            )\
-                            for i in range(1,len(u)-2)\
-                          ]
-
-                dij_CN = np.asarray([self.fac-(1+beta[i]*self.r) for i in range(1,len(u)-1)])
-
-                dijM1_CN = np.asarray([-self.fac*0.5 for i in range(2, len(u)-1)])
-                dijP1_CN = np.asarray([beta[i] * self.r - self.fac*0.5 for i in range(1,len(u)-2)])
-
-                dij = dij_LW + dij_CN
-                diM1j = dijM1_LW + dijM1_CN
-                diP1j = dijP1_LW + dijP1_CN
-                
-                IndJ_Du = np.diag(dij) + np.diag(diM1j, -1) + np.diag(diP1j, 1)
-                Dj_Du = np.zeros((self.Nx, self.Nx))
-                
-                Dj_Du[0,0] = dij[-1] #ie N-2 sur le total
-                Dj_Du[-1,-1] = dij[0] #ie le 1 sur le total
-                
-                return Dj_Du
-        #---------------------------------------------
-        #---------------------------------------------
-        beta_n = self.beta_prior
+        lambda_n = self.lambda_prior
         u_n = self.U_moy_obs["u_moy_it0"]
         
 #        alpha = 1.e-4 # facteur de régularisation
         self.opti_obj = dict
-        self.beta_n_dict = dict()
-        self.U_beta_n_dict = dict()
+        self.lambda_n_dict = dict()
+        self.U_lambda_n_dict = dict()
         self.optimization_time = dict()
         
         t = 0
         reg_fac = 1e-2
-        Id = np.eye(self.Nx)
+        Id = np.eye(2)
         
         for it in range(0, self.itmax-1) :
             if it >0 :
-                beta_n = beta_n_opti
-                u_n = u_n_beta
+                lambda_n = lambda_n_opti
+                u_n = u_n_lambda
                 
             t1 = time.time()
             
             u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it+1)]
-            cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)] # Pour avoir la bonne taille de matrice
+#            cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)] # Pour avoir la bonne taille de matrice
             
             if it == 0 :
-                u_n = self.u_beta(beta_n[1:self.Nx-1], u_obs_nt)
+                u_n = self.u_lambda(lambda_n, u_obs_nt)
             
             print ("diag")
 
@@ -552,31 +419,27 @@ class Vitesse_Choc() :
             
             print (cov_obs_nt_inv.shape)
             #Pour avoir la bonne taille de matrice
-            Uu = lambda beta : u_obs_nt - self.u_beta(beta[1:self.Nx-1], u_n) 
-            
-            J = lambda beta : 0.5 * (np.dot( np.dot(Uu(beta).T, cov_obs_nt_inv), Uu(beta)) +\
-                                             reg_fac*np.dot( np.transpose(beta - beta_n).dot(Id), (beta - beta_n) ) \
-                                    )
+            Uu  = lambda l  :   u_obs_nt - self.u_lambda(l, u_n) 
+            J   = lambda l  :   0.5 * (np.dot( np.dot(Uu(l).T, cov_obs_nt_inv), Uu(l) )) # +\
+#                                             reg_fac*np.dot( np.transpose(l - lambda_n).dot(Id), (l - lambda_n) ) \
                                     
             # On utilise les différence finies pour l'instant
-            DJ = nd.Gradient(J)
-                                   
-            
+#            DJ = nd.Gradient(J)
             print ("Opti Minimization it = %d" %(it))
             
             # Pour ne pas oublier :            
             # On cherche beta faisant correspondre les deux solutions au temps it + 1. Le beta final est ensuite utilisé pour calculer u_beta au temps it 
-            for i in range(len(beta_n)) : # Un peu de bruit
-                beta_n[i] *= np.random.random()    
+            for i in range(len(lambda_n)) : # Un peu de bruit
+                lambda_n[i] *= np.random.random()    
 
             # Minimization 
-            optimi_obj_n = op.minimize(J, self.beta_prior, jac=DJ, method=solver, options={"maxiter" : maxiter})
+            optimi_obj_n = op.minimize(J, self.lambda_prior, method=solver, options={"maxiter" : maxiter})
             
-            print("\x1b[1;37;44mDifference de beta it {} = {}\x1b[0m".format(it, np.linalg.norm(beta_n - optimi_obj_n.x, np.inf)))
-            beta_n_opti = optimi_obj_n.x
+            print("\x1b[1;37;44mDifference de lambda it {} = {}\x1b[0m".format(it, np.linalg.norm(lambda_n - optimi_obj_n.x, np.inf)))
+            lambda_n_opti = optimi_obj_n.x
             
             #On ne prend pas les béta dans les ghost cell
-            u_n_beta = self.u_beta(beta_n_opti[1:self.Nx-1], u_n)
+            u_n_lambda = self.u_lambda(lambda_n_opti, u_n)
 
             t2 = time.time()
             print (optimi_obj_n)
@@ -585,18 +448,18 @@ class Vitesse_Choc() :
             self.optimization_time["it%d" %(it)] = abs(t2-t1)
             
             # On enregistre pour garder une trace après calculs
-            self.beta_n_dict["beta_it%d" %(it)]  = beta_n_opti
-            self.U_beta_n_dict["u_beta_it%d" %(it)] = u_n_beta
+            self.lambda_n_dict["lambda_it%d" %(it)]  = lambda_n_opti
+            self.U_lambda_n_dict["u_lambda_it%d" %(it)] = u_n_lambda
             
             # On enregistre beta_n, u_n_beta et cholesky
                 # Enregistrement vecteur entier
-            np.save(self.beta_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), beta_n_opti) 
-            np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_n_beta)
+            np.save(self.lambda_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), lambda_n_opti) 
+            np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_n_lambda)
             
                 # Calcule de Cholesky et enregistrement
-            hess_beta = optimi_obj_n.hess_inv
-            cholesky_beta = np.linalg.cholesky(hess_beta)
-            np.save(self.chol_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), cholesky_beta)
+            hess_lambda = optimi_obj_n.hess_inv
+            cholesky_lambda = np.linalg.cholesky(hess_lambda)
+            np.save(self.chol_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), cholesky_lambda)
 
             # On calcule l'amplitude en utilisant cholesky pour savoir si les calculs sont convergés ou pas             
             sigma = dict()
@@ -610,15 +473,15 @@ class Vitesse_Choc() :
             cpt = 0
             # Tirage avec s un vecteur aléatoire tirée d'une distribution N(0,1)
             while cpt <100 :
-                s = np.random.randn(self.Nx)
-                beta_i = beta_n_opti + np.dot(cholesky_beta, s)
+                s = np.random.randn(2)
+                lambda_i = lambda_n_opti + np.dot(cholesky_lambda, s)
                 cpt += 1
             
             # On enregistre les valeurs des tirages pour chaque i pour trouver les extrema
-                for j in range(len(beta_i)): 
-                    fields_v["%03d" %(j)].append(beta_i[j])
+                for j in range(len(lambda_i)): 
+                    fields_v["%03d" %(j)].append(lambda_i[j])
                 
-            for k in range(len(beta_i)) :
+            for k in range(len(lambda_i)) :
                 mins.append(min(fields_v["%03d" %(k)]))
                 maxs.append(max(fields_v["%03d" %(k)]))
             
@@ -630,18 +493,18 @@ class Vitesse_Choc() :
                     for i in [0,1] : axes[i].clear()
 
                 if evol == 0 :
-                    axes[0].plot(self.line_x[:-1], beta_n_opti[:-1], label="iteration %d" %(it), c= "r")
-                    axes[0].fill_between(self.line_x[:-1], mins[:-1], maxs[:-1], facecolor= "0.2", alpha=0.2, interpolate=True, color="red")
+                    axes[0].plot(range(2), lambda_n_opti, label="iteration %d" %(it), c= "r")
+                    axes[0].fill_between(range(2), mins, maxs, facecolor= "0.2", alpha=0.2, interpolate=True, color="red")
                     
                     axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it), c='k')                 
-                    axes[1].plot(self.line_x[:-1], self.U_beta_n_dict["u_beta_it%d" %(it)][:-1], label='Opti it %d'%(it),\
+                    axes[1].plot(self.line_x[:-1], self.U_lambda_n_dict["u_lambda_it%d" %(it)][:-1], label='Opti it %d'%(it),\
                         marker='o', fillstyle='none', linestyle='none', c='r')
                 if evol == 1 :
-                    axes[0].plot(self.line_x[:-1], beta_n_opti[:-1], label="iteration %d" %(it), c = "b", marker="o")
-                    axes[0].fill_between(self.line_x[:-1], mins[:-1], maxs[:-1], facecolor= "0.2", alpha=0.2, interpolate=True, color="b")
+                    axes[0].plot(range(2), lambda_n_opti, label="iteration %d" %(it), c = "b", marker="o")
+                    axes[0].fill_between(range(2), mins, maxs, facecolor= "0.2", alpha=0.2, interpolate=True, color="b")
                     
                     axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it), c='grey', marker="+")
-                    axes[1].plot(self.line_x[:-1], self.U_beta_n_dict["u_beta_it%d" %(it)][:-1], label='Opti it %d'%(it),\
+                    axes[1].plot(self.line_x[:-1], self.U_lambda_n_dict["u_lambda_it%d" %(it)][:-1], label='Opti it %d'%(it),\
                         marker='o', fillstyle='none', linestyle='none', c='b')
                 
                 axes[0].legend(loc="best")
@@ -654,14 +517,13 @@ class Vitesse_Choc() :
 ###---------------------------------------------------##   
 ##----------------------------------------------------##
 if __name__ == '__main__' :
-#    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 52 -Nt 52
-#    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10
+#    run karniadakis_burger.py -nu 2.5e-2 -itmax 100 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -lambda_prior 10
     parser = parser()
     plt.close("all")
     
-    cb = Vitesse_Choc(parser)   
-#    cb.obs_res(True, True)
-#    cb.obs_res(write=False, plot=True)
-#    cb.get_obs_statistics(write=True)
+    kb = Karniadakis_burger(parser)   
+#    kb.obs_res(True, True)
+#    kb.obs_res(write=False, plot=True)
+#    kb.get_obs_statistics(write=True)
     
-#    cb.minimization()
+#    kb.minimization(maxiter = 50)
