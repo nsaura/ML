@@ -54,6 +54,8 @@ class Neural_Network():
         self.wlastkey = "wlast"
         self.blastkey = "blast"
         
+        print N_
+        
         self.N_ = N_
         self.lr = lr
         self.max_epoch = max_epoch
@@ -183,6 +185,7 @@ class Neural_Network():
 
         self.w_dict = w_dict
         self.biases_d = biases_d
+        self.Ncol_Xtrain = Ncol_Xtrain
 ###-------------------------------------------------------------------------------        
     def tf_variables(self):
         ### We want to create as many tf.tensors as we have weight and biases matrices 
@@ -199,8 +202,8 @@ class Neural_Network():
         
         ### We also create x and t which are training data and target to train the model
             ### Those will be tf.placeholder 
-        self.x = tf.placeholder(tf.float32, (None, self.N_["I"]))
-        self.t = tf.placeholder(tf.float32, (None, self.N_["O"]))
+        self.x = tf.placeholder(tf.float32, (None, self.Ncol_Xtrain) )
+        self.t = tf.placeholder(tf.float32, (None, 1) )
         
         self.w_tf_d = w_tf_d
         self.b_tf_d = b_tf_d
@@ -465,16 +468,18 @@ class Neural_Network():
 #            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
             for epoch in range(self.max_epoch) :
 #                print(self.kwargs["batch_sz"])
-                rand_index = np.random.choice(len(self.X_train), size=self.kwargs["batch_sz"])   
+                rand_index = np.random.choice(len(self.X_train), size=self.kwargs["b_sz"])   
 
-                X_batch = self.X_train[rand_index]
-                y_batch = self.y_train[rand_index]
-            
+                self.X_batch = self.X_train[rand_index]
+                self.y_batch = self.y_train[rand_index]
+#                print self.X_batch.shape
+#                
+                
 #                X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
 #                y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
-                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})  
-                err = self.sess.run(self.loss, feed_dict=({self.x: self.X_train,\
-                                                           self.t: self.y_train}))
+                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch, self.t : self.y_batch})  
+                err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
+                                                          self.t: self.y_train})
                     
                 costs.append(err)
                 
