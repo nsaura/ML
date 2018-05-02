@@ -215,7 +215,7 @@ class K_Neural_Network () :
         print ("Current Graphe can be seen by taping in a terminal :") 
         print ("\"eog {} \"".format(osp.abspath(filename)))
          
-        plot_model(k_nn.model, to_file=filename)
+        plot_model(self.model, to_file=filename)
 #-------------------------------------------------------------------------------  
     def train_and_split(self, X, y, random_state=0, strat=False, scale=False, shuffle=True):
         if shuffle == True :
@@ -264,7 +264,6 @@ class K_Neural_Network () :
         self.X_train_std  = X_train_std
         self.X_train, self.X_test = X_train, X_test
         self.y_train, self.y_test = y_train, y_test
-        
 #-------------------------------------------------------------------------------
     def compile(self, save=True, name="non-trained-model-1.h5"):
         self.summary()
@@ -310,12 +309,14 @@ class K_Neural_Network () :
         if save == True :
             self.model.save(name)
 #-------------------------------------------------------------------------------
-    def fit(self):           
+    def fit_model(self):           
         bsz = self.kwargs["batch_size"] if self.batched == True else len(self.X_train)
         self.fit = self.model.fit(self.X_train, self.y_train, epochs=self.max_epoch, batch_size=bsz)
         
         lenm = len(self.metrics)
         color = iter(cm.magma_r(lenm))
+        
+        plt.figure("Fitting")
         
         for i in self.metrics :
             c = next(color)
@@ -324,10 +325,8 @@ class K_Neural_Network () :
         plt.legend()
         self.prediction = self.model.predict
 #-------------------------------------------------------------------------------
-if __name__ == '__main__' : 
-    par = parser()
-    
-    def defined_optimizer(parser):
+#-------------------------------------------------------------------------------
+def defined_optimizer(par):
         default_value = {"SGD"   : {"lr"    :   0.01,\
                                     "momentum" : 0.0,\
                                     "decay" :   0.0,\
@@ -479,15 +478,15 @@ if __name__ == '__main__' :
                 kwargs["beta1"] = par.beta1
                 kwargs["beta2"] = par.beta2
                 kwargs["schedule_decay"] = par.schedule_decay
-        
-        f.write("opti={}\n".format(par.opti))
-        for it in kwargs.iteritems() :
-                f.write("{}={}\n".format(it[0], it[1]))
-            
-        f.close()
+
+        kwargs["batch_size"] = par.bsz
         return kwargs 
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+if __name__ == '__main__' : 
+    par = parser()
     
-    kwargs = defined_optimizer(parser)
+    kwargs = defined_optimizer(par)
     print ("\n\x1b[1;19;10mkwargs to lunch the NN :\n{}\x1b[0m".format(kwargs)) 
     print ("-"*20)
     
@@ -499,20 +498,14 @@ if __name__ == '__main__' :
     
     
     dict_layers = {"I" : 4,\
-                   "N1" : [100, "relu"],\
-                   "N2" : [100, "relu"],\
-#                   "N3" : [10,"relu"],\
-#                   "N4" : [10,"relu"],\
-#                   "N5" : [10,"relu"],\
-#                   "N6" : [10,"relu"],\
-#                   "N7" : [10,"relu"],\
-#                   "N8" : [10,"relu"],\
-#                   "N9" : [10,"relu"],\
-#                   "N10" : [10,"relu"],\
+                   "N1" : [100,par.act],\
+                   "N2" : [100,par.act],\
+                   "N3" : [100,par.act],\
+                   "N4" : [100,par.act],\
+                   "N5" : [100,par.act],\
+                   "N6" : [100,par.act],\
                    "O"  : [1, "relu"]\
                   }
-    
-    kwargs["batch_size"] = par.bsz
     
     k_nn = K_Neural_Network(dict_layers, opti=par.opti, loss=par.loss, metrics=par.metrics, max_epoch=par.maxepoch,\
                             verbose=False, non_uniform_act=True, **kwargs) 
