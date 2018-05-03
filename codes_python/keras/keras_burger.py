@@ -14,6 +14,13 @@ import os
 import os.path as osp
 from sklearn.model_selection import train_test_split
 
+## Import de la classe file ##
+file_folder = osp.abspath(osp.dirname("../cases/NN_write_file.py"))
+sys.path.append(file_folder)
+
+import Class_write_case as FW
+FW = reload(FW)
+
 import keras 
 import tensorflow as tf
 
@@ -220,6 +227,9 @@ keras_model = keras.models.load_model("non-trained-model-1.h5")
 X_train, X_test, y_train, y_test, mean, std = train_and_split(X, y, random_state=10, scale=True, shuffle=True)
 history = keras_model.fit(X_train, y_train, batch_size=100, epochs=200)
 
+data = {}
+
+
 lenm = 3
 color = iter(cm.magma_r(lenm))
 
@@ -246,7 +256,7 @@ def recentre(xs, X_train_mean, X_train_std):
     return xs
 
 
-def NN_solver(model, X_train_mean, X_train_std, cb=cb, scale=True):
+def NN_solver(model, X_train_mean, X_train_std, cb=cb, scale=True, typeJ="u"):
     beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
             "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
@@ -257,6 +267,7 @@ def NN_solver(model, X_train_mean, X_train_std, cb=cb, scale=True):
             "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
     
     # Initialisation it = 1
+    if cb.typeJ != typeJ : cb.typeJ = typeJ
     u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=1))
     plt.figure()
     for it in range(1, cb.itmax) :

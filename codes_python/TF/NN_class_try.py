@@ -262,12 +262,8 @@ class Neural_Network():
         
         print("Optimiseur choisi : {}".format(train_mod))
         
-        parameters = dict()        
-        for k in self.kwargs :
-            parameters[k] = self.kwargs[k]
-        
-        for k, v in zip(parameters.keys(), parameters.values()):
-            print("parmeters[{}] = {}".format(k,v))
+        for k, v in zip(self.kwargs.keys(), self.kwargs.values()):
+            print("kwargs[{}] = {}".format(k,v))
         
         if train_mod == "GD" or train_mod == "SGD":
             # Classical gradient descent. Insure to find global minimum, but may need a lot of time
@@ -281,74 +277,53 @@ class Neural_Network():
             try :
                 self.train_op = considered_optimizer[train_mod](\
                                                                self.lr,\
-                                                               momentum=parameters["momentum"],\
-                                                               decay=parameters["decay"]\
+                                                               momentum=self.kwargs["momentum"],\
+                                                               decay=self.kwargs["decay"]\
                                                                 )
             except KeyError:
                 print("\x1b[1;37;43mSeems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
                 Use the default one instead with lr = {} though\x1b[0m".format(self.lr))
                 self.train_op = tf.train.RMSPropOptimizer(self.lr)
                 
-                parameters["momentum"]  =   0.0
-                parameters["decay"]     =   0.9    
+                self.kwargs["momentum"]  =   0.0
+                self.kwargs["decay"]     =   0.9    
                 
                 self.default = True
         
         if train_mod=="Adam" :
         # Classical Momentum added in RMSPROP algorithm
-            try :    
+            if "beta1" in self.kwargs.keys() and "beta2" in self.kwargs.keys():
                 self.train_op = considered_optimizer[train_mod](\
                                                                self.lr,\
-                                                               beta1=parameters["beta1"],\
-                                                               beta2=parameters["beta2"],\
+                                                               beta1=self.kwargs["beta1"],\
+                                                               beta2=self.kwargs["beta2"],\
                                                               )
-            except KeyError:
+            elif "beta1" in self.kwargs.keys() : 
+                self.train_op = considered_optimizer[train_mod](\
+                                                               self.lr,\
+                                                               beta1=self.kwargs["beta1"]\
+                                                              )
+                self.kwargs["beta2"] = 0.99
+            
+            elif "beta2" in self.kwargs.keys() : 
+                self.train_op = considered_optimizer[train_mod](\
+                                                               self.lr,\
+                                                               beta2=self.kwargs["beta2"]\
+                                                              )
+                self.kwargs["beta1"] = 0.9
+                
+            else :
                 print("\x1b[1;37;43mAdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001\x1b[0m".format(self.lr))
                 self.train_op = tf.train.AdamOptimizer(self.lr)  
                 
-                parameters["beta1"] = 0.9
-                parameters["beta2"] = 0.99
+                self.kwargs["beta1"] = 0.9
+                self.kwargs["beta2"] = 0.99
                   
                 self.default = True
         
-        if train_mod=="Nadam" :
-            # Adding Nesterov momentum in Adam with schedule_decay
-            # If each of the Nadam's argument is specified
-            try :
-                self.train_op = considered_optimizer[train_mod](\
-                                                               self.lr,\
-                                                               beta_1=parameters["beta1"],\
-                                                               beta_2=parameters["beta2"],\
-                                                               schedule_decay=parameters["decay"]\
-                                                               ) 
-            except KeyError :
-                # If schedule_decay is not specified
-                try :
-                    print("\x1b[1;37;43mNadamOptimizer goes with default schedule decay.\
-                    lr = {}, beta1 = {}, beta2 = {} \x1b[0m"\
-                            .format(self.lr, parameters["beta1"], parameters["beta2"]))
-                            
-                    self.train_op = considered_optimizer[train_mod](\
-                                                                    self.lr,\
-                                                                    beta_1=parameters["beta1"],\
-                                                                    beta_2=parameters["beta2"]\
-                                                                   )
-                # If nothing but lr is specified    
-                except KeyError :
-                    print("\x1b[1;37;43mNadamOptimizer goes with default mode.\
-                    lr = {} and  beta1 = 0.9, beta2 = 0.999, schedule_decay = 0.04 \x1b[0m"\
-                            .format(self.lr))
-                    
-                    self.train_op = considered_optimizer[train_mod](self.lr) 
-                    
-                    parameters["beta1"] = 0.9
-                    parameters["beta2"] = 0.999
-                    
-                    self.default = True
                     
         # Selfing the optimizer with the wanted tuning 
         self.train_mod = train_mod
-        self.parameters = parameters
 ###-------------------------------------------------------------------------------      
     def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum") :
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
