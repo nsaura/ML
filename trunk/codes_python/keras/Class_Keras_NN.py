@@ -141,7 +141,7 @@ class K_Neural_Network () :
                 if j == 0 :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            activation= self.conv_str_to_acti[self.dict_layers[k][1]],\
-                                           activity_regularizer=keras.regularizers.l2(0.5),\
+#                                           activity_regularizer=keras.regularizers.l2(0.5),\
                                            kernel_initializer='random_uniform',\
                                            bias_initializer='zeros',\
                                            input_dim=self.dict_layers["I"]\
@@ -149,7 +149,7 @@ class K_Neural_Network () :
                 else :                    
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            activation= self.conv_str_to_acti[self.dict_layers[k][1]],\
-                                           activity_regularizer=keras.regularizers.l2(0.5),\
+#                                           activity_regularizer=keras.regularizers.l2(0.5),\
                                            kernel_initializer='random_uniform',\
                                            bias_initializer='zeros',\
                                            name='Dense-%s' %(k)\
@@ -166,7 +166,7 @@ class K_Neural_Network () :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            input_dim=self.dict_layers["I"],\
                                            activation=keras.layers.activations.relu,\
-                                           activity_regularizer=keras.regularizers.l2(0.5),\
+#                                           activity_regularizer=keras.regularizers.l2(0.5),\
                                            kernel_initializer='random_uniform',\
                                            bias_initializer ='zeros'\
                                           ))
@@ -174,7 +174,7 @@ class K_Neural_Network () :
                 else :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            activation=keras.layers.activations.relu,\
-                                           activity_regularizer=keras.regularizers.l2(0.5),\
+#                                           activity_regularizer=keras.regularizers.l2(0.5),\
                                            kernel_initializer='random_uniform',\
                                            bias_initializer ='zeros',\
                                            name='Dense-%s' %(k)\
@@ -305,13 +305,38 @@ class K_Neural_Network () :
         ### Faire des try except pour lancer les commandes par defaut si non precise dans le kwargs 
         
         self.model.compile(loss=self.keras_loss, optimizer=optimizer, metrics=self.metrics)
-
+        
+        data = {}
+        data["LR"] = kwargs["lr"]
+        
+        if self.opti in ["Adam", "Adamax", "Nadam"] :
+            data["Beta1"] = kwargs["beta1"]
+            data["Beta2"] = kwargs["beta2"]
+            try :
+                data["Decay"] = kwargs["decay"]
+            except KeyError :
+                data["Decay"] = kwargs["schedule_decay"]        
+        
+        if self.opti == "SGD" :
+            data["Decay"] = kwargs["decay"]
+            data["Momentum"] = kwargs["momentum"] 
+            data["Nesterov"] = kwargs["nesterov"]
+        
+        if self.opti == "RMSprop":
+            data["Rho"] = kwargs["rho"]
+            data["Decay"] = kwargs["decay"]
+        
+        self.data = data
+        
         if save == True :
             self.model.save(name)
 #-------------------------------------------------------------------------------
     def fit_model(self):           
         bsz = self.kwargs["batch_size"] if self.batched == True else len(self.X_train)
         self.fit = self.model.fit(self.X_train, self.y_train, epochs=self.max_epoch, batch_size=bsz)
+        
+        self.data["Batch_sz"] = bsz
+        self.data["Final_cost"] = self.fit.history["mse"][-1]
         
         lenm = len(self.metrics)
         color = iter(cm.magma_r(lenm))
@@ -480,7 +505,8 @@ def defined_optimizer(par):
                 kwargs["schedule_decay"] = par.schedule_decay
 
         kwargs["batch_size"] = par.bsz
-        return kwargs 
+        
+        return kwargs
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 if __name__ == '__main__' : 
