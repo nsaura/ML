@@ -65,8 +65,8 @@ class File():
                     sheet_dict[col_index[j]].append(cell.value)
                     
             # and convert to a DataFrame
+            print sheet_dict
             df = pd.DataFrame(sheet_dict)
-        
         self.key_to_num = {}
         
         for j, c in enumerate(df.columns) :

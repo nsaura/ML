@@ -15,7 +15,7 @@ cancer = load_breast_cancer()
 
 #import ./../datasets_mglearn as dsets
 #dsets = reload(dsets)
-
+import time
 import tensorflow as tf
 
 
@@ -38,7 +38,9 @@ def find_divisor(N) :
     return div_lst
 #-----------------------------------------------------------------
 #-----------------------------------------------------------------
-sess = tf.InteractiveSession()
+config = tf.ConfigProto(device_count = {'GPU': 0})
+
+sess = tf.InteractiveSession(config=config)
 
 X, y = cancer.data, cancer.target
 
@@ -50,7 +52,7 @@ X_train, X_test = scaler.transform(X_train), scaler.transform(X_test)
 
 # y_train labels known
 
-print("\x1b[0;30;47m GradientDescentOptimizer \x1b[0m")
+print("\x1b[0;30;47mGradientDescentOptimizer \x1b[0m")
 
 #----- Building graph -----#
 N1 = 100                #Nombre de noeuds pour w^1_ij
@@ -87,7 +89,7 @@ b3 = tf.Variable(b3_init.astype(np.float32))
 #   3-- define the model 
 ## Remind a nn consists in several nodes that transformed linear expressions into non-linear.
 ## Here we use relu fonction ( max(0,w.x) )
-z1 = tf.nn.leaky_relu( tf.matmul(x, w1) + b1) 
+z1 = tf.nn.leaky_relu(tf.matmul(x, w1) + b1)
 z2 = tf.nn.leaky_relu( tf.matmul(z1, w2) + b2)
 y_ = tf.nn.tanh(tf.matmul(z2, w3) + b3 )
 
@@ -108,6 +110,7 @@ n_batches= Nraw_Xtrain // batch_sz
 y_train_ind = y2indicator(y_train, K)
 y_test_ind = y2indicator(y_test, K)
 
+t1 = time.time() 
 sess.run(tf.global_variables_initializer())
 
 for epoch in range(max_epoch) :
@@ -133,7 +136,8 @@ R = correct_prediction.eval(feed_dict={x:X_test, t:y_test_ind})
 dd = {k:v for k,v in zip (["N","O"], np.bincount(R))}
 
 print ("Taux de bonne réponse : {:.2f}%".format((dd['O']/ (dd['N'] + dd['O']))))
-
+t2 = time.time()
+print np.abs(t2-t1), "s "
 # Taux de bonne réponse : 0.91
 # En jouant un peu, on peu atteindre les 0.98
 

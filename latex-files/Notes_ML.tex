@@ -294,7 +294,7 @@ Comme on l'a dit les fonctions de covariance (FDC) sont capitales pour effectuer
  \textsc{cov}\bepar{f(\textbf{x}_p), \, f(\mathbf{x}_q)} = k\bepar{\textbf{x}_p, \textbf{x}_q} = \exp{\bepar{-\frac{1}{2}\left| \textbf{x}_p  - \textbf{x}_q\right|^2}}\label{RBF}
  \end{equation} 
 Cette fonction permet de construire une covariance sur les sorties ($f_i$) en fonction des entrées. Plus les entrées sont éloignées, plus la covariance sera faible, alors que si les entrées sont très proches, cette covariance sera proche de l'unité.\\
-La RBF en particulier est la fonction de covariance correspondant au model de régression Baysienne dont l'espace des caractéristiques est infinie. On peut également l'obtenir en considérant un nombre infini de combinaisons linéaires de fonction de bases de forme Gaussienne (Rajouter les ref chjap 4 eq 4.13 4.13 et Th section 4.3).\\
+La RBF en particulier est la fonction de covariance correspondant au model de régression Baysienne dont l'espace des caractéristiques est infinie. On peut également l'obtenir en considérant un nombre infini de combinaisons linéaires de fonction de bases de forme Gaussienne (Rajouter les ref chap 4 eq 4.13 4.13 et Th section 4.3).\\
 Avant de regarder dans les détails les fonctions de covariance, on peut remarquer que la FDC \eqref{RBF} est indéfiniment dérivables, on s'attendra alors à des tirages de fonctions lisses et continues.\\
 De même, on peut ajuster la vitesse de variabilité des fonctions en normalisant la distance entre deux entrées.
 
@@ -311,7 +311,7 @@ Les distributions de $\textbf{y}$ et de $\textbf{f}_*$ la prédiction, s'écrit 
 \begin{equation}
 \left[ \begin{array}{c} 
  \textbf{y} \\ \textbf{f}_* \end{array}
-\right] = \left[\begin{array}{c@{\qquad}c} K\left(\textbf{\textit{X}}, \textbf{\textit{X}}\right) + \sigma_n^2\textbf{\textit{I}}& K\bepar{\textbf{\textit{X}}, \textbf{\textit{X}}_*}\\ K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}} & K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}_*}\\  \end{array}\right]
+\right] = \left[\begin{array}{c@{\qquad}c} K\left(\textbf{\textit{X}}, \textbf{\textit{X}}\right) + \sigma_n^2\textbf{\textit{I}}& K\bepar{\textbf{\textit{X}}, \textbf{\textit{X}}_*}\\ K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}} & K\bepar{\textbf{\textit{X}}_*, \textbf{\textit{X}}_*}\\  \end{array}\right] \label{GP_matrix_form}
 \end{equation}
 Avec l'indice $_*$ lorsque la quantité le portant se réfère à de la prédiction.\\
 
@@ -348,11 +348,15 @@ De plus la meilleure solution que l'on pourrait trouver $y_{\text{guess}}$ est l
 \begin{equation}
 y_{\text{optimal}} | \textbf{x}_* = \underset{y_{\text{guess}}}{\argmin} \tilde{R}_\mathcal{L}\bepar{y_{\text{guess}}|\textbf{x}_*}
 \end{equation}
-On peut alors choisir la forme de la fonction de coût.
+On peut alors choisir la forme de la fonction de coût. \\
+Pour chaque prédiction, il sera nécessaire d'inverser la matrice \eqref{GP_matrix_form} (ou sa partie triangulaire à partir de la décomposition de Cholesky), ce qui peut prendre beaucoup de temps.\\
+Néanmoins, l'apprentissage se fait par l'ajustage des hyperparamètres dont le premier se trouve dans l'écriture (plus générale) de la RBF : 
+\begin{equation}
+ k\bepar{\textbf{x}_p, \textbf{x}_q} = \exp{\bepar{-\frac{\left| \textbf{x}_p  - \textbf{x}_q\right|^2}{h^2}}}
+\end{equation}
+Le deuxième hyperparamètre se trouve dans l'écriture de la Log Marginal Likelihood (LML) au travers le terme $\sigma_n$ dans le cas où on ne connaît pas la variance sur les inputs.
 
-\newpage
-
-\subsubsection*{Retour sur la LML (Log Marginal Likelihood)}
+\paragraph*{Retour sur la LML } : \\
 \noindent Dans l'espace des fonctions, la \textit{likelihood} s'écrit $\displaystyle p\bepar{\textbf{y} | \textbf{f},\textbf{\textit{X}}}$. Cette fonction traduit la relation entre le modèle et les données observées. \\
 On marginalise cette fonction par $\textbf{f}$ au travers la probabilité prior $p\bepar{\textbf{f}\,|\textbf{\textit{X}}}$. La probabilité résultant de cette marginalisation est appelée \textit{marginal likelihood}
 \begin{equation}
@@ -365,15 +369,19 @@ On doit alors maximiser l'expression suivant :
 p\bepar{\textbf{y} | \textbf{\textit{X}}} = -0.5 \bepar{~ \underset{\text{Quadratique}}{\underbrace{\textbf{y}^T\bepar{K + \sigma_n^2\textit{\textbf{I}\,}}^{-1}\, \textbf{y}}} + \underset{\text{Déterminant}}{\underbrace{\log \left | K + \sigma_n^2\textbf{\textit{I}}\right |}} + \underset{\text{Terme en }\log{2\pi}}{\underbrace{N \log\bepar{2\pi}}}~ }
 \end{equation}  
 La fonction de covariance gère totalement la liaison entre $\textbf{y}$ et $\textbf{\textit{X}}$
+%Selon \url{https://web.stanford.edu/class/archive/cs/cs109/cs109.1166/pdfs/41\%20DeepLearning.pdf}, la maximisation de 
 \newpage
 
-\subsection{Notions}
-\begin{itemize}
-\item[--] \textbf{Le formalisme Bayesien} : consiste à estimer la probabilité d'un événement sachant la réalisation d'un autre. Dès lors que l'adjectif Bayesien est utilisé, il faut avoir en tête que de tels concepts sont mis en jeu. Le théorème de Bayes est le résultat de référence dans ce genre de problème. Les résultats et propriétés des probabilités conditionnelles sont également mis en jeu.
-\item[--] \textbf{Homoscédasticité} : Une des hypothèses fondamentales de la régression linéaire. \\
-Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chaque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
-\item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \neq j$.
-\end{itemize}
+\navy \chapter{ML dans des environnements non stationnaires} \bk
+\subsubsection*{Motivations et objectifs :}
+\noindent \cite{sugiyama2012machine} pose le constat suivant : \\
+Les algorithmes d'apprentissage existants supposent implicitement des distributions  de probabilités similaires entre la dataset utilisée pour l'ajustement des paramètres (learning/test) et les datasets sur lesquelles les prédictions sont faites. Dans la pratique, utiliser les méthodes d'apprentissage en l'état fournira des prédictions sous-optimales.\\
+Le problème majeur est le fait que les données n'ont peut être rien à voir d'une itération à l'autre, et donc il sera impossible d'inférer les données à partir du trainig dataset. L'idée est d'utiliser la covariance mobile (Covariance Shift, CS).\\
+
+\noindent La CS est une hypothèse : elle suppose que les distributions de probabilités des entrées entre le training et le test sont différentes mais que la probabilité conditionnelle des sorties sachant les entrées (\cad $ $ la fonction qui lie la sortie selons les entrées) reste inchangée.
+
+\newpage
+
 \navy \chapter{Notes TensorFlow et algorithmes relatifs} \bk
 La création d'un graph TensorFlow pour du \textit{\textbf{Supervised Learning}} peut se décomposer en plusieurs parties (susceptibles de changer en cours de thèse):
 \begin{itemize}
@@ -473,6 +481,18 @@ In a compresssion problem, if p is the real message and q is the compressed targ
 \end{itemize}
 
 \noindent The \textbf{cross-entropy} measures the average information (number of bits e.g.) needed to recover an evenement drawn from a set of events with the distribution q relatively to a «true» distribution p. We write it $$ H(P,Q) = H(P) + D_{\text{KL}}\bepar{P||Q} = -\mathbb{E}_{x\sim P} \log Q(x)$$  
+
+\newpage 
+
+\navy \chapter{Notions} \bk
+\begin{itemize}
+\item[--] \textbf{Le formalisme Bayesien} : consiste à estimer la probabilité d'un événement sachant la réalisation d'un autre. Dès lors que l'adjectif Bayesien est utilisé, il faut avoir en tête que de tels concepts sont mis en jeu. Le théorème de Bayes est le résultat de référence dans ce genre de problème. Les résultats et propriétés des probabilités conditionnelles sont également mis en jeu.
+\item[--] \textbf{Homoscédasticité} : Une des hypothèses fondamentales de la régression linéaire. \\
+Se dit lorsque la variance des erreurs stochastiques de la régression est la même pour chaque observation : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma^2, \, \forall i$.
+\item[--] \textbf{Hétéroscédasticité} : Variance des variables est différente (s'oppose à l'homoscédasticité) : $\displaystyle \text{\textbf{Var}}[\varepsilon_i] = \sigma_i^2$ par forcément égale à $\sigma_j^2$ pour $i \neq j$.
+\end{itemize}
+
+\newpage 
 
 \navy \chapter{Notes ML : \cite{muller2016introduction}} \bk
 \brick \subsection{Classification}\bk

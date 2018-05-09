@@ -70,14 +70,22 @@ class Neural_Network():
         try :
             self.color = kwargs["color"]
         except KeyError :
-            self.color= 'orchid'
+            self.color= 'purple'
 
         try :
             self.step = kwargs["step"]
         
         except KeyError :
-            self.step = 50    
-            
+            self.step = 10    
+        
+        if "BN" in kwargs.keys() :  
+            self.BN = True
+            print ("Batch Normalization method used")
+        
+        else :
+            self.BN = False
+            print ("Batch Normalization method NOT used")
+        
         self.verbose= verbose 
         self.kwargs = kwargs
         
@@ -112,15 +120,16 @@ class Neural_Network():
         
         X_train_std  =  X_train.std(axis=0)
         X_train_mean =  X_train.mean(axis=0)
-#       Sometimes scaling datas leads to better generalization
         
         if scale == True :
+            # We have to normalize each dimension
+            # We scale independently such that each dimension has 0 mean and 1 variance  
             X_train_scaled = np.zeros_like(X_train)
             X_test_scaled = np.zeros_like(X_test)
             
             for i in range(X_train_mean.shape[0]) :
-                X_train_scaled[:, i] = X_train[:, i] - X_train_mean[i]
-                X_test_scaled[:, i] = X_test[:, i] - X_train_mean[i]
+                X_train_scaled[:, i] = X_train[:, i] -  X_train_mean[i]
+                X_test_scaled[:, i]  = X_test[:, i]  -  X_train_mean[i]
                 
                 if np.abs(X_train_std[i]) > 1e-12 :
                     X_train_scaled[:,i] /= X_train_std[i]
@@ -130,30 +139,30 @@ class Neural_Network():
             print ("X_train_mean = \n{}\n X_train_std = \n{}".format(X_train_mean, X_train_std))
             X_train = X_train_scaled
             X_test = X_test_scaled
-#            X_train[:,0] = (X_train[:,0]  - X_train_mean[0])
-#            X_test[:,0]  = (X_test[:,0]   - X_train_mean[0])
-
-#            if np.abs(X_std[0]) > 1e-12 :    
-#                X_train[:,0]/= X_train_std[0]
-#                X_test[:,0]  /= X_train_std[0]  
-
-#            X_train[:,1] = (X_train[:,1]  - X_train_mean[1]) /   X_train_std[1]
-#            X_test[:,1]  = (X_test[:,1]   - X_train_mean[1]) /   X_train_std[1]
         
-#       We finish by "selfing" Training Set and Testing Set
         self.scale = scale
         self.X_test, self.y_test    =   X_test , y_test
         self.X_train, self.y_train  =   X_train, y_train
         self.X_train_mean, self.X_train_std =  X_train_mean, X_train_std
 ####-------------------------------------------------------------------------------
-#    def mean_std_new_input(self, x_s):
-#        for i in range(len(x_s)) :
-#            x_s[i] -= self.X_train_mean[i]
-#            
-#            if np.abs(self.X_train_std[i]) > 1e-12 :
-#                x_s[i] /= self.X_train_std[i]
-#        
-#        return x_s       
+    def batch_norm_wrapper(self, inputs, is_training, decay = 0.999, epsilon=1e-3):
+        scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+        beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
+        pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
+        pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
+
+        if is_training:
+            batch_mean, batch_var = tf.nn.moments(inputs,[0])
+            train_mean = tf.assign(pop_mean,
+                                   pop_mean * decay + batch_mean * (1 - decay))
+            train_var = tf.assign(pop_var,
+                                  pop_var * decay + batch_var * (1 - decay))
+            with tf.control_dependencies([train_mean, train_var]):
+                return tf.nn.batch_normalization(inputs,
+                    batch_mean, batch_var, beta, scale, epsilon)
+        else:
+            return tf.nn.batch_normalization(inputs,
+                pop_mean, pop_var, beta, scale, epsilon)
 ###-------------------------------------------------------------------------------
     def w_b_real_init(self):
         ### We use X_train.shape
@@ -208,35 +217,6 @@ class Neural_Network():
         self.w_tf_d = w_tf_d
         self.b_tf_d = b_tf_d
 ###-------------------------------------------------------------------------------
-    def feed_forward(self, activation="relu"):
-        Z = dict()
-        act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu", "selu"]
-        # to have leakyrelu upgrade tensorflow :  sudo pip install tensorflow==1.4.0-rc0 
-        ### A wide variety of models are availables to compute the neuronal outputs.
-        ### We chose that way of implementation : the main work is done only if str_act
-        ### belongs to a list predefined that should be improved by time
-        #####   Must read and cite articles or documentations related to activation fcts
-        
-        # cross entropy most likely to be used in classification wit sigmoid
-        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu] ) :
-            if str_act == activation :
-                Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
-                print ("fonction d'activation considérée : %s" %(activation))
-                for i in range(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
-                    curr_zkey, prev_zkey = "z%d" %(i), "z%d" %(i-1)
-                    wkey = "w%d" %(i)
-                    bkey = "b%d" %(i)
-                    Z[curr_zkey] = act( tf.matmul(Z[prev_zkey], self.w_tf_d[wkey] )  + self.b_tf_d[bkey] ) 
-                self.y_pred_model = tf.matmul(Z[curr_zkey], self.w_tf_d[self.wlastkey]) + self.b_tf_d[self.blastkey]
-                
-        if Z == {}:
-            raise AttributeError ("\"{}\" activation function is unknown.\nActivation function must be one of {}".format(activation, act_func_lst))
-        self.temp_weights = self.w_tf_d
-        ### We constructed operations 
-#        print("Z\'s construits")
-        self.activation = activation
-        self.Z = Z
-###-------------------------------------------------------------------------------      
     def def_training(self, train_mod) :
         """
         Define a training model. Use kwargs to specify particular training parameters.\n
@@ -244,9 +224,13 @@ class Neural_Network():
         
         Args:
         -----
-        train_mod   :   str     Define the string representation of the desired optimization method.
-                                Currently, has to be one of [\"RMS\", \"GD \", \"SGD\"]. Otherwise exits
-        kwargs      :   dict    Dictionary that has to contain Optimizer specification. Else default one will be used
+        train_mod   :   str     Define the string representation of the desired
+                                optimization method.
+                                Currently, has to be one of [\"RMS\", \"GD \", \"SGD\"].
+                                Otherwise exits
+
+        kwargs      :   dict    Dictionary that has to contain Optimizer specification.
+                                Else default one will be used
         
         After execution of this method, the NN object will have the NN.train_op attribute 
         """
@@ -321,9 +305,51 @@ class Neural_Network():
                   
                 self.default = True
         
-                    
-        # Selfing the optimizer with the wanted tuning 
         self.train_mod = train_mod
+###-------------------------------------------------------------------------------
+    def feed_forward(self, activation="relu"):
+        Z = dict()
+        act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu", "selu"]
+        # to have leakyrelu upgrade tensorflow :  sudo pip install tensorflow==1.4.0-rc0 
+        ### A wide variety of models are availables to compute the neuronal outputs.
+        ### We chose that way of implementation : the main work is done only if str_act
+        ### belongs to a list predefined that should be improved by time
+        #####   Must read and cite articles or documentations related to activation fcts
+        
+        # cross entropy most likely to be used in classification wit sigmoid
+        
+        # We added the possibility to deal with internal covariate shifting (Better generalization)
+        # This possibility is activated if "BN" is in kwargs
+        
+        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu] ) :
+            if str_act == activation :
+                Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
+                print ("fonction d'activation considérée : %s" %(activation))
+                for i in range(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
+                    curr_zkey, prev_zkey = "z%d" %(i), "z%d" %(i-1)
+                    wkey = "w%d" %(i)
+                    bkey = "b%d" %(i)
+                    
+                    if self.BN == True :
+                        m = tf.matmul(Z[prev_zkey], self.w_tf_d[wkey] )  + self.b_tf_d[bkey]
+                        try :
+                            decayBN = self.kwargs["decay"]
+                        except KeyError :
+                            decayBN = 0.999
+                        bn = self.batch_norm_wrapper(m, is_training=True, decay=decayBN)
+                        Z[curr_zkey] = act(bn)
+                    
+                    else : 
+                        Z[curr_zkey] = act( tf.matmul(Z[prev_zkey], self.w_tf_d[wkey] )  + self.b_tf_d[bkey] ) 
+                self.y_pred_model = tf.matmul(Z[curr_zkey], self.w_tf_d[self.wlastkey])+self.b_tf_d[self.blastkey]
+                
+        if Z == {}:
+            raise AttributeError ("\"{}\" activation function is unknown.\nActivation function must be one of {}".format(activation, act_func_lst))
+        self.temp_weights = self.w_tf_d
+        ### We constructed operations 
+#        print("Z\'s construits")
+        self.activation = activation
+        self.Z = Z
 ###-------------------------------------------------------------------------------      
     def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum") :
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
