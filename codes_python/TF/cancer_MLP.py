@@ -18,7 +18,6 @@ cancer = load_breast_cancer()
 import time
 import tensorflow as tf
 
-
 def y2indicator(y, T):
     N = len(y)
     y = y.astype(np.int32)

@@ -16,6 +16,9 @@ import matplotlib.cm as cm
 import numdifftools as nd
 
 import time
+from sklearn.model_selection import train_test_split   
+
+plt.ion()
 
 def training_set(T, N_sample, scale=False, shuffle=False):
     """
@@ -30,11 +33,10 @@ def training_set(T, N_sample, scale=False, shuffle=False):
     -----------
     T : l'objet de la classe Classe_Temp_Cst dans laquelle l'inférence Bayesienne est faite
     N_sample : Nombre de tirages que l'on veut faire dans les distributions de beta_map 
-    
     Returns :
     ----------
-    X_train 
-    Y_train
+    X 
+    y
     """
     # Initialisation des tableaux
     X = np.zeros((1, 2))      # Pour l'instant on essaye ça
@@ -107,22 +109,27 @@ def training_set(T, N_sample, scale=False, shuffle=False):
         
         X[:,1]  = (X[:,1] - mean[1]) / std[1]
         X[:,1]  = (X[:,1] - mean[1]) / std[1]
-        
+    
     return X, y, variances, mean, std
+#-------------------------------------------#
+#def split(X,y) :
+#    return train_test_split(X, y, random_state=0)
 #-------------------------------------------#            
-def maximize_LML(T, X_train, Y_train, var, N_sample, h_curr = 2.): #Rajouter variances
+def maximize_LML(T, X, y, var, N_sample, h_curr = 2.): #Rajouter variances
     N = N_sample*(T.N_discr-2)*len(T.T_inf_lst)
     var_mat = var*np.eye(N)
     
     ### On définit les lambda
-    phi = lambda h : np.asarray([[np.exp(- np.linalg.norm(X_train[i] - X_train[j], 2)**2/h**2)\
+    phi = lambda h : np.asarray([[np.exp(- np.linalg.norm(X[i] - X[j], 2)**2/h**2)\
                                   for i in range(N)] for j in range(N)])
     # On inversera L plutot que phi (Voir Ramussen and Williams)
 #    L = lambda h : np.linalg.cholesky(phi(h) + var_mat) 
     
+    print phi(h_curr).shape
+    
     # max(f) = -min(-f)
     m_LML = lambda h : (-1)*(-0.5)*(np.log(np.linalg.det(phi(h) + var_mat)) +\
-                            np.dot(np.dot(Y_train.T, np.linalg.inv(phi(h) + var_mat)), Y_train)[0,0]+\
+                            np.dot(np.dot(y.T, np.linalg.inv(phi(h) + var_mat)), y)[0,0]+\
                             N_sample*np.log(2*np.pi) )
 
     ### On minimise -LML
@@ -239,7 +246,7 @@ def beta_to_T(T, beta, T_inf, body) :
     print ("Iterations = {} ".format(compteur))
     return T_nNext 
 #------------------------------------#
-def T_to_beta(T, X_train, Y_train, var, mean, std, phi_var_inv, h_op, N_sample, T_inf, body, scale=True):
+def T_to_beta(T, X_train, Y_train, var, mean, std, phi_var_inv, h_op, N_sample, T_inf, body, scale):
     T_n = np.asarray(map(lambda x : 0, T.line_z) )
     beta, sigma =  [], []
     
@@ -263,7 +270,7 @@ def T_to_beta(T, X_train, Y_train, var, mean, std, phi_var_inv, h_op, N_sample, 
     B_n = np.zeros((T.N_discr-2))
     T_n_tmp = np.zeros((T.N_discr-2))
 
-    tol, compteur, cmax = 1e-4, 0, 6000
+    tol, compteur, cmax = 1e-7, 0, 10000
     err = err_beta = 1.
     
     while (np.abs(err) > tol) and (compteur <= cmax) :
@@ -313,12 +320,12 @@ def T_to_beta(T, X_train, Y_train, var, mean, std, phi_var_inv, h_op, N_sample, 
     
     return T_nNext, beta_nNext, sigma
 #-------------------------------------------#
-def solver_ML(T, X, y, var, mean, std, h_op, phi_var_inv, N_sample, T_inf, body, verbose = False):
+def solver_ML(T, X, y, var, mean, std, h_op, phi_var_inv, N_sample, T_inf, body, scale, verbose = False):
 #    X_train, Y_train, var = training_set(T, N_sample)
     T_inf_lambda = T_inf
     T_inf = map(T_inf, T.line_z) 
 
-    T_ML, beta_ML, sigma_ML = T_to_beta(T, X, y, var, mean, std, phi_var_inv, h_op, N_sample, T_inf, body)
+    T_ML, beta_ML, sigma_ML = T_to_beta(T, X, y, var, mean, std, phi_var_inv, h_op, N_sample, T_inf, body, scale=scale)
 
     T_true = True_Temp(T, T_inf, body)
 

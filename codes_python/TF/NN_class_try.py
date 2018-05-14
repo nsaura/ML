@@ -11,6 +11,7 @@ import os, csv
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
+#import tensorlayer as tl
 
 # Utilities :
 def find_divisor(N) :
@@ -65,7 +66,7 @@ class Neural_Network():
         
         self.file_to_update = file_to_update 
         
-        self.batched = True if "b_sz" in kwargs.keys() or "batch_sz" in kwargs.keys() else False
+        self.batched = True if "bsz" in kwargs.keys() or "batch_sz" in kwargs.keys() else False
         
         try :
             self.color = kwargs["color"]
@@ -90,7 +91,7 @@ class Neural_Network():
         self.kwargs = kwargs
         
 ###-------------------------------------------------------------------------------        
-    def train_and_split(self, X, y, random_state=0, strat=True, scale=False, shuffle=True):
+    def train_and_split(self, X, y, random_state=0, strat=True, scale=False, shuffle=True, val=True):
 #        Stratify option allows to have a loyal representation of the datasets (couples of data,target)
 #        And allows a better training and can prevent from overfitting
         
@@ -108,6 +109,10 @@ class Neural_Network():
             permute_indices = np.random.permutation(np.arange(len(y)))
             X = X[permute_indices]
             y = y[permute_indices]        
+        
+        if len(y.shape) == 1:
+            y = y.reshape(-1,1)
+            print y.shape
         
         self.X, self.y = X, y
         
@@ -139,30 +144,39 @@ class Neural_Network():
             print ("X_train_mean = \n{}\n X_train_std = \n{}".format(X_train_mean, X_train_std))
             X_train = X_train_scaled
             X_test = X_test_scaled
-        
+
+        if val == True :
+            xtest_length = len(X_test)
+            self.X_val = X_test[:int(xtest_length*0.2)]
+            self.y_val = y_test[:int(xtest_length*0.2)]
+                
+            X_test = X_test[int(xtest_length*0.2):]
+            y_test = y_test[int(xtest_length*0.2):]
+            
+        # ---        
         self.scale = scale
         self.X_test, self.y_test    =   X_test , y_test
         self.X_train, self.y_train  =   X_train, y_train
         self.X_train_mean, self.X_train_std =  X_train_mean, X_train_std
 ####-------------------------------------------------------------------------------
-    def batch_norm_wrapper(self, inputs, is_training, decay = 0.999, epsilon=1e-3):
-        scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
-        beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
-        pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
-        pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
+#    def batch_norm_wrapper(self, inputs, is_training, decay = 0.999, epsilon=1e-3):
+#        scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+#        beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
+#        pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
+#        pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
 
-        if is_training:
-            batch_mean, batch_var = tf.nn.moments(inputs,[0])
-            train_mean = tf.assign(pop_mean,
-                                   pop_mean * decay + batch_mean * (1 - decay))
-            train_var = tf.assign(pop_var,
-                                  pop_var * decay + batch_var * (1 - decay))
-            with tf.control_dependencies([train_mean, train_var]):
-                return tf.nn.batch_normalization(inputs,
-                    batch_mean, batch_var, beta, scale, epsilon)
-        else:
-            return tf.nn.batch_normalization(inputs,
-                pop_mean, pop_var, beta, scale, epsilon)
+#        if is_training:
+#            batch_mean, batch_var = tf.nn.moments(inputs,[0])
+#            train_mean = tf.assign(pop_mean,
+#                                   pop_mean * decay + batch_mean * (1 - decay))
+#            train_var = tf.assign(pop_var,
+#                                  pop_var * decay + batch_var * (1 - decay))
+#            with tf.control_dependencies([train_mean, train_var]):
+#                return tf.nn.batch_normalization(inputs,
+#                    batch_mean, batch_var, beta, scale, epsilon)
+#        else:
+#            return tf.nn.batch_normalization(inputs,
+#                pop_mean, pop_var, beta, scale, epsilon)
 ###-------------------------------------------------------------------------------
     def w_b_real_init(self):
         ### We use X_train.shape
@@ -323,24 +337,43 @@ class Neural_Network():
         
         for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu] ) :
             if str_act == activation :
-                Z["z1"] = act( tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"] )    
                 print ("fonction d'activation considérée : %s" %(activation))
-                for i in range(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
-                    curr_zkey, prev_zkey = "z%d" %(i), "z%d" %(i-1)
-                    wkey = "w%d" %(i)
-                    bkey = "b%d" %(i)
-                    
-                    if self.BN == True :
+                
+                curr_zkey = "z1" # Should self a zlastkey
+                # Computation of the first HL 
+                m = tf.matmul(self.x,self.w_tf_d["w1"]) + self.b_tf_d["b1"]
+                if self.BN == True :
+                            # We modify the way m is defined
+                    try :
+                        decayBN = self.kwargs["decay"]
+                    except KeyError :
+                        decayBN = 0.999
+                    m = tf.layers.batch_normalization(m, momentum=decayBN)
+
+                        # Add the non linear activation
+                Z[curr_zkey] = act(m)
+                
+                # Computation of other layers if existing        
+                # Test if they exist and go ahead or pass to pred_model
+                if len(self.N_.keys()) > 3 :
+                    for i in range(2,len(self.w_tf_d)) : # i %d wi, We dont take wlast
+                        curr_zkey, prev_zkey = "z%d" %(i), "z%d" %(i-1)
+                        wkey, bkey = "w%d" %(i), "b%d" %(i)
+
                         m = tf.matmul(Z[prev_zkey], self.w_tf_d[wkey] )  + self.b_tf_d[bkey]
-                        try :
-                            decayBN = self.kwargs["decay"]
-                        except KeyError :
-                            decayBN = 0.999
-                        bn = self.batch_norm_wrapper(m, is_training=True, decay=decayBN)
-                        Z[curr_zkey] = act(bn)
-                    
-                    else : 
-                        Z[curr_zkey] = act( tf.matmul(Z[prev_zkey], self.w_tf_d[wkey] )  + self.b_tf_d[bkey] ) 
+                        
+                        if self.BN == True :
+                            # We modify the way m is defined
+                            try :
+                                decayBN = self.kwargs["decay"]
+                            except KeyError :
+                                decayBN = 0.999
+                            m = tf.layers.batch_normalization(m, momentum=decayBN)
+                        
+                        # Add the non linear activation
+                        Z[curr_zkey] = act(m)
+
+                # Compute the final layer to be fed in train or predict step 
                 self.y_pred_model = tf.matmul(Z[curr_zkey], self.w_tf_d[self.wlastkey])+self.b_tf_d[self.blastkey]
                 
         if Z == {}:
@@ -469,19 +502,33 @@ class Neural_Network():
 #            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
             for epoch in range(self.max_epoch) :
 #                print(self.kwargs["batch_sz"])
-                rand_index = np.random.choice(len(self.X_train), size=self.kwargs["b_sz"])   
+                n_batch, left = len(self.X_train) // self.kwargs["bsz"], len(self.X_train) % self.kwargs["bsz"]
+#                print n_batch, left
+                for b in range(n_batch) :
+                    bsz = self.kwargs["bsz"] + 1 if left > 0 else self.kwargs["bsz"]
+                    rand_index = np.random.choice(len(self.X_train), size=bsz)   
 
-                self.X_batch = self.X_train[rand_index]
-                self.y_batch = self.y_train[rand_index]
+                    self.X_batch = self.X_train[rand_index]
+                    self.y_batch = self.y_train[rand_index]
+                    
+                    left -=1
+                    
+                    if left <=0 : left = 0 
 #                print self.X_batch.shape
-#                
-                
+#               
+                    if self.BN == True :
+                        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)): 
+                            self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch, self.t : self.y_batch})  
+                            err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
+                                                                      self.t: self.y_train})
+                    
+                    else :
 #                X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
 #                y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
-                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch, self.t : self.y_batch})  
-                err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
-                                                          self.t: self.y_train})
-                    
+                        self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch, self.t : self.y_batch})  
+                        err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
+                                                                  self.t: self.y_train})
+                        
                 costs.append(err)
                 
                 if np.isnan(costs[-1]) : 
@@ -493,9 +540,9 @@ class Neural_Network():
                         plt.plot(epoch, costs[-1], marker='o', color=self.color, linestyle='--')
                         plt.pause(0.001)
                 
-                if np.abs(costs[-1]) < 1e-4 :
+                if np.abs(costs[-1]) < 1e-6 :
                     print "Final Cost "
-                    continue
+                    break
             print costs[-10:]
         self.costs = costs
 ###-------------------------------------------------------------------------------

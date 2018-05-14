@@ -1725,9 +1725,9 @@ if __name__ == "__main__" :
     import class_functions_aux as cfa #Pour les tracés post-process
     
     parser = cfa.parser()
-    print (parser)
     
-#    temp = Temperature(parser)
+    
+    T = Temperature_cst(parser)
 #    temp.obs_pri_model()
 #    temp.get_prior_statistics()
 #    

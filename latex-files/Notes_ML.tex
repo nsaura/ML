@@ -372,6 +372,34 @@ La fonction de covariance gère totalement la liaison entre $\textbf{y}$ et $\te
 %Selon \url{https://web.stanford.edu/class/archive/cs/cs109/cs109.1166/pdfs/41\%20DeepLearning.pdf}, la maximisation de 
 \newpage
 
+\navy \chapter{Ensemble Models} \bk 
+\begin{itemize}
+\item[--] Bagging (de Bag) : méthode d'aggrégation d'estimateur\footnote{\url{https://perso.univ-rennes2.fr/system/files/users/rouviere_l/poly_apprentissage.pdf}} consistant à conserver le résultats des estimateurs (en moyenne) \textbf{tout en réduisant la variance des sorties}. En théorie, plus le nombre d'estimateurs est grand, plus la variance est diminuée. Ceci n'est strictement vrai, que si les échantillons de la Datasets sont indépendants et identiquement distribués, ce qui n'est jamais véritablement le cas.\\
+On peut cependant atténuer les dépendances entre estimateurs avec le Bootstrapping.\\
+
+\item[--] Le bootstraping consiste à tirer de manière aléatoire des échantillons de la dataset $\mathcal{D}_n$. Ceci induit (artificiellement) un facteur de hasard qui permet d'augmenter autant que les coûts de calcul le permettent sans risquer le sur-ajustage (overfitting). \\ On dispose de deux types de boostraping : 
+\begin{itemize}
+\item[1-] On tire $n = \text{len}\bepar{\mathcal{D}_n}$ éléments de $\mathcal{D}_n$ de manière indépendante (\cad $ $ avec remise). Les $n$ éléments sont équiprobables.
+\item[2-] On tire $l < n$ éléments de $\mathcal{D}_n$ avec ou sans remise. 
+\end{itemize}
+\end{itemize}
+
+\noindent Pour chaque estimateur, on effectue un tirage $\theta$. Si on prend une infinité d'estimateur (et donc qu'on effectue une infinité de tirage $\theta$), on écrit :
+\begin{equation*}
+\hat{m}(x) = \lim_{B \rightarrow \infty}{\frac{1}{B} \sum^B_{k=1} \hat{m}(x, \theta_k)} =  \lim_{B \rightarrow \infty} \hat{m}_B(x) = \textbf{E}_\theta\becro{\hat{m}(x,\theta)\vert\mathcal{D}_n}
+\end{equation*}  
+La variance des estimateurs \textit{que l'on agrège} dépend donc directement des différents tirages. On écrira :
+\begin{equation*}
+\sigma^2(x) = \textbf{V}\bepar{\hat{m}(x, \theta_k})
+\end{equation*}
+Comme on l'a fait remarquer, il faut augmenter le nombre d'estimateurs baggé pour augmenter l'efficacité du bagging et donc réduire la variance. \\
+Plus les bootstrap $\theta_k$ sont indépendants, moins les estimateurs sont corrélés. De plus, on peut prouver que l'estimateur baggé possède une variance plus faible dès lors que $$ \textbf{Corr}\bepar{\hat{m}(x, \theta_1), \hat{m}(x, \theta_2)} <1$$ 
+\paragraph*{Remarque }:\\
+On vérifiera que les estimateurs sont sensibles à des modifications de $\theta_k$. Dans le cas contraire, le bagging ne servira à rien par rapport à ce qui est dit plus haut. \\
+ L'agrégation la plus connue est la forêt aléatoire, construite en agrégeant des arbres de régression (ou de classification). Le bonne propriété de généralisation de la RF est due à l'instabilité connue des arbres de décisions.
+
+\newpage
+
 \navy \chapter{ML dans des environnements non stationnaires} \bk
 \subsubsection*{Motivations et objectifs :}
 \noindent \cite{sugiyama2012machine} pose le constat suivant : \\
