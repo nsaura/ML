@@ -53,10 +53,10 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_, scale=True
     
     nn_obj.train_and_split(X,y,strat=False,shuffle=True, scale=scale)
     nn_obj.tf_variables()
-    nn_obj.def_training(opti)
-    nn_obj.feed_forward(activation=act)
+    nn_obj.def_optimizer(opti)
+    nn_obj.layer_stacking_and_act(activation=act)
     nn_obj.cost_computation(loss, reduce_type=reduce_type)
-    nn_obj.def_optimization()
+    nn_obj.case_specification()
     
     kwargs = nn_obj.kwargs
     

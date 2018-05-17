@@ -68,8 +68,8 @@ def training_set(T, N_sample, scale=False, shuffle=False):
         if osp.exists(bmap_) == False or osp.exists(chol_) == False :
             sys.exit("{} or {} or both don't exist. Check".format(bmap_, chol_))
         
-        bmap_fields[sT_inf] = T.pd_read_csv(bmap_)
-        chol_fields[sT_inf] = T.pd_read_csv(chol_)
+        bmap_fields[sT_inf] = np.load(bmap_)
+        chol_fields[sT_inf] = np.load(chol_)
 
         # On construit la distribution de beta autout de betamap
         distrib_bmap = lambda s : bmap_fields[sT_inf] + np.dot(chol_fields[sT_inf], s)
