@@ -33,7 +33,7 @@ config = tf.ConfigProto(
 
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, N_={}, max_epoch=10, verbose=False, file_to_update = "", **kwargs) :
+    def __init__(self, lr, N_={}, max_epoch=10, verbose=True, file_to_update = "", **kwargs) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
@@ -90,8 +90,11 @@ class Neural_Network():
         self.verbose= verbose 
         self.kwargs = kwargs
         
-###-------------------------------------------------------------------------------        
-    def train_and_split(self, X, y, random_state=0, strat=True, scale=False, shuffle=True, val=True):
+###-------------------------------------------------------------------------------  
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+      
+    def train_and_split(self, X, y, random_state=0, strat=False, scale=False, shuffle=True, val=True):
 #        Stratify option allows to have a loyal representation of the datasets (couples of data,target)
 #        And allows a better training and can prevent from overfitting
         
@@ -144,7 +147,7 @@ class Neural_Network():
             print ("X_train_mean = \n{}\n X_train_std = \n{}".format(X_train_mean, X_train_std))
             X_train = X_train_scaled
             X_test = X_test_scaled
-
+        
         if val == True :
             xtest_length = len(X_test)
             self.X_val = X_test[:int(xtest_length*0.2)]
@@ -158,26 +161,11 @@ class Neural_Network():
         self.X_test, self.y_test    =   X_test , y_test
         self.X_train, self.y_train  =   X_train, y_train
         self.X_train_mean, self.X_train_std =  X_train_mean, X_train_std
-####-------------------------------------------------------------------------------
-#    def batch_norm_wrapper(self, inputs, is_training, decay = 0.999, epsilon=1e-3):
-#        scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
-#        beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
-#        pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
-#        pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
 
-#        if is_training:
-#            batch_mean, batch_var = tf.nn.moments(inputs,[0])
-#            train_mean = tf.assign(pop_mean,
-#                                   pop_mean * decay + batch_mean * (1 - decay))
-#            train_var = tf.assign(pop_var,
-#                                  pop_var * decay + batch_var * (1 - decay))
-#            with tf.control_dependencies([train_mean, train_var]):
-#                return tf.nn.batch_normalization(inputs,
-#                    batch_mean, batch_var, beta, scale, epsilon)
-#        else:
-#            return tf.nn.batch_normalization(inputs,
-#                pop_mean, pop_var, beta, scale, epsilon)
 ###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+
     def w_b_real_init(self):
         ### We use X_train.shape
         w_dict, biases_d = dict(), dict()
@@ -209,7 +197,11 @@ class Neural_Network():
         self.w_dict = w_dict
         self.biases_d = biases_d
         self.Ncol_Xtrain = Ncol_Xtrain
+
+###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------        
+###-------------------------------------------------------------------------------
+
     def tf_variables(self):
         ### We want to create as many tf.tensors as we have weight and biases matrices 
             ### Those ones will be tf.Variables(weight.astype(np.float32))
@@ -230,98 +222,12 @@ class Neural_Network():
         
         self.w_tf_d = w_tf_d
         self.b_tf_d = b_tf_d
+    
 ###-------------------------------------------------------------------------------
-    def def_training(self, train_mod) :
-        """
-        Define a training model. Use kwargs to specify particular training parameters.\n
-        Documentation took from http://tflearn.org
-        
-        Args:
-        -----
-        train_mod   :   str     Define the string representation of the desired
-                                optimization method.
-                                Currently, has to be one of [\"RMS\", \"GD \", \"SGD\"].
-                                Otherwise exits
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
 
-        kwargs      :   dict    Dictionary that has to contain Optimizer specification.
-                                Else default one will be used
-        
-        After execution of this method, the NN object will have the NN.train_op attribute 
-        """
-        considered_optimizer = {"RMS" : tf.train.RMSPropOptimizer,\
-                                "Adam" : tf.train.AdamOptimizer,\
-                                "Nadam" : tf.keras.optimizers.Nadam(),\
-                                "GD": tf.train.GradientDescentOptimizer,\
-                                "SGD": tf.train.GradientDescentOptimizer\
-                              }
-        self.default = False
-        if train_mod not in considered_optimizer.keys() :
-            raise IndexError("{} n\'est pas dans les cas considérés. l\'argument train mod doit faire partie de la liste {}".format(train_mod, considered_optimizer.keys()))
-        
-        print("Optimiseur choisi : {}".format(train_mod))
-        
-        for k, v in zip(self.kwargs.keys(), self.kwargs.values()):
-            print("kwargs[{}] = {}".format(k,v))
-        
-        if train_mod == "GD" or train_mod == "SGD":
-            # Classical gradient descent. Insure to find global minimum, but may need a lot of time
-            # GD or S(tochastic) GD are relying on the same tf optimizer : 
-            self.train_op = considered_optimizer[train_mod](self.lr) 
-        
-        if train_mod=="RMS" :
-        # Maintain a moving (discounted) average of the square of gradients. 
-        # Divide gradient by the root of this average. 
-        # Quickly catch model common feature representation, and allow to have rare feature representation
-            try :
-                self.train_op = considered_optimizer[train_mod](\
-                                                               self.lr,\
-                                                               momentum=self.kwargs["momentum"],\
-                                                               decay=self.kwargs["decay"]\
-                                                                )
-            except KeyError:
-                print("\x1b[1;37;43mSeems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
-                Use the default one instead with lr = {} though\x1b[0m".format(self.lr))
-                self.train_op = tf.train.RMSPropOptimizer(self.lr)
-                
-                self.kwargs["momentum"]  =   0.0
-                self.kwargs["decay"]     =   0.9    
-                
-                self.default = True
-        
-        if train_mod=="Adam" :
-        # Classical Momentum added in RMSPROP algorithm
-            if "beta1" in self.kwargs.keys() and "beta2" in self.kwargs.keys():
-                self.train_op = considered_optimizer[train_mod](\
-                                                               self.lr,\
-                                                               beta1=self.kwargs["beta1"],\
-                                                               beta2=self.kwargs["beta2"],\
-                                                              )
-            elif "beta1" in self.kwargs.keys() : 
-                self.train_op = considered_optimizer[train_mod](\
-                                                               self.lr,\
-                                                               beta1=self.kwargs["beta1"]\
-                                                              )
-                self.kwargs["beta2"] = 0.99
-            
-            elif "beta2" in self.kwargs.keys() : 
-                self.train_op = considered_optimizer[train_mod](\
-                                                               self.lr,\
-                                                               beta2=self.kwargs["beta2"]\
-                                                              )
-                self.kwargs["beta1"] = 0.9
-                
-            else :
-                print("\x1b[1;37;43mAdamOptimizer goes default beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8). Though lr is specified = {} instead of dafault 0.001\x1b[0m".format(self.lr))
-                self.train_op = tf.train.AdamOptimizer(self.lr)  
-                
-                self.kwargs["beta1"] = 0.9
-                self.kwargs["beta2"] = 0.99
-                  
-                self.default = True
-        
-        self.train_mod = train_mod
-###-------------------------------------------------------------------------------
-    def feed_forward(self, activation="relu"):
+    def layer_stacking_and_act(self, activation="relu"):
         Z = dict()
         act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu", "selu"]
         # to have leakyrelu upgrade tensorflow :  sudo pip install tensorflow==1.4.0-rc0 
@@ -374,7 +280,8 @@ class Neural_Network():
                         Z[curr_zkey] = act(m)
 
                 # Compute the final layer to be fed in train or predict step 
-                self.y_pred_model = tf.matmul(Z[curr_zkey], self.w_tf_d[self.wlastkey])+self.b_tf_d[self.blastkey]
+                self.y_pred_model = tf.matmul(Z[curr_zkey], self.w_tf_d[self.wlastkey])\
+                                    + self.b_tf_d[self.blastkey]
                 
         if Z == {}:
             raise AttributeError ("\"{}\" activation function is unknown.\nActivation function must be one of {}".format(activation, act_func_lst))
@@ -383,7 +290,160 @@ class Neural_Network():
 #        print("Z\'s construits")
         self.activation = activation
         self.Z = Z
-###-------------------------------------------------------------------------------      
+        
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+
+    def def_optimizer(self, train_mod) :
+        """
+        Define a training model. Use kwargs to specify particular training parameters.\n
+        Documentation took from http://tflearn.org
+        
+        Args:
+        -----
+        train_mod   :   str     Define the string representation of the desired
+                                optimization method.
+                                Currently, has to be one of [\"RMS\", \"GD \", \"SGD\"].
+                                Otherwise exits
+
+        kwargs      :   dict    Dictionary that has to contain Optimizer specification.
+                                Else default one will be used
+        
+        After execution of this method, the NN object will have the NN.train_op attribute 
+        """
+        considered_optimizer = {"RMS" : tf.train.RMSPropOptimizer,\
+                                "Adam" : tf.train.AdamOptimizer,\
+                                "GD": tf.train.GradientDescentOptimizer,\
+                                "SGD": tf.train.GradientDescentOptimizer,\
+                               
+                                "Proximal_Adag": tf.train.ProximalAdagradOptimizer,\
+                                "Proximal_Grad": tf.train.ProximalGradientDescentOptimizer\
+                              }
+        self.default = False
+        keys = self.kwargs.keys()
+        #--#
+        if train_mod not in considered_optimizer.keys() : raise IndexError\
+            ("{} Not recognized. Choose from {}".format(train_mod, considered_optimizer.keys()))
+        #--#
+        
+        for k, v in zip(self.kwargs.keys(), self.kwargs.values()):
+            print("kwargs[{}] = {}".format(k,v))
+        
+        if train_mod == "GD" or train_mod == "SGD":
+            # Classical gradient descent. Insure to find global minimum, but may need a lot of time
+            # GD or S(tochastic) GD are relying on the same tf optimizer : 
+            self.train_op = considered_optimizer[train_mod](self.lr) 
+        
+        if train_mod=="RMS" :
+        # Maintain a moving (discounted) average of the square of gradients. 
+        # Divide gradient by the root of this average. 
+        # Quickly catch model common feature representation, and allow to have the rare ones
+            try :
+                self.train_op = considered_optimizer[train_mod]\
+                                   (self.lr, momentum=self.kwargs["momentum"],\
+                                    decay=self.kwargs["decay"] )
+            except KeyError:
+                print("\x1b[1;37;43m\
+                Seems like, some argument are missing in kwargs dict to design a RMSPROP optimizer\n\
+                Use the default one instead with lr = {} though\
+                \x1b[0m".format(self.lr))
+
+                self.train_op = tf.train.RMSPropOptimizer(self.lr)
+                
+                self.kwargs["momentum"]  =   0.0
+                self.kwargs["decay"]     =   0.9    
+                
+                self.default = True
+        
+        if train_mod=="Adam" :
+        # Classical Momentum added in RMSPROP algorithm
+            if "beta1" in keys and "beta2" in keys:
+                self.train_op =\
+                        considered_optimizer[train_mod]\
+                                (self.lr, beta1=self.kwargs["beta1"], beta2=self.kwargs["beta2"])
+                                                        
+            elif "beta1" in keys : 
+                self.train_op =considered_optimizer[train_mod]\
+                                (self.lr, beta1=self.kwargs["beta1"])
+                self.kwargs["beta2"] = 0.99
+            
+            elif "beta2" in keys : 
+                self.train_op = considered_optimizer[train_mod]\
+                                (self.lr, beta2=self.kwargs["beta2"])
+                self.kwargs["beta1"] = 0.9
+                
+            else :
+                print("\x1b[1;37;43m\
+                AdamOptimizer goes default lr = {}, beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8).\
+                \x1b[0m".format(self.lr))
+                
+                self.train_op = tf.train.AdamOptimizer(self.lr)  
+                
+                self.kwargs["beta1"] = 0.9
+                self.kwargs["beta2"] = 0.99
+                  
+                self.default = True
+        
+        if train_mod == "Proximal_Grad": 
+            if "l1reg" in keys and "l2reg" in keys :
+                self.train_op = train_mod(lr,\
+                                          l1_regularization_strength=self.kwargs["l1reg"],\
+                                          l2_regularization_strength=self.kwargs["l2reg"]\)
+            elif "l1reg" in keys :
+                self.train_op = train_mod(lr,\
+                                          l1_regularization_strength=self.kwargs["l1reg"])
+                self.kwargs["l2reg"] = 0.0 
+                
+            elif "l2reg" in keys :
+                self.train_op = train_mod(lr,\
+                                          l2_regularization_strength=self.kwargs["l2reg"])
+                self.kwargs["l1reg"] = 0.0
+            else :  
+                print("\x1b[1;37;43m\
+                ProximalGradientDesent goes default lr = {}, l1 and l2 regularizer = 0.0\
+                \x1b[0m".format(self.lr)
+                
+                self.train_mod = train_mod(lr)
+                
+                self.kwargs["l1reg"], self.kwargs["l2reg"] = 0.0, 0.0
+                
+                self.default = True
+                
+        if train_mod == "Proximal_Adag": 
+            if "l1reg" in keys and "l2reg" in keys :
+                self.train_op = train_mod(lr,\
+                                          l1_regularization_strength=self.kwargs["l1reg"],\
+                                          l2_regularization_strength=self.kwargs["l2reg"]\)
+                self.kwargs["initial_accumulator_value"] = 0.1
+            elif "l1reg" in keys :
+                self.train_op = train_mod(lr,\
+                                          l1_regularization_strength=self.kwargs["l1reg"])
+                self.kwargs["l2reg"] = 0.0 
+                self.kwargs["initial_accumulator_value"] = 0.1
+                
+            elif "l2reg" in keys :
+                self.train_op = train_mod(lr,\
+                                          l2_regularization_strength=self.kwargs["l2reg"])
+                self.kwargs["l1reg"] = 0.0
+                self.kwargs["initial_accumulator_value"] = 0.1
+            else :  
+                print("\x1b[1;37;43m\
+                ProximalGradientDesent goes default lr = {}, l1 and l2 regularizer = 0.0\
+                \x1b[0m".format(self.lr)
+                
+                self.train_mod = train_mod(lr)
+                
+                self.kwargs["l1reg"], self.kwargs["l2reg"] = 0.0, 0.0
+                self.kwargs["initial_accumulator_value"] = 0.1
+                
+                self.default = True
+        self.train_mod = train_mod
+        
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------  
+    
     def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum") :
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
 #        REGRESSION pbs     : L2 regularisation -> OLS  :   tf.reduce_sum(tf.square(y_pred - targets))
@@ -413,11 +473,15 @@ class Neural_Network():
                     ridge_param = tf.constant(ridge_param)
                     if reduce_type == "mean" :
                         ridge_loss = tf.reduce_mean(tf.square(self.x))
-                        self.loss = tf.expand_dims(tf.add(tf.reduce_mean(tf.square(self.y_pred_model - self.t)), tf.multiply(ridge_param, ridge_loss)), 0)
+                        self.loss = tf.expand_dims(\
+                        tf.add(tf.reduce_mean(tf.square(self.y_pred_model - self.t)),\
+                                tf.multiply(ridge_param, ridge_loss)), 0)
                     
                     if reduce_type == "sum" :
                         ridge_loss = tf.reduce_sum(tf.square(self.x))
-                        self.loss = tf.expand_dims(tf.add(tf.reduce_sum(tf.square(self.y_pred_model - self.t)), tf.multiply(ridge_param, ridge_loss)), 0)
+                        self.loss =tf.expand_dims(\
+                        tf.add(tf.reduce_sum(tf.square(self.y_pred_model - self.t)),\
+                               tf.multiply(ridge_param, ridge_loss)), 0)
 
             else :
                 if reduce_type == "mean" :
@@ -436,21 +500,39 @@ class Neural_Network():
 
         self.reduce_type = reduce_type
         self.err_type  = err_type 
-###-------------------------------------------------------------------------------          
-    def def_optimization(self, verbose = False):
-#    https://github.com/vsmolyakov/experiments_with_python/blob/master/chp03/tensorflow_optimizers.ipynb
-        if verbose == True :
-            print("Récapitulatif sur la fonction de coût et la méthode de minimisation :\n")
-            print("La méthode utilisée pour minimiser les erreurs entre les prédictions et les target est :{} -> {}\n".format(self.train_mod, self.train_op))
-            print("La fonction de coût pour évaluer ces erreurs est {} -> {}".format(self.err_type, self.loss))
         
-        if self.err_type != "VSGD" :
-            self.minimize_loss = self.train_op.minimize(self.loss)
+###-------------------------------------------------------------------------------   
 ###-------------------------------------------------------------------------------
-    def training_session(self, tol, verbose = False) :
+###-------------------------------------------------------------------------------
+       
+    def case_specification_recap(self) :
+#    https://github.com/vsmolyakov/experiments_with_python/blob/master/chp03/tensorflow_optimizers.ipynb
+        print("Récapitulatif sur la fonction de coût et la méthode de minimisation :\n")
+        print("La méthode utilisée pour minimiser les erreurs entre les prédictions et les target est :{} -> {}\n".format(self.train_mod, self.train_op))
+        print("La fonction de coût pour évaluer ces erreurs est {} -> {}".format(self.err_type, self.loss))
+        
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------            
+###-------------------------------------------------------------------------------
+
+    def training_session(self, tol) :
 #       Initialization ou ré-initialization ;)
+        
+        if "clip"  in self.kwargs.keys() :
+            gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
+            gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+            self.minimize_loss = self.train_op.apply_gradients(zip(gradients, variables))
+        else :
+            self.minimize_loss = self.train_op.minimize(self.loss)
+        
         init = tf.global_variables_initializer()
         self.sess.run(init)
+        
+#        if "bsz" in self.kwargs.keys() :
+#            self.bsz = self.kwargs["bsz"]
+#        
+#        else :
+#            self.bsz = len(self.X_train)
         
         if "VSGD" in self.kwargs.keys():
             if self.err_type == "VSGD" or self.err_type == "Vanilla" :
@@ -468,15 +550,36 @@ class Neural_Network():
                     for w in ww.iteritems() :
                         sum_weight += np.sum(w[1])
                     self.loss = tf.expand_dims(tf.add(meansq, reg*0.5*sum_weight), 0)
-
-            self.minimize_loss = self.train_op.minimize(self.loss)
-
+                    
+                self.minimize_loss = self.train_op.minimize(self.loss)
+        
         costs = []
         err, epoch, tol = 1., 0, tol
         
-        if verbose == True :
-            plt.figure("Cost Evolution")
-        
+        if self.verbose == True :
+#            if "label" in self.kwargs.keys() :
+#                label = self.kwargs["label"]
+#            else :
+#                label = "%s %s %s %d size HL = %d " %\
+#                (self.activation, self.train_mod, self.loss, self.bsz,len(self.N_.keys()) -2) 
+
+            if plt.fignum_exists("Cost Evolution : loglog and lin") == False: 
+                fig, axes = plt.subplots(1,2,figsize=(12,3), num="Cost Evolution : loglog and lin")
+            subplot = plt.figure("Cost Evolution : loglog and lin")
+            axes = subplot.axes
+            fig = subplot
+                
+            axes[0].set_xlabel("#It")
+            axes[0].xaxis.set_label_coords(-0.01, -0.06)
+            axes[0].yaxis.set_label_position("left")
+            axes[0].set_title("loglog")
+            
+            axes[1].yaxis.set_label_position("right")
+            axes[1].set_title("lin")
+            axes[1].set_ylabel("Errors")
+            axes[1].yaxis.set_label_position("right")
+            
+                
         if self.batched == False :
 #            with tf.Session() as sess:        
             while epoch <= self.max_epoch and err > tol:
@@ -485,12 +588,17 @@ class Neural_Network():
                 err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
                                                           self.t : self.y_train})
                 costs.append(err)
-                if np.isnan(costs[-1]) : raise IOError("Warning, Epoch {}, lr = {}.. nan"\
-                                                    .format(epoch, self.lr))
+                if np.isnan(costs[-1]) : 
+                    raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
+                
                 if epoch % self.step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                    if verbose == True :
-                        plt.plot(epoch, costs[-1], marker='o', color=self.color, linestyle='--')
+                    
+                    if self.verbose == True :
+                        axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
+                        axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
+                        
+                        fig.tight_layout()
                         plt.pause(0.001)
 #                    print ("{} : \n{}".format(epoch, self.sess.run(self.w_tf_d[self.wlastkey])))
                     
@@ -518,14 +626,18 @@ class Neural_Network():
 #               
                     if self.BN == True :
                         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)): 
-                            self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch, self.t : self.y_batch})  
+                            self.sess.run(self.minimize_loss, feed_dict={self.x : self.X_batch,\
+                                                                         self.t : self.y_batch})
+                                            
                             err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
                                                                       self.t: self.y_train})
                     
                     else :
 #                X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
 #                y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
-                        self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch, self.t : self.y_batch})  
+                        self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch,\
+                                                                    self.t : self.y_batch})  
+                                                                    
                         err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
                                                                   self.t: self.y_train})
                         
@@ -536,20 +648,33 @@ class Neural_Network():
                 
                 if epoch % self.step == 0 and epoch != 0:
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                    if verbose == True :
-                        plt.plot(epoch, costs[-1], marker='o', color=self.color, linestyle='--')
+                    if self.verbose == True :
+                        axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
+                        axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
+                        
+                        fig.tight_layout()
+                        
                         plt.pause(0.001)
                 
                 if np.abs(costs[-1]) < 1e-6 :
                     print "Final Cost "
                     break
             print costs[-10:]
+        
         self.costs = costs
+
 ###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------    
+###-------------------------------------------------------------------------------
+
     def predict(self, x_s):
         P = self.sess.run(self.y_pred_model, feed_dict={self.x: x_s})
         return P
+        
 ###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+
     def visualize_graph(self):
         writer = tf.summary.FileWriter('logs', self.sess.graph)
         writer.close()
@@ -561,18 +686,42 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 if __name__=="__main__":
+    plt.ion()
     
-    TF = Neural_Network(0.0004, model="", pathfile="test.csv", N_hidden_layer=3, layers_sizes = [2, 100, 100, 200, 1])
-    from sklearn.datasets import load_breast_cancer
-    cancer = load_breast_cancer()
-    TF.train_and_split(cancer.data, cancer.target)
-    TF.build_graph()
-    TF.tf_variables()
-    TF.feed_forward("relu")
-    TF.error_computation("cross_entropy")
-    
-    TF.optimisation()
+    from sklearn.datasets import load_boston
+    boston = load_boston()
+    X, y = boston.data, boston.target
 
+    gen_dict = lambda inputsize : \
+               {"I"  : inputsize,\
+               "N1" : 100,\
+               "N2" : 100,\
+               "N3" : 100,\
+               "N4" : 100,\
+               "O" :1}
+               
+    N_= gen_dict(X.shape[1])
+
+    TF = Neural_Network(0.0001, N_=N_, color="magenta", bsz=52, BN=True, verbose=True, max_epoch=2000, clip=True)
+    
+    TF.train_and_split(X,y, scale=True, shuffle=True, val=False, strat=False)
+    
+    TF.tf_variables()
+    TF.layer_stacking_and_act("relu")
+    TF.def_optimizer("Adam")
+    TF.cost_computation("OLS", reduce_type="sum")
+    TF.case_specification_recap()
+    
+    TF.training_session(1e-3)
+    
+    
+    plt.figure("Prediction")
+    plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
+    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds", color='green', marker='o', linestyle="none", fillstyle='none')
+    plt.legend()
+#    TF.error_computation("cross_entropy")
+    
+#    TF.optimisation()
 
 ##-------------------------------------------------- NOTES --------------------------------------------------##
 

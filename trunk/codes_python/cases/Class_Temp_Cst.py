@@ -215,32 +215,32 @@ class Temperature_cst() :
         self.g_sup_max = new_criteria
         print("g_sup_max is now {}".format(self.g_sup_max))
 ##---------------------------------------------------
-    def pd_read_csv(self, filename) :
-        """
-        Argument :
-        ----------
-        filename : the file's path with or without the extension which is csv in any way. 
-        """
-        if osp.splitext(filename)[-1] is not ".csv" :
-            filename = osp.splitext(filename)[0] + ".csv"
-        data = pd.read_csv(filename).get_values()
-        data = pd.read_csv(filename).get_values()
-#        print data
-#        print data.shape
-        if np.shape(data)[1] == 1 : 
-            data = data.reshape(data.shape[0])
-        return data
-##---------------------------------------------------
-    def pd_write_csv(self, filename, data) :
-        """
-        Argument :
-        ----------
-        filename:   the path where creates the csv file;
-        data    :   the data to write in the file
-        """
-        path = osp.join(self.datapath, filename)
-        pd.DataFrame(data).to_csv(path, index=False, header= True)
-##---------------------------------------------------
+#    def pd_read_csv(self, filename) :
+#        """
+#        Argument :
+#        ----------
+#        filename : the file's path with or without the extension which is csv in any way. 
+#        """
+#        if osp.splitext(filename)[-1] is not ".csv" :
+#            filename = osp.splitext(filename)[0] + ".csv"
+#        data = pd.read_csv(filename).get_values()
+#        data = pd.read_csv(filename).get_values()
+##        print data
+##        print data.shape
+#        if np.shape(data)[1] == 1 : 
+#            data = data.reshape(data.shape[0])
+#        return data
+###---------------------------------------------------
+#    def pd_write_csv(self, filename, data) :
+#        """
+#        Argument :
+#        ----------
+#        filename:   the path where creates the csv file;
+#        data    :   the data to write in the file
+#        """
+#        path = osp.join(self.datapath, filename)
+#        pd.DataFrame(data).to_csv(path, index=False, header= True)
+###---------------------------------------------------
     def tab_normal(self, mu, sigma, length) :
         return ( sigma * np.random.randn(length) + mu, 
                 (sigma * np.random.randn(length) + mu).mean(), 
@@ -252,14 +252,14 @@ class Temperature_cst() :
             sT_inf = "T_inf_%d" %(t)
             if self.bool_method["opti_scipy_%s" %(sT_inf)] :
                 for f, s in zip([self.betamap, self.cholesky],["beta", "cholesky"]) :
-                    path_tosave = "opti_scipy_%s_%s_N%d_cov%s.csv" %(s, sT_inf, self.N_discr-2, self.cov_mod)
+                    path_tosave = "opti_scipy_%s_%s_N%d_cov%s.npy" %(s, sT_inf, self.N_discr-2, self.cov_mod)
                     path_tosave = osp.join(self.path_fields, path_tosave)
                     self.pd_write_csv(path_tosave, f[sT_inf])
                     
             
             if self.bool_method["adj_bfgs_%s" %(sT_inf)] :
                 for f, s in zip([self.bfgs_adj_bmap, self.bfgs_adj_cholesky],["beta", "cholesky"]) :
-                    path_tosave = "adj_bfgs_%s_%s_N%d_cov%s.csv" %(s, sT_inf, self.N_discr-2, self.cov_mod)
+                    path_tosave = "adj_bfgs_%s_%s_N%d_cov%s.npy" %(s, sT_inf, self.N_discr-2, self.cov_mod)
                     path_tosave = osp.join(self.path_fields, path_tosave)
                     self.pd_write_csv(path_tosave, f[sT_inf])
 
@@ -347,8 +347,8 @@ class Temperature_cst() :
                 # For python3.5 add list( )
                 
                 # Titre qui prend en compte la forme de la covariance, de la température en cours, et le nombre de points de discrétisation
-                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
-                pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
+                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.npy'.format(self.cov_mod, T_inf, self.N_discr-2, it)
+                pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.npy'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 ## Il faudra peut être zipper tout ces fichiers, les commité puis possiblement les unziper
                 ## On utilisera alors cette procédure
 #                import zipfile
@@ -415,8 +415,8 @@ class Temperature_cst() :
                     err_pri = np.linalg.norm(T_nNext_pri - T_n_pri, 2)
                 
                 # On écrit les champs convergés 
-                self.pd_write_csv(obs_filename, T_nNext_obs)
-                self.pd_write_csv(pri_filename, T_nNext_pri)             
+                np.save(obs_filename, T_nNext_obs)
+                np.save(pri_filename, T_nNext_pri)             
             
             if compteur == 0:
                 print("Pour T_inf = {}, les fichiers ont été chargés.".format(T_inf))
@@ -435,7 +435,6 @@ class Temperature_cst() :
         # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
         # cours. De cette façon, on peut passer d'une température à une autre, et préparer les covariances pour l'optimisation
         # ceux pour des T_inf différentes, sans craindre de perdre ou de mélanger les statistiques        
-        
         cov_obs_dict    =   dict() 
         cov_pri_dict    =   dict()
         
@@ -462,22 +461,22 @@ class Temperature_cst() :
                 
                 # Titre qui prend en compte la forme de la covariance, de la température en cours, et le nombre de points de discrétisation
                 # Correspondent aux fichiers enregistrés dans la fonction précédente
-                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
-                pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
+                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.npy'.format(self.cov_mod, T_inf, self.N_discr-2, it)
+                pri_filename  =  '{}_pri_T_inf_{}_N{}_{}.npy'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 
                 # Pour éviter les conflits d'une machine à l'autre
                 obs_filename = osp.join(self.datapath, obs_filename)
                 pri_filename = osp.join(self.datapath, pri_filename)
                 
                 # Calcule des covariances
-                T_temp = self.pd_read_csv(obs_filename)
+                T_temp = np.load(obs_filename).ravel()
                 T_sum += T_temp / float(self.num_real) # T_sum est la température moyenne sur le nombre de tirages. Espérance pour les variances
                 
                 for j in range(self.N_discr-2) :
                     vals_obs_meshpoints[sT_inf+"_"+str(j)].append(T_temp[j]) # On enregistre les différentes valeurs de température en chaque point
                 
                 # On récupère les températures du modèle incomplet
-                T_pri = self.pd_read_csv(pri_filename)
+                T_pri = np.load(pri_filename).ravel()
                 T_prior.append(T_pri)
                 
                 if verbose == True :
@@ -495,9 +494,9 @@ class Temperature_cst() :
             full_cov = np.zeros((self.N_discr-2, self.N_discr-2)) 
             
             for it in range(self.num_real) :
-                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.csv'.format(self.cov_mod, T_inf, self.N_discr-2, it)
+                obs_filename  =  '{}_obs_T_inf_{}_N{}_{}.npy'.format(self.cov_mod, T_inf, self.N_discr-2, it)
                 obs_filename = osp.join(self.datapath, obs_filename)
-                T_temp = self.pd_read_csv(obs_filename)
+                T_temp = np.load(obs_filename).ravel()
                 
                 # Façon non Pythonique mais ça marche quand même
                 for ii in range(self.N_discr-2)  :
@@ -703,7 +702,7 @@ class Temperature_cst() :
     def adjoint_bfgs(self, inter_plot=False, verbose = False) : 
         """
         inter_plot to see the evolution of the inference
-        verbose to print different informqtion during the optimization
+        verbose to print different information during the optimization
         """
         print("Début de l\'optimisation maison\n")
         if self.bool_method["stat"] == False : self.get_prior_statistics() 
@@ -847,7 +846,7 @@ class Temperature_cst() :
                 print("d_n descent direction : {}".format(test_))    
                 
                 if test_  == False : 
-                    # Si GD == False : H_n n'est pas définie positive (Matrix Positive Definite)
+                    # Si GD == False : H_n n'est pas définie positive (is not Matrix Positive Definite)
                     self.positive_definite_test(H_n_inv, verbose=False) # Permet de vérifier diagnostique (obsolète)
 
                     H_n_inv = self.cholesky_for_MPD(H_n_inv, fac = 2.) # Corr CF Nocedal Wright (page ou chap ?)
@@ -966,20 +965,20 @@ class Temperature_cst() :
             
             # On utilise une fonction codée plus haut : pd_write_csv 
             # On écrit la covariance a posteriori dans un fichier pour l'utiliser dans le ML
-            write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf))
+            write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.npy" %(self.cov_mod, sT_inf))
             if osp.exists(write_cov) :
                 add_title = 1
-                if osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv") == False :
-                    write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv"
+                if osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".npy") == False :
+                    write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".npy"
 
                 # Si on rentre dans le prochaine boucle, le fichier est de la forme T_inf_nombre, reste à savoir à combien il en est
-                while osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv") :
+                while osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".npy") :
                     add_title += 1
-                write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv"
+                write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".npy"
                 
                 print write_cov
             
-            self.pd_write_csv(write_cov, pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
+            np.save(write_cov, pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
             print("%s written" %(write_cov))
 
             beta_var = []
@@ -1370,20 +1369,20 @@ class Temperature_cst() :
             
             # On utilise une fonction codée plus haut : pd_write_csv 
             # On écrit la covariance a posteriori dans un fichier pour l'utiliser dans le ML
-            write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.csv" %(self.cov_mod, sT_inf))
+            write_cov = osp.join(osp.abspath("./data/post_cov"), "adj_post_cov_%s_%s.npy" %(self.cov_mod, sT_inf))
             if osp.exists(write_cov) :
                 add_title = 1
-                if osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv") == False :
-                    write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv"
+                if osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".npy") == False :
+                    write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".npy"
 
                 # Si on rentre dans le prochaine boucle, le fichier est de la forme T_inf_nombre, reste à savoir à combien il en est
-                while osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv") :
+                while osp.exists(osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".npy") :
                     add_title += 1
-                write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".csv"
+                write_cov = osp.splitext(write_cov)[0] + "_%s" %(str(add_title)) + ".npy"
                 
                 print write_cov
             
-            self.pd_write_csv(write_cov, pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
+            np.save(write_cov, pd.DataFrame(bfgs_adj_cholesky[sT_inf]))
             print("%s written" %(write_cov))
 
             beta_var = []
