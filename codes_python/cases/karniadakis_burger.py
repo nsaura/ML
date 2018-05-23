@@ -182,7 +182,7 @@ class Karniadakis_burger() :
                 except OSError :
                     pass
 
-        self.datapath = datapath
+        self.datapath = karnia_path
         
         self.lambda_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(self.lambda_path,\
             "lambda_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
@@ -203,7 +203,12 @@ class Karniadakis_burger() :
         ----------
         Method designed to change the lambda_prior array without running back the whole program.
         """
-        self.lambda_prior = np.asarray([new_lambda for i in range(2)])
+        if type(new_lambda) == list :
+            self.lambda_prior = np.array(new_lambda)
+        
+        else :  
+            self.lambda_prior = np.asarray([new_lambda for i in range(2)])
+
         print("lambda_prior is now \n{}".format(self.lambda_prior))
 ###---------------------------------------------------
     def init_u(self): 
@@ -223,9 +228,8 @@ class Karniadakis_burger() :
             u = np.sin(2*np.pi/self.L*self.line_x) + 0.5
         return u
 ##---------------------------------------------------
-    def u_lambda(self, lambdas, u_n, verbose=False) :
+    def u_lambda(self, lambdas, u, verbose=False) :
         
-        u = u_n
         r = self.dt/self.dx
         
         u_nNext  = []
@@ -268,7 +272,7 @@ class Karniadakis_burger() :
                 plt.plot(self.line_x, u)
                 plt.title("U vs X iteration 0 bruit %d" %(j))
                 plt.ylim((-2.5, 2.5))
-                plt.pause(0.01)
+                plt.pause(0.5)
             
             # pd_write_csv --->> np.save
             if write == True : 
@@ -380,14 +384,14 @@ class Karniadakis_burger() :
     def minimization(self, maxiter, solver="BFGS", step=10):
         fig, axes= plt.subplots(1, 2, figsize = (8,8))
         evol = 0
-        if self.stats_done == False :
-            self.get_obs_statistics(True)
-            print("Get_Obs_Statistics lunched")
+#        if self.stats_done == False :
+#            self.get_obs_statistics(True)
+#            print("Get_Obs_Statistics lunched")
         #---------------------------------------------    
         #---------------------------------------------
         
         lambda_n = self.lambda_prior
-        u_n = self.U_moy_obs["u_moy_it0"]
+        u_n_lambda = self.U_moy_obs["u_moy_it0"]
         
 #        alpha = 1.e-4 # facteur de régularisation
         self.opti_obj = dict
@@ -402,29 +406,30 @@ class Karniadakis_burger() :
         for it in range(0, self.itmax-1) :
             if it >0 :
                 lambda_n = lambda_n_opti
-                u_n = u_n_lambda
+                u_n_lambda = u_post_inf
                 
             t1 = time.time()
-            
+            print "avant : ", self.U_moy_obs
             u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it+1)]
-#            cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)] # Pour avoir la bonne taille de matrice
             
-            if it == 0 :
-                u_n = self.u_lambda(lambda_n, u_obs_nt)
-            
-            print ("diag")
+            u_prior_inf = self.u_lambda(lambda_n, u_n_lambda)
 
             cov_obs_nt = self.diag_cov_obs_dict["diag_cov_obs_it%d"%(it+1)]
             cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
             
-            print (cov_obs_nt_inv.shape)
             #Pour avoir la bonne taille de matrice
-            Uu  = lambda l  :   u_obs_nt - self.u_lambda(l, u_n) 
+            Uu  = lambda l  :   u_obs_nt - self.u_lambda(l, u_prior_inf)
             J   = lambda l  :   0.5 * (np.dot( np.dot(Uu(l).T, cov_obs_nt_inv), Uu(l) )) # +\
 #                                             reg_fac*np.dot( np.transpose(l - lambda_n).dot(Id), (l - lambda_n) ) \
-                                    
+            
+            print("J(lp) = {}".format(J(self.lambda_prior)))
+            print("Uu(lp) = {}\nJ(lp) = {}".format(Uu(self.lambda_prior), J(self.lambda_prior)))
+            
+            print ("it = {}, J = {} ".format(it,J(self.lambda_prior)))
             # On utilise les différence finies pour l'instant
-#            DJ = nd.Gradient(J)
+            DJ = nd.Gradient(J)(self.lambda_prior)
+            print "it = {}, DJ = {} ".format(it,DJ)
+            
             print ("Opti Minimization it = %d" %(it))
             
             # Pour ne pas oublier :            
@@ -435,11 +440,13 @@ class Karniadakis_burger() :
             # Minimization 
             optimi_obj_n = op.minimize(J, self.lambda_prior, method=solver, options={"maxiter" : maxiter})
             
+            print "apres : ", self.U_moy_obs
+            
             print("\x1b[1;37;44mDifference de lambda it {} = {}\x1b[0m".format(it, np.linalg.norm(lambda_n - optimi_obj_n.x, np.inf)))
             lambda_n_opti = optimi_obj_n.x
             
             #On ne prend pas les béta dans les ghost cell
-            u_n_lambda = self.u_lambda(lambda_n_opti, u_n)
+            u_post_inf = self.u_lambda(lambda_n_opti, u_prior_inf)
 
             t2 = time.time()
             print (optimi_obj_n)
@@ -449,12 +456,12 @@ class Karniadakis_burger() :
             
             # On enregistre pour garder une trace après calculs
             self.lambda_n_dict["lambda_it%d" %(it)]  = lambda_n_opti
-            self.U_lambda_n_dict["u_lambda_it%d" %(it)] = u_n_lambda
+            self.U_lambda_n_dict["u_lambda_it%d" %(it)] = u_post_inf
             
             # On enregistre beta_n, u_n_beta et cholesky
                 # Enregistrement vecteur entier
             np.save(self.lambda_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), lambda_n_opti) 
-            np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_n_lambda)
+            np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_post_inf)
             
                 # Calcule de Cholesky et enregistrement
             hess_lambda = optimi_obj_n.hess_inv
@@ -523,7 +530,7 @@ if __name__ == '__main__' :
     
     kb = Karniadakis_burger(parser)   
 #    kb.obs_res(True, True)
-#    kb.obs_res(write=False, plot=True)
-#    kb.get_obs_statistics(write=True)
+    kb.obs_res(True, plot=True)
+    kb.get_obs_statistics(write=True)
     
 #    kb.minimization(maxiter = 50)
