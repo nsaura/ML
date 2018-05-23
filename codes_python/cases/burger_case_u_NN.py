@@ -438,6 +438,8 @@ def processing(nn_obj, cb=cb, n_neigh = 3) :
 
 # To run this program : 
 # You should first have inferred data for your problem (this can be done by running cb.minimization(maxiter=50) see Class_Vit_Choc at the end of the file 
+# Any way you have to run this class in order to create a cb object needed 
+# run burger_case_u_NN.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
 # Then you want to build and train a Neural Network. This can be done by typing (for example) :
 # nn_test = build_case(1e-2, X, y , act="selu", opti="Proximal_Adag", loss="OLS", max_epoch=3000, reduce_type="sum", verbose=True, N_=N_, color="red",  scale=True, bsz=256, BN=True)
 # To tune those parameters see in NN_class_try in TF directory
