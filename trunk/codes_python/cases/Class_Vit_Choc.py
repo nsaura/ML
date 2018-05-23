@@ -124,6 +124,7 @@ class Vitesse_Choc() :
         cov_mod     =   parser.cov_mod
         g_sup_max   =   parser.g_sup_max
         itmax       =   parser.itmax
+        typeJ       =   parser.typeJ
         
         self.beta_prior = np.asarray([parser.beta_prior for i in range(Nx)]) 
         
@@ -170,7 +171,6 @@ class Vitesse_Choc() :
         self.CFL_str = str(self.CFL).replace(".","_")
         self.type_init = parser.type_init
         
-        self.typeJ = parser.typeJ
         
         bool_method = dict()
         bool_written= dict()
@@ -179,7 +179,7 @@ class Vitesse_Choc() :
             os.mkdir(datapath)
         
         bmatrice_path = osp.join(datapath, "burger_matrices")
-        case_path = osp.join(bmatrice_path, "cas_u")
+        case_path = osp.join(bmatrice_path, "cas_%s" % typeJ)
         
         self.cov_path = osp.join(case_path, "post_cov")
         self.beta_path = osp.join(case_path, "betas")
@@ -187,7 +187,7 @@ class Vitesse_Choc() :
         self.inferred_U = osp.join(case_path, "U")
         
         if osp.exists(osp.join(case_path)) == False :
-            os.mkdir(bmatrice_path)
+            os.makedirs(case_path)
         
         if osp.exists(self.inferred_U) == False :
             os.mkdir(self.cov_path)
@@ -207,7 +207,9 @@ class Vitesse_Choc() :
             "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
 
         self.stats_done = False    
-                
+
+        self.typeJ = typeJ        
+                        
         self.parser = parser
 ##---------------------------------------------------
     def set_beta_prior(self, new_beta) :
@@ -663,3 +665,13 @@ if __name__ == '__main__' :
 #    cb.get_obs_statistics(write=True)
     
 #    cb.minimization()
+
+
+## Pour lancer ce code : 
+# run Class_Vit_Choc -h #Pour visualiser les parametres a tuner ou leur valeur par defaut 
+
+# On pourra essayer :
+# run Class_Vit_Choc.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
+# cb.obs_res(True, True)
+# cb.minimization(maxiter=50, solver="BFGS", step=5) # Ici aussi on pourra modifier ces parametres
+

@@ -189,7 +189,7 @@ dict_layers = {"I" : X.shape[1],\
 #              }
                "N1" : 1000,\
                "N2" : 1000,\
-#               "N4" : 100,\
+               "N3" : 1000,\
 #               "N5" : 30,\
 #               "N10" : 30,\
 #               "N11" : 30,\
@@ -436,3 +436,16 @@ def processing(nn_obj, cb=cb, n_neigh = 3) :
 #    
 #    
 
+# To run this program : 
+# You should first have inferred data for your problem (this can be done by running cb.minimization(maxiter=50) see Class_Vit_Choc at the end of the file 
+# Then you want to build and train a Neural Network. This can be done by typing (for example) :
+# nn_test = build_case(1e-2, X, y , act="selu", opti="Proximal_Adag", loss="OLS", max_epoch=3000, reduce_type="sum", verbose=True, N_=N_, color="red",  scale=True, bsz=256, BN=True)
+# To tune those parameters see in NN_class_try in TF directory
+
+# After having trained the NN you want to test its prediction ability :
+# NN_solver(nn_test) # Its important to use the NN you've just trained
+
+# If you want to train a KNN on top of that, for comparision (e.g.) :
+# processing(nn-test, cb=cb, n_neigh=3) # We use here the NN previously trained to have access to important variables
+
+# Stacking on process
