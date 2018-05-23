@@ -302,8 +302,6 @@ class Vitesse_Choc() :
         for j, bruit in enumerate(self.bruits) :
             # Initialisation des champs u (boucles while)
             u, u_nNext = [], []
-            plt.close()
-            
             u = self.init_u() 
 #            u = np.sin(2*np.pi/self.L*self.line_x) + bruit
             
@@ -657,7 +655,7 @@ if __name__ == '__main__' :
 #    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 52 -Nt 52
 #    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10
     parser = parser()
-    plt.close("all")
+#    plt.close("all")
     
     cb = Vitesse_Choc(parser)   
 #    cb.obs_res(True, True)
