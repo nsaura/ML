@@ -349,7 +349,7 @@ class Neural_Network():
                 Use the default one instead with lr = {} though\
                 \x1b[0m".format(self.lr))
 
-                self.train_op = tf.train.RMSPropOptimizer(self.lr)
+                self.train_op = considered_optimizer[train_mod](self.lr)
                 
                 self.kwargs["momentum"]  =   0.0
                 self.kwargs["decay"]     =   0.9    
@@ -378,7 +378,7 @@ class Neural_Network():
                 AdamOptimizer goes default lr = {}, beta1 = 0.9, beta2 = 0.99, epsilon = 10^(-8).\
                 \x1b[0m".format(self.lr))
                 
-                self.train_op = tf.train.AdamOptimizer(self.lr)  
+                self.train_op = considered_optimizer[train_mod](self.lr)  
                 
                 self.kwargs["beta1"] = 0.9
                 self.kwargs["beta2"] = 0.99
@@ -387,24 +387,24 @@ class Neural_Network():
         
         if train_mod == "Proximal_Grad": 
             if "l1reg" in keys and "l2reg" in keys :
-                self.train_op = train_mod(lr,\
+                self.train_op = considered_optimizer[train_mod](self.lr,\
                                           l1_regularization_strength=self.kwargs["l1reg"],\
-                                          l2_regularization_strength=self.kwargs["l2reg"]\)
+                                          l2_regularization_strength=self.kwargs["l2reg"])
             elif "l1reg" in keys :
-                self.train_op = train_mod(lr,\
+                self.train_op = considered_optimizer[train_mod](self.lr,\
                                           l1_regularization_strength=self.kwargs["l1reg"])
                 self.kwargs["l2reg"] = 0.0 
                 
             elif "l2reg" in keys :
-                self.train_op = train_mod(lr,\
+                self.train_op = considered_optimizer[train_mod](self.lr,\
                                           l2_regularization_strength=self.kwargs["l2reg"])
                 self.kwargs["l1reg"] = 0.0
             else :  
                 print("\x1b[1;37;43m\
                 ProximalGradientDesent goes default lr = {}, l1 and l2 regularizer = 0.0\
-                \x1b[0m".format(self.lr)
+                \x1b[0m".format(self.lr))
                 
-                self.train_mod = train_mod(lr)
+                self.train_op = considered_optimizer[train_mod](self.lr)
                 
                 self.kwargs["l1reg"], self.kwargs["l2reg"] = 0.0, 0.0
                 
@@ -412,32 +412,33 @@ class Neural_Network():
                 
         if train_mod == "Proximal_Adag": 
             if "l1reg" in keys and "l2reg" in keys :
-                self.train_op = train_mod(lr,\
+                self.train_op = considered_optimizer[train_mod](self.lr,\
                                           l1_regularization_strength=self.kwargs["l1reg"],\
-                                          l2_regularization_strength=self.kwargs["l2reg"]\)
+                                          l2_regularization_strength=self.kwargs["l2reg"])
                 self.kwargs["initial_accumulator_value"] = 0.1
             elif "l1reg" in keys :
-                self.train_op = train_mod(lr,\
+                self.train_op = considered_optimizer[train_mod](self.lr,\
                                           l1_regularization_strength=self.kwargs["l1reg"])
                 self.kwargs["l2reg"] = 0.0 
                 self.kwargs["initial_accumulator_value"] = 0.1
                 
             elif "l2reg" in keys :
-                self.train_op = train_mod(lr,\
+                self.train_op = considered_optimizer[train_mod](self.lr,\
                                           l2_regularization_strength=self.kwargs["l2reg"])
                 self.kwargs["l1reg"] = 0.0
                 self.kwargs["initial_accumulator_value"] = 0.1
             else :  
                 print("\x1b[1;37;43m\
                 ProximalGradientDesent goes default lr = {}, l1 and l2 regularizer = 0.0\
-                \x1b[0m".format(self.lr)
+                \x1b[0m".format(self.lr))
                 
-                self.train_mod = train_mod(lr)
+                self.train_op = considered_optimizer[train_mod](self.lr)
                 
                 self.kwargs["l1reg"], self.kwargs["l2reg"] = 0.0, 0.0
                 self.kwargs["initial_accumulator_value"] = 0.1
                 
                 self.default = True
+
         self.train_mod = train_mod
         
 ###-------------------------------------------------------------------------------
@@ -702,7 +703,7 @@ if __name__=="__main__":
                
     N_= gen_dict(X.shape[1])
 
-    TF = Neural_Network(0.0001, N_=N_, color="magenta", bsz=52, BN=True, verbose=True, max_epoch=2000, clip=True)
+    TF = Neural_Network(0.001, N_=N_, color="red", bsz=16, BN=True, verbose=True, max_epoch=2000, clip=False, l1_regularization_strength=0.1)
     
     TF.train_and_split(X,y, scale=True, shuffle=True, val=False, strat=False)
     
@@ -717,7 +718,7 @@ if __name__=="__main__":
     
     plt.figure("Prediction")
     plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
-    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds", color='green', marker='o', linestyle="none", fillstyle='none')
+    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds", color='red', marker='o', linestyle="none", fillstyle='none')
     plt.legend()
 #    TF.error_computation("cross_entropy")
     
