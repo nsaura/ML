@@ -24,8 +24,9 @@ def find_divisor(N) :
 def error_rate(p, t):
     return np.mean(p != t)
 
-
+############################
 ## Notes en fin de codes !!!
+############################
 
 config = tf.ConfigProto(
         device_count = {'GPU': 0}
@@ -57,7 +58,6 @@ class Neural_Network():
         
         print N_
         
-        self.N_ = N_
         self.lr = lr
         self.max_epoch = max_epoch
         
@@ -89,6 +89,19 @@ class Neural_Network():
         
         self.verbose= verbose 
         self.kwargs = kwargs
+
+        ## Check on the keys : 
+        keys = N_.keys()
+        keys.remove("I"), keys.remove("O")
+        
+        sorted_keys = sorted(keys, key=lambda x: int(x[1:]))
+        
+        for j,k in enumerate(sorted_keys) :
+            if int(k[1:]) != j+1 :
+                raise KeyError ("Check N_ keys. One indice seems to be dumped: {}".format(keys))
+        
+        self.N_ = N_
+                
         
 ###-------------------------------------------------------------------------------  
 ###-------------------------------------------------------------------------------
