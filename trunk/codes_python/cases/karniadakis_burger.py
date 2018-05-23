@@ -348,19 +348,19 @@ class Karniadakis_burger() :
             diag_cov_filename = osp.join(self.cov_path, "diag_cov_obs_it%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(it, self.Nt, self.Nx, self.CFL_str, self.nu_str, init)) 
             
             if osp.exists(full_cov_filename) == True and osp.exists(diag_cov_filename) :
-                full_cov_obs_dict["full_cov_obs_it%d"%(it)] = np.load(full_cov_filename) 
-                diag_cov_obs_dict["diag_cov_obs_it%d"%(it)] = np.load(diag_cov_filename)
+                full_cov = np.load(full_cov_filename) 
+#                diag_cov_obs_dict["diag_cov_obs_it%d"%(it)] = np.load(diag_cov_filename)
 #                print ("Lecture %s" %(cov_filename))
-                continue
+            else :
             
-            for n in range(self.num_real) :
-                file_to_get = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy" %(it, n, self.Nt, self.Nx, self.CFL_str, self.nu_str, init))
-                u_t_n = np.load(file_to_get)
+                for n in range(self.num_real) :
+                    file_to_get = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy" %(it, n, self.Nt, self.Nx, self.CFL_str, self.nu_str, init))
+                    u_t_n = np.load(file_to_get)
+                    
+                    for ii in range(self.Nx)  :
+                        for jj in range(self.Nx) : 
+                            full_cov[ii,jj] += (u_t_n[ii] - u_sum[ii]) * (u_t_n[jj] - u_sum[jj]) / float(self.num_real)
                 
-                for ii in range(self.Nx)  :
-                    for jj in range(self.Nx) : 
-                        full_cov[ii,jj] += (u_t_n[ii] - u_sum[ii]) * (u_t_n[jj] - u_sum[jj]) / float(self.num_real)
-            
             full_cov_obs_dict["full_cov_obs_it%d"%(it)] = full_cov 
             diag_cov_obs_dict["diag_cov_obs_it%d"%(it)] = np.diag(np.diag(full_cov))
             
