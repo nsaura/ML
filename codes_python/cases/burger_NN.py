@@ -219,6 +219,7 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers
     nn_obj.tf_variables()
     nn_obj.feed_forward(activation=act)
     nn_obj.def_training(opti)
+    
     nn_obj.cost_computation(loss, reduce_type=reduce_type)
     nn_obj.def_optimization()
     
