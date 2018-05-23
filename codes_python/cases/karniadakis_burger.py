@@ -231,9 +231,9 @@ class Karniadakis_burger() :
     def u_lambda(self, lambdas, u, verbose=False) :
         
         r = self.dt/self.dx
+        new_u = np.zeros_like(u)
         
         u_nNext  = []
-        
         fu = np.asarray([lambdas[0]*0.5*u_x**2 for u_x in u])
                 
         der_sec = [lambdas[1]*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
@@ -248,12 +248,12 @@ class Karniadakis_burger() :
             u_nNext.append( u[i] - r*( fu_p - fu_m ) + der_sec[i] )
                                         
         # Conditions aux limites 
-        u[1:self.Nx-1] = u_nNext  
+        new_u[1:self.Nx-1] = u_nNext  
         
-        u[0] = u[-2]
-        u[-1]= u[1]
+        new_u[0] = new_u[-2]
+        new_u[-1]= new_u[1]
         
-        return u
+        return new_u
 ##---------------------------------------------------         
     def obs_res(self, write=False, plot=False)  : 
         ## Déf des données du probleme 
@@ -409,7 +409,6 @@ class Karniadakis_burger() :
                 u_n_lambda = u_post_inf
                 
             t1 = time.time()
-            print "avant : ", self.U_moy_obs
             u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it+1)]
             
             u_prior_inf = self.u_lambda(lambda_n, u_n_lambda)
@@ -422,31 +421,29 @@ class Karniadakis_burger() :
             J   = lambda l  :   0.5 * (np.dot( np.dot(Uu(l).T, cov_obs_nt_inv), Uu(l) )) # +\
 #                                             reg_fac*np.dot( np.transpose(l - lambda_n).dot(Id), (l - lambda_n) ) \
             
-            print("J(lp) = {}".format(J(self.lambda_prior)))
-            print("Uu(lp) = {}\nJ(lp) = {}".format(Uu(self.lambda_prior), J(self.lambda_prior)))
-            
-            print ("it = {}, J = {} ".format(it,J(self.lambda_prior)))
             # On utilise les différence finies pour l'instant
             DJ = nd.Gradient(J)(self.lambda_prior)
-            print "it = {}, DJ = {} ".format(it,DJ)
-            
+
             print ("Opti Minimization it = %d" %(it))
             
             # Pour ne pas oublier :            
             # On cherche beta faisant correspondre les deux solutions au temps it + 1. Le beta final est ensuite utilisé pour calculer u_beta au temps it 
-            for i in range(len(lambda_n)) : # Un peu de bruit
-                lambda_n[i] *= np.random.random()    
-
+#            for i in range(len(lambda_n)) : # Un peu de bruit
+#                lambda_n[i] *= np.random.random()    
+            
+            print ("it = {}, lambda = {}".format(it, lambda_n)
+            
+            
             # Minimization 
             optimi_obj_n = op.minimize(J, self.lambda_prior, method=solver, options={"maxiter" : maxiter})
             
             print "apres : ", self.U_moy_obs
             
             print("\x1b[1;37;44mDifference de lambda it {} = {}\x1b[0m".format(it, np.linalg.norm(lambda_n - optimi_obj_n.x, np.inf)))
-            lambda_n_opti = optimi_obj_n.x
+            lambda_n_post_inf = optimi_obj_n.x
             
             #On ne prend pas les béta dans les ghost cell
-            u_post_inf = self.u_lambda(lambda_n_opti, u_prior_inf)
+            u_post_inf = self.u_lambda(lambda_n_post_inf, u_prior_inf)
 
             t2 = time.time()
             print (optimi_obj_n)
@@ -455,15 +452,15 @@ class Karniadakis_burger() :
             self.optimization_time["it%d" %(it)] = abs(t2-t1)
             
             # On enregistre pour garder une trace après calculs
-            self.lambda_n_dict["lambda_it%d" %(it)]  = lambda_n_opti
+            self.lambda_n_dict["lambda_it%d" %(it)]  = lambda_n_post_inf
             self.U_lambda_n_dict["u_lambda_it%d" %(it)] = u_post_inf
             
             # On enregistre beta_n, u_n_beta et cholesky
                 # Enregistrement vecteur entier
-            np.save(self.lambda_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), lambda_n_opti) 
+            np.save(self.lambda_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), lambda_n_post_inf) 
             np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_post_inf)
             
-                # Calcule de Cholesky et enregistrement
+            # Calcule de Cholesky et enregistrement
             hess_lambda = optimi_obj_n.hess_inv
             cholesky_lambda = np.linalg.cholesky(hess_lambda)
             np.save(self.chol_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), cholesky_lambda)
@@ -500,7 +497,7 @@ class Karniadakis_burger() :
                     for i in [0,1] : axes[i].clear()
 
                 if evol == 0 :
-                    axes[0].plot(range(2), lambda_n_opti, label="iteration %d" %(it), c= "r")
+                    axes[0].plot(range(2), lambda_n_post_inf, label="iteration %d" %(it), c= "r")
                     axes[0].fill_between(range(2), mins, maxs, facecolor= "0.2", alpha=0.2, interpolate=True, color="red")
                     
                     axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it), c='k')                 
