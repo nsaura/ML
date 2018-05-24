@@ -125,14 +125,14 @@ class Karniadakis_burger() :
         g_sup_max   =   parser.g_sup_max
         itmax       =   parser.itmax
         
-        self.lambda_prior = np.asarray([parser.lambda_prior for i in range(2)]) 
+        self.lambda_prior = np.asarray([parser.lambda_prior for i in range(1)]) 
         
         ## Matrices des coefficients pour la résolution
         ## Attention ces matrices ne prennent pas les points où sont définies les conditions initiales
         ## Ces cas doivent faire l'objet de méthodes particulières avec la redéfinition des fonctions A1 et A2 
         
         #####
-        bruits = [0.0009 * np.random.randn(Nx) for time in range(num_real)]
+        bruits = [0.01 * np.random.randn(Nx) for time in range(num_real)]
         self.bruits = bruits
         
         self.line_x = np.arange(0,L+dx, dx)
@@ -236,9 +236,9 @@ class Karniadakis_burger() :
         u_nNext  = []
         fu = np.asarray([lambdas[0]*0.5*u_x**2 for u_x in u])
                 
-        der_sec = [lambdas[1]*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
-        der_sec.insert(0, lambdas[1]*(u[1] - 2*u[0] + u[-1]))
-        der_sec.insert(len(der_sec), lambdas[1]*(u[0] - 2*u[-1] + u[-2]))
+        der_sec = [self.nu*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
+        der_sec.insert(0, self.nu*(u[1] - 2*u[0] + u[-1]))
+        der_sec.insert(len(der_sec), self.nu*(u[0] - 2*u[-1] + u[-2]))
 
         for i in range(1,self.Nx-1) : # Pour prendre en compte le point Nx-2
             u_m, u_p = intermediaires(u, fu, i, r)
@@ -391,7 +391,7 @@ class Karniadakis_burger() :
         #---------------------------------------------
         
         lambda_n = self.lambda_prior
-        u_n_lambda = self.U_moy_obs["u_moy_it0"]
+        u_prior_inf = self.U_moy_obs["u_moy_it0"]
         
 #        alpha = 1.e-4 # facteur de régularisation
         self.opti_obj = dict
@@ -405,14 +405,12 @@ class Karniadakis_burger() :
         
         for it in range(0, self.itmax-1) :
             if it >0 :
-                lambda_n = lambda_n_opti
-                u_n_lambda = u_post_inf
+                lambda_n = lambda_n_post_inf
+                u_prior_inf = u_post_inf
                 
             t1 = time.time()
             u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it+1)]
             
-            u_prior_inf = self.u_lambda(lambda_n, u_n_lambda)
-
             cov_obs_nt = self.diag_cov_obs_dict["diag_cov_obs_it%d"%(it+1)]
             cov_obs_nt_inv = np.linalg.inv(cov_obs_nt)
             
@@ -431,8 +429,7 @@ class Karniadakis_burger() :
 #            for i in range(len(lambda_n)) : # Un peu de bruit
 #                lambda_n[i] *= np.random.random()    
             
-            print ("it = {}, lambda = {}".format(it, lambda_n)
-            
+            print ("it = {}, lambda = {}".format(it, lambda_n))
             
             # Minimization 
             optimi_obj_n = op.minimize(J, self.lambda_prior, method=solver, options={"maxiter" : maxiter})
@@ -453,12 +450,12 @@ class Karniadakis_burger() :
             
             # On enregistre pour garder une trace après calculs
             self.lambda_n_dict["lambda_it%d" %(it)]  = lambda_n_post_inf
-            self.U_lambda_n_dict["u_lambda_it%d" %(it)] = u_post_inf
+            self.U_lambda_n_dict["u_lambda_it%d" %(it+1)] = u_post_inf
             
             # On enregistre beta_n, u_n_beta et cholesky
                 # Enregistrement vecteur entier
             np.save(self.lambda_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), lambda_n_post_inf) 
-            np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it), u_post_inf)
+            np.save(self.u_name(self.Nx, self.Nt, self.nu, self.type_init, self.CFL, it+1), u_post_inf)
             
             # Calcule de Cholesky et enregistrement
             hess_lambda = optimi_obj_n.hess_inv
@@ -477,8 +474,8 @@ class Karniadakis_burger() :
             cpt = 0
             # Tirage avec s un vecteur aléatoire tirée d'une distribution N(0,1)
             while cpt <100 :
-                s = np.random.randn(2)
-                lambda_i = lambda_n_opti + np.dot(cholesky_lambda, s)
+                s = np.random.randn(np.size(lambda_n_post_inf))
+                lambda_i = lambda_n_post_inf + np.dot(cholesky_lambda, s)
                 cpt += 1
             
             # On enregistre les valeurs des tirages pour chaque i pour trouver les extrema
@@ -497,18 +494,18 @@ class Karniadakis_burger() :
                     for i in [0,1] : axes[i].clear()
 
                 if evol == 0 :
-                    axes[0].plot(range(2), lambda_n_post_inf, label="iteration %d" %(it), c= "r")
-                    axes[0].fill_between(range(2), mins, maxs, facecolor= "0.2", alpha=0.2, interpolate=True, color="red")
+                    axes[0].plot(range(np.size(lambda_n_post_inf)), lambda_n_post_inf, label="iteration %d" %(it), c= "r")
+                    axes[0].fill_between(range(np.size(lambda_n_post_inf)), mins, maxs, facecolor= "0.2", alpha=0.2, interpolate=True, color="red")
                     
                     axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it), c='k')                 
-                    axes[1].plot(self.line_x[:-1], self.U_lambda_n_dict["u_lambda_it%d" %(it)][:-1], label='Opti it %d'%(it),\
+                    axes[1].plot(self.line_x[:-1], self.U_lambda_n_dict["u_lambda_it%d" %(it+1)][:-1], label='Opti it %d'%(it),\
                         marker='o', fillstyle='none', linestyle='none', c='r')
                 if evol == 1 :
-                    axes[0].plot(range(2), lambda_n_opti, label="iteration %d" %(it), c = "b", marker="o")
-                    axes[0].fill_between(range(2), mins, maxs, facecolor= "0.2", alpha=0.2, interpolate=True, color="b")
+                    axes[0].plot(range(np.size(lambda_n_post_inf)), lambda_n_post_inf, label="iteration %d" %(it), c = "b", marker="o")
+                    axes[0].fill_between(range(np.size(lambda_n_post_inf)), mins, maxs, facecolor= "0.2", alpha=0.2, interpolate=True, color="b")
                     
-                    axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it), c='grey', marker="+")
-                    axes[1].plot(self.line_x[:-1], self.U_lambda_n_dict["u_lambda_it%d" %(it)][:-1], label='Opti it %d'%(it),\
+                    axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it+1), c='grey', marker="+")
+                    axes[1].plot(self.line_x[:-1], self.U_lambda_n_dict["u_lambda_it%d" %(it+1)][:-1], label='Opti it %d'%(it),\
                         marker='o', fillstyle='none', linestyle='none', c='b')
                 
                 axes[0].legend(loc="best")
@@ -516,7 +513,7 @@ class Karniadakis_burger() :
                 axes[1].set_ylim((-2.0, 2.0))
                 axes[1].legend(loc = "best")
                     
-                plt.pause(0.01)
+                plt.pause(0.5)
                 evol += 1
 ###---------------------------------------------------##   
 ##----------------------------------------------------##
