@@ -470,15 +470,11 @@ class Neural_Network():
         else :
             expected_loss = {"OLS" : tf.square,\
                              "AVL" : tf.abs,\
-                             "VSGD": "below",\
                              "Ridge": "below",\
                              "Lasso": "below"}
             if err_type not in expected_loss :
                 raise IndexError("{} n\'est pas dans les cas considérés. La fonction de cout doit appartenir à la liste {}".format(err_type, expected_loss.keys()))
             
-            if err_type == "VSGD":
-                print ("Voir plus loin")
-                self.loss = 1
             
             elif err_type == "Ridge" or err_type == "ridge":
                 if "ridge_param" not in self.kwargs.keys() :
@@ -546,25 +542,6 @@ class Neural_Network():
 #        
 #        else :
 #            self.bsz = len(self.X_train)
-        
-        if "VSGD" in self.kwargs.keys():
-            if self.err_type == "VSGD" or self.err_type == "Vanilla" :
-                sum_weight = 0
-                ww = self.sess.run(self.w_tf_d)
-                reg = float(input("Enter Vanila regularization coefficient "))
-                if self.reduce_type == "mean" :
-                    meansq = tf.reduce_mean(tf.square(self.y_pred_model - self.t))
-                    for w in ww.iteritems() :
-                        sum_weight += np.mean(w[1])
-                    self.loss = tf.expand_dims(tf.add(meansq, reg*0.5*sum_weight), 0)
-            
-                if self.reduce_type == "sum":
-                    meansq = tf.reduce_sum(tf.square(self.y_pred_model - self.t))
-                    for w in ww.iteritems() :
-                        sum_weight += np.sum(w[1])
-                    self.loss = tf.expand_dims(tf.add(meansq, reg*0.5*sum_weight), 0)
-                    
-                self.minimize_loss = self.train_op.minimize(self.loss)
         
         costs = []
         err, epoch, tol = 1., 0, tol
