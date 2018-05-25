@@ -187,10 +187,12 @@ dict_layers = {"I" : X.shape[1],\
 #               "N2" : 100,\
 #               "O": 1\
 #              }
-               "N1" : 1000,\
+               "N1" : 3000,\
                "N2" : 1000,\
-               "N3" : 1000,\
-#               "N5" : 30,\
+               "N3" : 100,\
+               "N4" : 50,\
+               "N5" : 50,\
+               "N6" : 50,\
 #               "N10" : 30,\
 #               "N11" : 30,\
 #               "N12" : 30,\
@@ -228,13 +230,13 @@ def recentre(xs, X_train_mean, X_train_std):
 def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, step=50, **kwargs) :
     plt.ion()
     print kwargs
-    nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch, **kwargs)
+    nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
     
     nn_obj.train_and_split(X,y,strat=False,shuffle=True, scale=scale)
     nn_obj.tf_variables()
     nn_obj.def_optimizer(opti)
     nn_obj.layer_stacking_and_act(activation=act)
-    nn_obj.cost_computation(loss, reduce_type=reduce_type)
+    nn_obj.cost_computation(loss)
     nn_obj.case_specification_recap()
     
     kwargs = nn_obj.kwargs

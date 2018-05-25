@@ -34,7 +34,7 @@ config = tf.ConfigProto(
 
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, N_={}, max_epoch=10, verbose=True, file_to_update = "", **kwargs) :
+    def __init__(self, lr, N_={}, max_epoch=10, verbose=True, file_to_update = "", reduce_type = "sum", **kwargs) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
@@ -60,11 +60,19 @@ class Neural_Network():
         
         self.lr = lr
         self.max_epoch = max_epoch
+        self.file_to_update = file_to_update 
+        
+        if reduce_type =="sum" :
+            self.reduce_type_fct = tf.reduce_sum
+        
+        if reduce_type =="mean" :   
+             self.reduce_type_fct = tf.reduce_mean
+             
+        self.reduce_type = reduce_type
         
         self.savefile= "./session"
         self.sess = tf.InteractiveSession(config=config)
         
-        self.file_to_update = file_to_update 
         
         self.batched = True if "bsz" in kwargs.keys() or "batch_sz" in kwargs.keys() else False
         
@@ -457,7 +465,7 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------  
     
-    def cost_computation(self, err_type, SL_type="regression", reduce_type = "sum") :
+    def cost_computation(self, err_type, SL_type="regression") :
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
 #        REGRESSION pbs     : L2 regularisation -> OLS  :   tf.reduce_sum(tf.square(y_pred - targets))
 #                             L1 regression     -> AVL  :   tf.reduce_sum(tf.abs(y_pred - targets))
@@ -476,38 +484,41 @@ class Neural_Network():
                 raise IndexError("{} n\'est pas dans les cas considérés. La fonction de cout doit appartenir à la liste {}".format(err_type, expected_loss.keys()))
             
             
-            elif err_type == "Ridge" or err_type == "ridge":
+            elif err_type == "Ridge":
                 if "ridge_param" not in self.kwargs.keys() :
+                    self.weight_sum = tf.placeholder(np.float32)
+
                     ridge_param = float(input("Give a Ridge parameter " ) )
                     ridge_param = tf.constant(ridge_param)
-                    if reduce_type == "mean" :
-                        ridge_loss = tf.reduce_mean(tf.square(self.x))
-                        self.loss = tf.expand_dims(\
-                        tf.add(tf.reduce_mean(tf.square(self.y_pred_model - self.t)),\
-                                tf.multiply(ridge_param, ridge_loss)), 0)
                     
-                    if reduce_type == "sum" :
-                        ridge_loss = tf.reduce_sum(tf.square(self.x))
-                        self.loss =tf.expand_dims(\
-                        tf.add(tf.reduce_sum(tf.square(self.y_pred_model - self.t)),\
-                               tf.multiply(ridge_param, ridge_loss)), 0)
+                    ridge_loss = self.reduce_type_fct(tf.square(self.x))
+                    
+                    self.loss = tf.expand_dims(\
+                                tf.add(tf.reduce_mean(tf.square(self.y_pred_model - self.t)),\
+                                tf.multiply(ridge_param, self.weight_sum)), 0)
+            
+            elif err_type == "Lasso":
+                if "ridge_param" not in self.kwargs.keys() :
+                    self.weight_sum = tf.placeholder(np.float32)
 
+                    lasso_param = float(input("Give a Lasso parameter " ) )
+                    lasso_param = tf.constant(lasso_param)
+                    
+                    ridge_loss = self.reduce_type_fct(tf.abs(self.x))
+                    
+                    self.loss = tf.expand_dims(\
+                                tf.add(tf.reduce_mean(tf.square(self.y_pred_model - self.t)),\
+                                tf.multiply(lasso_param, self.weight_sum)), 0)
+                
             else :
-                if reduce_type == "mean" :
-                    self.loss = tf.reduce_mean(expected_loss[err_type](self.y_pred_model - self.t))
-                    print ("%s: The loss function will compute the averaged sum over all the errors" % err_type)
-                elif reduce_type == "sum" :
-                    self.loss = tf.reduce_sum(expected_loss[err_type](self.y_pred_model - self.t))
-                    print ("%s: The loss function will compute sum over all the errors" % err_type)
-                else :
-                    raise AttributeError("Define a reduce_type between sum and mean")
+                self.loss = self.reduce_type_fct(expected_loss[err_type](self.y_pred_model - self.t))
+                print ("%s: The loss function will compute the averaged %s over all the errors" %(err_type, self.reduce_type))
                 
 #https://stackoverflow.com/questions/43822715/tensorflow-cost-function
 #    Also tf.reduce_sum(cost) will do what you want, I think it is better to use tf.reduce_mean(). Here are a few reasons why:
 #    you get consistent loss independent of your matrix size. On average you will get reduce_sum 4 times bigger for a two times bigger matrix
 #    less chances you will get nan by overflowing
 
-        self.reduce_type = reduce_type
         self.err_type  = err_type 
         
 ###-------------------------------------------------------------------------------   
@@ -527,6 +538,10 @@ class Neural_Network():
     def training_session(self, tol) :
 #       Initialization ou ré-initialization ;)
         
+        if self.err_type in {"Ridge", "Lasso"} :
+            self.training_ridge_regression(tol=tol)
+            return "End of Ridge/Lasso Network training"
+        
         if "clip"  in self.kwargs.keys() :
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
             gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
@@ -536,12 +551,6 @@ class Neural_Network():
         
         init = tf.global_variables_initializer()
         self.sess.run(init)
-        
-#        if "bsz" in self.kwargs.keys() :
-#            self.bsz = self.kwargs["bsz"]
-#        
-#        else :
-#            self.bsz = len(self.X_train)
         
         costs = []
         err, epoch, tol = 1., 0, tol
@@ -573,6 +582,20 @@ class Neural_Network():
         if self.batched == False :
 #            with tf.Session() as sess:        
             while epoch <= self.max_epoch and err > tol:
+                weight_sum = 0
+                if self.err_type == "Ridge" :
+                    lst_key = self.N_.keys()
+                    lst_key.remove("I"); lst_key.remove("O")
+                    
+                    for lk, _ in enumerate(lst_key) : 
+                        weight_sum += np.sum(self.sess.run(self.w_tf_d.values()[lk]))
+                            
+                    self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
+                
+                    err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
+                                                          self.t : self.y_train})
+                
+                
                 self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
                 
                 err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
@@ -590,13 +613,13 @@ class Neural_Network():
                         
                         fig.tight_layout()
                         plt.pause(0.001)
-#                    print ("{} : \n{}".format(epoch, self.sess.run(self.w_tf_d[self.wlastkey])))
                     
                 epoch += 1
 
             print costs[-10:]
 #            self.saver.save(sess, self.savefile)
         else :
+            ff = open("just_a_test.txt", "w")
 #            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
             for epoch in range(self.max_epoch) :
 #                print(self.kwargs["batch_sz"])
@@ -645,17 +668,175 @@ class Neural_Network():
                         fig.tight_layout()
                         
                         plt.pause(0.001)
-                
+#                        print ("{} : \n{}".format(epoch, self.sess.run(self.w_tf_d[self.wlastkey])))
+#                        ff.write("#"*20+"\n")
+#                        ff.write("\nIt={}\nweights values\n{}\n".format(epoch, self.sess.run(self.w_tf_d)))
+#                        ff.write("#"*20+"\n")
                 if np.abs(costs[-1]) < 1e-6 :
                     print "Final Cost "
                     break
             print costs[-10:]
-        
+        ff.close()
         self.costs = costs
 
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------    
 ###-------------------------------------------------------------------------------
+
+    def training_ridge_regression(self, tol) :
+        
+        if "clip"  in self.kwargs.keys() :
+            gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
+            gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+            self.minimize_loss = self.train_op.apply_gradients(zip(gradients, variables))
+        else :
+            self.minimize_loss = self.train_op.minimize(self.loss)
+        
+        init = tf.global_variables_initializer()
+        self.sess.run(init)
+        
+        costs = []
+        err, epoch, tol = 1., 0, tol
+        
+        if self.verbose == True :
+#            if "label" in self.kwargs.keys() :
+#                label = self.kwargs["label"]
+#            else :
+#                label = "%s %s %s %d size HL = %d " %\
+#                (self.activation, self.train_mod, self.loss, self.bsz,len(self.N_.keys()) -2) 
+
+            if plt.fignum_exists("Cost Evolution : loglog and lin") == False: 
+                fig, axes = plt.subplots(1,2,figsize=(12,3), num="Cost Evolution : loglog and lin")
+            subplot = plt.figure("Cost Evolution : loglog and lin")
+            axes = subplot.axes
+            fig = subplot
+                
+            axes[0].set_xlabel("#It")
+            axes[0].xaxis.set_label_coords(-0.01, -0.06)
+            axes[0].yaxis.set_label_position("left")
+            axes[0].set_title("loglog")
+            
+            axes[1].yaxis.set_label_position("right")
+            axes[1].set_title("lin")
+            axes[1].set_ylabel("Errors")
+            axes[1].yaxis.set_label_position("right")
+            
+        lst_key = self.N_.keys()
+        lst_key.remove("I"); lst_key.remove("O")
+
+        if self.batched == False :
+#            with tf.Session() as sess:        
+            while epoch <= self.max_epoch and err > tol:
+                weight_sum = 0
+                if self.reduce_type == "mean" :
+                    div = lambda x: len(x)-1
+                else :
+                    div = lambda x: 1
+                
+                for lk, _ in enumerate(lst_key) : 
+                    curr_w = self.sess.run(self.w_tf_d.values()[lk])
+                    weight_sum += np.sum(curr_w) / div(curr_w)
+                        
+                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train,\
+                                                            self.weight_sum : weight_sum})
+            
+                err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
+                                                      self.t : self.y_train,\
+                                                      self.weight_sum : weight_sum})
+                
+                costs.append(err)
+                if np.isnan(costs[-1]) : 
+                    raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
+                
+                if epoch % self.step == 0 :
+                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
+                    
+                    if self.verbose == True :
+                        axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
+                        axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
+                        
+                        fig.tight_layout()
+                        plt.pause(0.001)
+                    
+                epoch += 1
+
+            print costs[-10:]
+#            self.saver.save(sess, self.savefile)
+        else :
+            ff = open("just_a_test.txt", "w")
+#            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
+            for epoch in range(self.max_epoch) :
+#                print(self.kwargs["batch_sz"])
+                n_batch, left = len(self.X_train) // self.kwargs["bsz"], len(self.X_train) % self.kwargs["bsz"]
+#                print n_batch, left
+                
+                
+                for b in range(n_batch) :
+                    
+                    weight_sum = 0
+
+                    for lk, _ in enumerate(lst_key) : 
+                        weight_sum += np.sum(self.sess.run(self.w_tf_d.values()[lk]))
+                        
+                    bsz = self.kwargs["bsz"] + 1 if left > 0 else self.kwargs["bsz"]
+                    
+                    rand_index = np.random.choice(len(self.X_train), size=bsz)   
+
+                    self.X_batch = self.X_train[rand_index]
+                    self.y_batch = self.y_train[rand_index]
+                    
+                    left -=1
+                    
+                    if left <=0 : left = 0 
+#                print self.X_batch.shape
+#               
+                    if self.BN == True :
+                        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)): 
+                            self.sess.run(self.minimize_loss, feed_dict={self.x : self.X_batch,\
+                                                                         self.t : self.y_batch,\
+                                                                         self.weight_sum : weight_sum})
+                                            
+                            err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
+                                                                      self.t: self.y_train,\
+                                                                         self.weight_sum : weight_sum})
+                    
+                    else :
+#                X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
+#                y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
+                        self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch,\
+                                                                    self.t : self.y_batch})  
+                                                                    
+                        err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
+                                                                  self.t: self.y_train})
+                        
+                costs.append(err)
+                
+                if np.isnan(costs[-1]) : 
+                    raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
+                
+                if epoch % self.step == 0 and epoch != 0:
+                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
+                    if self.verbose == True :
+                        axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
+                        axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
+                        
+                        fig.tight_layout()
+                        
+                        plt.pause(0.001)
+#                        print ("{} : \n{}".format(epoch, self.sess.run(self.w_tf_d[self.wlastkey])))
+#                        ff.write("#"*20+"\n")
+#                        ff.write("\nIt={}\nweights values\n{}\n".format(epoch, self.sess.run(self.w_tf_d)))
+#                        ff.write("#"*20+"\n")
+                if np.abs(costs[-1]) < 1e-6 :
+                    print "Final Cost "
+                    break
+            print costs[-10:]
+        ff.close()
+        self.costs = costs
+
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------    
+###-------------------------------------------------------------------------------        
 
     def predict(self, x_s):
         P = self.sess.run(self.y_pred_model, feed_dict={self.x: x_s})
@@ -692,14 +873,14 @@ if __name__=="__main__":
                
     N_= gen_dict(X.shape[1])
 
-    TF = Neural_Network(0.001, N_=N_, color="red", bsz=16, BN=True, verbose=True, max_epoch=2000, clip=False, l1_regularization_strength=0.1)
+    TF = Neural_Network(0.0005, N_=N_, reduce_type="sum", color="orange", bsz=64, BN=True, verbose=True, max_epoch=2000, clip=False, l1reg=0.1)
     
     TF.train_and_split(X,y, scale=True, shuffle=True, val=False, strat=False)
     
     TF.tf_variables()
     TF.layer_stacking_and_act("relu")
     TF.def_optimizer("Adam")
-    TF.cost_computation("OLS", reduce_type="sum")
+    TF.cost_computation("Lasso")
     TF.case_specification_recap()
     
     TF.training_session(1e-3)
@@ -707,7 +888,7 @@ if __name__=="__main__":
     
     plt.figure("Prediction")
     plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
-    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds", color='red', marker='o', linestyle="none", fillstyle='none')
+    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds", color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
     plt.legend()
 #    TF.error_computation("cross_entropy")
     
