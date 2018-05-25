@@ -7,6 +7,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
+import seaborn as sns
+
 import os, csv
 from sklearn.model_selection import train_test_split
 
@@ -479,39 +481,76 @@ class Neural_Network():
             expected_loss = {"OLS" : tf.square,\
                              "AVL" : tf.abs,\
                              "Ridge": "below",\
-                             "Lasso": "below"}
+                             "Lasso": "below",\
+                             "Elastic": "below",\
+                             "Custom": "below"}
             if err_type not in expected_loss :
                 raise IndexError("{} n\'est pas dans les cas considérés. La fonction de cout doit appartenir à la liste {}".format(err_type, expected_loss.keys()))
             
             
             elif err_type == "Ridge":
-                if "ridge_param" not in self.kwargs.keys() :
-                    self.weight_sum = tf.placeholder(np.float32)
-
+                try :
+                    ridge_param = self.kwargs["ridge_param"]
+                except KeyError :
                     ridge_param = float(input("Give a Ridge parameter " ) )
-                    ridge_param = tf.constant(ridge_param)
+                
+                ridge_param = tf.constant(ridge_param)
+
+                self.weight_sum = tf.placeholder(np.float32, (None))
                     
-                    ridge_loss = self.reduce_type_fct(tf.square(self.x))
-                    
-                    self.loss = tf.expand_dims(\
-                                tf.add(tf.reduce_mean(tf.square(self.y_pred_model - self.t)),\
-                                tf.multiply(ridge_param, self.weight_sum)), 0)
+                self.loss = tf.expand_dims(\
+                            tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                            tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum)))), 0)
             
             elif err_type == "Lasso":
-                if "ridge_param" not in self.kwargs.keys() :
-                    self.weight_sum = tf.placeholder(np.float32)
-
+                try :
+                    lasso_param = self.kwargs["lasso_param"]
+                except KeyError :
                     lasso_param = float(input("Give a Lasso parameter " ) )
-                    lasso_param = tf.constant(lasso_param)
+                lasso_param = tf.constant(lasso_param)
                     
-                    ridge_loss = self.reduce_type_fct(tf.abs(self.x))
+                self.weight_sum = tf.placeholder(np.float32, (None))
+                
+                self.loss = tf.expand_dims(\
+                            tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                            tf.multiply(lasso_param, self.reduce_type_fct(tf.abs(self.weight_sum)))), 0)
+            
+            elif err_type == "Elastic":
+                try :
+                    lasso_param = self.kwargs["lasso_param"]
+                except KeyError :
+                    lasso_param = float(input("Give a Lasso parameter " ) )
                     
-                    self.loss = tf.expand_dims(\
-                                tf.add(tf.reduce_mean(tf.square(self.y_pred_model - self.t)),\
-                                tf.multiply(lasso_param, self.weight_sum)), 0)
+                try :
+                    ridge_param = self.kwargs["ridge_param"]
+                except KeyError :
+                    ridge_param = float(input("Give a Ridge parameter " ) )
+                    
+                lasso_param = tf.constant(lasso_param)
+                ridge_param = tf.constant(ridge_param)
+                
+                self.weight_sum = tf.placeholder(np.float32, (None))
+                    
+                self.loss = tf.expand_dims(\
+                            tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                            tf.add(tf.multiply(lasso_param, self.reduce_type_fct(tf.abs(self.weight_sum))),\
+                                   tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum)))) ), 0)
+            
+            elif err_type == "Custom":
+                try :
+                    custom_param = self.kwargs["custom_param"]
+                except KeyError :
+                    custom_param = float(input("Give a custom parameter " ) )
+            
+                self.weight_sum = tf.placeholder(np.float32, (None))
+                
+                self.loss = tf.expand_dims(\
+                            tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                            tf.multiply(custom_param, self.reduce_type_fct(self.weight_sum))), 0)
                 
             else :
                 self.loss = self.reduce_type_fct(expected_loss[err_type](self.y_pred_model - self.t))
+                
                 print ("%s: The loss function will compute the averaged %s over all the errors" %(err_type, self.reduce_type))
                 
 #https://stackoverflow.com/questions/43822715/tensorflow-cost-function
@@ -538,9 +577,9 @@ class Neural_Network():
     def training_session(self, tol) :
 #       Initialization ou ré-initialization ;)
         
-        if self.err_type in {"Ridge", "Lasso"} :
-            self.training_ridge_regression(tol=tol)
-            return "End of Ridge/Lasso Network training"
+        if self.err_type not in {"OLS", "AVL"} :
+            self.training_coupled_regression(tol=tol)
+            return "End of Ridge/Lasso or Elastic Network training"
         
         if "clip"  in self.kwargs.keys() :
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
@@ -582,19 +621,6 @@ class Neural_Network():
         if self.batched == False :
 #            with tf.Session() as sess:        
             while epoch <= self.max_epoch and err > tol:
-                weight_sum = 0
-                if self.err_type == "Ridge" :
-                    lst_key = self.N_.keys()
-                    lst_key.remove("I"); lst_key.remove("O")
-                    
-                    for lk, _ in enumerate(lst_key) : 
-                        weight_sum += np.sum(self.sess.run(self.w_tf_d.values()[lk]))
-                            
-                    self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
-                
-                    err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
-                                                          self.t : self.y_train})
-                
                 
                 self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
                 
@@ -683,7 +709,7 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------    
 ###-------------------------------------------------------------------------------
 
-    def training_ridge_regression(self, tol) :
+    def training_coupled_regression(self, tol) :
         
         if "clip"  in self.kwargs.keys() :
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
@@ -727,17 +753,17 @@ class Neural_Network():
         if self.batched == False :
 #            with tf.Session() as sess:        
             while epoch <= self.max_epoch and err > tol:
-                weight_sum = 0
-                if self.reduce_type == "mean" :
-                    div = lambda x: len(x)-1
-                else :
-                    div = lambda x: 1
-                
+                weight_sum = []
+
                 for lk, _ in enumerate(lst_key) : 
                     curr_w = self.sess.run(self.w_tf_d.values()[lk])
-                    weight_sum += np.sum(curr_w) / div(curr_w)
-                        
-                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train,\
+                    for elt in curr_w.ravel() :
+                        weight_sum.append(elt)
+                
+                weight_sum = np.array(weight_sum).reshape(-1,1)
+                
+                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train,\
+                                                            self.t : self.y_train,\
                                                             self.weight_sum : weight_sum})
             
                 err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
@@ -773,15 +799,18 @@ class Neural_Network():
                 
                 for b in range(n_batch) :
                     
-                    weight_sum = 0
+                    weight_sum = []
 
                     for lk, _ in enumerate(lst_key) : 
-                        weight_sum += np.sum(self.sess.run(self.w_tf_d.values()[lk]))
-                        
-                    bsz = self.kwargs["bsz"] + 1 if left > 0 else self.kwargs["bsz"]
+                        curr_w = self.sess.run(self.w_tf_d.values()[lk])
+                        for elt in curr_w.ravel() :
+                            weight_sum.append(elt)
                     
-                    rand_index = np.random.choice(len(self.X_train), size=bsz)   
+                    weight_sum = np.array(weight_sum).reshape(-1,1)
 
+                    bsz = self.kwargs["bsz"] + 1 if left > 0 else self.kwargs["bsz"]
+
+                    rand_index = np.random.choice(len(self.X_train), size=bsz)   
                     self.X_batch = self.X_train[rand_index]
                     self.y_batch = self.y_train[rand_index]
                     
@@ -856,6 +885,7 @@ class Neural_Network():
         
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
+from mpl_toolkits.mplot3d import Axes3D
 if __name__=="__main__":
     plt.ion()
     
@@ -872,27 +902,105 @@ if __name__=="__main__":
                "O" :1}
                
     N_= gen_dict(X.shape[1])
-
-    TF = Neural_Network(0.0005, N_=N_, reduce_type="sum", color="orange", bsz=64, BN=True, verbose=True, max_epoch=2000, clip=False, l1reg=0.1)
     
+#    lparams = [1e-08, 1e-07, 1e-06, 1e-05, 0.0001, 0.001, 0.01, 0.1]
+
+    lparams = [1e-9, 1e-07, 1e-3]
+    rparams = [1e-5, 1e-3, 1e-2]
+#    lparams = [1e8, 1e7, 1e6, 100000, 10000, 1000, 100, 10, 1]
+#    color = iter(cm.rainbow(np.linspace(0,1,np.shape(lparams)[0])))
+#    color = iter(sns.diverging_palette(255, 30, l=80, n=len(lparams), center='dark'))
+    color = iter(sns.color_palette("Set1", len(lparams)*len(rparams)))
+    names = iter([str(i) + "_" + str(j)  for i in lparams for j in rparams])
+    
+    finalTrain_costs = []
+    finalTest_costs = []
+    
+    elasticTrain_costs = []
+    elasticTest_costs = []
+    
+    ll, rr = [], []
+    
+#    for l in lparams :
+#        for r in rparams :
+#            TF = Neural_Network(0.0005, N_=N_, reduce_type="sum", color=next(color), bsz=64, BN=True, verbose=True,\
+#                                max_epoch=1000, clip=False, lasso_param = l, ridge_param = r)
+#        
+#            TF.train_and_split(X,y, scale=True, shuffle=True, val=False, strat=False)
+#            
+#            TF.tf_variables()
+#            TF.layer_stacking_and_act("relu")
+#            TF.def_optimizer("Adam")
+#            TF.cost_computation("Elastic")
+#            TF.case_specification_recap()
+#            
+#            TF.training_session(1e-3)
+#            
+#            elasticTrain_costs.append(TF.costs[-1][0])
+#            
+#            elasticTest_costs.append(TF.sess.run(TF.reduce_type_fct(tf.square(TF.predict(TF.X_test) - TF.y_test))))
+#            
+#            lab = next(names)
+#            
+#            plt.figure("Prediction")
+#            plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
+#            plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds %s" % lab, color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
+#            plt.legend()
+#            
+#            plt.pause(0.1)
+#            
+#            TF.sess.close()
+#            
+#            ll.append(l)
+#            rr.append(r)
+#            
+#    fig = plt.figure("3D Projection Path Elastic Net")
+#    ax = fig.gca(projection='3d')
+#    ax.plot(ll, rr, elasticTrain_costs, color='navy', label="Training cost evolution")
+#    ax.plot(ll, rr, elasticTest_costs, color='darkred', label="Ontest set cost evolution")
+
+#    ax.set_xlabel("Lasso param : $\lambda_L$")
+#    ax.set_ylabel("Ridge param : $\lambda_R$")
+#    ax.set_zlabel("Training costs")
+#    #    ax=plt.gca()
+#    #    ax.yaxis.set_label_coords(-0.08, 0.5)
+
+#    #    ax.set_xlabel("Lasso param : $\lambda_L$")
+#    #    ax.set_xlabel("Ridge param : $\lambda_R$")
+#    #    ax.set_zlabel("Test costs")
+#    #    ax=plt.gca()
+#    #    ax.yaxis.set_label_coords(-0.08, 0.5)
+#    ax.legend()
+
+#plt.pause(0.1)
+            
+#    TF.error_computation("cross_entropy")
+    
+#    TF.optimisation()
+
+    TF = Neural_Network(0.0005, N_=N_, reduce_type="sum", color='k', bsz=64, BN=True, verbose=True,\
+                                max_epoch=1000, clip=False)#, lasso_param = l, ridge_param = r)
+        
     TF.train_and_split(X,y, scale=True, shuffle=True, val=False, strat=False)
     
     TF.tf_variables()
     TF.layer_stacking_and_act("relu")
     TF.def_optimizer("Adam")
-    TF.cost_computation("Lasso")
+    TF.cost_computation("Custom")
     TF.case_specification_recap()
     
     TF.training_session(1e-3)
     
+##    print (TF.costs[-1])
+    
+    print(TF.sess.run(TF.reduce_type_fct(tf.square(TF.predict(TF.X_test) - TF.y_test))))
+    
+    lab = next(names)
     
     plt.figure("Prediction")
     plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
-    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds", color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
+    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds %s" % lab, color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
     plt.legend()
-#    TF.error_computation("cross_entropy")
-    
-#    TF.optimisation()
 
 ##-------------------------------------------------- NOTES --------------------------------------------------##
 

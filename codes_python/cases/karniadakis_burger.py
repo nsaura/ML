@@ -367,7 +367,7 @@ class Karniadakis_burger() :
             if write == True :
 #                print ("Ecriture %s" %(cov_filename))
                 if osp.exists(diag_cov_filename) == False :
-                    np.save(diag_cov_filename, np.diag(np.diag(full_cov)))
+                    np.save(diag_cov_filename, diag_cov_obs_dict["diag_cov_obs_it%d"%(it)])
                 
                 if osp.exists(full_cov_filename) == False :
                     np.save(full_cov_filename, full_cov)
