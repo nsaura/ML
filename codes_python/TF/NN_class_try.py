@@ -116,7 +116,9 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
       
-    def train_and_split(self, X, y, random_state=0, strat=False, scale=False, shuffle=True, val=True):
+    def split_data(self, X, y, random_state=0, strat=False, standard_scale=False, shuffle=True, val=True):
+#        https://stats.stackexchange.com/questions/49540/understanding-stratified-cross-validation
+
 #        Stratify option allows to have a loyal representation of the datasets (couples of data,target)
 #        And allows a better training and can prevent from overfitting
         
@@ -125,9 +127,6 @@ class Neural_Network():
 #        comprises 50% of the data, it is best to arrange the data such that in every fold, each class 
 #        comprises around half the instances.
 
-#        Stratification is generally a better scheme, both in terms of bias and variance, when 
-#        compared to regular cross-validation.
-#        https://stats.stackexchange.com/questions/49540/understanding-stratified-cross-validation
         if shuffle == True :
 #        Inspired by : Sebastian Heinz
 #        https://medium.com/mlreview/a-simple-deep-learning-model-for-stock-price-prediction-using-tensorflow-30505541d877
@@ -141,19 +140,20 @@ class Neural_Network():
         
         self.X, self.y = X, y
         
-        strat_done = False
         if strat == True :
             X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, random_state=random_state)
-            strat_done = True
+            self.strat_done = True
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
         
-        X_train_std  =  X_train.std(axis=0)
+        X_train_stdd  =  X_train.std(axis=0)
         X_train_mean =  X_train.mean(axis=0)
         
-        if scale == True :
+        if standard_scale == True :
             # We have to normalize each dimension
             # We scale independently such that each dimension has 0 mean and 1 variance  
+            
+            # This is consistent with sklearn's StandardScale().fit(data)
             X_train_scaled = np.zeros_like(X_train)
             X_test_scaled = np.zeros_like(X_test)
             
@@ -161,12 +161,12 @@ class Neural_Network():
                 X_train_scaled[:, i] = X_train[:, i] -  X_train_mean[i]
                 X_test_scaled[:, i]  = X_test[:, i]  -  X_train_mean[i]
                 
-                if np.abs(X_train_std[i]) > 1e-12 :
-                    X_train_scaled[:,i] /= X_train_std[i]
-                    X_test_scaled[:,i] /= X_train_std[i]
+                if np.abs(X_train_stdd[i]) > 1e-12 :
+                    X_train_scaled[:,i] /= X_train_stdd[i]
+                    X_test_scaled[:,i] /= X_train_stdd[i]
             
             print ("Scaling done")
-            print ("X_train_mean = \n{}\n X_train_std = \n{}".format(X_train_mean, X_train_std))
+            print ("X_train_mean = \n{}\n X_train_stdd = \n{}".format(X_train_mean, X_train_stdd))
             X_train = X_train_scaled
             X_test = X_test_scaled
         
@@ -179,11 +179,87 @@ class Neural_Network():
             y_test = y_test[int(xtest_length*0.2):]
             
         # ---        
-        self.scale = scale
+        self.standard_scale = standard_scale
         self.X_test, self.y_test    =   X_test , y_test
         self.X_train, self.y_train  =   X_train, y_train
-        self.X_train_mean, self.X_train_std =  X_train_mean, X_train_std
+        self.X_train_mean, self.X_train_stdd =  X_train_mean, X_train_stdd
 
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+    
+    def split_and_scale(self, X, y, scaler= "PCA", shuffle=True, val=False, random_state=0, n_components="mle", whiten=False) :
+        
+        if scaler == "standard" :
+            self.split_data(X, y, shuffle=shuffle, strat=False,\
+                            standard_scale=True, val=val, random_state = random_state)
+        
+        else : 
+            if shuffle == True :
+                # Source see above
+                permute_indices = np.random.permutation(np.arange(len(y)))
+                X = X[permute_indices]
+                y = y[permute_indices]       
+
+            if len(y.shape) == 1:
+                y = y.reshape(-1,1)
+            
+            self.X, self.y = X, y
+            
+            xtr, xte, ytr, yte = train_test_split(X, y, random_state=random_state)        
+                    
+            if scaler=="minmax" :
+                from sklearn.preprocessing import MinMaxScaler
+                scaler = MinMaxScaler().fit(xtr)
+                
+            if scaler == "robust" : 
+                from sklearn.preprocessing import RobustScaler
+                scaler = RobustScaler().fit(xtr)
+            
+            if scaler == "PCA" :
+                from sklearn.decomposition import PCA
+    #            whiten : bool, optional (default False)
+    #            When True (False by default) the `components_` vectors are multiplied
+    #            by the square root of n_samples and then divided by the singular values
+    #            to ensure uncorrelated outputs with unit component-wise variances.
+                scaler = PCA(n_components=n_components, whiten=whiten).fit(xtr)
+                
+                print ("PCA allows another data representation.")
+                print ("From %d inputs, N_ contain now %d inputs entries" %\
+                        (    self.N_["I"],              scaler.n_components_))
+                
+                self.N_["I"] = scaler.n_components_
+            
+            self.X_train, self.y_train = scaler.transform(xtr), ytr
+            self.X_test, self.y_test =  scaler.transform(xte), yte
+            
+        self.scaler = scaler
+        
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+
+    def scale_inputs(self, xs) :
+        try :
+            new_xs = np.asarray([xs[i] for i in range(len(xs))])
+        
+            if self.scaler == "standard" :
+                for i, mean in enumerate(self.X_train_mean) :
+                    new_xs[i] -= mean
+                
+                for i, stdd in enumerate(self.X_train_stdd) :
+                    if np.abs(stdd) > 1e-8 :
+                        new_xs[i] /= stdd
+            
+            else :
+                new_xs = self.scaler.transform(new_xs.reshape(1,-1))
+        
+            return new_xs
+            
+        except AttributeError :
+            print ("No scaling")
+            return xs
+        
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -977,30 +1053,34 @@ if __name__=="__main__":
 #    TF.error_computation("cross_entropy")
     
 #    TF.optimisation()
-
-    TF = Neural_Network(0.0005, N_=N_, reduce_type="sum", color='k', bsz=64, BN=True, verbose=True,\
-                                max_epoch=1000, clip=False)#, lasso_param = l, ridge_param = r)
+    scaler_name = ["standard", "minmax", "robust", "PCA"]
+    names = iter(scaler_name)
+    color = iter(sns.color_palette("Set1", len(scaler_name)))
+    
+    for sn in scaler_name :
+        TF = Neural_Network(0.0005, N_=N_, reduce_type="sum", color=next(color), bsz=64, BN=True, verbose=True,\
+                            max_epoch=1000, clip=False)#, lasso_param = l, ridge_param = r)
+    
+        TF.split_and_scale(X,y, scaler=sn, shuffle=True, val=False)
+    
+        TF.tf_variables()
+        TF.layer_stacking_and_act("relu")
+        TF.def_optimizer("Adam")
+        TF.cost_computation("Elastic")
+        TF.case_specification_recap()
         
-    TF.train_and_split(X,y, scale=True, shuffle=True, val=False, strat=False)
-    
-    TF.tf_variables()
-    TF.layer_stacking_and_act("relu")
-    TF.def_optimizer("Adam")
-    TF.cost_computation("Custom")
-    TF.case_specification_recap()
-    
-    TF.training_session(1e-3)
-    
-##    print (TF.costs[-1])
-    
-    print(TF.sess.run(TF.reduce_type_fct(tf.square(TF.predict(TF.X_test) - TF.y_test))))
-    
-    lab = next(names)
-    
-    plt.figure("Prediction")
-    plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
-    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds %s" % lab, color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
-    plt.legend()
+        TF.training_session(1e-3)
+#    
+        print (TF.costs[-1])
+#    
+        print(TF.sess.run(TF.reduce_type_fct(tf.square(TF.predict(TF.X_test) - TF.y_test))))
+#    
+        lab = next(names)
+#    
+        plt.figure("Prediction")
+        plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
+        plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds %s" % lab, color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
+        plt.legend()
 
 ##-------------------------------------------------- NOTES --------------------------------------------------##
 

@@ -7,7 +7,7 @@
 # Vanilla Gradient descent https://towardsdatascience.com/improving-vanilla-gradient-descent-f9d91031ab1d
 
 # To run
-# run burger_NN.py -nu 2.5e-2 -itmax 100 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10    
+# run burger_case_u_NN.py -nu 2.5e-2 -itmax 100 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10    
 # 
 import numpy as np
 import pandas as pd
@@ -68,7 +68,7 @@ def xy_burger (num_real, cb=cb, n_input=6) :
     b_c = dict()
     lst_pairs_bu = []
     lst_pairs_bc = []
-
+    
     l = osp.split(b_files[0])[1].split("_")
     ll = [i.split(":") for i in l[1:-1]]
 
@@ -169,8 +169,6 @@ def xy_burger (num_real, cb=cb, n_input=6) :
             for k in range(1, len(u)-1) :
                 X = np.block([[X], [cb.line_x[k-1], cb.line_x[k], cb.line_x[k+1], uu[k-1], uu[k], uu[k+1]]])
                 y = np.block([[y], [beta[k]]])
-        print ("it= ", it) 
-        print "X.shape[0] -1 = ",X.shape[0] - 1 
 #        u_last = u
 #        beta_last = beta  
 #        chol_last = chol
@@ -209,30 +207,30 @@ dict_layers = {"I" : X.shape[1],\
 #nn_adam_sum = build_case(1e-3, X, y , act="selu", opti="Adam", loss="OLS", max_epoch=1000, reduce_type="sum", verbose=True, N_=dict_layers, color="blue",  scale=True, bsz=256, BN=True)
 
 print dict_layers
-def recentre(xs, X_train_mean, X_train_std):
-    """
-    This function refocuses the input before prediction. It needs three arguments :
-    
-    xs              :   The input to refocuses
-    X_train_mean    :   The mean vector calculated according to the training set
-    X_train_std     :   The standard deviation vector calculated according to the training set   
-    
-    xs is a vector of shape [N] 
-    X_train_mean and X_train_std are vectors of whose shape is [N_features]
-    """
-    for i in range(np.size(X_train_mean)-1) :
-        xs[i] -= X_train_mean[i]
-        if np.abs(X_train_std[i]) > 1e-12 :
-            xs[i] /= X_train_std[i]
+#def recentre(xs, X_train_mean, X_train_std):
+#    """
+#    This function refocuses the input before prediction. It needs three arguments :
+#    
+#    xs              :   The input to refocuses
+#    X_train_mean    :   The mean vector calculated according to the training set
+#    X_train_std     :   The standard deviation vector calculated according to the training set   
+#    
+#    xs is a vector of shape [N] 
+#    X_train_mean and X_train_std are vectors of whose shape is [N_features]
+#    """
+#    for i in range(np.size(X_train_mean)-1) :
+#        xs[i] -= X_train_mean[i]
+#        if np.abs(X_train_std[i]) > 1e-12 :
+#            xs[i] /= X_train_std[i]
 
-    return xs
+#    return xs
 
-def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, step=50, **kwargs) :
+def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, **kwargs) :
     plt.ion()
     print kwargs
     nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
     
-    nn_obj.train_and_split(X,y,strat=False,shuffle=True, scale=scale)
+    nn_obj.split_and_scale(X, y, scaler=scaler, shuffle=True)
     nn_obj.tf_variables()
     nn_obj.def_optimizer(opti)
     nn_obj.layer_stacking_and_act(activation=act)
@@ -354,14 +352,15 @@ def NN_solver(nn_obj, cb=cb, typeJ="u"):
     for it in range(1, cb.itmax) :
         beta = []
         u_mean = np.mean(u)
+
         for j in range(1, cb.Nx-1) :
             xs = np.array([cb.line_x[j-1], cb.line_x[j], cb.line_x[j+1], u[j-1], u[j], u[j+1]])
-            print xs
-            if nn_obj.scale == True :
-                xs = recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
-            print xs
-            xs = xs.reshape(-1, nn_obj.X.shape[1])
+            
+            xs = nn_obj.scale_inputs(xs)
+            xs = xs.reshape(1, -1)
+
             print "xs.shape= ", xs.shape
+
             beta.append(nn_obj.predict(xs)[0,0])
         
 #        print(beta, type(beta), np.shape(beta))
@@ -402,7 +401,7 @@ def processing(nn_obj, cb=cb, n_neigh = 3) :
         for j in range(1, cb.Nx-1) :
             xs = np.array([cb.line_x[j-1], cb.line_x[j], cb.line_x[j+1], u[j-1], u[j], u[j+1]])
             if nn_obj.scale == True :
-                xs = recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
+                xs = nn_obj.scale_inputs(xs)
             xs = xs.reshape(-1,6)
             print xs.shape
             beta.append(reg.predict(xs)[0,0])
