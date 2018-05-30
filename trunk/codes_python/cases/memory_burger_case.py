@@ -7,7 +7,7 @@
 # Vanilla Gradient descent https://towardsdatascience.com/improving-vanilla-gradient-descent-f9d91031ab1d
 
 # To run
-# run burger_case_u_NN.py -nu 2.5e-2 -itmax 100 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10    
+# run burger_case_u_NN.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
 # 
 import numpy as np
 import pandas as pd
@@ -44,10 +44,10 @@ cwc = reload(cwc)
 parser = cvc.parser()
 cb = cvc.Vitesse_Choc(parser)
 
-cb.obs_res(True, True)
+#cb.obs_res(True, True)
 
 # Dataset Construction
-def xy_burger (num_real, cb=cb, n_input=6) :
+def xy_burger (num_real, cb=cb, n_inputs=6, n_points=3, verbose=False) :
     #cb.minimization(maxiter=50, step=5)
 
     u_name = cb.u_name
@@ -68,6 +68,8 @@ def xy_burger (num_real, cb=cb, n_input=6) :
     b_c = dict()
     lst_pairs_bu = []
     lst_pairs_bc = []
+    
+    print betaloc
     
     l = osp.split(b_files[0])[1].split("_")
     ll = [i.split(":") for i in l[1:-1]]
@@ -117,17 +119,21 @@ def xy_burger (num_real, cb=cb, n_input=6) :
     #    for i in range (10) :
     #        print lst_pairs[np.random.randint(len(lst_pairs))]
 
-    X = np.zeros((6))
+    X = np.zeros((n_inputs))
     y = np.zeros((1))
 #    flux = []
     
-    print (lst_pairs_bu[0][0])
-    print (X[0])
-    #return X, y 
-    # pairs :   p[0] -> beta
-    #           p[1] -> u
-    beta_chol = dict()
-    u_chol = dict()
+#    print (lst_pairs_bu[0][0])
+
+    # pairs : for u
+    #              p[0] -> beta
+    #              p[1] -> u
+    #         for chol 
+    #              p[0] -> beta
+    #              p[1] -> c
+
+    duc, duc_p, duc_pp = dict(), dict(), dict()
+    dbc, dbc_p, dbc_pp = dict(), dict(), dict()
 
     lst_pairs_bu = sorted(lst_pairs_bu)
     lst_pairs_bc = sorted(lst_pairs_bc)
@@ -136,99 +142,99 @@ def xy_burger (num_real, cb=cb, n_input=6) :
     color=iter(cm.rainbow(np.linspace(0,1,np.shape(lst_pairs_bu)[0])))
     dx = cb.dx
     
-#    for h in range(1, len(u)-1):    
-#        flux.append((u[h+1] - u[h-1])/dx)
+    if n_points == 3 :
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
+                                                 up[xj-1], up[xj], up[xj+1],\
+                                                 upp[xj-1], upp[xj], upp[xj+1]\
+                                                ] 
+    
+    if n_points == 2 :
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],\
+                                                 up[xj-1], up[xj],\
+                                                 upp[xj-1], upp[xj]\
+                                                ] 
+    
+#    add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
+#                                             up[xj-1], up[xj], up[xj+1],\
+#                                             upp[xj-1], upp[xj], upp[xj+1]\
+#                                            ] 
+    beta_chol_fct = lambda beta, chol : beta + chol.dot(np.random.rand(len(beta)))
+    u_chol_fct    = lambda beta_co, u : cb.u_beta(beta_co, u) + np.random.rand(len(u))) * 0.1
     
     for it, (pbu, pbc) in enumerate(zip(lst_pairs_bu, lst_pairs_bc)) :
-        beta = np.load(pbu[0])
-        chol = np.load(pbc[1])
-        u = np.load(pbu[1])
+        beta  =  np.load(pbu[0])
+        chol  =  np.load(pbc[1])
+        u     =  np.load(pbu[1])
         
-        u_mean = np.zeros_like(u[1:cb.Nx-1])
-        c = next(color)
-#        if osp.splitext(pbu[1])[0][-3:] != "000" :
+        if it > 1 :
+            b_p = np.load(lst_pairs_bu[it-1][0])
+            b_pp = np.load(lst_pairs_bu[it-2][0])
+            
+            u_p = np.load(lst_pairs_bu[it-1][1])
+            u_pp = np.load(lst_pairs_bu[it-2][1])
+            
+            c_p = np.load(lst_pairs_bc[it-1][1])
+            c_pp = np.load(lst_pairs_bc[it-2][1])
+            
+        else :
+            b_p = np.load(lst_pairs_bu[0][0])
+            b_pp = np.load(lst_pairs_bu[0][0])
+            
+            u_p = np.load(lst_pairs_bu[0][1])
+            u_pp = np.load(lst_pairs_bu[0][1])
+            
+            c_p = np.load(lst_pairs_bc[0][1])
+            c_pp = np.load(lst_pairs_bc[0][1])        
+        
+        col = next(color)
+
         for i in range(num_real) :
-            # Pour eviter de reiterer la premiere (Obsolete?)
-            beta_chol[str(i)] = beta + chol.dot(np.random.rand(len(beta)))            
-#            print np.shape(beta_chol[str(i)])
-            u_chol[str(i)]= cb.u_beta(beta_chol[str(i)], u)
-                
-    #            for k in range(0, len(u)-2) : #Pour aller de 1 à Nx-1 vav de u-beta_chol mais commencer aux bons endroits
-    #                u_mean[k] += u_beta_chol[str(i)][k+1] / float(num_real)
-        
+            duc[str(i)] = u_chol_fct(beta_chol_fct(beta, chol), u) # u_chol
+            duc_p[str(i)] = u_chol_fct(beta_chol_fct(b_p, c_p), u_p) # u_chol_previous
+            duc_pp[str(i)] = u_chol_fct(beta_chol_fct(b_pp, c_pp), u_pp) # u_chol_previous_previous
+            
         for j in range(1, len(u)-1) :
-#            if osp.splitext(pbu[1])[0][-3:] != "000" :
-            flux = (u[j+1] - u[j-1])/dx
-            X = np.block([[X], [cb.line_x[j-1], cb.line_x[j], cb.line_x[j+1], u[j-1], u[j], u[j+1]]])
-            y = np.block([[y], [beta[j]]])
+            new_block = add_block(u, u_p, u_pp, j)
+            
+            X = np.block([ [X], new_block ])
+            y = np.block([ [y], [beta[j]] ])
                 
         for i in range(num_real) :
-            bb = beta_chol[str(i)]
-            uu = u_chol[str(i)]
+            uc, uc_p, uc_pp = duc[str(i)], duc_p[str(i)], duc_pp[str(i)]
                                         
             for k in range(1, len(u)-1) :
-                X = np.block([[X], [cb.line_x[k-1], cb.line_x[k], cb.line_x[k+1], uu[k-1], uu[k], uu[k+1]]])
-                y = np.block([[y], [beta[k]]])
-#        u_last = u
-#        beta_last = beta  
-#        chol_last = chol
+                new_block = add_block(uc, uc_p,  uc_pp, k)
+                
+                X = np.block([ [X], new_block ])
+                y = np.block([ [y], [beta[k]]])
         
+        if verbose == True :
+            print X.shape[0]-1
+            time.sleep(0.2)
+#       X Gets (Nx-2)*(num_real+1) inputs for each iteration        
+    print pbu
+    
     X = np.delete(X, 0, axis=0)
     y = np.delete(y, 0, axis=0)
     
     return X, y
 
-X, y = xy_burger(num_real=4, cb=cb)
+#X, y = xy_burger(num_real=4, cb=cb, n_inputs=9)
 
-dict_layers = {"I" : X.shape[1],\
-#               "N1":10000,\
-#               "N2" : 100,\
-#               "O": 1\
-#              }
-               "N1" : 3000,\
-               "N2" : 1000,\
-               "N3" : 100,\
-               "N4" : 50,\
-               "N5" : 50,\
-               "N6" : 50,\
-#               "N10" : 30,\
-#               "N11" : 30,\
-#               "N12" : 30,\
-#               "N13" : 30,\
-#               "N14" : 10,\
-#               "N15" : 10,\
-#               "N16" : 10,\
-#               "N17" : 10,\
-#               "N18" : 10,\
-               "O"  : 1}
-#for j in range(5,100) :
-#    dict_layers["N%d" % j] = 10
+def dict_layer(X) :
+    dict_layers = {"I" : X.shape[1],\
+                   "N1" : 200,\
+                   "N2" : 100,\
+                   "N3" : 50,\
+                   "N4" : 10,\
+                   "O"  : 1}
+    return dict_layers
+#print dict_layers
 
-#nn_adam_sum = build_case(1e-3, X, y , act="selu", opti="Adam", loss="OLS", max_epoch=1000, reduce_type="sum", verbose=True, N_=dict_layers, color="blue",  scale=True, bsz=256, BN=True)
-
-print dict_layers
-#def recentre(xs, X_train_mean, X_train_std):
-#    """
-#    This function refocuses the input before prediction. It needs three arguments :
-#    
-#    xs              :   The input to refocuses
-#    X_train_mean    :   The mean vector calculated according to the training set
-#    X_train_std     :   The standard deviation vector calculated according to the training set   
-#    
-#    xs is a vector of shape [N] 
-#    X_train_mean and X_train_std are vectors of whose shape is [N_features]
-#    """
-#    for i in range(np.size(X_train_mean)-1) :
-#        xs[i] -= X_train_mean[i]
-#        if np.abs(X_train_std[i]) > 1e-12 :
-#            xs[i] /= X_train_std[i]
-
-#    return xs
-
-def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, **kwargs) :
+def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_, step=50, **kwargs) :
     plt.ion()
     print kwargs
-    nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
+    nn_obj = NNC.Neural_Network(lr, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
     
     nn_obj.split_and_scale(X, y, scaler=scaler, shuffle=True)
     nn_obj.tf_variables()
@@ -296,58 +302,12 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dic
     print("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
     
     plt.show()
+
+# see burger_case_u_NN for writing something into ols fashion
     
-#    lr, X, y, act, opti, loss, max_epoch, reduce_type, N_=dict_layers, scale=True, step=50, **kwargs
-    
-#    f = cwc.File("traceback_u_burger_nn.ods")
-#    f.read_file()
-#    
-#    data = {}
-#    
-#    data["lr"] = lr
-#    data["act"]=act
-#    data["opti"] = opti
-#    data["maxepoch"] = max_epoch
-#    data["loss"] = loss
-#    data["structure"] = dict_layers
-#    data["finalcost"] = nn_obj.costs[-1]
-#    
-#    if nn_obj.batched == True :
-#        data["batchsize"] = kwargs["b_sz"]
-#    
-#    else :
-#        data["batchsize"] = " "
-#        
-#    if opti == "Nadam" or opti == "Adam":
-#        data["beta1"] = kwargs["beta1"]
-#        data["beta2"] = kwargs["beta2"]
-#        
-#        data["decay"] = " "
-#        data["momentum"] = " "
-#        
-#    if opti == "RMS" :
-#        data["decay"] = kwargs["decay"]
-#        data["momentum"] = kwargs["momentum"]
-#        
-#        data["beta1"] = " "
-#        data["beta2"] = " "
-#    
-#    if opti == "GD" or opti == "SGD":
-#        data["beta1"] = " "
-#        data["beta2"] = " "
-#        data["decay"] = " "
-#        data["momentum"] = " "
-#    
-#    print data 
-#    f.write_in_file(data)
     return nn_obj
-
-#nn_adam_mean = build_case(1e-4, X, y , act="relu", opti="Adam", loss="OLS", decay=0.5, momentum=0.8, max_epoch=5000, reduce_type="sum", verbose=True)
-
-#nn_adam_mean = build_case(5e-4, X, y , act="selu", opti="Adam", loss="OLS", max_epoch=700, reduce_type="mean", verbose=True, b_sz=250, N_=dict_layers, color="k", BN=True)
-#nn_adam_mean = build_case(1e-3, X, y , act="selu", opti="Adam", loss="OLS", max_epoch=2000, reduce_type="mean", verbose=True, b_sz=250, N_=dict_layers, color="tan", BN=True)
-
-def NN_solver(nn_obj, cb=cb, typeJ="u"):
+##------------------------------------------------------------------------------------------------------------
+def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
     beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
             "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
@@ -360,31 +320,57 @@ def NN_solver(nn_obj, cb=cb, typeJ="u"):
     evol = 0
     
     if cb.typeJ != typeJ : cb.typeJ = typeJ
+    
     # Initialisation it = 1
     u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=1))
+    u_p = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=0))
+    u_pp = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=0))
+    
+    
+    if n_points == 3 :
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
+                                                 up[xj-1], up[xj], up[xj+1],\
+                                                 upp[xj-1], upp[xj], upp[xj+1]\
+                                                ] 
+    
+    if n_points == 2 :
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],\
+                                                 up[xj-1], up[xj],\
+                                                 upp[xj-1], upp[xj]\
+                                                ] 
+    
     plt.figure()
+    
     for it in range(1, cb.itmax) :
+        if it > 1 :
+            u_pp = u_p 
+            u_p = u
+            u = u_nNext
+                   
         beta = []
-        u_mean = np.mean(u)
 
         for j in range(1, cb.Nx-1) :
-            xs = np.array([cb.line_x[j-1], cb.line_x[j], cb.line_x[j+1], u[j-1], u[j], u[j+1]])
+            xs = np.array(add_block(u, u_p, u_pp, j))
             
             xs = nn_obj.scale_inputs(xs)
             xs = xs.reshape(1, -1)
 
             beta.append(nn_obj.predict(xs)[0,0])
         
-#        print(beta, type(beta), np.shape(beta))
+        # u_nNext.shape = 30 
+        # use of list type to insert in a second time boundary condition
         u_nNext = cb.u_beta(np.asarray(beta), u)
-        u = u_nNext
-        u[0] = u[-2]
-        u[-1] = u[1]
+        
+#        u_nNext.insert(0, u[-2])
+#        u_nNext.insert(len(u_nNext), u[1])
+        
+#        u = u_nNext
+#        u[0] = u[-2]
+#        u[-1] = u[1]
         
         plt.clf()        
-        
-        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it), c='k')
-        plt.plot(cb.line_x[1:cb.Nx-1], u[1:cb.Nx-1], label="Predicted it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c='navy')
+        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it))[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
+        plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
         
         plt.legend()
         plt.pause(5)

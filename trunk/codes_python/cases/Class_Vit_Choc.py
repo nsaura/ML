@@ -62,7 +62,7 @@ def parser() :
     parser.add_argument('--logbook_path', '-p', action='store', type=str, default='./logbooks/', dest='logbook_path', 
                         help='Define the logbook\'s path. Default to %(default)s \n')
    
-    parser.add_argument('--type_J', '-typeJ', action='store', type=str, default="grad", dest='typeJ',\
+    parser.add_argument('--type_J', '-typeJ', action='store', type=str, default="u", dest='typeJ',\
                         help='Define the type of term you want to simulate')
 #    # Booléen
 #    parser.add_argument('--T_inf_type', '-T_cst', action='store', type=bool, default=False, dest='T_cst', 
