@@ -111,7 +111,7 @@ class Neural_Network():
                 raise KeyError ("Check N_ keys. One indice seems to be dumped: {}".format(keys))
         
         self.N_ = N_
-        
+        self.exception = 0
 ###-------------------------------------------------------------------------------  
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -146,7 +146,7 @@ class Neural_Network():
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
         
-        X_train_stdd  =  X_train.std(axis=0)
+        X_train_stdd  =  X_train.std(axis=0, ddof=1)
         X_train_mean =  X_train.mean(axis=0)
         
         if standard_scale == True :
@@ -189,12 +189,17 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
     
     def split_and_scale(self, X, y, scaler= "PCA", shuffle=True, val=False, random_state=0, n_components="mle", whiten=False) :
+
+        if scaler == "None" :
+            self.split_data(X, y, shuffle=shuffle, strat=False,\
+                            standard_scale=False, val=val, random_state = random_state)
         
-        if scaler == "standard" :
+        elif scaler == "Standard" :
             self.split_data(X, y, shuffle=shuffle, strat=False,\
                             standard_scale=True, val=val, random_state = random_state)
         
         else : 
+            self.standard_scale = scaler
             if shuffle == True :
                 # Source see above
                 permute_indices = np.random.permutation(np.arange(len(y)))
@@ -208,11 +213,11 @@ class Neural_Network():
             
             xtr, xte, ytr, yte = train_test_split(X, y, random_state=random_state)        
                     
-            if scaler=="minmax" :
+            if scaler=="Minmax" :
                 from sklearn.preprocessing import MinMaxScaler
                 scaler = MinMaxScaler().fit(xtr)
                 
-            if scaler == "robust" : 
+            if scaler == "Robust" : 
                 from sklearn.preprocessing import RobustScaler
                 scaler = RobustScaler().fit(xtr)
             
@@ -235,6 +240,8 @@ class Neural_Network():
             
         self.scaler = scaler
         
+        print ("Standard scale = {}".format(self.standard_scale))
+        print ("scaler = %s" % self.scaler)
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -243,7 +250,7 @@ class Neural_Network():
         try :
             new_xs = np.asarray([xs[i] for i in range(len(xs))])
         
-            if self.scaler == "standard" :
+            if self.scaler == "Standard" :
                 for i, mean in enumerate(self.X_train_mean) :
                     new_xs[i] -= mean
                 
@@ -257,7 +264,12 @@ class Neural_Network():
             return new_xs
             
         except AttributeError :
-            print ("No scaling")
+            self.exception += 1
+            if self.exception == 1 :
+                print("\x1b[1;37;41mNo scaling\x1b[0m")
+            
+            else :
+                pass
             return xs
         
 ###-------------------------------------------------------------------------------
@@ -622,7 +634,7 @@ class Neural_Network():
                 
                 self.loss = tf.expand_dims(\
                             tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
-                            tf.multiply(custom_param, self.reduce_type_fct(self.weight_sum))), 0)
+                            tf.multiply(custom_param, self.reduce_type_fct(self.x))), 0)
                 
             else :
                 self.loss = self.reduce_type_fct(expected_loss[err_type](self.y_pred_model - self.t))
@@ -777,8 +789,8 @@ class Neural_Network():
                 if np.abs(costs[-1]) < 1e-6 :
                     print "Final Cost "
                     break
+            ff.close()
             print costs[-10:]
-        ff.close()
         self.costs = costs
 
 ###-------------------------------------------------------------------------------
@@ -936,7 +948,7 @@ class Neural_Network():
                     print "Final Cost "
                     break
             print costs[-10:]
-        ff.close()
+            ff.close()
         self.costs = costs
 
 ###-------------------------------------------------------------------------------
