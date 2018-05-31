@@ -7,7 +7,7 @@
 # Vanilla Gradient descent https://towardsdatascience.com/improving-vanilla-gradient-descent-f9d91031ab1d
 
 # To run
-# run burger_case_u_NN.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
+# run memory_burger_case.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
 # 
 import numpy as np
 import pandas as pd
@@ -159,7 +159,7 @@ def xy_burger (num_real, cb=cb, n_inputs=6, n_points=3, verbose=False) :
 #                                             upp[xj-1], upp[xj], upp[xj+1]\
 #                                            ] 
     beta_chol_fct = lambda beta, chol : beta + chol.dot(np.random.rand(len(beta)))
-    u_chol_fct    = lambda beta_co, u : cb.u_beta(beta_co, u) + np.random.rand(len(u))) * 0.1
+    u_chol_fct    = lambda beta_co, u : cb.u_beta(beta_co, u) + np.random.rand(len(u)) * 0.1
     
     for it, (pbu, pbc) in enumerate(zip(lst_pairs_bu, lst_pairs_bc)) :
         beta  =  np.load(pbu[0])
@@ -223,7 +223,7 @@ def xy_burger (num_real, cb=cb, n_inputs=6, n_points=3, verbose=False) :
 
 def dict_layer(X) :
     dict_layers = {"I" : X.shape[1],\
-                   "N1" : 200,\
+                   "N1" : 500,\
                    "N2" : 100,\
                    "N3" : 50,\
                    "N4" : 10,\
@@ -369,7 +369,7 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
 #        u[-1] = u[1]
         
         plt.clf()        
-        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it))[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
+        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
         plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
         
         plt.legend()
