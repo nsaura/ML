@@ -22,6 +22,10 @@ from itertools import cycle
 from matplotlib.pyplot import cm
 
 from scipy import optimize as op
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.model_selection import train_test_split
+
+from sklearn.ensemble import RandomForestRegressor
 
 import numdifftools as nd
 
@@ -29,7 +33,6 @@ import glob
 import time
 
 import Class_write_case as cwc
-
 ## Import de la classe TF ##
 nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
 sys.path.append(nnc_folder)
@@ -47,7 +50,11 @@ cb = cvc.Vitesse_Choc(parser)
 #cb.obs_res(True, True)
 
 # Dataset Construction
-def xy_burger (num_real, cb=cb, n_inputs=6, n_points=3, verbose=False) :
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
+def xy_burger (num_real, cb=cb, n_inputs=9, n_points=3, verbose=False) :
     #cb.minimization(maxiter=50, step=5)
 
     u_name = cb.u_name
@@ -219,7 +226,16 @@ def xy_burger (num_real, cb=cb, n_inputs=6, n_points=3, verbose=False) :
     
     return X, y
 
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
 #X, y = xy_burger(num_real=4, cb=cb, n_inputs=9)
+
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
 
 def dict_layer(X) :
     dict_layers = {"I" : X.shape[1],\
@@ -231,12 +247,17 @@ def dict_layer(X) :
     return dict_layers
 #print dict_layers
 
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
+
 def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_, step=50, **kwargs) :
     plt.ion()
     print kwargs
     nn_obj = NNC.Neural_Network(lr, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
     
-    nn_obj.split_and_scale(X, y, scaler=scaler, shuffle=True)
+    nn_obj.split_and_scale(X, y, scaler=scaler, shuffle=False)
     nn_obj.tf_variables()
     nn_obj.def_optimizer(opti)
     nn_obj.layer_stacking_and_act(activation=act)
@@ -306,19 +327,209 @@ def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
 # see burger_case_u_NN for writing something into ols fashion
     
     return nn_obj
+    
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
+def stack_NN_model(X, y, nn_obj, n, mod, cb=cb, verbose=True, **kwargs) :
+    permute_indices = np.random.permutation(np.arange(len(y)))
+    X = X[permute_indices]
+    y = y[permute_indices]
+    
+    X = nn_obj.predict(X)
+    
+#    nn_obj.split_and_scale(X, y, scaler="Standard")
+    xtr, xte, ytr, yte = train_test_split(X, y, random_state=0)
+    
+    means = xtr.mean(axis=0)
+    stds = xtr.std(axis=0, ddof=1)
+    
+    for i, mean in enumerate(means) :
+        xtr[:,i] -= mean
+        xte[:,i] -= mean
+    
+    for s, std in enumerate(stds) :
+        if np.abs(std) > 1e-8 :
+            xtr[:,s] /= std 
+            xte[:,s] /= std 
+            
+    if nn_obj.err_type == "AVL" : crit = "mae"
+    else : crit= "mse"
+    
+    if mod =="RF" :
+        try :
+            model = RandomForestRegressor(n_estimators=n, max_depth=kwargs["max_depth"],\
+                                          criterion=crit) 
+        except KeyError :
+            model = RandomForestRegressor(n_estimators=n, criterion=crit) 
+             
+    else :
+        model = KNeighborsRegressor(n_neighbors=n)
+    
+    model = model.fit(xtr, ytr.ravel())    
+    print ("{} with {}: Score = {}".format(mod, n, model.score(xte, yte.ravel())))
+    
+    dev_lab = "{}_augmented_Pred_lr_{}_{}_{}_Maxepoch_{}"\
+            .format(mod, nn_obj.lr, nn_obj.train_mod, nn_obj.activation,\
+                    nn_obj.scaler, nn_obj.max_epoch)
+    
+    test_line = range(len(xte))
+    mod_test_preds = model.predict(xte) 
+    
+    deviation = np.array([ abs(mod_test_preds[j] - yte[j]) for j in test_line])
+    error_estimation = sum(deviation)
+    
+    if plt.fignum_exists("Stacking Comparaison sur le test set") :
+        plt.figure("Stacking Comparaison sur le test set")
+        plt.plot(test_line, mod_test_preds, label=dev_lab, marker='+',\
+                    fillstyle='none', linestyle='none', c=nn_obj.kwargs["color"])
+
+    else :
+        plt.figure("Stacking Comparaison sur le test set")
+        plt.plot(test_line, yte, label="Expected value", marker='o', fillstyle='none',\
+                    linestyle='none', c='k')   
+        plt.plot(test_line, mod_test_preds, label=dev_lab, marker='+',\
+                    fillstyle='none', linestyle='none', c=nn_obj.kwargs["color"])
+ 
+    plt.legend(loc="best", prop={'size': 7})
+    
+    if plt.fignum_exists("Stacking Deviation of the prediction") :
+            plt.figure("Stacking Deviation of the prediction")
+            plt.plot(yte, mod_test_preds, c=nn_obj.kwargs["color"], marker='o',\
+                     linestyle='none', label=dev_lab, ms=3)
+        
+    else :
+        plt.figure("Stacking Deviation of the prediction")
+        plt.plot(yte, yte, c='k', label="reference line")
+        plt.plot(yte, yte, c='navy', marker='+', label="wanted value",linestyle='none')
+        plt.plot(nn_obj.y_test, mod_test_preds, c=nn_obj.kwargs["color"], marker='o',\
+                      linestyle='none', label=dev_lab, ms=3)
+
+    plt.legend(loc="best", prop={'size': 7}) 
+
+    print("Résultat après Stacking NN_%s Estimateur ou Voisins = %d" % (mod,n))
+#    print("Modèle pour H_NL = {}, H_NN = {} \n".format(len(N_.keys())-2, N_["N1"]))
+    print("Fonction d'activation : {}\n Fonction de cout : {}\n\
+    Méthode d'optimisation : {}".format(nn_obj.activation, nn_obj.err_type, nn_obj.train_mod))
+    print("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
+    
+    plt.show()
+    
+
 ##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+
+def stack_NN_NN(nn_obj, lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_, step=50, **kwargs) :
+    inputs = nn_obj.predict(X, rescale=True)
+    print inputs 
+    
+    output = y 
+    
+    plt.figure("For comparaison")
+    plt.plot(y,y,color="green", label="Expected", marker="+", ms=6)
+    plt.plot(y, inputs, marker='o', linestyle="none", color="darkred", fillstyle="none", ms=4, label="Before")
+    plt.pause(0.01)
+    nn_sec = NNC.Neural_Network(lr, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
+    
+    nn_sec.split_and_scale(inputs, output, scaler=scaler, shuffle=True)
+    nn_sec.tf_variables()
+    nn_sec.def_optimizer(opti)
+    nn_sec.layer_stacking_and_act(activation=act)
+    nn_sec.cost_computation(loss)
+    nn_sec.case_specification_recap()
+    
+    print X.shape[0]
+    print nn_sec.X_train.shape[0]
+    print nn_sec.X_test.shape[0]
+    
+    kwargs = nn_sec.kwargs
+    
+#    return nn_obj
+    print nn_sec.X_train.shape
+    try :
+        nn_sec.training_session(tol=1e-3)
+
+    except KeyboardInterrupt :
+        print ("Session closed")
+        nn_sec.sess.close()
+    
+    beta_test_preds = np.array(nn_sec.predict(nn_sec.X_test))
+    test_line = range(len(nn_sec.X_test))
+    
+    
+    deviation = np.array([ abs(beta_test_preds[j] - nn_sec.y_test[j]) for j in test_line])
+    error_estimation = sum(deviation)
+
+    dev_lab = "Pred_lr_{}_{}_{}_Maxepoch_{}".format(lr, opti, act, scaler, max_epoch)
+    
+    if plt.fignum_exists("Stack NN NN Comparaison sur le test set") :
+        plt.figure("Stack NN NN sur le test set")
+        plt.plot(test_line, beta_test_preds, label=dev_lab, marker='+',\
+                    fillstyle='none', linestyle='none', c=nn_obj.kwargs["color"])
+
+    else :
+        plt.figure("Stack NN NN sur le test set")
+        plt.plot(test_line, nn_sec.y_test, label="Expected value", marker='o', fillstyle='none',\
+                    linestyle='none', c='k')   
+        plt.plot(test_line, beta_test_preds, label=dev_lab, marker='+',\
+                    fillstyle='none', linestyle='none', c=nn_obj.kwargs["color"])
+ 
+    plt.legend(loc="best", prop={'size': 7})
+    
+    if plt.fignum_exists("Stack NN NN Deviation of the prediction") :
+            plt.figure("Stack NN NN Deviation of the prediction")
+            plt.plot(nn_sec.y_test, beta_test_preds, c=nn_obj.kwargs["color"], marker='o',\
+                     linestyle='none', label=dev_lab, ms=3)
+        
+    else :
+        plt.figure("Stack NN NN Deviation of the prediction")
+        plt.plot(nn_sec.y_test, nn_sec.y_test, c='k', label="reference line")
+        plt.plot(nn_sec.y_test, nn_sec.y_test, c='navy', marker='+', label="wanted value",linestyle='none')
+        plt.plot(nn_sec.y_test, beta_test_preds, c=nn_obj.kwargs["color"], marker='o',\
+                      linestyle='none', label=dev_lab, ms=3)
+
+    plt.legend(loc="best", prop={'size': 7}) 
+
+#    print("Modèle utilisant N_dict_layer = {}".format(N_))\\
+    print("Modèle pour H_NL = {}, H_NN = {} \n".format(len(N_.keys())-2, N_["N1"]))
+    print("Fonction d'activation : {}\n Fonction de cout : {}\n\
+    Méthode d'optimisation : {}".format(act, loss, opti))
+    print("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
+    
+
+# see burger_case_u_NN for writing something into ols fashion
+    
+    plt.figure("For comparaison")
+#    plt.plot(nn_sec.y_test, nn_obj.predict(X[int(len(X)*0.75):], rescale=False) , label="NN_OBJ", marker='o', linestyle="none", color="darkred", fillstyle="none", ms=3)
+    plt.plot(nn_sec.y_test, nn_sec.predict(nn_sec.X_test, rescale=False), label="Stack result",\
+                marker='o', linestyle="none", color="coral", fillstyle="none", ms=4)
+#    plt.plot(nn_sec.y_test, nn_sec.y_test, label="expected", c="green", marker="+")
+    plt.legend(loc="best")
+    
+    plt.show()
+    
+    return nn_sec
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+
+
 def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
     beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
-            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) +\
+            "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
     u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.inferred_U,\
-            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) +\
+            "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
     chol_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.chol_path,\
-            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) +\
+            "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
     
     evol = 0
-    
     if cb.typeJ != typeJ : cb.typeJ = typeJ
     
     # Initialisation it = 1
@@ -338,9 +549,8 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
                                                  up[xj-1], up[xj],\
                                                  upp[xj-1], upp[xj]\
                                                 ] 
-    
     plt.figure()
-    
+
     for it in range(1, cb.itmax) :
         if it > 1 :
             u_pp = u_p 
@@ -361,13 +571,6 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
         # use of list type to insert in a second time boundary condition
         u_nNext = cb.u_beta(np.asarray(beta), u)
         
-#        u_nNext.insert(0, u[-2])
-#        u_nNext.insert(len(u_nNext), u[1])
-        
-#        u = u_nNext
-#        u[0] = u[-2]
-#        u[-1] = u[1]
-        
         plt.clf()        
         plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
         plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
@@ -379,7 +582,6 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
 def processing(nn_obj, cb=cb, n_neigh = 3) :
     plt.ion()
     
-    from sklearn.neighbors import KNeighborsRegressor
     reg = KNeighborsRegressor(n_neighbors=n_neigh).fit(nn_obj.X_train, nn_obj.y_train)
     
     beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
@@ -446,8 +648,7 @@ def processing(nn_obj, cb=cb, n_neigh = 3) :
 #       run burger_case_u_NN.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
 
 # Then you want to build and train a Neural Network. This can be done by typing (for example) :
-#        nn_test = build_case(5e-4, X, y , act="selu", opti="Adam", loss="Custom", custom_param=1e-4, max_epoch=300\,
-#        reduce_type="sum", verbose=True, N_=N_, color="red", scaler="Standard", bsz=256, BN=True)
+#       nn_test = build_memory_case(5e-4, X, y , act="selu", opti="Adam", loss="AVL",  max_epoch=800, reduce_type="sum", verbose=True, N_=dict_layers, color="navy", scaler="Standard", bsz=128, BN=True)
 
 # To tune those parameters see in NN_class_try in TF directory
 

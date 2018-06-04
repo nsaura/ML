@@ -126,13 +126,14 @@ class Neural_Network():
 #        representative of the whole. For example in a binary classification problem where each class 
 #        comprises 50% of the data, it is best to arrange the data such that in every fold, each class 
 #        comprises around half the instances.
-
+        
         if shuffle == True :
 #        Inspired by : Sebastian Heinz
 #        https://medium.com/mlreview/a-simple-deep-learning-model-for-stock-price-prediction-using-tensorflow-30505541d877
             permute_indices = np.random.permutation(np.arange(len(y)))
             X = X[permute_indices]
-            y = y[permute_indices]        
+            y = y[permute_indices]     
+            self.permute_indices =  permute_indices   
         
         if len(y.shape) == 1:
             y = y.reshape(-1,1)
@@ -183,7 +184,6 @@ class Neural_Network():
         self.X_test, self.y_test    =   X_test , y_test
         self.X_train, self.y_train  =   X_train, y_train
         self.X_train_mean, self.X_train_stdd =  X_train_mean, X_train_stdd
-
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -204,7 +204,8 @@ class Neural_Network():
                 # Source see above
                 permute_indices = np.random.permutation(np.arange(len(y)))
                 X = X[permute_indices]
-                y = y[permute_indices]       
+                y = y[permute_indices]
+                self.permute_indices =  permute_indices       
 
             if len(y.shape) == 1:
                 y = y.reshape(-1,1)
@@ -955,8 +956,17 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------    
 ###-------------------------------------------------------------------------------        
 
-    def predict(self, x_s):
-        P = self.sess.run(self.y_pred_model, feed_dict={self.x: x_s})
+    def predict(self, xs, rescale=False):
+        arg = np.copy(xs)
+        if rescale==True :        
+            if self.scaler!= "None" :
+                for i, mean in enumerate(self.X_train_mean) :
+                    arg[:, i] -= mean            
+                for i, std in enumerate(self.X_train_stdd) :
+                    if np.abs(std) > 1e-8 :
+                        arg[:, i] /= std            
+
+        P = self.sess.run(self.y_pred_model, feed_dict={self.x: arg})
         return P
         
 ###-------------------------------------------------------------------------------
