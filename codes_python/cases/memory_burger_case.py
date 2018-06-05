@@ -332,7 +332,10 @@ def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
 ##--------------------------------------------------------------------------------------------
 ##--------------------------------------------------------------------------------------------
 
-def stack_NN_model(X, y, nn_obj, n, mod, cb=cb, verbose=True, **kwargs) :
+def stack_NN_model(X, y, nn_obj, n, mod, cb=cb, verbose=True, crit = "mse", **kwargs) :
+    X = np.copy(X)
+    y = np.copy(y)
+    
     permute_indices = np.random.permutation(np.arange(len(y)))
     X = X[permute_indices]
     y = y[permute_indices]
@@ -342,18 +345,6 @@ def stack_NN_model(X, y, nn_obj, n, mod, cb=cb, verbose=True, **kwargs) :
 #    nn_obj.split_and_scale(X, y, scaler="Standard")
     xtr, xte, ytr, yte = train_test_split(X, y, random_state=0)
     
-    means = xtr.mean(axis=0)
-    stds = xtr.std(axis=0, ddof=1)
-    
-    for i, mean in enumerate(means) :
-        xtr[:,i] -= mean
-        xte[:,i] -= mean
-    
-    for s, std in enumerate(stds) :
-        if np.abs(std) > 1e-8 :
-            xtr[:,s] /= std 
-            xte[:,s] /= std 
-            
     if nn_obj.err_type == "AVL" : crit = "mae"
     else : crit= "mse"
     
@@ -401,9 +392,8 @@ def stack_NN_model(X, y, nn_obj, n, mod, cb=cb, verbose=True, **kwargs) :
         
     else :
         plt.figure("Stacking Deviation of the prediction")
-        plt.plot(yte, yte, c='k', label="reference line")
-        plt.plot(yte, yte, c='navy', marker='+', label="wanted value",linestyle='none')
-        plt.plot(nn_obj.y_test, mod_test_preds, c=nn_obj.kwargs["color"], marker='o',\
+        plt.plot(yte, yte, c='navy', marker='+', label="wanted value")
+        plt.plot(yte, mod_test_preds, c=nn_obj.kwargs["color"], marker='o',\
                       linestyle='none', label=dev_lab, ms=3)
 
     plt.legend(loc="best", prop={'size': 7}) 
@@ -416,17 +406,47 @@ def stack_NN_model(X, y, nn_obj, n, mod, cb=cb, verbose=True, **kwargs) :
     
     plt.show()
     
+    return model
 
 ##------------------------------------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------------------------------------
 
 def stack_NN_NN(nn_obj, lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_, step=50, **kwargs) :
-    inputs = nn_obj.predict(X, rescale=True)
-    print inputs 
     
-    output = y 
+    X,y = np.copy(X), np.copy(y)
+    uj = X[:, 1].ravel()
     
+    inputs = np.zeros((N_["I"]))
+    outputs = np.zeros((1))
+    
+    add_block = lambda midinp, fulinp : [midinp, nn_obj.predict(fulinp, rescale_tab=False)[0,0]]
+    
+    for xx, XX in enumerate(X) :
+#        print XX, XX.shape #OK
+        
+        XX = np.array([XX])
+        
+#        print uj[xx], uj[xx].shape #OK
+#        
+#        print np.shape(add_block(uj[xx], XX)) #Ok
+#        print add_block(uj[xx], XX) #Ok
+#        
+#        print "INPUTS: ", np.shape(inputs) #OK
+#        print "NEWBLOCK :", np.shape(add_block(uj[xx], XX)) #Ok
+#        
+        inputs = np.block([[inputs], add_block(uj[xx], XX)])
+        outputs = np.block([[outputs], [y[xx]]])
+    
+    inputs = np.delete(inputs, 0, axis=0)
+    outputs = np.delete(outputs, 0, axis=0)
+    
+#    print "Input (comparez premiere colonne) :", inputs[:2, :2] #Ok
+#    print "Col mil X : ", X[:2, 1]         # Ok
+#    
+#    print "Outputs : ", outputs[:2] #OK
+#    print "A comparer avec :", y[:2] #Ok
+#    
     plt.figure("For comparaison")
     plt.plot(y,y,color="green", label="Expected", marker="+", ms=6)
     plt.plot(y, inputs, marker='o', linestyle="none", color="darkred", fillstyle="none", ms=4, label="Before")
@@ -511,10 +531,10 @@ def stack_NN_NN(nn_obj, lr, X, y, act, opti, loss, max_epoch, reduce_type, scale
     plt.show()
     
     return nn_sec
+    
 ##------------------------------------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------------------------------------
-
 
 def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
     beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
@@ -578,61 +598,138 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
         plt.legend()
         plt.pause(5)
 
-###---------------------------------------------------------------
-def processing(nn_obj, cb=cb, n_neigh = 3) :
-    plt.ion()
-    
-    reg = KNeighborsRegressor(n_neighbors=n_neigh).fit(nn_obj.X_train, nn_obj.y_train)
-    
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+
+def mStack_prediction(nn_int, nn_fnl, typeJ="u", n_points=3) :
     beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
-            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) +\
+            "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
     u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.inferred_U,\
-            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) +\
+            "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
         
     chol_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.chol_path,\
-            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) +\
+            "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+    
+    evol = 0
+    if cb.typeJ != typeJ : cb.typeJ = typeJ
     
     # Initialisation it = 1
-    u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=0))
-    for it in range(1, cb.itmax) :
-        beta = []
-        u_mean = np.mean(u)
-        for j in range(1, cb.Nx-1) :
-            xs = np.array([cb.line_x[j-1], cb.line_x[j], cb.line_x[j+1], u[j-1], u[j], u[j+1]])
-            if nn_obj.scale == True :
-                xs = nn_obj.scale_inputs(xs)
-            xs = xs.reshape(-1,6)
-            print xs.shape
-            beta.append(reg.predict(xs)[0,0])
-            print(beta)
+    u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=1))
+    u_p = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=0))
+    u_pp = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=0))
+    
+    
+    if n_points == 3 :
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
+                                                 up[xj-1], up[xj], up[xj+1],\
+                                                 upp[xj-1], upp[xj], upp[xj+1]\
+                                                ] 
+    
+    if n_points == 2 :
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],\
+                                                 up[xj-1], up[xj],\
+                                                 upp[xj-1], upp[xj]\
+                                                ] 
+    plt.figure()    
 
-        print(beta, type(beta), np.shape(beta))
-        u_nNext = cb.u_beta(np.asarray(beta), u)
-        u = u_nNext
-        u[0] = u[-2]
-        u[-1] = u[1]
+    for it in range(1, cb.itmax, 5) :
+        if it > 1 :
+            u_pp = u_p 
+            u_p = u
+            u = u_nNext
+                   
+        n_beta, beta = [], []
+            
+        for j in range(1, cb.Nx-1) :
+            xs = np.array(add_block(u, u_p, u_pp, j))
+            
+            xs = nn_int.scale_inputs(xs)
+            xs = xs.reshape(1, -1)
+
+            beta.append(nn_int.predict(xs)[0,0])
+            
+        # u_nNext.shape = 30 
+        # use of list type to insert in a second time boundary condition
+        for b in beta :
+            n_beta.append(nn_fnl.predict([[b]])[0,0])
         
-        plt.figure("Dynamique knn")
-        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it), c='k')
-        plt.plot(cb.line_x[1:cb.Nx-1], u[1:cb.Nx-1], label="Predicted it = %d"%(it), marker='o', fillstyle = 'none', linestyle= 'none', c='steelblue') 
+        u_nNext = cb.u_beta(np.asarray(n_beta), u)
+        
+        plt.clf()        
+        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
+        plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_int.kwargs["color"])
+        
         plt.legend()
         plt.pause(5)
-        plt.clf()
-#    grid_search = GridSearchCV(SVC(), param_grid, cv=5) # Objet a entrainer et evaluer
+        
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+        
+        
+        
+#def processing(nn_obj, cb=cb, n_neigh = 3) :
+#    plt.ion()
+#    
+#    reg = KNeighborsRegressor(n_neighbors=n_neigh).fit(nn_obj.X_train, nn_obj.y_train)
+#    
+#    beta_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.beta_path,\
+#            "beta_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+#        
+#    u_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.inferred_U,\
+#            "U_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+#        
+#    chol_name = lambda nx, nt, nu, type_i, CFL, it : osp.join(cb.chol_path,\
+#            "chol_Nx:{}_Nt:{}_nu:{}_".format(nx, nt, nu) + "typei:{}_CFL:{}_it:{:03}.npy".format(type_i, CFL, it))
+#    
+#    # Initialisation it = 1
+#    u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it=0))
+#    for it in range(1, cb.itmax) :
+#        beta = []
+#        u_mean = np.mean(u)
+#        for j in range(1, cb.Nx-1) :
+#            xs = np.array([cb.line_x[j-1], cb.line_x[j], cb.line_x[j+1], u[j-1], u[j], u[j+1]])
+#            if nn_obj.scale == True :
+#                xs = nn_obj.scale_inputs(xs)
+#            xs = xs.reshape(-1,6)
+#            print xs.shape
+#            beta.append(reg.predict(xs)[0,0])
+#            print(beta)
 
-    print("Test differences entre prediction et Y_test : ")
-    print("{}".format(y_test - reg.predict(X_test)))
-    
-    plt.figure("KNN vs True")
-    plt.plot(T.line_z, T_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
-    plt.plot(T.line_z, T_true, label='True', linestyle='--', c='k')
-    plt.legend()
+#        print(beta, type(beta), np.shape(beta))
+#        u_nNext = cb.u_beta(np.asarray(beta), u)
+#        u = u_nNext
+#        u[0] = u[-2]
+#        u[-1] = u[1]
+#        
+#        plt.figure("Dynamique knn")
+#        plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it), c='k')
+#        plt.plot(cb.line_x[1:cb.Nx-1], u[1:cb.Nx-1], label="Predicted it = %d"%(it), marker='o', fillstyle = 'none', linestyle= 'none', c='steelblue') 
+#        plt.legend()
+#        plt.pause(5)
+#        plt.clf()
+##    grid_search = GridSearchCV(SVC(), param_grid, cv=5) # Objet a entrainer et evaluer
 
-    plt.figure("beta KNN vs True")
-    plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
-    plt.plot(T.line_z, true_beta, label='True', linestyle='--', c='k')
-    plt.legend()
+#    print("Test differences entre prediction et Y_test : ")
+#    print("{}".format(y_test - reg.predict(X_test)))
+#    
+#    plt.figure("KNN vs True")
+#    plt.plot(T.line_z, T_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
+#    plt.plot(T.line_z, T_true, label='True', linestyle='--', c='k')
+#    plt.legend()
+
+#    plt.figure("beta KNN vs True")
+#    plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML")
+#    plt.plot(T.line_z, true_beta, label='True', linestyle='--', c='k')
+#    plt.legend()
 
 #                                                          #
 ############################################################
@@ -646,6 +743,12 @@ def processing(nn_obj, cb=cb, n_neigh = 3) :
 
 # Any way you have to run this class in order to create a cb object needed 
 #       run burger_case_u_NN.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
+
+# Construct X and y that will be the reference dataset :
+#       X, y = xy_burger(3, n_inputs=9)
+
+# Construct the layer dictionnay using the dict_layer function :
+#       dict_layers = dict_layer(X)
 
 # Then you want to build and train a Neural Network. This can be done by typing (for example) :
 #       nn_test = build_memory_case(5e-4, X, y , act="selu", opti="Adam", loss="AVL",  max_epoch=800, reduce_type="sum", verbose=True, N_=dict_layers, color="navy", scaler="Standard", bsz=128, BN=True)
