@@ -423,51 +423,33 @@ def stack_NN_NN(nn_obj, lr, X, y, act, opti, loss, max_epoch, reduce_type, scale
     add_block = lambda midinp, fulinp : [midinp, nn_obj.predict(fulinp, rescale_tab=False)[0,0]]
     
     for xx, XX in enumerate(X) :
-#        print XX, XX.shape #OK
-        
         XX = np.array([XX])
-        
-#        print uj[xx], uj[xx].shape #OK
-#        
-#        print np.shape(add_block(uj[xx], XX)) #Ok
-#        print add_block(uj[xx], XX) #Ok
-#        
-#        print "INPUTS: ", np.shape(inputs) #OK
-#        print "NEWBLOCK :", np.shape(add_block(uj[xx], XX)) #Ok
-#        
+
         inputs = np.block([[inputs], add_block(uj[xx], XX)])
         outputs = np.block([[outputs], [y[xx]]])
     
     inputs = np.delete(inputs, 0, axis=0)
     outputs = np.delete(outputs, 0, axis=0)
     
-#    print "Input (comparez premiere colonne) :", inputs[:2, :2] #Ok
-#    print "Col mil X : ", X[:2, 1]         # Ok
-#    
-#    print "Outputs : ", outputs[:2] #OK
-#    print "A comparer avec :", y[:2] #Ok
-#    
     plt.figure("For comparaison")
     plt.plot(y,y,color="green", label="Expected", marker="+", ms=6)
-    plt.plot(y, inputs, marker='o', linestyle="none", color="darkred", fillstyle="none", ms=4, label="Before")
+    plt.plot(y, inputs[:,1], marker='o', linestyle="none", color="darkred", ms=4, label="Before")
     plt.pause(0.01)
+    
+    
     nn_sec = NNC.Neural_Network(lr, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
     
-    nn_sec.split_and_scale(inputs, output, scaler=scaler, shuffle=True)
+    nn_sec.split_and_scale(inputs, outputs, scaler=scaler, shuffle=True)
     nn_sec.tf_variables()
     nn_sec.def_optimizer(opti)
     nn_sec.layer_stacking_and_act(activation=act)
     nn_sec.cost_computation(loss)
     nn_sec.case_specification_recap()
     
-    print X.shape[0]
+    print inputs.shape
     print nn_sec.X_train.shape[0]
     print nn_sec.X_test.shape[0]
     
-    kwargs = nn_sec.kwargs
-    
-#    return nn_obj
-    print nn_sec.X_train.shape
     try :
         nn_sec.training_session(tol=1e-3)
 
@@ -477,7 +459,6 @@ def stack_NN_NN(nn_obj, lr, X, y, act, opti, loss, max_epoch, reduce_type, scale
     
     beta_test_preds = np.array(nn_sec.predict(nn_sec.X_test))
     test_line = range(len(nn_sec.X_test))
-    
     
     deviation = np.array([ abs(beta_test_preds[j] - nn_sec.y_test[j]) for j in test_line])
     error_estimation = sum(deviation)
@@ -523,7 +504,7 @@ def stack_NN_NN(nn_obj, lr, X, y, act, opti, loss, max_epoch, reduce_type, scale
     
     plt.figure("For comparaison")
 #    plt.plot(nn_sec.y_test, nn_obj.predict(X[int(len(X)*0.75):], rescale=False) , label="NN_OBJ", marker='o', linestyle="none", color="darkred", fillstyle="none", ms=3)
-    plt.plot(nn_sec.y_test, nn_sec.predict(nn_sec.X_test, rescale=False), label="Stack result",\
+    plt.plot(nn_sec.y_test, nn_sec.predict(nn_sec.X_test, rescale_tab=False), label="Stack result",\
                 marker='o', linestyle="none", color="coral", fillstyle="none", ms=4)
 #    plt.plot(nn_sec.y_test, nn_sec.y_test, label="expected", c="green", marker="+")
     plt.legend(loc="best")

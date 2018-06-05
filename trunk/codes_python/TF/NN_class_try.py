@@ -126,7 +126,7 @@ class Neural_Network():
 #        representative of the whole. For example in a binary classification problem where each class 
 #        comprises 50% of the data, it is best to arrange the data such that in every fold, each class 
 #        comprises around half the instances.
-        
+        X = np.copy(X)
         if shuffle == True :
 #        Inspired by : Sebastian Heinz
 #        https://medium.com/mlreview/a-simple-deep-learning-model-for-stock-price-prediction-using-tensorflow-30505541d877
@@ -189,7 +189,9 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
     
     def split_and_scale(self, X, y, scaler= "PCA", shuffle=True, val=False, random_state=0, n_components="mle", whiten=False) :
-
+        
+        X, y = np.copy(X), np.copy(y)
+        
         if scaler == "None" :
             self.split_data(X, y, shuffle=shuffle, strat=False,\
                             standard_scale=False, val=val, random_state = random_state)
@@ -214,7 +216,7 @@ class Neural_Network():
             
             xtr, xte, ytr, yte = train_test_split(X, y, random_state=random_state)        
                     
-            if scaler=="Minmax" :
+            if scaler=="MinMax" :
                 from sklearn.preprocessing import MinMaxScaler
                 scaler = MinMaxScaler().fit(xtr)
                 
@@ -248,8 +250,21 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 
     def scale_inputs(self, xs) :
+        """
+        Doc to be done
+        """
+        new_xs = np.copy(xs)
+        input_shape = np.shape(new_xs)
+        
+        if  len(input_shape) == 2 and np.shape(new_xs)[0] > 1 :
+            print ("Use of scale_inputs method only for one line element")
+            print ("Use nn_obj.predict(arr, rescale_tab=True) to rescale an array")
+            sys.exit()
+            
+        if np.shape(new_xs)[0] < 1 :
+            sys.exit("Null Argument in scale_inputs call")
+        
         try :
-            new_xs = np.asarray([xs[i] for i in range(len(xs))])
         
             if self.scaler == "Standard" :
                 for i, mean in enumerate(self.X_train_mean) :
@@ -262,7 +277,7 @@ class Neural_Network():
             else :
                 new_xs = self.scaler.transform(new_xs.reshape(1,-1))
         
-            return new_xs
+            return new_xs.reshape(1,-1)
             
         except AttributeError :
             self.exception += 1
@@ -271,7 +286,7 @@ class Neural_Network():
             
             else :
                 pass
-            return xs
+            return new_xs.reshape(1,-1)
         
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -956,9 +971,10 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------    
 ###-------------------------------------------------------------------------------        
 
-    def predict(self, xs, rescale=False):
+    def predict(self, xs, rescale_tab=False):
         arg = np.copy(xs)
-        if rescale==True :        
+        
+        if rescale_tab == True :        
             if self.scaler!= "None" :
                 for i, mean in enumerate(self.X_train_mean) :
                     arg[:, i] -= mean            
