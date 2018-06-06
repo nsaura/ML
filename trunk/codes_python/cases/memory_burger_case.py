@@ -54,12 +54,13 @@ cb = cvc.Vitesse_Choc(parser)
 ##--------------------------------------------------------------------------------------------
 ##--------------------------------------------------------------------------------------------
 
-def xy_burger (num_real, cb=cb, n_inputs=9, n_points=3, verbose=False) :
+def xy_burger (num_real, cb=cb, n_points=3, verbose=False) :
     #cb.minimization(maxiter=50, step=5)
 
     u_name = cb.u_name
     b_name = cb.beta_name
-
+    c_name = cb.chol_name
+    
     root = osp.split(cb.beta_path)[0]
 
     uloc = cb.inferred_U
@@ -67,17 +68,36 @@ def xy_burger (num_real, cb=cb, n_inputs=9, n_points=3, verbose=False) :
     cholloc = cb.chol_path
 
     # On va se servir de ça
-    b_files = glob.glob(betaloc+'/*')
-    u_files = glob.glob(uloc+'/*')
-    c_files = glob.glob(cholloc+'/*')
-
+#    b_files = glob.glob(betaloc+'/*')
+#    u_files = glob.glob(uloc+'/*')
+#    c_files = glob.glob(cholloc+'/*')
+    
+    b_files, u_files, c_files = [], [], []
+    
+    for it in range(cb.itmax) :
+        if osp.exists(b_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it)) :
+            b_files.append(b_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it))        
+            u_files.append(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it))
+            c_files.append(c_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it))
+        else :
+            print ("%s doesn\'t exist "% b_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it) )
+            
     b_u = dict()
     b_c = dict()
     lst_pairs_bu = []
     lst_pairs_bc = []
-    
-    print betaloc
-    
+
+# The sorted in the following has been tested by randomly permuted the different lists    
+#    permute = np.random.permutation(len(u_files))
+#    u_files = np.array(u_files)[permute]
+#    
+#    permute = np.random.permutation(len(u_files))
+#    b_files = np.array(b_files)[permute]
+#    
+#    print u_files[:5]
+#    print b_files[:5]
+#    
+        
     l = osp.split(b_files[0])[1].split("_")
     ll = [i.split(":") for i in l[1:-1]]
 
@@ -85,8 +105,7 @@ def xy_burger (num_real, cb=cb, n_inputs=9, n_points=3, verbose=False) :
     u_sorted = sorted(u_files, key= lambda x: int(osp.splitext(x)[0][-3:]))
     b_sorted = sorted(b_files, key= lambda x: int(osp.splitext(x)[0][-3:]))
     c_sorted = sorted(c_files, key= lambda x: int(osp.splitext(x)[0][-3:]))
-
-
+    
     cpt_rm = 0
     for u, b, c in zip(u_sorted, b_sorted, c_sorted) :
         cond = lambda f : int(osp.splitext(f)[0][-3:]) > cb.itmax-1
@@ -126,10 +145,6 @@ def xy_burger (num_real, cb=cb, n_inputs=9, n_points=3, verbose=False) :
     #    for i in range (10) :
     #        print lst_pairs[np.random.randint(len(lst_pairs))]
 
-    X = np.zeros((n_inputs))
-    y = np.zeros((1))
-#    flux = []
-    
 #    print (lst_pairs_bu[0][0])
 
     # pairs : for u
@@ -152,19 +167,25 @@ def xy_burger (num_real, cb=cb, n_inputs=9, n_points=3, verbose=False) :
     if n_points == 3 :
         add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
                                                  up[xj-1], up[xj], up[xj+1],\
-                                                 upp[xj-1], upp[xj], upp[xj+1]\
+                                                 upp[xj-1], upp[xj], upp[xj+1],\
+                                                 (u[xj+1] - u[xj-1])/(2*cb.dx)\
                                                 ] 
     
     if n_points == 2 :
         add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],\
                                                  up[xj-1], up[xj],\
-                                                 upp[xj-1], upp[xj]\
+                                                 upp[xj-1], upp[xj],\
+                                                 (u[xj] - u[xj-1])/(cb.dx)\
                                                 ] 
     
 #    add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
 #                                             up[xj-1], up[xj], up[xj+1],\
 #                                             upp[xj-1], upp[xj], upp[xj+1]\
 #                                            ] 
+    
+    X = np.zeros((n_points*3+1))
+    y = np.zeros((1))
+
     beta_chol_fct = lambda beta, chol : beta + chol.dot(np.random.rand(len(beta)))
     u_chol_fct    = lambda beta_co, u : cb.u_beta(beta_co, u) + np.random.rand(len(u)) * 0.1
     
@@ -235,7 +256,6 @@ def xy_burger (num_real, cb=cb, n_inputs=9, n_points=3, verbose=False) :
 ##--------------------------------------------------------------------------------------------
 ##--------------------------------------------------------------------------------------------
 ##--------------------------------------------------------------------------------------------
-
 
 def dict_layer(X) :
     dict_layers = {"I" : X.shape[1],\
@@ -412,9 +432,32 @@ def stack_NN_model(X, y, nn_obj, n, mod, cb=cb, verbose=True, crit = "mse", **kw
 ##------------------------------------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------------------------------------
 
-def stack_NN_NN(nn_obj, lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_, step=50, **kwargs) :
+#def inference_post_NN(nn_obj, cb=cb) :    
+#    X, y = np.copy(nn_obj.X), np.copy(nn_obj.y)
+#    beta_map = dict()
+#    
+#    xtr, xte, ytr, yte = nn_obj.X_train, nn_obj.X_test, nn_obj.y_train, nn_obj.y_test
+#    
+#    for n, x in enumerate(xtr) :
+#        btar = ytr[n]
+#        upred = cb.u_beta(btar)                
+#                        
+#        bpred = nn_obj.predict(x)
+#        upred = 
+#        
+#    J = lambda beta : np.dot( (beta*upred - utar).T, np.dot( np.Id(len(tar)), (beta*upred - utar)) ) +\
+#                            1e-3*(beta.T).dot(beta)
+#    
     
-    X,y = np.copy(X), np.copy(y)
+    
+        
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+##------------------------------------------------------------------------------------------------------------
+
+def stack_NN_NN(nn_obj, lr, act, opti, loss, max_epoch, reduce_type, scaler, N_, step=50, **kwargs) :
+    
+    X, y = nn_obj.X_train, nn_obj.y_train
     uj = X[:, 1].ravel()
     
     inputs = np.zeros((N_["I"]))
@@ -504,7 +547,7 @@ def stack_NN_NN(nn_obj, lr, X, y, act, opti, loss, max_epoch, reduce_type, scale
     
     plt.figure("For comparaison")
 #    plt.plot(nn_sec.y_test, nn_obj.predict(X[int(len(X)*0.75):], rescale=False) , label="NN_OBJ", marker='o', linestyle="none", color="darkred", fillstyle="none", ms=3)
-    plt.plot(nn_sec.y_test, nn_sec.predict(nn_sec.X_test, rescale_tab=False), label="Stack result",\
+    plt.plot(y, nn_sec.predict([nn_obj.X_train[:,1], nn_obj.y_train], rescale_tab=True), label="Stack result",\
                 marker='o', linestyle="none", color="coral", fillstyle="none", ms=4)
 #    plt.plot(nn_sec.y_test, nn_sec.y_test, label="expected", c="green", marker="+")
     plt.legend(loc="best")
@@ -542,13 +585,15 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
     if n_points == 3 :
         add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
                                                  up[xj-1], up[xj], up[xj+1],\
-                                                 upp[xj-1], upp[xj], upp[xj+1]\
+                                                 upp[xj-1], upp[xj], upp[xj+1],\
+                                                 (u[xj+1] - u[xj-1])/(2*cb.dx)\
                                                 ] 
     
     if n_points == 2 :
         add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],\
                                                  up[xj-1], up[xj],\
-                                                 upp[xj-1], upp[xj]\
+                                                 upp[xj-1], upp[xj],\
+                                                 (u[xj] - u[xj-1])/(cb.dx)\
                                                 ] 
     plt.figure()
 
@@ -608,17 +653,19 @@ def mStack_prediction(nn_int, nn_fnl, typeJ="u", n_points=3) :
     if n_points == 3 :
         add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
                                                  up[xj-1], up[xj], up[xj+1],\
-                                                 upp[xj-1], upp[xj], upp[xj+1]\
+                                                 upp[xj-1], upp[xj], upp[xj+1],\
+                                                 (u[xj+1] - u[xj-1])/(2*cb.dx)\
                                                 ] 
     
     if n_points == 2 :
         add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],\
                                                  up[xj-1], up[xj],\
-                                                 upp[xj-1], upp[xj]\
+                                                 upp[xj-1], upp[xj],\
+                                                 (u[xj] - u[xj-1])/(cb.dx)\
                                                 ] 
     plt.figure()    
 
-    for it in range(1, cb.itmax, 5) :
+    for it in range(1, cb.itmax) :
         if it > 1 :
             u_pp = u_p 
             u_p = u
@@ -637,7 +684,7 @@ def mStack_prediction(nn_int, nn_fnl, typeJ="u", n_points=3) :
         # u_nNext.shape = 30 
         # use of list type to insert in a second time boundary condition
         for b in beta :
-            n_beta.append(nn_fnl.predict([[b]])[0,0])
+            n_beta.append(nn_fnl.predict([[u[j], b]], rescale_tab=True)[0,0])
         
         u_nNext = cb.u_beta(np.asarray(n_beta), u)
         
