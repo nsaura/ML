@@ -36,7 +36,7 @@ config = tf.ConfigProto(
 
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, N_={}, max_epoch=10, verbose=True, file_to_update = "", reduce_type = "sum", **kwargs) :
+    def __init__(self, lr, scaler, N_={}, max_epoch=10, verbose=True, file_to_update = "", reduce_type = "sum", **kwargs) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
@@ -61,6 +61,7 @@ class Neural_Network():
         print N_
         
         self.lr = lr
+        self.scaler = scaler        
         self.max_epoch = max_epoch
         self.file_to_update = file_to_update 
         
@@ -71,13 +72,11 @@ class Neural_Network():
              self.reduce_type_fct = tf.reduce_mean
              
         self.reduce_type = reduce_type
-        
+                
         self.savefile= "./session"
         self.sess = tf.InteractiveSession(config=config)
         
-        
-        self.batched = True if "bsz" in kwargs.keys() or "batch_sz" in kwargs.keys() else False
-        
+
         try :
             self.color = kwargs["color"]
         except KeyError :
@@ -89,10 +88,11 @@ class Neural_Network():
         except KeyError :
             self.step = 10    
         
+        self.batched = True if "bsz" in kwargs.keys() or "batch_sz" in kwargs.keys() else False
+
         if "BN" in kwargs.keys() :  
             self.BN = True
             print ("Batch Normalization method used")
-        
         else :
             self.BN = False
             print ("Batch Normalization method NOT used")
@@ -115,6 +115,67 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------  
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
+    
+    def split_and_scale(self, X, y, shuffle=True, val=False, random_state=0, n_components="mle", whiten=False) :
+        
+        X, y = np.copy(X), np.copy(y)
+        
+        if self.scaler == "None" :
+            self.split_data(X, y, shuffle=shuffle, strat=False,\
+                            standard_scale=False, val=val, random_state = random_state)
+        
+        elif self.scaler == "Standard" :
+            self.split_data(X, y, shuffle=shuffle, strat=False,\
+                            standard_scale=True, val=val, random_state = random_state)
+        
+        else : 
+            self.standard_scale = self.scaler
+            if shuffle == True :
+                # Source see above
+                permute_indices = np.random.permutation(np.arange(len(y)))
+                X = X[permute_indices]
+                y = y[permute_indices]
+                self.permute_indices =  permute_indices       
+
+            if len(y.shape) == 1:
+                y = y.reshape(-1,1)
+            
+            self.X, self.y = X, y
+            
+            xtr, xte, ytr, yte = train_test_split(X, y, random_state=random_state)        
+                    
+            if self.scaler=="MinMax" :
+                from sklearn.preprocessing import MinMaxScaler
+                scaler = MinMaxScaler().fit(xtr)
+                
+            if self.scaler == "Robust" : 
+                from sklearn.preprocessing import RobustScaler
+                scaler = RobustScaler().fit(xtr)
+            
+            if self.scaler == "PCA" :
+                from sklearn.decomposition import PCA
+    #            whiten : bool, optional (default False)
+    #            When True (False by default) the `components_` vectors are multiplied
+    #            by the square root of n_samples and then divided by the singular values
+    #            to ensure uncorrelated outputs with unit component-wise variances.
+                self.scaler = PCA(n_components=n_components, whiten=whiten).fit(xtr)
+                
+                print ("PCA allows another data representation.")
+                print ("From %d inputs, N_ contain now %d inputs entries" %\
+                        (    self.N_["I"],              scaler.n_components_))
+                
+                self.N_["I"] = self.scaler.n_components_
+            
+            self.X_train, self.y_train = self.scaler.transform(xtr), ytr
+            self.X_test, self.y_test =  self.scaler.transform(xte), yte
+            
+        self.scaler = scaler
+        
+        print ("Standard scale = {}".format(self.standard_scale))
+        print ("scaler = %s" % self.scaler)
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
       
     def split_data(self, X, y, random_state=0, strat=False, standard_scale=False, shuffle=True, val=True):
 #        https://stats.stackexchange.com/questions/49540/understanding-stratified-cross-validation
@@ -126,7 +187,8 @@ class Neural_Network():
 #        representative of the whole. For example in a binary classification problem where each class 
 #        comprises 50% of the data, it is best to arrange the data such that in every fold, each class 
 #        comprises around half the instances.
-        X = np.copy(X)
+        X, y = np.copy(X), np.copy(y)
+        
         if shuffle == True :
 #        Inspired by : Sebastian Heinz
 #        https://medium.com/mlreview/a-simple-deep-learning-model-for-stock-price-prediction-using-tensorflow-30505541d877
@@ -188,66 +250,7 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
     
-    def split_and_scale(self, X, y, scaler= "PCA", shuffle=True, val=False, random_state=0, n_components="mle", whiten=False) :
-        
-        X, y = np.copy(X), np.copy(y)
-        
-        if scaler == "None" :
-            self.split_data(X, y, shuffle=shuffle, strat=False,\
-                            standard_scale=False, val=val, random_state = random_state)
-        
-        elif scaler == "Standard" :
-            self.split_data(X, y, shuffle=shuffle, strat=False,\
-                            standard_scale=True, val=val, random_state = random_state)
-        
-        else : 
-            self.standard_scale = scaler
-            if shuffle == True :
-                # Source see above
-                permute_indices = np.random.permutation(np.arange(len(y)))
-                X = X[permute_indices]
-                y = y[permute_indices]
-                self.permute_indices =  permute_indices       
-
-            if len(y.shape) == 1:
-                y = y.reshape(-1,1)
-            
-            self.X, self.y = X, y
-            
-            xtr, xte, ytr, yte = train_test_split(X, y, random_state=random_state)        
-                    
-            if scaler=="MinMax" :
-                from sklearn.preprocessing import MinMaxScaler
-                scaler = MinMaxScaler().fit(xtr)
-                
-            if scaler == "Robust" : 
-                from sklearn.preprocessing import RobustScaler
-                scaler = RobustScaler().fit(xtr)
-            
-            if scaler == "PCA" :
-                from sklearn.decomposition import PCA
-    #            whiten : bool, optional (default False)
-    #            When True (False by default) the `components_` vectors are multiplied
-    #            by the square root of n_samples and then divided by the singular values
-    #            to ensure uncorrelated outputs with unit component-wise variances.
-                scaler = PCA(n_components=n_components, whiten=whiten).fit(xtr)
-                
-                print ("PCA allows another data representation.")
-                print ("From %d inputs, N_ contain now %d inputs entries" %\
-                        (    self.N_["I"],              scaler.n_components_))
-                
-                self.N_["I"] = scaler.n_components_
-            
-            self.X_train, self.y_train = scaler.transform(xtr), ytr
-            self.X_test, self.y_test =  scaler.transform(xte), yte
-            
-        self.scaler = scaler
-        
-        print ("Standard scale = {}".format(self.standard_scale))
-        print ("scaler = %s" % self.scaler)
-###-------------------------------------------------------------------------------
-###-------------------------------------------------------------------------------
-###-------------------------------------------------------------------------------
+    
 
     def scale_inputs(self, xs) :
         """
