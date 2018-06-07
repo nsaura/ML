@@ -251,12 +251,6 @@ def xy_burger (num_real, cb=cb, n_points=3, verbose=False) :
 ##--------------------------------------------------------------------------------------------
 ##--------------------------------------------------------------------------------------------
 
-#X, y = xy_burger(num_real=4, cb=cb, n_inputs=9)
-
-##--------------------------------------------------------------------------------------------
-##--------------------------------------------------------------------------------------------
-##--------------------------------------------------------------------------------------------
-
 def dict_layer(X) :
     dict_layers = {"I" : X.shape[1],\
                    "N1" : 500,\
@@ -275,13 +269,22 @@ def dict_layer(X) :
 def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_, step=50, **kwargs) :
     plt.ion()
     print kwargs
-    nn_obj = NNC.Neural_Network(lr, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
     
-    nn_obj.split_and_scale(X, y, scaler=scaler, shuffle=False)
+    # Define an NN object
+    nn_obj = NNC.Neural_Network(lr, scaler = scaler, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
+    
+    # Spliting The Data
+    nn_obj.split_and_scale(X, y, shuffle=True)
+    
+    #Preparing the Tensorflow Graph
     nn_obj.tf_variables()
+    nn_obj.layer_stacking_and_act(act)
+    
+    #Setting Optimizer and Loss for the graph    
     nn_obj.def_optimizer(opti)
-    nn_obj.layer_stacking_and_act(activation=act)
     nn_obj.cost_computation(loss)
+    
+    #Display a Recap
     nn_obj.case_specification_recap()
     
     kwargs = nn_obj.kwargs
@@ -773,7 +776,7 @@ def mStack_prediction(nn_int, nn_fnl, typeJ="u", n_points=3) :
 #       run burger_case_u_NN.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
 
 # Construct X and y that will be the reference dataset :
-#       X, y = xy_burger(3, n_inputs=9)
+#       X, y = xy_burger(3, n_points=3)
 
 # Construct the layer dictionnay using the dict_layer function :
 #       dict_layers = dict_layer(X)

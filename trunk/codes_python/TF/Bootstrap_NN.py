@@ -89,7 +89,7 @@ class Bootstraped_Neural_Network :
 
         self.NN_dict = NN_dict
 ##--------------------------------------------------------------------------------------------    
-    def bootstrap_prediction(self, xs, rescale) :
+    def bootstrap_prediction(self, xs, rescale, variance=False) :
         xs = np.copy(xs)
         prediction =[]
         
@@ -99,8 +99,22 @@ class Bootstraped_Neural_Network :
             
             prediction.append(self.NN_dict[self.nnkey(b)].predict(xs, rescale_tab=False))
             
-        bstrap_pred = 
+        bstrap_pred = 1./(self.n_estimators-1) * sum(prediction)
         
+        if variance == True :
+            return bstrap_pred, prediction
+    
+        else : 
+            return bstrap_pred   
+##--------------------------------------------------------------------------------------------
+    def bootstrap_variance(self, xs, rescale) :
+        xs = np.copy(xs)
+        ymean_bstrap, ybs_pred = self.bootstrap_prediction(xs, rescale, variance=True)
+        
+        var_ymean_bstrap = sum([(y_mean_bstrap - yb)**2 for yb in ybs_pred])
+        var_ymean_bstrap /= (self.n_estimators -1)
+        
+        return var_ymean_bstrap
 ##--------------------------------------------------------------------------------------------
     def NN_test_plot(self, nn_b) :
         lr = nn_b.lr

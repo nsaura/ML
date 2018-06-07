@@ -532,7 +532,7 @@ class Vitesse_Choc() :
         reg_fac = 1e-2
         Id = np.eye(self.Nx)
         
-        for it in range(0, self.itmax-1) :
+        for it in range(self.itmax+1) :
             if it >0 :
                 beta_n = beta_n_opti
                 u_n = u_n_beta
