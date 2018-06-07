@@ -15,6 +15,8 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 #import tensorlayer as tl
 
+from datetime import datetime
+
 # Utilities :
 def find_divisor(N) :
     div_lst = []
@@ -36,7 +38,7 @@ config = tf.ConfigProto(
 
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, scaler, N_={}, max_epoch=10, verbose=True, file_to_update = "", reduce_type = "sum", **kwargs) :
+    def __init__(self, lr, scaler, N_={}, max_epoch=10, verbose=True, graph_name = "./default.ckpt", reduce_type = "sum", **kwargs) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
@@ -61,9 +63,9 @@ class Neural_Network():
         print N_
         
         self.lr = lr
-        self.scaler_name = scaler        
         self.max_epoch = max_epoch
-        self.file_to_update = file_to_update 
+        self.scaler_name = scaler        
+        self.graph_name = graph_name
         
         if reduce_type =="sum" :
             self.reduce_type_fct = tf.reduce_sum
@@ -341,13 +343,13 @@ class Neural_Network():
         bkeys = [i.split("_")[0] for i in self.biases_d.keys()]
 
         for (kw,w, kb,b) in zip(wkeys, self.w_dict.values(), bkeys, self.biases_d.values()) :
-            w_tf_d[kw] = tf.Variable(w.astype(np.float32))
-            b_tf_d[kb] = tf.Variable(b.astype(np.float32))
+            w_tf_d[kw] = tf.Variable(w.astype(np.float32), name=kw)
+            b_tf_d[kb] = tf.Variable(b.astype(np.float32), name=kb)
         
         ### We also create x and t which are training data and target to train the model
             ### Those will be tf.placeholder 
-        self.x = tf.placeholder(tf.float32, (None, self.Ncol_Xtrain) )
-        self.t = tf.placeholder(tf.float32, (None, 1) )
+        self.x = tf.placeholder(tf.float32, (None, self.Ncol_Xtrain), name="inputs"  )
+        self.t = tf.placeholder(tf.float32, (None, 1), name="output" )
         
         self.w_tf_d = w_tf_d
         self.b_tf_d = b_tf_d
@@ -488,18 +490,17 @@ class Neural_Network():
         if train_mod=="Adam" :
         # Classical Momentum added in RMSPROP algorithm
             if "beta1" in keys and "beta2" in keys:
-                self.train_op =\
-                        considered_optimizer[train_mod]\
-                                (self.lr, beta1=self.kwargs["beta1"], beta2=self.kwargs["beta2"])
+                self.train_op = considered_optimizer[train_mod]\
+                                 (self.lr, beta1=self.kwargs["beta1"], beta2=self.kwargs["beta2"])
                                                         
             elif "beta1" in keys : 
-                self.train_op =considered_optimizer[train_mod]\
-                                (self.lr, beta1=self.kwargs["beta1"])
+                self.train_op = considered_optimizer[train_mod]\
+                                 (self.lr, beta1=self.kwargs["beta1"])
                 self.kwargs["beta2"] = 0.99
             
             elif "beta2" in keys : 
                 self.train_op = considered_optimizer[train_mod]\
-                                (self.lr, beta2=self.kwargs["beta2"])
+                                 (self.lr, beta2=self.kwargs["beta2"])
                 self.kwargs["beta1"] = 0.9
                 
             else :
@@ -581,62 +582,78 @@ class Neural_Network():
         
         if SL_type == "classification" :
             self.loss = tf.reduce_sum(\
-                tf.nn.softmax_cross_entropy_with_logits(logits=self.y_pred_model, label=self.t)\
-                                     )
-            
+                tf.nn.softmax_cross_entropy_with_logits(logits=self.y_pred_model, label=self.t))
         else :
             expected_loss = {"OLS" : tf.square,\
                              "AVL" : tf.abs,\
+                             "CBS" : "below",\
                              "Ridge": "below",\
                              "Lasso": "below",\
                              "Elastic": "below",\
                              "Custom": "below"}
             if err_type not in expected_loss :
-                raise IndexError("{} n\'est pas dans les cas considérés. La fonction de cout doit appartenir à la liste {}".format(err_type, expected_loss.keys()))
+                raise IndexError("{}\'s not in the list {}".format(err_type, expected_loss.keys()))
             
             
             elif err_type == "Ridge":
-                try :
-                    ridge_param = self.kwargs["ridge_param"]
-                except KeyError :
-                    ridge_param = float(input("Give a Ridge parameter " ) )
+                ridge_choice = ["ridge_param", "ridge_parameter", "Ridge_param"]
+                inside=[c in self.kwargs.keys() for c in ridge_choice]
+                if True in inside :
+                    ridge_param = self.kwargs[ridge_choice[inside.index[True]]]
                 
-                ridge_param = tf.constant(ridge_param)
+                else :
+                    print ("Ridge Param set to {}".format(1e-4))
+                    ridge_param = 1e-4
+                
+                ridge_param = tf.constant(0.5*ridge_param)
 
-                self.weight_sum = tf.placeholder(np.float32, (None))
-                    
+                self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
                 self.loss = tf.expand_dims(\
                             tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
                             tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum)))), 0)
             
             elif err_type == "Lasso":
-                try :
-                    lasso_param = self.kwargs["lasso_param"]
-                except KeyError :
-                    lasso_param = float(input("Give a Lasso parameter " ) )
+                lasso_choice = ["lasso_param", "lasso_parameter", "Lasso_param"]
+                inside=[c in self.kwargs.keys() for c in lasso_choice]
+                if True in inside :
+                    lasso_param = self.kwargs[lasso_choice[inside.index[True]]]
+                
+                else :
+                    print ("Lasso Param set to {}".format(1e-4))
+                    lasso_param = 1e-4
+                
                 lasso_param = tf.constant(lasso_param)
-                    
-                self.weight_sum = tf.placeholder(np.float32, (None))
+                self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
                 
                 self.loss = tf.expand_dims(\
                             tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
                             tf.multiply(lasso_param, self.reduce_type_fct(tf.abs(self.weight_sum)))), 0)
             
             elif err_type == "Elastic":
-                try :
-                    lasso_param = self.kwargs["lasso_param"]
-                except KeyError :
-                    lasso_param = float(input("Give a Lasso parameter " ) )
-                    
-                try :
-                    ridge_param = self.kwargs["ridge_param"]
-                except KeyError :
-                    ridge_param = float(input("Give a Ridge parameter " ) )
-                    
-                lasso_param = tf.constant(lasso_param)
-                ridge_param = tf.constant(ridge_param)
+                ridge_choice = ["ridge_param", "ridge_parameter", "Ridge_param"]
+                lasso_choice = ["lasso_param", "lasso_parameter", "Lasso_param"]
                 
-                self.weight_sum = tf.placeholder(np.float32, (None))
+                inside=[c in self.kwargs.keys() for c in ridge_choice]
+                if True in inside :
+                    ridge_param = self.kwargs[ridge_choice[inside.index[True]]]
+                
+                else :
+                    print ("Ridge Param set to {}".format(1e-4))
+                    ridge_param = 1e-4
+                    
+                inside=[c in self.kwargs.keys() for c in lasso_choice]
+                
+                if True in inside :
+                    lasso_param = self.kwargs[lasso_choice[inside.index[True]]]
+                
+                else :
+                    print ("Lasso Param set to {}".format(1e-4))
+                    lasso_param = 1e-4
+
+                ridge_param = tf.constant(ridge_param)
+                lasso_param = tf.constant(lasso_param)
+                
+                self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
                     
                 self.loss = tf.expand_dims(\
                             tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
@@ -649,8 +666,6 @@ class Neural_Network():
                 except KeyError :
                     custom_param = float(input("Give a custom parameter " ) )
             
-                self.weight_sum = tf.placeholder(np.float32, (None))
-                
                 self.loss = tf.expand_dims(\
                             tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
                             tf.multiply(custom_param, self.reduce_type_fct(self.x))), 0)
@@ -664,7 +679,6 @@ class Neural_Network():
 #    Also tf.reduce_sum(cost) will do what you want, I think it is better to use tf.reduce_mean(). Here are a few reasons why:
 #    you get consistent loss independent of your matrix size. On average you will get reduce_sum 4 times bigger for a two times bigger matrix
 #    less chances you will get nan by overflowing
-
         self.err_type  = err_type 
         
 ###-------------------------------------------------------------------------------   
@@ -677,13 +691,27 @@ class Neural_Network():
         print("La méthode utilisée pour minimiser les erreurs entre les prédictions et les target est :{} -> {}\n".format(self.train_mod, self.train_op))
         print("La fonction de coût pour évaluer ces erreurs est {} -> {}".format(self.err_type, self.loss))
         
+        now = datetime.utcnow().strftime("%Y_%m_%d_%Hh%m")
+        log_path = osp.abspath("./logs")
+        
+        bsz = self.kwargs["bsz"] if self.batched == True else len(self.X_train)
+        dir_name = osp.join(log_path, now + "_{}_{}_mepoch{}_bsz{}".format(self.train_mod, self.activation, self.max_epoch, bsz))
+        
+        if osp.exists(dir_name) == False :
+            os.makedirs(dir_name)
+        
+        log_dir = "{}/".format(dir_name)
+        
+        self.log_dir = log_dir
+        self.dir_name = dir_name
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------            
 ###-------------------------------------------------------------------------------
 
     def training_session(self, tol) :
-#       Initialization ou ré-initialization ;)
         
+        self.case_specification_recap()        
+                
         if self.err_type not in {"OLS", "AVL"} :
             self.training_coupled_regression(tol=tol)
             return "End of Ridge/Lasso or Elastic Network training"
@@ -696,7 +724,16 @@ class Neural_Network():
             self.minimize_loss = self.train_op.minimize(self.loss)
         
         init = tf.global_variables_initializer()
-        self.sess.run(init)
+        self.sess.run(init) 
+        
+        ##  -- Marks the end of the construction Phase --
+        ##  We define the saver , and add the saving procedure at each checkpoint wanted
+        
+        ##  We also define the summary for watching the evolution and the builded graph in TensoBoard
+                
+        saver = tf.train.Saver()
+        case_summary = tf.summary.scalar(self.err_type, self.loss) # We write the loss whose name is err_type
+        file_writer = tf.summary.FileWriter(self.log_dir, tf.get_default_graph()) #We use log_dir (case_specification) with current graph
         
         costs = []
         err, epoch, tol = 1., 0, tol
@@ -739,7 +776,12 @@ class Neural_Network():
                 
                 if epoch % self.step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                    
+                    if epoch % (2*self.step) :
+                        summary_str = case_summary.eval(feed_dict={self.x : self.X_train,\
+                                                                   self.t : self.y_train})
+                        file_writer.add_summary(summary_str, epoch)
+                                            
+                                        
                     if self.verbose == True :
                         axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
                         axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
@@ -794,6 +836,11 @@ class Neural_Network():
                 
                 if epoch % self.step == 0 and epoch != 0:
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
+                    if epoch % (2*self.step) :
+                        summary_str = case_summary.eval(feed_dict={self.x : self.X_train,\
+                                                                   self.t : self.y_train})
+                        file_writer.add_summary(summary_str, epoch)
+                            
                     if self.verbose == True :
                         axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
                         axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
@@ -810,6 +857,8 @@ class Neural_Network():
                     break
             ff.close()
             print costs[-10:]
+        
+        saver_path = saver.save(self.sess, self.graph_name)
         self.costs = costs
 
 ###-------------------------------------------------------------------------------
@@ -827,6 +876,15 @@ class Neural_Network():
         
         init = tf.global_variables_initializer()
         self.sess.run(init)
+        
+        ##  -- Marks the end of the construction Phase --
+        ##  We define the saver , and add the saving procedure at each checkpoint wanted
+        
+        ##  We also define the summary for watching the evolution and the builded graph in TensoBoard
+                
+        saver = tf.train.Saver()
+        case_summary = tf.summary.scalar(self.err_type, self.loss) # We write the loss whose name is err_type
+        file_writer = tf.summary.FileWriter(self.log_dir, tf.get_default_graph()) #We use log_dir (case_specification) with current graph        
         
         costs = []
         err, epoch, tol = 1., 0, tol
@@ -883,7 +941,12 @@ class Neural_Network():
                 
                 if epoch % self.step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                    
+                    if epoch % (2*self.step) :
+                        summary_str = case_summary.eval(feed_dict={self.x : self.X_train,\
+                                                                   self.t : self.y_train,\
+                                                                   self.weight_sum : weight_sum})
+                        file_writer.add_summary(summary_str, epoch)
+                        
                     if self.verbose == True :
                         axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
                         axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
@@ -934,7 +997,7 @@ class Neural_Network():
                                             
                             err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
                                                                       self.t: self.y_train,\
-                                                                         self.weight_sum : weight_sum})
+                                                                      self.weight_sum : weight_sum})
                     
                     else :
 #                X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
@@ -950,8 +1013,14 @@ class Neural_Network():
                 if np.isnan(costs[-1]) : 
                     raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
                 
-                if epoch % self.step == 0 and epoch != 0:
+                if epoch % self.step == 0 :
                     print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
+                    if epoch % (2*self.step) :
+                        summary_str = case_summary.eval(feed_dict={self.x : self.X_batch,\
+                                                                   self.t : self.y_batch,\
+                                                                   self.weight_sum : weight_sum})
+                        file_writer.add_summary(summary_str, epoch)
+                    
                     if self.verbose == True :
                         axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
                         axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
@@ -968,6 +1037,13 @@ class Neural_Network():
                     break
             print costs[-10:]
             ff.close()
+        
+        saver_path = saver.save(self.sess, self.graph_name)
+        
+        self.saver_path = saver_path
+        self.file_writer = file_writer
+        self.case_summary = case_summary
+        
         self.costs = costs
 
 ###-------------------------------------------------------------------------------
@@ -1094,39 +1170,60 @@ if __name__=="__main__":
 #    TF.error_computation("cross_entropy")
     
 #    TF.optimisation()
-    scaler_name = ["standard", "minmax", "robust", "PCA"]
+    scaler_name = ["Standard", "MinMax", "Robust", "PCA"]
     names = iter(scaler_name)
     color = iter(sns.color_palette("Set1", len(scaler_name)))
     
-    for sn in scaler_name :
-        TF = Neural_Network(0.0005, N_=N_, reduce_type="sum", color=next(color), bsz=64, BN=True, verbose=True,\
-                            max_epoch=1000, clip=False)#, lasso_param = l, ridge_param = r)
+#    for sn in scaler_name :
+    sn = "Standard"
+    TF = Neural_Network(0.0005, N_=N_, scaler = sn, reduce_type="sum", color=next(color), bsz=64, BN=True, verbose=True,\
+                        max_epoch=100, clip=False)#, lasso_param = l, ridge_param = r)
+
+    TF.split_and_scale(X,y,shuffle=True, val=False)
+
+    TF.tf_variables()
+    TF.layer_stacking_and_act("relu")
+    TF.def_optimizer("Adam")
+    TF.cost_computation("Elastic")
+    TF.case_specification_recap()
     
-        TF.split_and_scale(X,y, scaler=sn, shuffle=True, val=False)
-    
-        TF.tf_variables()
-        TF.layer_stacking_and_act("relu")
-        TF.def_optimizer("Adam")
-        TF.cost_computation("Elastic")
-        TF.case_specification_recap()
-        
-        TF.training_session(1e-3)
+    TF.training_session(1e-3)
 #    
-        print (TF.costs[-1])
+    print (TF.costs[-1])
 #    
-        print(TF.sess.run(TF.reduce_type_fct(tf.square(TF.predict(TF.X_test) - TF.y_test))))
+    print(TF.sess.run(TF.reduce_type_fct(tf.square(TF.predict(TF.X_test) - TF.y_test))))
 #    
-        lab = next(names)
+    lab = next(names)
 #    
-        plt.figure("Prediction")
-        plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
-        plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds %s" % lab, color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
-        plt.legend()
+    plt.figure("Prediction")
+    plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
+    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds %s" % lab, color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
+    plt.legend()
 
 ##-------------------------------------------------- NOTES --------------------------------------------------##
 
 
 ## Notes intéressantes de Methods of Model Based Process Control :
+
+### Quelques notes sur les gradients : https://stackoverflow.com/questions/41822308/how-tf-gradients-work-in-tensorflow
+
+#dc_dw, dc_db = tf.gradients(cost, [W, b])
+
+# The tf.gradients() function allows you to compute the symbolic gradient of one tensor with respect to one or more other tensors—including variables.
+
+# Full exemple from : https://stackoverflow.com/questions/35226428/how-do-i-get-the-gradient-of-the-loss-at-a-tensorflow-variable
+
+#data = tf.placeholder(tf.float32)
+#var = tf.Variable(...)              # Must be a tf.float32 or tf.float64 variable.
+#loss = some_function_of(var, data)  # some_function_of() returns a `Tensor`.
+
+#var_grad = tf.gradients(loss, [var])[0]
+#sess = tf.Session()
+#var_grad_val = sess.run(var_grad, feed_dict={data: ...})
+
+#https://books.google.fr/books?id=bRpYDgAAQBAJ&pg=PT656&lpg=PT656&dq=you+can+call+optimizer.compute_gradients()+with+trainable+variable&source=bl&ots=h3VGTaqIcM&sig=2q7x5ABYbzWvuQ8H8pT_CMycZtE&hl=fr&sa=X&ved=0ahUKEwjsjNm868HbAhVJVRQKHRg0A6MQ6AEIVDAE#v=onepage&q=you%20can%20call%20optimizer.compute_gradients()%20with%20trainable%20variable&f=false
+#https://www.tensorflow.org/api_docs/python/tf/gradients
+
 
 # "The back propagation-based learning algorithm [..] varies only the weights of the neural network to achieve the desired mapping
 # To overcome dependence of the learning process on the initial settings and for further improvement of the mapping accuracy, we use a combination of backpropagation and a genetic algorithm. The key idea os to vary the properties of each neurom in the net simultaneously with the adaptation of the weigths
