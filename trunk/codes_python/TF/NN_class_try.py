@@ -61,7 +61,7 @@ class Neural_Network():
         print N_
         
         self.lr = lr
-        self.scaler = scaler        
+        self.scaler_name = scaler        
         self.max_epoch = max_epoch
         self.file_to_update = file_to_update 
         
@@ -119,17 +119,20 @@ class Neural_Network():
     def split_and_scale(self, X, y, shuffle=True, val=False, random_state=0, n_components="mle", whiten=False) :
         
         X, y = np.copy(X), np.copy(y)
-        
-        if self.scaler == "None" :
+        print self.scaler_name
+        if self.scaler_name == "None" :
             self.split_data(X, y, shuffle=shuffle, strat=False,\
                             standard_scale=False, val=val, random_state = random_state)
-        
-        elif self.scaler == "Standard" :
+            scaler = self.scaler_name
+            
+        elif self.scaler_name == "Standard" :
             self.split_data(X, y, shuffle=shuffle, strat=False,\
                             standard_scale=True, val=val, random_state = random_state)
+            scaler = self.scaler_name
         
-        else : 
-            self.standard_scale = self.scaler
+        else : #We split and preparing data with different scalers
+            self.standard_scale = self.scaler_name
+            
             if shuffle == True :
                 # Source see above
                 permute_indices = np.random.permutation(np.arange(len(y)))
@@ -144,35 +147,35 @@ class Neural_Network():
             
             xtr, xte, ytr, yte = train_test_split(X, y, random_state=random_state)        
                     
-            if self.scaler=="MinMax" :
+            if self.scaler_name=="MinMax" :
                 from sklearn.preprocessing import MinMaxScaler
                 scaler = MinMaxScaler().fit(xtr)
                 
-            if self.scaler == "Robust" : 
+            if self.scaler_name == "Robust" : 
                 from sklearn.preprocessing import RobustScaler
                 scaler = RobustScaler().fit(xtr)
             
-            if self.scaler == "PCA" :
+            if self.scaler_name == "PCA" :
                 from sklearn.decomposition import PCA
     #            whiten : bool, optional (default False)
     #            When True (False by default) the `components_` vectors are multiplied
     #            by the square root of n_samples and then divided by the singular values
     #            to ensure uncorrelated outputs with unit component-wise variances.
-                self.scaler = PCA(n_components=n_components, whiten=whiten).fit(xtr)
+                scaler = PCA(n_components=n_components, whiten=whiten).fit(xtr)
                 
                 print ("PCA allows another data representation.")
                 print ("From %d inputs, N_ contain now %d inputs entries" %\
                         (    self.N_["I"],              scaler.n_components_))
                 
-                self.N_["I"] = self.scaler.n_components_
+                self.N_["I"] = scaler.n_components_
             
-            self.X_train, self.y_train = self.scaler.transform(xtr), ytr
-            self.X_test, self.y_test =  self.scaler.transform(xte), yte
+            self.X_train, self.y_train = scaler.transform(xtr), ytr
+            self.X_test, self.y_test =  scaler.transform(xte), yte
             
         self.scaler = scaler
         
         print ("Standard scale = {}".format(self.standard_scale))
-        print ("scaler = %s" % self.scaler)
+        print ("scaler = %s" % self.scaler_name)
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -250,8 +253,6 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
     
-    
-
     def scale_inputs(self, xs) :
         """
         Doc to be done
@@ -268,8 +269,7 @@ class Neural_Network():
             sys.exit("Null Argument in scale_inputs call")
         
         try :
-        
-            if self.scaler == "Standard" :
+            if self.scaler_name == "Standard" :
                 for i, mean in enumerate(self.X_train_mean) :
                     new_xs[i] -= mean
                 
@@ -978,7 +978,7 @@ class Neural_Network():
         arg = np.copy(xs)
         
         if rescale_tab == True :        
-            if self.scaler!= "None" :
+            if self.scaler_name != "None" :
                 for i, mean in enumerate(self.X_train_mean) :
                     arg[:, i] -= mean            
                 for i, std in enumerate(self.X_train_stdd) :
