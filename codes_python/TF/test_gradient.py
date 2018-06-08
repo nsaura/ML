@@ -54,44 +54,55 @@ w2_init = np.random.randn(nN1, 1) / np.sqrt(nN1)
 x = tf.placeholder(tf.float32, (None, n_input), name="inputs")
 t = tf.placeholder(tf.float32, (None), name="output")
 
+# Placeholder added in the cost function
 jac = tf.placeholder(tf.float32, (None), name="grad_x")
 
 w1 = tf.Variable(w1_init.astype(np.float32), name="w1")
 b1 = tf.Variable(b1_init.astype(np.float32), name="b1")
 w2 = tf.Variable(w2_init.astype(np.float32), name="w2")
 
+# Graph Computation
 z1 = tf.nn.relu(tf.matmul(x, w1) + b1)
 y_pred = tf.matmul(z1, w2)
 
+# Derivation of y_pred w.r.t inputs
 derr_y_pred = tf.norm( tf.gradients(y_pred, [x]) )
 
+# Cost Function from eq.25
 cost = tf.reduce_sum(tf.add(tf.square(y_pred - t), tf.multiply(1e-3, jac)))
 
 optimizer = tf.train.AdamOptimizer(learning_rate=1e-3) 
-
 train_op = optimizer.minimize(cost)
 
-
+# Initialization of the tensorflow graph variables
 sess = tf.InteractiveSession(config=config)
 init = tf.global_variables_initializer()
 
 sess.run(init)
+
+# To see in tensorboard
 mse_summary  = tf.summary.scalar("MSE", cost)
 file_writer= tf.summary.FileWriter(logdir, tf.get_default_graph())
 
 plt.figure("Log evolution error")
 plt.figure("Evol Euclidian norm")
 
+# Training 
 for epoch in range(max_epoch) :
     
+    # Calulus of the derrivative  y_pred w.r.t inputs
     derr_y_pred_n = sess.run(derr_y_pred, feed_dict = {x:X_train})
         
     plt.figure("Evol Euclidian norm")
     plt.semilogy(epoch, derr_y_pred_n, marker='o', color='navy', linestyle='none')
     
+    # Minimization of the cost fuction
     sess.run(train_op, feed_dict={x : X_train, t: y_train, jac : derr_y_pred_n})
+    
+    # Calculus of the cost
     err = sess.run(cost, feed_dict={x : X_train, t: y_train, jac : derr_y_pred_n})
     
+    # Plots
     if epoch % step ==0 :
         plt.figure("Log evolution error")
         plt.semilogy(epoch, err, marker='o', color='darkred', linestyle='none')
@@ -101,6 +112,7 @@ for epoch in range(max_epoch) :
         file_writer.add_summary(summary_str, step)
         
         plt.pause(0.1)
+
 file_writer.close()
 
 
