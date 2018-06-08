@@ -701,8 +701,7 @@ class Neural_Network():
             os.makedirs(dir_name)
         
         now = datetime.utcnow().strftime("%Y_%m_%d_%Hh%m_%ss")
-        
-        log_dir = "{}/run--{}/".format(dir_name, now)
+        log_dir = "{}/run--{}".format(dir_name, now)
         
         self.log_dir = log_dir
         self.dir_name = dir_name
@@ -711,9 +710,8 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 
     def training_session(self, tol) :
-        
         self.case_specification_recap()        
-                
+        
         if self.err_type not in {"OLS", "AVL"} :
             self.training_coupled_regression(tol=tol)
             return "End of Ridge/Lasso or Elastic Network training"
@@ -722,6 +720,7 @@ class Neural_Network():
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
             gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
             self.minimize_loss = self.train_op.apply_gradients(zip(gradients, variables))
+            print ("Clip !")
 
         else :
             self.minimize_loss = self.train_op.minimize(self.loss)
@@ -842,7 +841,7 @@ class Neural_Network():
                     if epoch % (2*self.step) :
                         summary_str = case_summary.eval(feed_dict={self.x : self.X_train,\
                                                                    self.t : self.y_train})
-                        file_writer.add_summary(summary_str, epoch)
+                        file_writer.add_summary(summary_str, epoch*n_batch + b)
                             
                     if self.verbose == True :
                         axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
@@ -875,7 +874,8 @@ class Neural_Network():
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
             gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
             self.minimize_loss = self.train_op.apply_gradients(zip(gradients, variables))
-
+            print ("Clip !")
+            
         else :
             self.minimize_loss = self.train_op.minimize(self.loss)        
         
@@ -921,7 +921,6 @@ class Neural_Network():
         lst_key.remove("I"); lst_key.remove("O")
 
         if self.batched == False :
-#            with tf.Session() as sess:        
             while epoch <= self.max_epoch and err > tol:
                 weight_sum = []
 
@@ -967,11 +966,8 @@ class Neural_Network():
             ff = open("just_a_test.txt", "w")
 #            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
             for epoch in range(self.max_epoch) :
-#                print(self.kwargs["batch_sz"])
                 n_batch, left = len(self.X_train) // self.kwargs["bsz"], len(self.X_train) % self.kwargs["bsz"]
-#                print n_batch, left
-                
-                
+
                 for b in range(n_batch) :
                     
                     weight_sum = []
@@ -992,7 +988,6 @@ class Neural_Network():
                     left -=1
                     
                     if left <=0 : left = 0 
-#                print self.X_batch.shape
 #               
                     if self.BN == True :
                         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)): 
@@ -1005,8 +1000,6 @@ class Neural_Network():
                                                                       self.weight_sum : weight_sum})
                     
                     else :
-#                X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
-#                y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
                         self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch,\
                                                                     self.t : self.y_batch})  
                                                                     
@@ -1024,7 +1017,7 @@ class Neural_Network():
                         summary_str = case_summary.eval(feed_dict={self.x : self.X_batch,\
                                                                    self.t : self.y_batch,\
                                                                    self.weight_sum : weight_sum})
-                        file_writer.add_summary(summary_str, epoch)
+                        file_writer.add_summary(summary_str, epoch*n_batch + b)
                     
                     if self.verbose == True :
                         axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
@@ -1080,7 +1073,7 @@ class Neural_Network():
 #        writer.close()
         
 #        weights = tf.trainable_variables()
-        print("Graph written. See tensorboard --logdir=\"logs\"")
+        print("Graph written. See tensorboard --logdir={}".format(self.log_dir))
 #        print self.sess.run(weights)
         
 ###-------------------------------------------------------------------------------
@@ -1095,10 +1088,10 @@ if __name__=="__main__":
 
     gen_dict = lambda inputsize : \
                {"I"  : inputsize,\
-               "N1" : 100,\
-               "N2" : 100,\
-               "N3" : 100,\
-               "N4" : 100,\
+               "N1" : 10,\
+               "N2" : 10,\
+               "N3" : 10,\
+               "N4" : 10,\
                "O" :1}
                
     N_= gen_dict(X.shape[1])
