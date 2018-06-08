@@ -114,6 +114,7 @@ class Neural_Network():
         
         self.N_ = N_
         self.exception = 0
+        
 ###-------------------------------------------------------------------------------  
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -178,6 +179,7 @@ class Neural_Network():
         
         print ("Standard scale = {}".format(self.standard_scale))
         print ("scaler = %s" % self.scaler_name)
+        
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -251,6 +253,7 @@ class Neural_Network():
         self.X_test, self.y_test    =   X_test , y_test
         self.X_train, self.y_train  =   X_train, y_train
         self.X_train_mean, self.X_train_stdd =  X_train_mean, X_train_stdd
+        
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -608,9 +611,8 @@ class Neural_Network():
                 ridge_param = tf.constant(0.5*ridge_param)
 
                 self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
-                self.loss = tf.expand_dims(\
-                            tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
-                            tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum)))), 0)
+                self.loss = tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                            tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum))))
             
             elif err_type == "Lasso":
                 lasso_choice = ["lasso_param", "lasso_parameter", "Lasso_param"]
@@ -625,9 +627,8 @@ class Neural_Network():
                 lasso_param = tf.constant(lasso_param)
                 self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
                 
-                self.loss = tf.expand_dims(\
-                            tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
-                            tf.multiply(lasso_param, self.reduce_type_fct(tf.abs(self.weight_sum)))), 0)
+                self.loss = tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                            tf.multiply(lasso_param, self.reduce_type_fct(tf.abs(self.weight_sum))) )
             
             elif err_type == "Elastic":
                 ridge_choice = ["ridge_param", "ridge_parameter", "Ridge_param"]
@@ -655,10 +656,9 @@ class Neural_Network():
                 
                 self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
                     
-                self.loss = tf.expand_dims(\
-                            tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                self.loss = tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
                             tf.add(tf.multiply(lasso_param, self.reduce_type_fct(tf.abs(self.weight_sum))),\
-                                   tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum)))) ), 0)
+                                   tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum)))))
             
             elif err_type == "Custom":
                 try :
@@ -692,15 +692,17 @@ class Neural_Network():
         print("La fonction de coût pour évaluer ces erreurs est {} -> {}".format(self.err_type, self.loss))
         
         now = datetime.utcnow().strftime("%Y_%m_%d_%Hh%m")
-        log_path = osp.abspath("./logs")
+        log_path = os.path.abspath("./logs")
         
         bsz = self.kwargs["bsz"] if self.batched == True else len(self.X_train)
-        dir_name = osp.join(log_path, now + "_{}_{}_mepoch{}_bsz{}".format(self.train_mod, self.activation, self.max_epoch, bsz))
+        dir_name = os.path.join(log_path, now + "_{}_{}_mepoch{}_bsz{}".format(self.train_mod, self.activation, self.max_epoch, bsz))
         
-        if osp.exists(dir_name) == False :
+        if os.path.exists(dir_name) == False :
             os.makedirs(dir_name)
         
-        log_dir = "{}/".format(dir_name)
+        now = datetime.utcnow().strftime("%Y_%m_%d_%Hh%m_%ss")
+        
+        log_dir = "{}/run--{}/".format(dir_name, now)
         
         self.log_dir = log_dir
         self.dir_name = dir_name
@@ -716,10 +718,11 @@ class Neural_Network():
             self.training_coupled_regression(tol=tol)
             return "End of Ridge/Lasso or Elastic Network training"
         
-        if "clip"  in self.kwargs.keys() :
+        if "clip"  in self.kwargs.keys() and self.kwargs["clip"] == True :
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
             gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
             self.minimize_loss = self.train_op.apply_gradients(zip(gradients, variables))
+
         else :
             self.minimize_loss = self.train_op.minimize(self.loss)
         
@@ -855,6 +858,7 @@ class Neural_Network():
                 if np.abs(costs[-1]) < 1e-6 :
                     print "Final Cost "
                     break
+                
             ff.close()
             print costs[-10:]
         
@@ -867,12 +871,13 @@ class Neural_Network():
 
     def training_coupled_regression(self, tol) :
         
-        if "clip"  in self.kwargs.keys() :
+        if "clip"  in self.kwargs.keys() and self.kwargs["clip"] == True :
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
             gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
             self.minimize_loss = self.train_op.apply_gradients(zip(gradients, variables))
+
         else :
-            self.minimize_loss = self.train_op.minimize(self.loss)
+            self.minimize_loss = self.train_op.minimize(self.loss)        
         
         init = tf.global_variables_initializer()
         self.sess.run(init)
@@ -1040,6 +1045,8 @@ class Neural_Network():
         
         saver_path = saver.save(self.sess, self.graph_name)
         
+        file_writer.close()
+        
         self.saver_path = saver_path
         self.file_writer = file_writer
         self.case_summary = case_summary
@@ -1069,12 +1076,12 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 
     def visualize_graph(self):
-        writer = tf.summary.FileWriter('logs', self.sess.graph)
-        writer.close()
+#        writer = tf.summary.FileWriter('logs', self.sess.graph)
+#        writer.close()
         
-        weights = tf.trainable_variables()
+#        weights = tf.trainable_variables()
         print("Graph written. See tensorboard --logdir=\"logs\"")
-        print self.sess.run(weights)
+#        print self.sess.run(weights)
         
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -1176,7 +1183,7 @@ if __name__=="__main__":
     
 #    for sn in scaler_name :
     sn = "Standard"
-    TF = Neural_Network(0.0005, N_=N_, scaler = sn, reduce_type="sum", color=next(color), bsz=64, BN=True, verbose=True,\
+    TF = Neural_Network(0.0005, N_=N_, scaler = sn, reduce_type="sum", color="yellow", verbose=True,\
                         max_epoch=100, clip=False)#, lasso_param = l, ridge_param = r)
 
     TF.split_and_scale(X,y,shuffle=True, val=False)
@@ -1184,7 +1191,7 @@ if __name__=="__main__":
     TF.tf_variables()
     TF.layer_stacking_and_act("relu")
     TF.def_optimizer("Adam")
-    TF.cost_computation("Elastic")
+    TF.cost_computation("OLS")
     TF.case_specification_recap()
     
     TF.training_session(1e-3)
