@@ -253,10 +253,8 @@ def xy_burger (num_real, cb=cb, n_points=3, verbose=False) :
 
 def dict_layer(X) :
     dict_layers = {"I" : X.shape[1],\
-                   "N1" : 500,\
-                   "N2" : 100,\
-                   "N3" : 50,\
-                   "N4" : 10,\
+                   "N1" : 40,
+                   "N2" : 40,
                    "O"  : 1}
     return dict_layers
 #print dict_layers
@@ -292,7 +290,7 @@ def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
 #    return nn_obj
     print nn_obj.X_train.shape
     try :
-        nn_obj.training_session(tol=1e-3)
+        nn_obj.training_phase(tol=1e-3)
 
     except KeyboardInterrupt :
         print ("Session closed")
@@ -773,7 +771,7 @@ def mStack_prediction(nn_int, nn_fnl, typeJ="u", n_points=3) :
 #       cb.minimization(maxiter=50) see Class_Vit_Choc at the end of the file 
 
 # Any way you have to run this class in order to create a cb object needed 
-#       run burger_case_u_NN.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
+#       run memory_burger_case.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 3 -Nx 52 -Nt 32 -beta_prior 10 -typeJ "u"
 
 # Construct X and y that will be the reference dataset :
 #       X, y = xy_burger(3, n_points=3)

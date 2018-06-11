@@ -16,6 +16,8 @@ import tensorflow as tf
 #import tensorlayer as tl
 
 from datetime import datetime
+from custom_swish_function import tf_swish
+
 
 # Utilities :
 def find_divisor(N) :
@@ -363,7 +365,7 @@ class Neural_Network():
 
     def layer_stacking_and_act(self, activation="relu"):
         Z = dict()
-        act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu", "selu"]
+        act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu", "selu", "swish"]
         # to have leakyrelu upgrade tensorflow :  sudo pip install tensorflow==1.4.0-rc0 
         ### A wide variety of models are availables to compute the neuronal outputs.
         ### We chose that way of implementation : the main work is done only if str_act
@@ -375,7 +377,7 @@ class Neural_Network():
         # We added the possibility to deal with internal covariate shifting (Better generalization)
         # This possibility is activated if "BN" is in kwargs
         
-        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu] ) :
+        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu, tf_swish] ) :
             if str_act == activation :
                 print ("fonction d'activation considérée : %s" %(activation))
                 
@@ -582,96 +584,42 @@ class Neural_Network():
 #        CLASSIFICATION pbs : cross entropy most likely to be used in  with sigmoid : softmax_cross_entropy_with_logits
 #        REGRESSION pbs     : L2 regularisation -> OLS  :   tf.reduce_sum(tf.square(y_pred - targets))
 #                             L1 regression     -> AVL  :   tf.reduce_sum(tf.abs(y_pred - targets))
-        
         if SL_type == "classification" :
             self.loss = tf.reduce_sum(\
                 tf.nn.softmax_cross_entropy_with_logits(logits=self.y_pred_model, label=self.t))
+        
         else :
-            expected_loss = {"OLS" : tf.square,\
-                             "AVL" : tf.abs,\
-                             "CBS" : "below",\
-                             "Ridge": "below",\
-                             "Lasso": "below",\
-                             "Elastic": "below",\
-                             "Custom": "below"}
-            if err_type not in expected_loss :
-                raise IndexError("{}\'s not in the list {}".format(err_type, expected_loss.keys()))
+            classic_loss = {"OLS" : tf.square,
+                             "AVL" : tf.abs} 
+            advanced_loss=["MSEGrad", "Ridge", "Lasso", "Elastic", "Custom"]
             
-            
-            elif err_type == "Ridge":
-                ridge_choice = ["ridge_param", "ridge_parameter", "Ridge_param"]
-                inside=[c in self.kwargs.keys() for c in ridge_choice]
-                if True in inside :
-                    ridge_param = self.kwargs[ridge_choice[inside.index[True]]]
-                
-                else :
-                    print ("Ridge Param set to {}".format(1e-4))
-                    ridge_param = 1e-4
-                
-                ridge_param = tf.constant(0.5*ridge_param)
+            if err_type in advanced_loss :
+                self.advanced = True
 
-                self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
-                self.loss = tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
-                            tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum))))
+            key_to_check = advanced_loss + classic_loss.keys()
+            
+            if err_type not in key_to_check :
+                raise IndexError("{}\'s not in the list {}".format(err_type, key_to_check))
+                
+            elif err_type == "MSEGrad" :
+                self.jac = tf.placeholder(tf.float32, (None), name="grad_y_pred_x")
+                self.loss = self.reduce_type_fct(tf.add(tf.square(self.y_pred_model - self.t), tf.multiply(1e-3, self.jac)))
+                
+            elif err_type == "Ridge":
+                self.Elastic_cost(r=0)
             
             elif err_type == "Lasso":
-                lasso_choice = ["lasso_param", "lasso_parameter", "Lasso_param"]
-                inside=[c in self.kwargs.keys() for c in lasso_choice]
-                if True in inside :
-                    lasso_param = self.kwargs[lasso_choice[inside.index[True]]]
-                
-                else :
-                    print ("Lasso Param set to {}".format(1e-4))
-                    lasso_param = 1e-4
-                
-                lasso_param = tf.constant(lasso_param)
-                self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
-                
-                self.loss = tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
-                            tf.multiply(lasso_param, self.reduce_type_fct(tf.abs(self.weight_sum))) )
+                self.Elastic_cost(r=1)
             
             elif err_type == "Elastic":
-                ridge_choice = ["ridge_param", "ridge_parameter", "Ridge_param"]
-                lasso_choice = ["lasso_param", "lasso_parameter", "Lasso_param"]
+                self.Elastic_cost()
                 
-                inside=[c in self.kwargs.keys() for c in ridge_choice]
-                if True in inside :
-                    ridge_param = self.kwargs[ridge_choice[inside.index[True]]]
-                
-                else :
-                    print ("Ridge Param set to {}".format(1e-4))
-                    ridge_param = 1e-4
-                    
-                inside=[c in self.kwargs.keys() for c in lasso_choice]
-                
-                if True in inside :
-                    lasso_param = self.kwargs[lasso_choice[inside.index[True]]]
-                
-                else :
-                    print ("Lasso Param set to {}".format(1e-4))
-                    lasso_param = 1e-4
-
-                ridge_param = tf.constant(ridge_param)
-                lasso_param = tf.constant(lasso_param)
-                
-                self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
-                    
-                self.loss = tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
-                            tf.add(tf.multiply(lasso_param, self.reduce_type_fct(tf.abs(self.weight_sum))),\
-                                   tf.multiply(ridge_param, self.reduce_type_fct(tf.square(self.weight_sum)))))
-            
             elif err_type == "Custom":
-                try :
-                    custom_param = self.kwargs["custom_param"]
-                except KeyError :
-                    custom_param = float(input("Give a custom parameter " ) )
-            
-                self.loss = tf.expand_dims(\
-                            tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
-                            tf.multiply(custom_param, self.reduce_type_fct(self.x))), 0)
+                self.Custom_cost()
                 
             else :
-                self.loss = self.reduce_type_fct(expected_loss[err_type](self.y_pred_model - self.t))
+                self.loss = self.reduce_type_fct(classic_loss[err_type](self.y_pred_model - self.t))
+                self.advanced = False
                 
                 print ("%s: The loss function will compute the averaged %s over all the errors" %(err_type, self.reduce_type))
                 
@@ -691,17 +639,14 @@ class Neural_Network():
         print("La méthode utilisée pour minimiser les erreurs entre les prédictions et les target est :{} -> {}\n".format(self.train_mod, self.train_op))
         print("La fonction de coût pour évaluer ces erreurs est {} -> {}".format(self.err_type, self.loss))
         
-        now = datetime.utcnow().strftime("%Y_%m_%d_%Hh%m")
-        log_path = os.path.abspath("./logs")
         
+        log_path = os.path.abspath("./logs")
+        now = datetime.utcnow().strftime("%Y_%m_%d_%Hh%m_%S")
         bsz = self.kwargs["bsz"] if self.batched == True else len(self.X_train)
+
         dir_name = os.path.join(log_path, now + "_{}_{}_mepoch{}_bsz{}".format(self.train_mod, self.activation, self.max_epoch, bsz))
         
-        if os.path.exists(dir_name) == False :
-            os.makedirs(dir_name)
-        
-        now = datetime.utcnow().strftime("%Y_%m_%d_%Hh%m_%ss")
-        log_dir = "{}/run--{}".format(dir_name, now)
+        log_dir = "{}/run-{}".format(dir_name, now)
         
         self.log_dir = log_dir
         self.dir_name = dir_name
@@ -709,166 +654,7 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------            
 ###-------------------------------------------------------------------------------
 
-    def training_session(self, tol) :
-        self.case_specification_recap()        
-        
-        if self.err_type not in {"OLS", "AVL"} :
-            self.training_coupled_regression(tol=tol)
-            return "End of Ridge/Lasso or Elastic Network training"
-        
-        if "clip"  in self.kwargs.keys() and self.kwargs["clip"] == True :
-            gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
-            gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
-            self.minimize_loss = self.train_op.apply_gradients(zip(gradients, variables))
-            print ("Clip !")
-
-        else :
-            self.minimize_loss = self.train_op.minimize(self.loss)
-        
-        init = tf.global_variables_initializer()
-        self.sess.run(init) 
-        
-        ##  -- Marks the end of the construction Phase --
-        ##  We define the saver , and add the saving procedure at each checkpoint wanted
-        
-        ##  We also define the summary for watching the evolution and the builded graph in TensoBoard
-                
-        saver = tf.train.Saver()
-        case_summary = tf.summary.scalar(self.err_type, self.loss) # We write the loss whose name is err_type
-        file_writer = tf.summary.FileWriter(self.log_dir, tf.get_default_graph()) #We use log_dir (case_specification) with current graph
-        
-        costs = []
-        err, epoch, tol = 1., 0, tol
-        
-        if self.verbose == True :
-#            if "label" in self.kwargs.keys() :
-#                label = self.kwargs["label"]
-#            else :
-#                label = "%s %s %s %d size HL = %d " %\
-#                (self.activation, self.train_mod, self.loss, self.bsz,len(self.N_.keys()) -2) 
-
-            if plt.fignum_exists("Cost Evolution : loglog and lin") == False: 
-                fig, axes = plt.subplots(1,2,figsize=(12,3), num="Cost Evolution : loglog and lin")
-            subplot = plt.figure("Cost Evolution : loglog and lin")
-            axes = subplot.axes
-            fig = subplot
-                
-            axes[0].set_xlabel("#It")
-            axes[0].xaxis.set_label_coords(-0.01, -0.06)
-            axes[0].yaxis.set_label_position("left")
-            axes[0].set_title("loglog")
-            
-            axes[1].yaxis.set_label_position("right")
-            axes[1].set_title("lin")
-            axes[1].set_ylabel("Errors")
-            axes[1].yaxis.set_label_position("right")
-            
-                
-        if self.batched == False :
-#            with tf.Session() as sess:        
-            while epoch <= self.max_epoch and err > tol:
-                
-                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train, self.t : self.y_train})
-                
-                err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
-                                                          self.t : self.y_train})
-                costs.append(err)
-                if np.isnan(costs[-1]) : 
-                    raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
-                
-                if epoch % self.step == 0 :
-                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                    if epoch % (2*self.step) :
-                        summary_str = case_summary.eval(feed_dict={self.x : self.X_train,\
-                                                                   self.t : self.y_train})
-                        file_writer.add_summary(summary_str, epoch)
-                                            
-                                        
-                    if self.verbose == True :
-                        axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
-                        axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
-                        
-                        fig.tight_layout()
-                        plt.pause(0.001)
-                    
-                epoch += 1
-
-            print costs[-10:]
-#            self.saver.save(sess, self.savefile)
-        else :
-            ff = open("just_a_test.txt", "w")
-#            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
-            for epoch in range(self.max_epoch) :
-#                print(self.kwargs["batch_sz"])
-                n_batch, left = len(self.X_train) // self.kwargs["bsz"], len(self.X_train) % self.kwargs["bsz"]
-#                print n_batch, left
-                for b in range(n_batch) :
-                    bsz = self.kwargs["bsz"] + 1 if left > 0 else self.kwargs["bsz"]
-                    rand_index = np.random.choice(len(self.X_train), size=bsz)   
-
-                    self.X_batch = self.X_train[rand_index]
-                    self.y_batch = self.y_train[rand_index]
-                    
-                    left -=1
-                    
-                    if left <=0 : left = 0 
-#                print self.X_batch.shape
-#               
-                    if self.BN == True :
-                        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)): 
-                            self.sess.run(self.minimize_loss, feed_dict={self.x : self.X_batch,\
-                                                                         self.t : self.y_batch})
-                                            
-                            err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
-                                                                      self.t: self.y_train})
-                    
-                    else :
-#                X_batch = self.X_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
-#                y_batch = self.y_train[jj*batch_sz:(jj*batch_sz + batch_sz)]
-                        self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch,\
-                                                                    self.t : self.y_batch})  
-                                                                    
-                        err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
-                                                                  self.t: self.y_train})
-                        
-                costs.append(err)
-                
-                if np.isnan(costs[-1]) : 
-                    raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
-                
-                if epoch % self.step == 0 and epoch != 0:
-                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                    if epoch % (2*self.step) :
-                        summary_str = case_summary.eval(feed_dict={self.x : self.X_train,\
-                                                                   self.t : self.y_train})
-                        file_writer.add_summary(summary_str, epoch*n_batch + b)
-                            
-                    if self.verbose == True :
-                        axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
-                        axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
-                        
-                        fig.tight_layout()
-                        
-                        plt.pause(0.001)
-#                        print ("{} : \n{}".format(epoch, self.sess.run(self.w_tf_d[self.wlastkey])))
-#                        ff.write("#"*20+"\n")
-#                        ff.write("\nIt={}\nweights values\n{}\n".format(epoch, self.sess.run(self.w_tf_d)))
-#                        ff.write("#"*20+"\n")
-                if np.abs(costs[-1]) < 1e-6 :
-                    print "Final Cost "
-                    break
-                
-            ff.close()
-            print costs[-10:]
-        
-        saver_path = saver.save(self.sess, self.graph_name)
-        self.costs = costs
-
-###-------------------------------------------------------------------------------
-###-------------------------------------------------------------------------------    
-###-------------------------------------------------------------------------------
-
-    def training_coupled_regression(self, tol) :
+    def training_phase(self, tol) :
         
         if "clip"  in self.kwargs.keys() and self.kwargs["clip"] == True :
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
@@ -881,47 +667,92 @@ class Neural_Network():
         
         init = tf.global_variables_initializer()
         self.sess.run(init)
-        
-        ##  -- Marks the end of the construction Phase --
-        ##  We define the saver , and add the saving procedure at each checkpoint wanted
-        
-        ##  We also define the summary for watching the evolution and the builded graph in TensoBoard
+        ##  End of the construction Phase 
                 
-        saver = tf.train.Saver()
+        saver = tf.train.Saver() # Saver
         case_summary = tf.summary.scalar(self.err_type, self.loss) # We write the loss whose name is err_type
-        file_writer = tf.summary.FileWriter(self.log_dir, tf.get_default_graph()) #We use log_dir (case_specification) with current graph        
+
+        #We use log_dir (case_specification) with current graph        
+        file_writer = tf.summary.FileWriter(self.log_dir, tf.get_default_graph()) 
         
         costs = []
-        err, epoch, tol = 1., 0, tol
+        epoch = 0
+        err = 1.
+        
+        # Executing Phase
         
         if self.verbose == True :
-#            if "label" in self.kwargs.keys() :
-#                label = self.kwargs["label"]
-#            else :
-#                label = "%s %s %s %d size HL = %d " %\
-#                (self.activation, self.train_mod, self.loss, self.bsz,len(self.N_.keys()) -2) 
+            # Prepare the figures the errors will be plotting in.
+            fig, axes = self.config_plot()
+            
+        while epoch <= self.max_epoch and err > tol:
+            if self.batched== True :
+                    n_batch, left = len(self.X_train) // self.kwargs["bsz"], len(self.X_train) % self.kwargs["bsz"]
+                    err, feeding = self.batched_training(n_batch, left)
+                    curr_effective_epoch = n_batch * epoch 
+                    final_effective_epoch = n_batch * self.max_epoch
+             
+            else :
+                err, feeding = self.non_batched_training()
+                curr_effective_epoch = epoch 
+                final_effective_epoch = self.max_epoch
 
-            if plt.fignum_exists("Cost Evolution : loglog and lin") == False: 
-                fig, axes = plt.subplots(1,2,figsize=(12,3), num="Cost Evolution : loglog and lin")
-            subplot = plt.figure("Cost Evolution : loglog and lin")
-            axes = subplot.axes
-            fig = subplot
+            costs.append(err)
+
+            if np.isnan(costs[-1]) : 
+                raise IOError("Warning, (effective) Epoch {}, lr = {}.. nan".format(curr_effective_epochepoch, self.lr))
+            
+            if epoch % self.step == 0 :
+                if epoch % (2*self.step) :
+                    summary_str = case_summary.eval(feed_dict=feeding)
+                    file_writer.add_summary(summary_str, curr_effective_epoch)
                 
-            axes[0].set_xlabel("#It")
-            axes[0].xaxis.set_label_coords(-0.01, -0.06)
-            axes[0].yaxis.set_label_position("left")
-            axes[0].set_title("loglog")
-            
-            axes[1].yaxis.set_label_position("right")
-            axes[1].set_title("lin")
-            axes[1].set_ylabel("Errors")
-            axes[1].yaxis.set_label_position("right")
-            
+                if self.verbose == True :
+                    axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
+                    axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
+                    
+                    fig.tight_layout()
+                    plt.pause(0.001)
+                
+                print("(effective) epoch {}/{}, cost = {}".format(curr_effective_epoch, final_effective_epoch, err))
+
+            if np.abs(costs[-1]) < 1e-6 :
+                print ("Final Cost ".format(costs[-1]))
+                break
+
+            epoch += 1
+
+        print ("Ten last costs :\n{} ".format(costs[-10:]))
+
+        saver_path = saver.save(self.sess, self.graph_name)
+        file_writer.close()
+        
+        self.saver_path = saver_path
+        self.file_writer = file_writer
+        self.case_summary = case_summary
+        
+        self.costs = costs
+        
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
+
+    def batched_training(self, n_batch, left): 
         lst_key = self.N_.keys()
         lst_key.remove("I"); lst_key.remove("O")
+            
+        for b in range(n_batch) :
+            
+            bsz = self.kwargs["bsz"] + 1 if left > 0 else self.kwargs["bsz"]
 
-        if self.batched == False :
-            while epoch <= self.max_epoch and err > tol:
+            rand_index = np.random.choice(len(self.X_train), size=bsz)   
+            self.X_batch = self.X_train[rand_index]
+            self.y_batch = self.y_train[rand_index]
+            
+            left -=1
+            if left <=0 : left = 0 
+            
+            if self.advanced == True and self.err_type != "MSEGrad" :
                 weight_sum = []
 
                 for lk, _ in enumerate(lst_key) : 
@@ -930,125 +761,145 @@ class Neural_Network():
                         weight_sum.append(elt)
                 
                 weight_sum = np.array(weight_sum).reshape(-1,1)
-                
-                self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_train,\
-                                                            self.t : self.y_train,\
-                                                            self.weight_sum : weight_sum})
+                feeding = {self.x : self.X_batch, self.t : self.y_batch, self.weight_sum : weight_sum}
             
-                err = self.sess.run(self.loss, feed_dict={self.x : self.X_train,\
-                                                      self.t : self.y_train,\
-                                                      self.weight_sum : weight_sum})
+            elif self.err_type=="MSEGrad" : 
+                derr_y_pred = self.sess.run(tf.norm( tf.gradients(self.y_pred_model, [self.x]) ), feed_dict={self.x:self.X_batch})
+                feeding = {self.x : self.X_batch, self.t : self.y_batch, self.jac:derr_y_pred}      
                 
-                costs.append(err)
-                if np.isnan(costs[-1]) : 
-                    raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
+            else : 
+                feeding = {self.x : self.X_batch, self.t : self.y_batch}
                 
-                if epoch % self.step == 0 :
-                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                    if epoch % (2*self.step) :
-                        summary_str = case_summary.eval(feed_dict={self.x : self.X_train,\
-                                                                   self.t : self.y_train,\
-                                                                   self.weight_sum : weight_sum})
-                        file_writer.add_summary(summary_str, epoch)
-                        
-                    if self.verbose == True :
-                        axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
-                        axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
-                        
-                        fig.tight_layout()
-                        plt.pause(0.001)
+            if self.BN == True :
+                with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)): 
+                    # Tuning the parameters (weights, biais)
+                    self.sess.run(self.minimize_loss, feed_dict=feeding)
                     
-                epoch += 1
-
-            print costs[-10:]
-#            self.saver.save(sess, self.savefile)
-        else :
-            ff = open("just_a_test.txt", "w")
-#            https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.py
-            for epoch in range(self.max_epoch) :
-                n_batch, left = len(self.X_train) // self.kwargs["bsz"], len(self.X_train) % self.kwargs["bsz"]
-
-                for b in range(n_batch) :
-                    
-                    weight_sum = []
-
-                    for lk, _ in enumerate(lst_key) : 
-                        curr_w = self.sess.run(self.w_tf_d.values()[lk])
-                        for elt in curr_w.ravel() :
-                            weight_sum.append(elt)
-                    
-                    weight_sum = np.array(weight_sum).reshape(-1,1)
-
-                    bsz = self.kwargs["bsz"] + 1 if left > 0 else self.kwargs["bsz"]
-
-                    rand_index = np.random.choice(len(self.X_train), size=bsz)   
-                    self.X_batch = self.X_train[rand_index]
-                    self.y_batch = self.y_train[rand_index]
-                    
-                    left -=1
-                    
-                    if left <=0 : left = 0 
-#               
-                    if self.BN == True :
-                        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)): 
-                            self.sess.run(self.minimize_loss, feed_dict={self.x : self.X_batch,\
-                                                                         self.t : self.y_batch,\
-                                                                         self.weight_sum : weight_sum})
-                                            
-                            err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
-                                                                      self.t: self.y_train,\
-                                                                      self.weight_sum : weight_sum})
-                    
-                    else :
-                        self.sess.run(self.minimize_loss,feed_dict={self.x : self.X_batch,\
-                                                                    self.t : self.y_batch})  
-                                                                    
-                        err = self.sess.run(self.loss, feed_dict={self.x: self.X_train,\
-                                                                  self.t: self.y_train})
-                        
-                costs.append(err)
-                
-                if np.isnan(costs[-1]) : 
-                    raise IOError("Warning, Epoch {}, lr = {}.. nan".format(epoch, self.lr))
-                
-                if epoch % self.step == 0 :
-                    print("epoch {}/{}, cost = {}".format(epoch, self.max_epoch, err))
-                    if epoch % (2*self.step) :
-                        summary_str = case_summary.eval(feed_dict={self.x : self.X_batch,\
-                                                                   self.t : self.y_batch,\
-                                                                   self.weight_sum : weight_sum})
-                        file_writer.add_summary(summary_str, epoch*n_batch + b)
-                    
-                    if self.verbose == True :
-                        axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
-                        axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
-                        
-                        fig.tight_layout()
-                        
-                        plt.pause(0.001)
-#                        print ("{} : \n{}".format(epoch, self.sess.run(self.w_tf_d[self.wlastkey])))
-#                        ff.write("#"*20+"\n")
-#                        ff.write("\nIt={}\nweights values\n{}\n".format(epoch, self.sess.run(self.w_tf_d)))
-#                        ff.write("#"*20+"\n")
-                if np.abs(costs[-1]) < 1e-6 :
-                    print "Final Cost "
-                    break
-            print costs[-10:]
-            ff.close()
+                    # Assessing the cost with the updated parameters             
+                    err = self.sess.run(self.loss, feed_dict=feeding)
         
-        saver_path = saver.save(self.sess, self.graph_name)
+        return err, feeding
+            
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------    
+###------------------------------------------------------------------------------- 
+
+    def non_batched_training(self): 
+        lst_key = self.N_.keys()
+        lst_key.remove("I"); lst_key.remove("O")
+            
+        if self.advanced == True and self.err_type != "MSEGrad":
+            weight_sum = []
+
+            for lk, _ in enumerate(lst_key) : 
+                curr_w = self.sess.run(self.w_tf_d.values()[lk])
+                for elt in curr_w.ravel() :
+                    weight_sum.append(elt)
+            
+            weight_sum = np.array(weight_sum).reshape(-1,1)
+            feeding = {self.x : self.X_train, self.t : self.y_train, self.weight_sum : weight_sum}
+            
+        elif self.err_type == "MSEGrad": 
+            derr_y_pred = self.sess.run(tf.norm( tf.gradients(self.y_pred_model, [self.x]) ), feed_dict={self.x:self.X_train})
+            feeding = {self.x : self.X_train, self.t : self.y_train, self.jac : derr_y_pred}
         
-        file_writer.close()
-        
-        self.saver_path = saver_path
-        self.file_writer = file_writer
-        self.case_summary = case_summary
-        
-        self.costs = costs
+        else  :
+            feeding = {self.x : self.X_train, self.t : self.y_train}
+            
+        # Tuning the parameters (weights, biais)
+        self.sess.run(self.minimize_loss, feed_dict=feeding)
+                    
+        # Assessing the cost with the updated parameters                
+        err = self.sess.run(self.loss, feed_dict=feeding)
+
+        return err, feeding
 
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------    
-###-------------------------------------------------------------------------------        
+###-------------------------------------------------------------------------------
+
+    def config_plot(self): 
+#            if "label" in self.kwargs.keys() :
+#                label = self.kwargs["label"]
+#            else :
+#                label = "%s %s %s %d size HL = %d " %\
+#                (self.activation, self.train_mod, self.loss, self.bsz,len(self.N_.keys()) -2) 
+        
+        if plt.fignum_exists("Cost Evolution : loglog and lin") == False: 
+                fig, axes = plt.subplots(1,2,figsize=(12,3), num="Cost Evolution : loglog and lin")
+        subplot = plt.figure("Cost Evolution : loglog and lin")
+        axes = subplot.axes
+        fig = subplot
+                
+        axes[0].set_xlabel("#It")
+        axes[0].xaxis.set_label_coords(-0.01, -0.06)
+        axes[0].yaxis.set_label_position("left")
+        axes[0].set_title("loglog")
+        
+        axes[1].yaxis.set_label_position("right")
+        axes[1].set_title("lin")
+        axes[1].set_ylabel("Errors")
+        axes[1].yaxis.set_label_position("right")
+
+        return fig, axes
+
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------    
+###------------------------------------------------------------------------------- 
+
+    def Elastic_cost(self, r='None') :
+        
+        # Pseudo code : 
+        # J = tf.square(y_pred - target) + r*alpha * sum(|weights|) + (1-r)*0.5*alpha * sum(tf.square(weights))
+        
+        # si r = 0 ---> Ridge
+        # si r = 1 ---> Lasso 
+        if r == 'None' :
+        
+            if "r_parameter" in self.kwargs.keys() :
+               r = self.kwargs["r_parameter"]
+            else :  
+                r = -50
+                while np.abs(r) > 1 :
+                    r = float(input("Enter a value of r within 0 (all Ridge) and 1 (all lasso)" ))
+        
+        alpha = 1e-7 if "alpha" not in self.kwargs.keys() else self.kwargs["alpha"]
+                    
+        if np.abs(r) < 1e-8 :
+            print ("r = %f --> Ridge function selected" % r)
+        
+        if np.abs(r-1) < 1e-8 :
+            print ("r = %f --> Lasso function selected" % r)
+        
+        self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
+            
+        self.loss = tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                    tf.add(tf.multiply(r*alpha, self.reduce_type_fct(tf.abs(self.weight_sum))),\
+                           tf.multiply((1.-r)*0.5*alpha, self.reduce_type_fct(tf.square(self.weight_sum)))))
+    
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------    
+###------------------------------------------------------------------------------- 
+
+    def Custom_cost(self): 
+        custom_choice = ["custom_param", "Custom_param", "custom_parameter"]
+        inside = [c in self.kwargs.keys() for c in custom_choice]
+        
+        if True in inside :
+            custom_param = self.kwargs[custom_choice[inside.index[True]]]
+        
+        else :
+            print ("Custom Param set to {}".format(1e-4))
+            custom_param = 1e-4
+            self.kwargs["custom_param"] = custom_param
+       
+        self.loss = tf.expand_dims(\
+                    tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
+                    tf.multiply(custom_param, self.reduce_type_fct(self.x))), 0)
+    
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------    
+###------------------------------------------------------------------------------- 
 
     def predict(self, xs, rescale_tab=False):
         arg = np.copy(xs)
@@ -1172,22 +1023,26 @@ if __name__=="__main__":
 #    TF.optimisation()
     scaler_name = ["Standard", "MinMax", "Robust", "PCA"]
     names = iter(scaler_name)
-    color = iter(sns.color_palette("Set1", len(scaler_name)))
+    
     
 #    for sn in scaler_name :
     sn = "Standard"
-    TF = Neural_Network(0.0005, N_=N_, scaler = sn, reduce_type="sum", color="yellow", verbose=True,\
-                        max_epoch=100, clip=False)#, lasso_param = l, ridge_param = r)
+    color = iter(["yellow", "green", "black", "purple", "cyan"])
+    losses = iter(["OLS", "MSEGrad", "Lasso", "Ridge", "Elastic"])
+    
+#    for i in range(5) :
+        
+    TF = Neural_Network(0.0005, N_=N_, scaler = sn, reduce_type="sum", color="black", verbose=True, max_epoch=300, clip=False, r_parameter=0.5, bsz=128, BN=True)#, lasso_param = l, ridge_param = r)
 
     TF.split_and_scale(X,y,shuffle=True, val=False)
 
     TF.tf_variables()
-    TF.layer_stacking_and_act("relu")
+    TF.layer_stacking_and_act("swish")
     TF.def_optimizer("Adam")
-    TF.cost_computation("OLS")
+    TF.cost_computation("MSEGrad")
     TF.case_specification_recap()
     
-    TF.training_session(1e-3)
+    TF.training_phase(1e-3)
 #    
     print (TF.costs[-1])
 #    

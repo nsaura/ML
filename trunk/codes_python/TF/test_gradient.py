@@ -36,7 +36,7 @@ step = 5
 X, y = load_boston().data, load_boston().target
 
 now = datetime.utcnow().strftime("%Y_%m_%d_%Hh%M_%S")
-root_logdir = "tf_logs"+now
+root_logdir = "logs/tf_logs"+now
 logdir = "{}/run-{}/".format(root_logdir, now)
 
 # number of nodes
