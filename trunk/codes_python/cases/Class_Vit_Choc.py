@@ -322,7 +322,8 @@ class Vitesse_Choc() :
                 np.save(filename, u)
                 
             t = it = 0
-            while it < self.itmax :
+            
+            while it <= self.itmax+2 :
                 filename = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(it+1, j, self.Nt, self.Nx, self.CFL_str, self.nu_str, self.type_init))
                 if osp.exists(filename) == True :
                     it += 1
@@ -373,7 +374,7 @@ class Vitesse_Choc() :
         full_cov_obs_dict = dict()
         diag_cov_obs_dict = dict()
         init = self.type_init
-        for it in range(self.itmax) :
+        for it in range(self.itmax+2) :
             u_sum = np.zeros((self.Nx))
 
             # Calcul de la moyenne pour l'itération en cours
@@ -538,6 +539,9 @@ class Vitesse_Choc() :
                 u_n = u_n_beta
                 
             t1 = time.time()
+            
+            print ("it = ".format(it))
+            print ("it + 1 = ".format(it+1))
             
             u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it+1)]
             cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)] # Pour avoir la bonne taille de matrice
