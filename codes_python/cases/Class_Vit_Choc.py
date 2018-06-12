@@ -323,7 +323,7 @@ class Vitesse_Choc() :
                 
             t = it = 0
             
-            while it <= self.itmax+2 :
+            while it <= self.itmax+1 :
                 filename = osp.join(self.datapath, "u_it%d_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(it+1, j, self.Nt, self.Nx, self.CFL_str, self.nu_str, self.type_init))
                 if osp.exists(filename) == True :
                     it += 1
@@ -374,7 +374,7 @@ class Vitesse_Choc() :
         full_cov_obs_dict = dict()
         diag_cov_obs_dict = dict()
         init = self.type_init
-        for it in range(self.itmax+2) :
+        for it in range(self.itmax+1) :
             u_sum = np.zeros((self.Nx))
 
             # Calcul de la moyenne pour l'itération en cours
@@ -424,7 +424,7 @@ class Vitesse_Choc() :
 ##---------------------------------------------------
 ##---------------------------------------------------
 ##---------------------------------------------------
-    def minimization(self, maxiter, solver="BFGS", step=10):
+    def minimization(self, maxiter, solver="BFGS", step=5):
         fig, axes= plt.subplots(1, 2, figsize = (8,8))
         evol = 0
         if self.stats_done == False :
@@ -533,7 +533,7 @@ class Vitesse_Choc() :
         reg_fac = 1e-2
         Id = np.eye(self.Nx)
         
-        for it in range(self.itmax+1) :
+        for it in range(self.itmax) :
             if it >0 :
                 beta_n = beta_n_opti
                 u_n = u_n_beta
@@ -631,7 +631,8 @@ class Vitesse_Choc() :
             if it % step == 0 :
                 if evol == 2 :
                     evol = 0
-                    for i in [0,1] : axes[i].clear()
+                    for i in [0,1] : 
+                        axes[i].clear()
 
                 if evol == 0 :
                     axes[0].plot(self.line_x[:-1], beta_n_opti[:-1], label="iteration %d" %(it), c= "r")
@@ -655,6 +656,35 @@ class Vitesse_Choc() :
                     
                 plt.pause(0.01)
                 evol += 1
+            ## End of the while loop ## 
+        
+        # Plot the last iteration
+        if evol == 2 :
+            evol = 0
+            for i in [0,1] : 
+                axes[i].clear()
+            
+        if evol == 0 :
+            axes[0].plot(self.line_x[:-1], beta_n_opti[:-1], label="iteration %d" %(it), c= "r")
+            axes[0].fill_between(self.line_x[:-1], mins[:-1], maxs[:-1], facecolor= "0.2", alpha=0.2, interpolate=True, color="red")
+            
+            axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it), c='k')                 
+            axes[1].plot(self.line_x[:-1], self.U_beta_n_dict["u_beta_it%d" %(it)][:-1], label='Opti it %d'%(it),\
+                marker='o', fillstyle='none', linestyle='none', c='r')
+        if evol == 1 :
+            axes[0].plot(self.line_x[:-1], beta_n_opti[:-1], label="iteration %d" %(it), c = "b", marker="o")
+            axes[0].fill_between(self.line_x[:-1], mins[:-1], maxs[:-1], facecolor= "0.2", alpha=0.2, interpolate=True, color="b")
+            
+            axes[1].plot(self.line_x[:-1], u_obs_nt[:-1], label="LW it = %d" %(it), c='grey', marker="+")
+            axes[1].plot(self.line_x[:-1], self.U_beta_n_dict["u_beta_it%d" %(it)][:-1], label='Opti it %d'%(it),\
+                marker='o', fillstyle='none', linestyle='none', c='b')
+        
+        axes[0].legend(loc="best")
+
+        axes[1].set_ylim((-2.0, 2.0))
+        axes[1].legend(loc = "best")
+            
+        plt.pause(0.01)
 ###---------------------------------------------------##   
 ##----------------------------------------------------##
 if __name__ == '__main__' :

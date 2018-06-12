@@ -1,13 +1,12 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
 
-# Author : NS
 # Use of Various Helps From SO and CV; stack community
 # Ridge https://github.com/nfmcclure/tensorflow_cookbook/blob/master/03_Linear_Regression/06_Implementing_Lasso_and_Ridge_Regression/06_lasso_and_ridge_regression.ipynb
 # Vanilla Gradient descent https://towardsdatascience.com/improving-vanilla-gradient-descent-f9d91031ab1d
 
 # To run
-# run memory_burger_case.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
+# See at the end of the code
 # 
 import numpy as np
 import pandas as pd
@@ -165,17 +164,15 @@ def xy_burger (num_real, cb=cb, n_points=3, verbose=False) :
     dx = cb.dx
     
     if n_points == 3 :
-        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
-                                                 up[xj-1], up[xj], up[xj+1],\
-                                                 upp[xj-1], upp[xj], upp[xj+1],\
-                                                 (u[xj+1] - u[xj-1])/(2*cb.dx)\
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],
+                                                 up[xj-1], up[xj], up[xj+1],
+                                                 upp[xj-1], upp[xj], upp[xj+1]
                                                 ] 
     
     if n_points == 2 :
-        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],\
-                                                 up[xj-1], up[xj],\
-                                                 upp[xj-1], upp[xj],\
-                                                 (u[xj] - u[xj-1])/(cb.dx)\
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],
+                                                 up[xj-1], up[xj],
+                                                 upp[xj-1], upp[xj]
                                                 ] 
     
 #    add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
@@ -183,7 +180,7 @@ def xy_burger (num_real, cb=cb, n_points=3, verbose=False) :
 #                                             upp[xj-1], upp[xj], upp[xj+1]\
 #                                            ] 
     
-    X = np.zeros((n_points*3+1))
+    X = np.zeros((n_points*3))
     y = np.zeros((1))
 
     beta_chol_fct = lambda beta, chol : beta + chol.dot(np.random.rand(len(beta)))
@@ -294,9 +291,13 @@ def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
 
     except KeyboardInterrupt :
         print ("Session closed")
-        nn_obj.sess.close()
+        del nn_obj.sess
 
     beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
+    
+    score = nn_obj.score(beta_test_preds, nn_obj.y_test)
+    print ("score of this session is : {}".format(score))
+    
     test_line = range(len(nn_obj.X_test))
     
     try :
@@ -584,17 +585,15 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
     
     
     if n_points == 3 :
-        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],\
-                                                 up[xj-1], up[xj], up[xj+1],\
-                                                 upp[xj-1], upp[xj], upp[xj+1],\
-                                                 (u[xj+1] - u[xj-1])/(2*cb.dx)\
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj], u[xj+1],
+                                                 up[xj-1], up[xj], up[xj+1],
+                                                 upp[xj-1], upp[xj], upp[xj+1]
                                                 ] 
     
     if n_points == 2 :
-        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],\
-                                                 up[xj-1], up[xj],\
-                                                 upp[xj-1], upp[xj],\
-                                                 (u[xj] - u[xj-1])/(cb.dx)\
+        add_block     = lambda u, up, upp, xj : [u[xj-1], u[xj],
+                                                 up[xj-1], up[xj],
+                                                 upp[xj-1], upp[xj]
                                                 ] 
     plt.figure()
 
@@ -613,7 +612,7 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
             xs = xs.reshape(1, -1)
 
             beta.append(nn_obj.predict(xs)[0,0])
-        
+            cn_unext = cb.u_beta(cb.beta_prior, np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it)))
         # u_nNext.shape = 30 
         # use of list type to insert in a second time boundary condition
         u_nNext = cb.u_beta(np.asarray(beta), u)
@@ -621,7 +620,7 @@ def mNN_solver(nn_obj, cb=cb, typeJ="u", n_points=3):
         plt.clf()        
         plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
         plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
-        
+        plt.plot(cb.line_x[1:cb.Nx-1], cn_unext[1:cb.Nx-1], label="base solution (from true %d)" % it, marker='s', fillstyle = 'none', linestyle= 'none', c="k")
         plt.legend()
         plt.pause(5)
 
@@ -767,9 +766,21 @@ def mStack_prediction(nn_int, nn_fnl, typeJ="u", n_points=3) :
 ############################################################
 ############################################################
 #                                                          #
-# You should first have inferred data for your problem (this can be done by running 
-#       cb.minimization(maxiter=50) see Class_Vit_Choc at the end of the file 
+# You should first have inferred data for your problem 
+# If inferred calulus have not been maid follow this procedure :
 
+# First run Class_Vit_choc main function for example
+#       run Class_Vit_Choc.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 3 -Nx 52 -Nt 32 -beta_prior 10 -typeJ "u"
+
+# Then compute obs_res to further do the inference 
+#       cb.obs_res(True, True)
+
+# Then run the Bayesian inference
+#       cb.minimization(maxiter=50) :
+
+#### Until Here
+
+# Run the memory_burger_case : 
 # Any way you have to run this class in order to create a cb object needed 
 #       run memory_burger_case.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 3 -Nx 52 -Nt 32 -beta_prior 10 -typeJ "u"
 
