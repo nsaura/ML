@@ -3,21 +3,22 @@
 from __future__ import division
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 import seaborn as sns
 
-import os, csv
+import os
+
 from sklearn.model_selection import train_test_split
 
-import tensorflow as tf
-#import tensorlayer as tl
 
 from datetime import datetime
-from custom_swish_function import tf_swish
+import custom_swish_function as csf
 
+csf = reload(csf)
+
+import tensorflow as tf
 
 # Utilities :
 def find_divisor(N) :
@@ -27,8 +28,6 @@ def find_divisor(N) :
     # Since last divisor is N itself, we keep the prior last one
     return div_lst
 
-def error_rate(p, t):
-    return np.mean(p != t)
 
 ############################
 ## Notes en fin de codes !!!
@@ -377,7 +376,7 @@ class Neural_Network():
         # We added the possibility to deal with internal covariate shifting (Better generalization)
         # This possibility is activated if "BN" is in kwargs
         
-        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu, tf_swish] ) :
+        for str_act, act in zip(act_func_lst, [tf.nn.relu, tf.nn.sigmoid, tf.nn.tanh, tf.nn.leaky_relu, tf.nn.selu, csf.tf_swish] ) :
             if str_act == activation :
                 print ("fonction d'activation considérée : %s" %(activation))
                 
@@ -603,7 +602,7 @@ class Neural_Network():
                 
             elif err_type == "MSEGrad" :
                 self.jac = tf.placeholder(tf.float32, (None), name="grad_y_pred_x")
-                self.loss = self.reduce_type_fct(tf.add(tf.square(self.y_pred_model - self.t), tf.multiply(1e-3, self.jac)))
+                self.loss = self.reduce_type_fct(tf.add(tf.square(self.y_pred_model - self.t), tf.multiply(1e-5, self.jac)))
                 
             elif err_type == "Ridge":
                 self.Elastic_cost(r=0)
@@ -628,7 +627,7 @@ class Neural_Network():
 #    you get consistent loss independent of your matrix size. On average you will get reduce_sum 4 times bigger for a two times bigger matrix
 #    less chances you will get nan by overflowing
         self.err_type  = err_type 
-        
+        self.SL_type = SL_type
 ###-------------------------------------------------------------------------------   
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
@@ -680,6 +679,11 @@ class Neural_Network():
         err = 1.
         
         # Executing Phase
+        if self.err_type == "MSEGrad" :
+            self.grads_inputs = tf.norm(tf.gradients(self.y_pred_model, [self.x])[0])
+        
+        tf.get_default_graph().finalize()
+        
         
         if self.verbose == True :
             # Prepare the figures the errors will be plotting in.
@@ -740,7 +744,7 @@ class Neural_Network():
     def batched_training(self, n_batch, left): 
         lst_key = self.N_.keys()
         lst_key.remove("I"); lst_key.remove("O")
-            
+        err_b = 0
         for b in range(n_batch) :
             
             bsz = self.kwargs["bsz"] + 1 if left > 0 else self.kwargs["bsz"]
@@ -764,20 +768,23 @@ class Neural_Network():
                 feeding = {self.x : self.X_batch, self.t : self.y_batch, self.weight_sum : weight_sum}
             
             elif self.err_type=="MSEGrad" : 
-                derr_y_pred = self.sess.run(tf.norm( tf.gradients(self.y_pred_model, [self.x]) ), feed_dict={self.x:self.X_batch})
-                feeding = {self.x : self.X_batch, self.t : self.y_batch, self.jac:derr_y_pred}      
+                feeding = {self.x : self.X_batch, self.t : self.y_batch, self.jac:self.grads_inputs}      
                 
             else : 
                 feeding = {self.x : self.X_batch, self.t : self.y_batch}
                 
             if self.BN == True :
                 with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)): 
+                    if self.err_type=="MSEGrad" :
+                        feeding = {self.x : self.X_batch, self.t : self.y_batch,
+                           self.jac : self.sess.run(self.grads_inputs, feed_dict={self.x : self.X_batch})}
+                        
                     # Tuning the parameters (weights, biais)
                     self.sess.run(self.minimize_loss, feed_dict=feeding)
                     
                     # Assessing the cost with the updated parameters             
-                    err = self.sess.run(self.loss, feed_dict=feeding)
-        
+                    err_b += self.sess.run(self.loss, feed_dict=feeding)
+        err = err_b
         return err, feeding
             
 ###-------------------------------------------------------------------------------
@@ -799,13 +806,12 @@ class Neural_Network():
             weight_sum = np.array(weight_sum).reshape(-1,1)
             feeding = {self.x : self.X_train, self.t : self.y_train, self.weight_sum : weight_sum}
             
-        elif self.err_type == "MSEGrad": 
-            derr_y_pred = self.sess.run(tf.norm( tf.gradients(self.y_pred_model, [self.x]) ), feed_dict={self.x:self.X_train})
-            feeding = {self.x : self.X_train, self.t : self.y_train, self.jac : derr_y_pred}
-        
         else  :
             feeding = {self.x : self.X_train, self.t : self.y_train}
-            
+        
+        if self.err_type=="MSEGrad" :
+            feeding = {self.x : self.X_train, self.t : self.y_train,
+                       self.jac : self.sess.run(self.grads_inputs, feed_dict={self.x : self.X_batch})}
         # Tuning the parameters (weights, biais)
         self.sess.run(self.minimize_loss, feed_dict=feeding)
                     
@@ -918,7 +924,27 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
+    
+    def score (self, y_pred, y_true, rescale_tab=False) :
+        y_pred, y_true = np.copy(y_pred), np.copy(y_true)
 
+        if self.SL_type == "classification" :
+            score = np.mean(y_pred != y_true)
+            
+        if self.SL_type == "regression" :
+            y_true_mean = np.mean(y_true)
+            
+            print ("R2 score")
+            ratio = sum((y_true - y_pred)**2) / sum((y_true - y_true_mean)**2)
+            score = 1. - ratio
+            
+        self.score = score
+            
+        return score
+            
+###-------------------------------------------------------------------------------             
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
     def visualize_graph(self):
 #        writer = tf.summary.FileWriter('logs', self.sess.graph)
 #        writer.close()
@@ -1039,7 +1065,7 @@ if __name__=="__main__":
     TF.tf_variables()
     TF.layer_stacking_and_act("swish")
     TF.def_optimizer("Adam")
-    TF.cost_computation("MSEGrad")
+    TF.cost_computation("OLS")
     TF.case_specification_recap()
     
     TF.training_phase(1e-3)
@@ -1057,6 +1083,10 @@ if __name__=="__main__":
 
 ##-------------------------------------------------- NOTES --------------------------------------------------##
 
+del tf
+del plt
+del np
+del os
 
 ## Notes intéressantes de Methods of Model Based Process Control :
 
