@@ -42,7 +42,7 @@ X, y = np.zeros((1)), np.zeros((1))
 for it in range(cb.itmax) :
     u_curr = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it))
     u_next = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))
-    for j in range(1, cb.Nx) : #[1, Nx-1]
+    for j in range(1, cb.Nx-1) : #[1, Nx-1]
         
         X = np.block([[X], [u_curr[j]]])
         y = np.block([[y], [u_next[j]]])
@@ -50,11 +50,23 @@ for it in range(cb.itmax) :
 X = np.delete(X, 0, axis=0)
 y = np.delete(y, 0, axis=0)
 
-for i in range(5) :
-    permute_indices = np.random.permutation(np.arange(len(y)))
-    XX = X[permute_indices]* (1 + np.random.rand())
-    yy = y[permute_indices]
+x_to_randomize = np.copy(X)
+y_to_randomize = np.copy(y)
 
+for i in range(2) :
+    XX, yy  = [], []
+    
+    permute_indices = np.random.permutation(np.arange(len(y_to_randomize)))
+    x_random = x_to_randomize[permute_indices]
+    y_random = y_to_randomize[permute_indices]
+    
+    for j in range(len(x_random)) :
+        XX.append(x_random[j]*(1 + np.random.rand()))
+        yy.append(y_random[j])
+    
+    XX = np.array(XX)#.reshape(-1,1)
+    yy = np.array(yy)
+    
     X = np.block([[X], [XX]])
     y = np.block([[y], [yy]])
 
@@ -152,21 +164,28 @@ def build_direct_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
 def dNN_solver(nn_obj, cb=cb):
     plt.figure()
     u = np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, 0))
+    
+    u_nNext = []
     for it in range(1, cb.itmax) :
         beta = []
         if it > 1 :
             u = np.copy(u_nNext)
-            del u_nNext
+            u_nNext = [] 
+        
         for j in range(1, cb.Nx-1) :
             xs = np.array([u[j]])
             
             xs = nn_obj.scale_inputs(xs)
             xs = xs.reshape(1, -1)
 
-            beta.append(nn_obj.predict(xs)[0,0])
+            u_nNext.append(nn_obj.predict(xs)[0,0])
         # u_nNext.shape = 30 
         # use of list type to insert in a second time boundary condition
-        u_nNext = cb.u_beta(np.asarray(beta), u)
+        
+        u_nNext.insert(0, u[-2])
+        u_nNext.insert(len(u), u[1])
+        
+        u_nNext = np.array(u_nNext)
         
         plt.clf()        
         plt.plot(cb.line_x[1:cb.Nx-1], np.load(u_name(cb.Nx, cb.Nt, cb.nu, cb.type_init, cb.CFL, it+1))[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
