@@ -660,7 +660,7 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------            
 ###-------------------------------------------------------------------------------
 
-    def training_phase(self, tol) :
+    def training_phase(self, tol, early_stop=False) :
         
         if "clip"  in self.kwargs.keys() and self.kwargs["clip"] == True :
             gradients, variables = zip(*self.train_op.compute_gradients(self.loss))
@@ -682,8 +682,10 @@ class Neural_Network():
         file_writer = tf.summary.FileWriter(self.log_dir, tf.get_default_graph()) 
         
         costs = []
+        score_test = []
+        
         epoch = 0
-        err = 1.
+        
         
         # Executing Phase
         if self.err_type == "MSEGrad" :
@@ -691,12 +693,20 @@ class Neural_Network():
         
         tf.get_default_graph().finalize()
         
+        if early_stop == True :
+            tol = 0.93
+            err = 0.0
+            condition = lambda epoch, err : (epoch <= self.max_epoch and err < tol)
+        
+        else :
+            err = 1.
+            condition = lambda epoch, err : (epoch <= self.max_epoch and err > tol)
         
         if self.verbose == True :
             # Prepare the figures the errors will be plotting in.
             fig, axes = self.config_plot()
             
-        while epoch <= self.max_epoch and err > tol:
+        while condition(epoch, err):
             if self.batched== True :
                     n_batch, left = len(self.X_train) // self.kwargs["bsz"], len(self.X_train) % self.kwargs["bsz"]
                     err, feeding = self.batched_training(n_batch, left)
@@ -707,7 +717,10 @@ class Neural_Network():
                 err, feeding = self.non_batched_training()
                 curr_effective_epoch = epoch 
                 final_effective_epoch = self.max_epoch
-
+            
+            if early_stop == True :
+                y_pred = self.predict(self.X_train, rescale_tab=False)
+                score_test.append(self.score(y_pred, self.y_train))
             costs.append(err)
 
             if np.isnan(costs[-1]) : 
@@ -730,11 +743,15 @@ class Neural_Network():
             if np.abs(costs[-1]) < 1e-6 :
                 print ("Final Cost ".format(costs[-1]))
                 break
-
+            
+            if early_stop == True :
+                err = score_test[-1]
+                
             epoch += 1
-
+        
         print ("Ten last costs :\n{} ".format(costs[-10:]))
-
+        print ("Last epoch : %d" % epoch)
+        
         saver_path = saver.save(self.sess, self.graph_name)
         file_writer.close()
         
@@ -941,7 +958,6 @@ class Neural_Network():
         if self.SL_type == "regression" :
             y_true_mean = np.mean(y_true)
             
-            print ("R2 score")
             ratio = sum((y_true - y_pred)**2) / sum((y_true - y_true_mean)**2)
             score = 1. - ratio
             self.r2score = score
