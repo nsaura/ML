@@ -52,6 +52,12 @@ class Neural_Network():
         max_epoch : int --  Pour le learning, on impose une fin aux aller-retours du BackPropagation Algo.
                     Les poids seront peut être optimaux.
         """
+        try :
+            tf.reset_default_graph()
+        except :
+            print ("This time the graph won't be deleted")
+            pass
+        
         N_test = (N_ == "{}")
         if N_test == True :
             raise Exception("Merci de fournir un dictionnaire N_ de la forme : première clé \" \"I\" : N_features\"\
@@ -84,6 +90,7 @@ class Neural_Network():
             self.color = kwargs["color"]
         except KeyError :
             self.color= 'purple'
+            kwargs["color"] = self.color
 
         try :
             self.step = kwargs["step"]
@@ -811,7 +818,7 @@ class Neural_Network():
         
         if self.err_type=="MSEGrad" :
             feeding = {self.x : self.X_train, self.t : self.y_train,
-                       self.jac : self.sess.run(self.grads_inputs, feed_dict={self.x : self.X_batch})}
+                       self.jac : self.sess.run(self.grads_inputs, feed_dict={self.x : self.X_train})}
         # Tuning the parameters (weights, biais)
         self.sess.run(self.minimize_loss, feed_dict=feeding)
                     
@@ -1082,11 +1089,6 @@ if __name__=="__main__":
     plt.legend()
 
 ##-------------------------------------------------- NOTES --------------------------------------------------##
-
-del tf
-del plt
-del np
-del os
 
 ## Notes intéressantes de Methods of Model Based Process Control :
 
