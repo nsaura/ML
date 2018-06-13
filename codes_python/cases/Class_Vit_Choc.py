@@ -249,7 +249,7 @@ class Vitesse_Choc() :
         self.g_sup_max = new_criteria
         print("g_sup_max is now {}".format(self.g_sup_max))   
 ###---------------------------------------------------
-    def init_u(self, phase=0): 
+    def init_u(self, phase=0, cpx=1): 
         u = []
         if self.type_init == "choc":
             for i in range(len(self.line_x)) :
@@ -264,6 +264,14 @@ class Vitesse_Choc() :
         
         if self.type_init == "sin_decale" :
             u = np.sin(2*np.pi/self.L*self.line_x + phase) + 0.5
+        
+        if self.type_init == "complex_sin" :
+            u = np.zeros((len(self.line_x)))
+            harmonics = [np.sin(2*np.pi/self.L*self.line_x + k*phase) for k in range(1, cpx+1)]
+            
+            for h in harmonics :
+                for i in range(len(self.line_x)) :
+                    u[i] += h[i]
         return u
 ##---------------------------------------------------
     def u_beta(self, beta, u_n, verbose=False) :

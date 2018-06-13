@@ -59,6 +59,7 @@ def LW_solver(u_init, filename="u_test", write=False) :
         curr_filename = filename + "_it%d.npy"%(it+1)
         curr_filename = osp.join(abs_work, curr_filename)
         
+        
         if osp.exists(filename) == True :
             it += 1
             continue
@@ -85,40 +86,46 @@ def LW_solver(u_init, filename="u_test", write=False) :
 
         u = np.asarray(u) 
         
-        if write==True :
+        if write == True :
             if osp.exists(curr_filename) :
                 os.remove(curr_filename)
-                np.save(curr_filename, u)
+            np.save(curr_filename, u)
         
         it += 1
     return u, abs_work
-    
-def obs_res(cb, j_phase , write=False, plot=False)  : 
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+
+def obs_res(cb, j_phase, cpx=1 ,write=False, plot=False)  : 
     ## Déf des données du probleme 
     curr_phase = j_phase[0] 
     phase = j_phase[1]
     
     u, u_nNext = [], []
-    u = cb.init_u(phase) 
+    u = cb.init_u(phase, cpx) 
     r = cb.dt/cb.dx
-
+    
+    title=lambda it,cphase,cpx:"U(x) it %d phase %d cpx %d" %(it, cphase, cpx)
+    
+    u_curr_name=lambda it,cphase,cpx:"u_it%d_%d-eme_phase_cpx%d.npy"%(it,cphase, cpx)
+    
     # Tracés figure initialisation : 
     if plot == True :
         plt.figure("Resolution")
         plt.plot(cb.line_x, u)
-        plt.title("U vs X iteration 0 %d phase" %(curr_phase))
+        plt.title(title(0, curr_phase, cpx))
         plt.ylim((-2.5, 2.5))
         plt.pause(0.01)
     
-    # pd_write_csv --->> np.save
     if write == True : 
-        filename = osp.join(curr_work, "u_it0_{}-eme_phase.npy".format(curr_phase)) #osp.join(curr_work, "u_it0_%d_Nt%d_Nx%d_CFL%s_nu%s_%s.npy"%(j ,cb.Nt ,cb.Nx, cb.CFL_str, cb.nu_str, cb.type_init))
+        filename = osp.join(curr_work, u_curr_name(0, curr_phase, cpx))
         np.save(filename, u)
         
     t = it = 0
     
     while it <= cb.itmax+1 :
-        filename = osp.join(curr_work, "u_it%d_%d-eme_phase.npy"%(it+1, curr_phase))
+        filename = osp.join(curr_work, u_curr_name(it, curr_phase, cpx))
         if osp.exists(filename) == True :
             it += 1
             continue
@@ -156,12 +163,15 @@ def obs_res(cb, j_phase , write=False, plot=False)  :
                 plt.clf()
                 plt.plot(cb.line_x[0:cb.Nx-1], u[0:cb.Nx-1], c='k') 
                 plt.grid()
-                plt.title("u vs X, iteration %d phase %d" %(it, curr_phase)) 
+                plt.title(title(it, curr_phase, cpx)) 
                 plt.xticks(np.arange(0, cb.L-cb.dx, 0.25))
 #                        plt.yticks(np.arange(-2.5, 2.5, 0.5))
                 plt.ylim(-2.5,2.5)
                 plt.pause(0.1)  
-
+                
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
 ####
 
 pi_line = np.linspace(-np.pi/2., np.pi/2., 1000)
@@ -172,23 +182,24 @@ if osp.exists(curr_work) == False :
 
 def doit() :
     for j, c in enumerate(choices) :
-        obs_res(cb, [j, c], True, True) 
-
+        obs_res(cb, [j, c], 1, True, True) 
+        obs_res(cb, [j, c], 2, True, True)
 doit()
 
-lambda_filename = lambda it, phase_number : osp.join(curr_work,"u_it%d_%d-eme_phase.npy"%(it, phase_number))
+lambda_filename = lambda it, phase_number, cpx : osp.join(curr_work,"u_it%d_%d-eme_phase_cpx%d.npy"%(it, phase_number, cpx))
 
 X = np.zeros((3))
 y = np.zeros((1))
 
 for p in range(len(choices)) :
     for it in range(cb.itmax) :
-        u_curr = np.load(lambda_filename(it, p))
-        u_next = np.load(lambda_filename(it+1, p))
-    
-        for j in range(1, cb.Nx-1) : #[1, Nx-1]
-            X = np.block([[X], [u_curr[j], u_curr[j-1],u_curr[j+1]]])
-            y = np.block([[y], [u_next[j]]])
+        for cpx in range(1,3) :
+            u_curr = np.load(lambda_filename(it, p, cpx))
+            u_next = np.load(lambda_filename(it+1, p, cpx))
+        
+            for j in range(1, cb.Nx-1) : #[1, Nx-1]
+                X = np.block([[X], [u_curr[j], u_curr[j-1],u_curr[j+1]]])
+                y = np.block([[y], [u_next[j]]])
 
 X = np.delete(X, 0, axis=0)
 y = np.delete(y, 0, axis=0)
@@ -308,7 +319,7 @@ def multiNN_solver(nn_obj, cb=cb):
     plt.figure()
     p = np.random.choice(pi_line)
     
-    u = cb.init_u(p)
+    u = cb.init_u(p, cpx=2)
     
     _, abs_work = LW_solver(u, "u_test", write=True)
     
@@ -351,7 +362,7 @@ def multiRF_solver():
     plt.figure()
     p = np.random.choice(pi_line)
     
-    u = cb.init_u(p)
+    u = cb.init_u(p) + cb.init_u(np.random.choice(pi_line))
     
     _, abs_work = LW_solver(u, "u_test", write=True)
     
