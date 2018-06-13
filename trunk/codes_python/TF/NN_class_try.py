@@ -861,7 +861,6 @@ class Neural_Network():
 ###------------------------------------------------------------------------------- 
 
     def Elastic_cost(self, r='None') :
-        
         # Pseudo code : 
         # J = tf.square(y_pred - target) + r*alpha * sum(|weights|) + (1-r)*0.5*alpha * sum(tf.square(weights))
         
@@ -937,6 +936,7 @@ class Neural_Network():
 
         if self.SL_type == "classification" :
             score = np.mean(y_pred != y_true)
+            self.mean_score = score
             
         if self.SL_type == "regression" :
             y_true_mean = np.mean(y_true)
@@ -944,11 +944,10 @@ class Neural_Network():
             print ("R2 score")
             ratio = sum((y_true - y_pred)**2) / sum((y_true - y_true_mean)**2)
             score = 1. - ratio
-            
-        self.score = score
-            
-        return score
-            
+            self.r2score = score
+        
+        return score 
+                    
 ###-------------------------------------------------------------------------------             
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
