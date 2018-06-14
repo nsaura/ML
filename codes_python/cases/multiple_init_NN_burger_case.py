@@ -29,9 +29,11 @@ sys.path.append(nnc_folder)
 
 import NN_class_try as NNC
 import Class_Vit_Choc as cvc
+import harmonic_sinus as harm
 
 NNC = reload(NNC)
 cvc = reload(cvc)
+harm = reload(harm)
 
 #run multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -typeJ "u"
 
@@ -39,16 +41,16 @@ np.random.seed(1000000)
 parser = cvc.parser()
 cb = cvc.Vitesse_Choc(parser) 
 
-wdir = osp.abspath("./data/burger_dataset/direct_NN_proj/")
+wdir = osp.abspath("./data/burger_dataset/complex_init_NN/")
 curr_work = osp.join(wdir, "Nx:%d_Nt:%d_nu:%.4f_CFL:%0.2f" % (cb.Nx, cb.Nt, cb.nu, cb.CFL)) #beta_Nx:52_Nt:32_nu:0.025_typei:sin_CFL:0.4_it:017.npy
 
-def LW_solver(u_init, filename="u_test", write=False) :
+def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False) :
     r = cb.dt/cb.dx
     t = it = 0
     u = np.copy(u_init)
     u_nNext = []
     
-    while it <= cb.itmax+1 :
+    while it <= itmax + 1 :
         if "test" in filename.split("_") :
             abs_work = osp.join(curr_work, "tests_case")
             if osp.exists(abs_work) == False:
@@ -58,7 +60,6 @@ def LW_solver(u_init, filename="u_test", write=False) :
             
         curr_filename = filename + "_it%d.npy"%(it+1)
         curr_filename = osp.join(abs_work, curr_filename)
-        
         
         if osp.exists(filename) == True :
             it += 1
@@ -83,7 +84,7 @@ def LW_solver(u_init, filename="u_test", write=False) :
         
         u[0] = u[-2]
         u[-1]= u[1]
-
+        
         u = np.asarray(u) 
         
         if write == True :
@@ -91,6 +92,14 @@ def LW_solver(u_init, filename="u_test", write=False) :
                 os.remove(curr_filename)
             np.save(curr_filename, u)
         
+        if plot==True :
+            plt.figure("Evolution de la solution")
+            plt.clf()
+            plt.plot(cb.line_x, u, label="iteration = %d" % it)
+            plt.legend()
+            plt.ylim(-2,2)
+            plt.pause(0.15)
+            
         it += 1
     return u, abs_work
 #------------------------------------------------------------------
@@ -172,6 +181,31 @@ def obs_res(cb, j_phase, cpx=1 ,write=False, plot=False)  :
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
+def compute_true_u(cb, nsamples, pi_line, plot=False, write=False) :
+    X = np.zeros((3))
+    y = np.zeros((1))
+    
+    for n in range(nsamples) :
+        for kc in range(1,3) :
+            filename = "cpx_init_kc%d_%d" % (kc, n)
+            uu = harm.complex_init_sin(cb.line_x, kc=kc, inter_deph=pi_line, L=cb.L, plot=plot)
+            _, abs_work = LW_solver(uu, cb.itmax, filename = filename, write=write, plot=plot)
+                
+            for it in range(1, cb.itmax) :
+                u_curr = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it)))
+                u_next = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it+1)))
+
+                for j in range(1, len(uu)-1) :
+                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1]]])        
+                    y = np.block([[y], [u_next[j]]])
+    
+    X = np.delete(X, 0, axis=0)        
+    y = np.delete(y, 0, axis=0)
+    
+    return X, y 
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
 ####
 
 pi_line = np.linspace(-np.pi/2., np.pi/2., 1000)
@@ -184,45 +218,25 @@ def doit() :
     for j, c in enumerate(choices) :
         obs_res(cb, [j, c], 1, True, True) 
         obs_res(cb, [j, c], 2, True, True)
-doit()
+    
+    X = np.zeros((3))
+    y = np.zeros((1))
 
-lambda_filename = lambda it, phase_number, cpx : osp.join(curr_work,"u_it%d_%d-eme_phase_cpx%d.npy"%(it, phase_number, cpx))
+    for p in range(len(choices)) :
+        for it in range(cb.itmax) :
+            for cpx in range(1,3) :
+                u_curr = np.load(lambda_filename(it, p, cpx))
+                u_next = np.load(lambda_filename(it+1, p, cpx))
+            
+                for j in range(1, cb.Nx-1) : #[1, Nx-1]
+                    X = np.block([[X], [u_curr[j], u_curr[j-1],u_curr[j+1]]])
+                    y = np.block([[y], [u_next[j]]])
 
-X = np.zeros((3))
-y = np.zeros((1))
-
-for p in range(len(choices)) :
-    for it in range(cb.itmax) :
-        for cpx in range(1,3) :
-            u_curr = np.load(lambda_filename(it, p, cpx))
-            u_next = np.load(lambda_filename(it+1, p, cpx))
-        
-            for j in range(1, cb.Nx-1) : #[1, Nx-1]
-                X = np.block([[X], [u_curr[j], u_curr[j-1],u_curr[j+1]]])
-                y = np.block([[y], [u_next[j]]])
-
-X = np.delete(X, 0, axis=0)
-y = np.delete(y, 0, axis=0)
-
-#x_to_randomize = np.copy(X)
-#y_to_randomize = np.copy(y)
-
-#for i in range(2) :
-#    XX, yy  = [], []
-#    
-#    permute_indices = np.random.permutation(np.arange(len(y_to_randomize)))
-#    x_random = x_to_randomize[permute_indices]
-#    y_random = y_to_randomize[permute_indices]
-#    
-#    for j in range(len(x_random)) :
-#        XX.append(x_random[j]*(1 + np.random.rand()))
-#        yy.append(y_random[j])
-#    
-#    XX = np.array(XX)#.reshape(-1,1)
-#    yy = np.array(yy)
-#    
-#    X = np.block([[X], [XX]])
-#    y = np.block([[y], [yy]])
+    X = np.delete(X, 0, axis=0)
+    y = np.delete(y, 0, axis=0)
+    
+    return X, y
+    
 
 dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80}#, "N5":80, "N6":80, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
 
@@ -311,18 +325,21 @@ def multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=
     
     plt.show()
 
-# see burger_case_u_NN for writing something into ols fashion
-    
     return nn_obj
+
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
 
 def multiNN_solver(nn_obj, cb=cb):
     plt.figure()
-    p = np.random.choice(pi_line)
+    p = min(np.random.choice(pi_line), np.random.choice(pi_line))
     
-    u = cb.init_u(p, cpx=2)
+#    u = cb.init_u(p, cpx=2)
+    u = harm.complex_init_sin(cb.line_x, 1, pi_line, cb.L)
     
-    _, abs_work = LW_solver(u, "u_test", write=True)
-    
+    _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
+    print abs_work
     fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
     
     u_nNext = []
@@ -333,7 +350,7 @@ def multiNN_solver(nn_obj, cb=cb):
             u_nNext = []
             
         for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j], u[j-1], u[j+1]])
+            xs = np.array([u[j-1], u[j], u[j+1]])
             
             xs = nn_obj.scale_inputs(xs)
             xs = xs.reshape(1, -1)
@@ -353,6 +370,9 @@ def multiNN_solver(nn_obj, cb=cb):
         plt.legend()
         plt.pause(2)
         
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
    
 def multiRF_solver(): 
     xtr, xte, ytr, yte = train_test_split(X, y.ravel(), shuffle=True, random_state=0)
