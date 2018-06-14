@@ -6,7 +6,7 @@ import pandas as pd
 
 import sympy as sy
 
-sy.init_printing()
+#sy.init_printing()
 
 def func_XY_to_X_Y(f):
     """
@@ -121,88 +121,88 @@ f_mat   =   sy.Matrix([y - x**3 -2*x**2 + 1, y + x**2 - 1])
 d   =   sy.Derivative(sy.exp(sy.cos(x)), x)
 ddd =   d.doit()
 
-### Faire une figure avec un zoom
-figure = True
-if figure == True :
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d.axes3d import Axes3D
+#### Faire une figure avec un zoom
+#figure = True
+#if figure == True :
+#    import matplotlib as mpl
+#    import matplotlib.pyplot as plt
+#    from mpl_toolkits.mplot3d.axes3d import Axes3D
 
-    fig = plt.figure(figsize=(8, 4))
-    def f(x):
-        return 1/(1 + x**2) + 0.1/(1 + ((3 - x)/0.1)**2)
+#    fig = plt.figure(figsize=(8, 4))
+#    def f(x):
+#        return 1/(1 + x**2) + 0.1/(1 + ((3 - x)/0.1)**2)
 
 
-    def plot_and_format_axes(ax, x, f, fontsize):
-        ax.plot(x, f(x), linewidth=2)
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
-        ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
-        ax.set_xlabel(r"$x$", fontsize=fontsize)
-        ax.set_ylabel(r"$f(x)$", fontsize=fontsize)
+#    def plot_and_format_axes(ax, x, f, fontsize):
+#        ax.plot(x, f(x), linewidth=2)
+#        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
+#        ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
+#        ax.set_xlabel(r"$x$", fontsize=fontsize)
+#        ax.set_ylabel(r"$f(x)$", fontsize=fontsize)
 
-    # main graph
-    ax = fig.add_axes([0.1, 0.15, 0.8, 0.8], axisbg="#f5f5f5")
-    x = np.linspace(-4, 14, 1000)
-    plot_and_format_axes(ax, x, f, 18)
+#    # main graph
+#    ax = fig.add_axes([0.1, 0.15, 0.8, 0.8], axisbg="#f5f5f5")
+#    x = np.linspace(-4, 14, 1000)
+#    plot_and_format_axes(ax, x, f, 18)
 
-    # inset
-    x0, x1 = 2.5, 3.5
-    ## Les deux lignes pointillées
-    ax.axvline(x0, ymax=0.3, color="grey", linestyle=":")  
-    ax.axvline(x1, ymax=0.3, color="grey", linestyle=":")
+#    # inset
+#    x0, x1 = 2.5, 3.5
+#    ## Les deux lignes pointillées
+#    ax.axvline(x0, ymax=0.3, color="grey", linestyle=":")  
+#    ax.axvline(x1, ymax=0.3, color="grey", linestyle=":")
 
-    #Ajout de la figure
-    ax = fig.add_axes([0.5, 0.5, 0.38, 0.42], axisbg='none') 
-    #[début_horiz, début_vertical, fin_horiz, fin_vertical]
-    x = np.linspace(x0, x1, 1000)
-    plot_and_format_axes(ax, x, f, 14)
+#    #Ajout de la figure
+#    ax = fig.add_axes([0.5, 0.5, 0.38, 0.42], axisbg='none') 
+#    #[début_horiz, début_vertical, fin_horiz, fin_vertical]
+#    x = np.linspace(x0, x1, 1000)
+#    plot_and_format_axes(ax, x, f, 14)
 
-    mpl.rcParams["text.usetex"]=True
+#    mpl.rcParams["text.usetex"]=True
 
-    fig, ax = plt.subplots(figsize=(12, 3))
-    ax.set_yticks([])
-    ax.set_xticks([])
-    ax.set_xlim(-0.5, 3.5)
-    ax.set_ylim(-0.05, 0.25)
+#    fig, ax = plt.subplots(figsize=(12, 3))
+#    ax.set_yticks([])
+#    ax.set_xticks([])
+#    ax.set_xlim(-0.5, 3.5)
+#    ax.set_ylim(-0.05, 0.25)
 
-    ax.axhline(0)
-    # text label
-    ax.text(0, 0.1, "Et donc voila ", fontsize=14, family="serif")
-    # annotation
-    ax.plot(1, 0, "o")
-    ax.annotate("Interesting",
-                fontsize=14, family="serif",
-                xy=(1, 0), xycoords="data",
-                xytext=(+20, +50), textcoords="offset points",
-                arrowprops=dict(arrowstyle="->", connectionstyle="arc3, rad=.5")) #guette la fleche
-    ax.text(2, 0.1, r"Equation: $i\hbar\partial_t \Psi = \hat{H}\Psi$",
-                    fontsize=14, family="serif")
+#    ax.axhline(0)
+#    # text label
+#    ax.text(0, 0.1, "Et donc voila ", fontsize=14, family="serif")
+#    # annotation
+#    ax.plot(1, 0, "o")
+#    ax.annotate("Interesting",
+#                fontsize=14, family="serif",
+#                xy=(1, 0), xycoords="data",
+#                xytext=(+20, +50), textcoords="offset points",
+#                arrowprops=dict(arrowstyle="->", connectionstyle="arc3, rad=.5")) #guette la fleche
+#    ax.text(2, 0.1, r"Equation: $i\hbar\partial_t \Psi = \hat{H}\Psi$",
+#                    fontsize=14, family="serif")
 
-    ### Plot 3D
-    mpl.rcParams["text.usetex"]=False
+#    ### Plot 3D
+#    mpl.rcParams["text.usetex"]=False
 
-    fig, axes = plt.subplots(1, 3, figsize=(14, 4), subplot_kw={'projection': '3d'})
-    def title_and_labels(ax, title):
-        ax.set_title(title)
-        ax.set_xlabel("$x$", fontsize=16)
-        ax.set_ylabel("$y$", fontsize=16)
-        ax.set_zlabel("$z$", fontsize=16)
+#    fig, axes = plt.subplots(1, 3, figsize=(14, 4), subplot_kw={'projection': '3d'})
+#    def title_and_labels(ax, title):
+#        ax.set_title(title)
+#        ax.set_xlabel("$x$", fontsize=16)
+#        ax.set_ylabel("$y$", fontsize=16)
+#        ax.set_zlabel("$z$", fontsize=16)
 
-    x = y = np.linspace(-3, 3, 74)
-    X, Y = np.meshgrid(x, y)
-    R = np.sqrt(X**2 + Y**2)
-    Z = np.sin(4 * R) / R
-    norm = mpl.colors.Normalize(-abs(Z).max(), abs(Z).max())
+#    x = y = np.linspace(-3, 3, 74)
+#    X, Y = np.meshgrid(x, y)
+#    R = np.sqrt(X**2 + Y**2)
+#    Z = np.sin(4 * R) / R
+#    norm = mpl.colors.Normalize(-abs(Z).max(), abs(Z).max())
 
-    p = axes[0].plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=0,
-                            antialiased=False, norm=norm, cmap=mpl.cm.Blues)
-    cb = fig.colorbar(p, ax=axes[0], shrink=0.6)
-    title_and_labels(axes[0], "plot_surface")
-    axes[1].plot_wireframe(X, Y, Z, rstride=2, cstride=2, color="darkgrey")
-    title_and_labels(axes[1], "plot_wireframe")
-    axes[2].contour(X, Y, Z, zdir='z', offset=0, norm=norm, cmap=mpl.cm.Blues)
-    axes[2].contour(X, Y, Z, zdir='y', offset=3, norm=norm, cmap=mpl.cm.Blues)
-    title_and_labels(axes[2], "contour")
+#    p = axes[0].plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=0,
+#                            antialiased=False, norm=norm, cmap=mpl.cm.Blues)
+#    cb = fig.colorbar(p, ax=axes[0], shrink=0.6)
+#    title_and_labels(axes[0], "plot_surface")
+#    axes[1].plot_wireframe(X, Y, Z, rstride=2, cstride=2, color="darkgrey")
+#    title_and_labels(axes[1], "plot_wireframe")
+#    axes[2].contour(X, Y, Z, zdir='z', offset=0, norm=norm, cmap=mpl.cm.Blues)
+#    axes[2].contour(X, Y, Z, zdir='y', offset=3, norm=norm, cmap=mpl.cm.Blues)
+#    title_and_labels(axes[2], "contour")
 
 
     #a,b,c = sy.symbols('a,b,c', char=True)
