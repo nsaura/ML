@@ -238,7 +238,7 @@ def doit() :
     return X, y
     
 
-dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80}#, "N5":80, "N6":80, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
+dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80}#, "N3":80, "N4":80, "N5":80, "N6":80}#, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
 
 def multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
