@@ -19,7 +19,6 @@ import time
 from sklearn.ensemble import RandomForestRegressor as rfr
 from sklearn.model_selection import train_test_split
 
-
 from tensorflow import reset_default_graph
 
 import Class_write_case as cwc
