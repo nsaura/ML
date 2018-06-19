@@ -360,7 +360,7 @@ class Neural_Network():
         ### We also create x and t which are training data and target to train the model
             ### Those will be tf.placeholder 
         self.x = tf.placeholder(tf.float32, (None, self.Ncol_Xtrain), name="inputs"  )
-        self.t = tf.placeholder(tf.float32, (None, 1), name="output" )
+        self.t = tf.placeholder(tf.float32, (None, self.N_["O"]), name="output" )
         
         self.w_tf_d = w_tf_d
         self.b_tf_d = b_tf_d
