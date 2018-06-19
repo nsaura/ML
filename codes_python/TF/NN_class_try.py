@@ -29,9 +29,9 @@ def find_divisor(N) :
     return div_lst
 
 
-############################
-## Notes en fin de codes !!!
-############################
+#############################
+# Notes en fin de codes !!! #
+#############################
 
 config = tf.ConfigProto(
         device_count = {'GPU': 0}
