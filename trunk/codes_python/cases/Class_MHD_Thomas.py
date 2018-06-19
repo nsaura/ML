@@ -16,6 +16,10 @@ import matplotlib.cm as cm
 import numdifftools as nd
 
 import time
+import sys
+
+import harmonic_sinus as harm
+harm = reload(harm)
 
 def THparser() :
     parser=argparse.ArgumentParser(description='\
@@ -104,7 +108,7 @@ class Thomas_class() :
         self.U = parser.U
         
         if np.abs(parser.H) < 1e-5 :
-            self.H = 0.2*self.U
+            self.H = 0.1*self.U
             print ("Hmax = %f" % self.H)
         
         else :
@@ -129,10 +133,25 @@ class Thomas_class() :
         self.CFL_str = str(self.CFL).replace(".","_")
         self.type_init = parser.type_init
         
+        init_allowed = ["random", "sin", "complex", "choc"]
+        if self.type_init not in init_allowed :
+            sys.exit("type_init -init_u has to be in {}".format(init_allowed))
+        
         self.beta_prior = np.asarray([parser.beta_prior for i in range(self.Nx)])
         
         if osp.exists(self.datapath) == False :
             os.makedirs(self.datapath)
+        
+        self.u_dir = osp.join(osp.abspath(self.datapath), "u")
+        self.h_dir = osp.join(osp.abspath(self.datapath), "h")
+        
+        print self.h_dir
+        
+        if osp.exists(self.u_dir) == False:
+            os.makedirs(self.u_dir)
+        
+        if osp.exists(self.h_dir) == False:
+            os.makedirs(self.h_dir)
         
         if osp.exists(self.logbook_path) == False :
             os.makedirs(self.logbook_path)
@@ -151,13 +170,23 @@ class Thomas_class() :
                        "CFL": self.CFL,
                        "UMax" : self.U,
                        "HMax": self.H}
-                       
+       
+        self.u_name = lambda nx, nt, nu, mag_diff, CFL, it : osp.join(self.u_dir,\
+            "u_Nx:{}_Nt:{}_nu:{}_magdiff:{}_CFL:{}_it:{:04}.npy".format(nx, nt, nu, mag_diff, CFL, it))
+            
+        self.h_name = lambda nx, nt, nu, mag_diff, CFL, it : osp.join(self.h_dir,\
+            "h_Nx:{}_Nt:{}_nu:{}_magdiff:{}_CFL:{}_it:{:04}.npy".format(nx, nt, nu, mag_diff, CFL, it))
+            
+        self.thiscase = time.strftime("%Y_%m_%d_%Hh%m_%S") + "MHD_nu:%.5f_ratio:%.2f_U:%.2f_H:%.2f.txt"\
+                        %(self.nu, self.diff_ratio, self.U, self.H)
+        
 ##---------------------------------------------------         
 ##--------------------------------------------------- 
 ##--------------------------------------------------- 
 
-    def init_fields(self, type_init,  phase = 0, plot=False) :
-        if type_init == "random" :
+    def init_fields(self, phase = 0, kc = 1, plot=False) :
+        
+        if self.type_init == "random" :
             U_intervals = np.linspace(-self.U, self.U, 10000)
             H_intervals = np.linspace(-self.H, self.H, 10000)
         
@@ -173,9 +202,26 @@ class Thomas_class() :
             u_init_field.insert(len(u_init_field), 0.0)
             h_init_field.insert(len(u_init_field), 0.0)
 
-        if type_init == "sin" :
+        if self.type_init == "sin" :
             u_init_field = self.U*np.sin(2*np.pi*self.line_x/self.L + phase)
             h_init_field = self.H*np.sin(2*np.pi*self.line_x/self.L + phase)
+        
+        if self.type_init == "choc" :
+            u_init_field, h_init_field = [], []
+            
+            for x in self.line_x :
+                if 0.5 < x < self.L/2. + 0.5 :
+                    u_init_field.append(self.U)
+                    h_init_field.append(self.H)
+                    
+                else :
+                    u_init_field.append(0.)
+                    h_init_field.append(0.)
+        
+        if self.type_init == 'complex'  :
+            inter_deph = np.linspace(-np.pi, np.pi, 10000)
+            u_init_field = harm.complex_init_sin(self.line_x, kc, inter_deph, self.L, A=25)
+            h_init_field = self.H / self.U * u_init_field
             
         if plot :
             plt.figure()
@@ -202,19 +248,28 @@ class Thomas_class() :
         
         g = h * np.sqrt(3)
         
+#        Qu, Qh = self.correlation(u, g)
+
         fig, axes = plt.subplots(1, 2, figsize=(8,8), num="Evolution u et g")
         
         while cpt <= self.itmax :
             if cpt % 10 == 0 or cpt ==1 :
                 for i in [0,1]: axes[i].clear()
-                axes[0].plot(self.line_x, u, label="u it=%d" % cpt, color="blue")
-                axes[0].set_ylim(-2.5, 2.5)
-                                
-                axes[1].plot(self.line_x, g, label="h it=%d" % cpt, color="red")
-                axes[1].set_ylim(-1.25, 1.25)
-                plt.legend(loc='best')
+                axes[0].plot(self.line_x, u, label="u it %d" % cpt, color="blue")
+                axes[0].set_ylim(-round(self.U*1.5) , round(self.U*1.5))
+
+                axes[1].plot(self.line_x, g/np.sqrt(3), label="h it %d" % cpt, color="red")
+                axes[1].set_ylim(-self.U,self.U)
                 
+                for i in [0,1]: axes[i].legend(loc="best")
+                                
                 plt.pause(1)
+#                axes[1].plot(range(self.Nx), Qu, label="Correlation u it %d" % cpt, color="k")
+#                axes[1].plot(range(self.Nx), Qh, label="Correlation h it %d" % cpt,\
+#                             color="green", linestyle='--')
+#                axes[1].set_ylim(-1., 1.15)
+#                axes[1].legend(loc='best')
+                
 
             for j in range(1, self.Nx-1) :
                 u1 = u[j] * (1 - self.r*( u[j+1] - u[j-1] ))
@@ -229,6 +284,7 @@ class Thomas_class() :
                 u_nNext[j] = u1 + u2 + u3
                 g_nNext[j] = g1 - g2 + g3
             
+            
             u_nNext[0] = u_nNext[-2]
             u_nNext[-1] = u_nNext[1]
             
@@ -238,23 +294,50 @@ class Thomas_class() :
             u = u_nNext
             g = g_nNext
             
+            if True in np.isnan(u) :
+                sys.exit("CPT %d nan in u" % cpt)
             
             cpt += 1
+            self.u_final = u
+            self.h_final = g / np.sqrt(3)
             t += self.dt
             
-        self.u_final = u
-        self.h_final = g / np.sqrt(3)
+        self.Qu, self.Qh = self.correlation(u, g)
         
         plt.figure()
         plt.plot(self.line_x, self.u_final, label="u itmax %d" % self.itmax, color='blue')
         plt.plot(self.line_x, self.h_final, label="h itmax %d" % self.itmax,  color='red', linestyle='--')
         plt.legend(loc='best')
         
-    def write_casesumup(self): 
-        thiscase = time.strftime("%Y_%m_%d_%Hh%m_%S") + "MHD_nu:%.5f_ratio:%.2f_U:%.2f_H:%.2f.txt"\
-                        %(self.nu, self.diff_ratio, self.U, self.H)
+##---------------------------------------------------         
+##--------------------------------------------------- 
+##--------------------------------------------------- 
+    
+    def correlation(self, curr_u, curr_g) :
+        uu = np.copy(curr_u)
+        hh = np.copy(curr_g) / np.sqrt(3)
         
-        pathtowrite = osp.join(self.logbook_path, thiscase)
+        uu = np.concatenate([uu,uu] , axis=0)
+        hh = np.concatenate([hh,hh] , axis=0)
+        
+        qu = np.zeros((self.Nx))
+        qh = np.zeros((self.Nx))
+        
+        for r in range(self.Nx) :
+            qu[r] = np.mean([uu[i]*uu[i+r] for i in range(self.Nx)])
+            qh[r] = np.mean([hh[i]*hh[i+r] for i in range(self.Nx)])
+        
+        qu /= qu[0]
+        qh /= qh[0]
+        
+        return qu, qh
+##---------------------------------------------------         
+##--------------------------------------------------- 
+##--------------------------------------------------- 
+        
+    def write_casesumup(self): 
+        
+        pathtowrite = osp.join(self.logbook_path, self.thiscase)
 
         f = open(pathtowrite, "w")
         f.write("*"*28 + "\n")
@@ -278,6 +361,7 @@ class Thomas_class() :
         f.write("Final fields \nU:\n{} \n\nH:\n{}".format(self.u_final, self.h_final))      
         
         f.close()
+        
 ##---------------------------------------------------         
 ##--------------------------------------------------- 
 ##--------------------------------------------------- 
@@ -289,6 +373,9 @@ if __name__ == "__main__" :
     parser = THparser()
     tc = Thomas_class(parser)
     
-    tc.init_fields("sin", phase=0, plot=True)
+    tc.init_fields(phase=0, plot=True)
     tc.thomas_dynamics(True)
+
+
+# run Class_MHD_Thomas.py -Nx 1000 -nu 2.5e-3 -Nt 500 -ratio 0.5 -U 1.5 -init_u "complex"
 
