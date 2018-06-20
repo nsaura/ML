@@ -33,27 +33,30 @@ def THparser() :
     # Caractéristiques de la simulation voulue          
     parser.add_argument('--Nx', '-Nx', action='store', type=int, default=202, dest='Nx', 
                         help='Define the number of discretization points : default %(default)d \n' )
+
     parser.add_argument('--N_temp', '-Nt', action='store', type=int, default=202, dest='Nt', 
                         help='Define the number of time steps; default %(default)d \n' )
+
     parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=3, dest='num_real', 
                         help='Define the number of realizations drawn; default %(default)d \n' )
                         
     parser.add_argument('--domain_length', '-L', action='store', type=int, default=float(3), dest='L',
                         help='Define the length of the domain; default %(default)f \n' )
+
     parser.add_argument('--CFL', '-CFL', action='store', type=float, default=0.45, dest='CFL', 
                         help='Define this simulations\'s CFL (under 0.5); default %(default)d\n' )
                         
-    parser.add_argument('--diffusion_rate', '-nu', action='store', type=float, default=2.5e-5, dest='nu', 
+    parser.add_argument('--reynolds_number', '-Re', action='store', type=float, default=2.5e-2, dest='Re', 
                         help='Define the convection coefficient h \n' )
     
-    parser.add_argument("--Umax", "-U", action="store", type=float, default=5., dest="U",
+    parser.add_argument("--Umax", "-U", action="store", type=float, default=1.2, dest="U",
                         help="Define U max. Default: %(default)f m/s \n")
 
     parser.add_argument("--HMax", "-H", action="store", type=float, default=0.0, dest="H",
                         help="Define H max. Default: %(default)f m/s \n")
     
-    parser.add_argument("--reynolds_ratio", "-ratio", action="store", default=0.01, type=float, dest="diff_ratio",
-                        help="Define the diffusivity ratio Nu/Lambda. Default: %(default)f \n")
+    parser.add_argument("--prandtl_magnetic", "-Pr", action="store", default=0.01, type=float, dest="Pr",
+                        help="Define the magnetic Prandtl of the simulation : Pr = Nu/Lambda. Default: %(default)f \n")
     # Pour l'algorithme
 #    parser.add_argument('--delta_t', '-dt', action='store', type=float, default=1e-4, dest='dt', 
 #                        help='Define the time step disctretization. Default to %(default).5f \n' )
@@ -80,46 +83,40 @@ class Thomas_class() :
         
         self.Nx = parser.Nx  
         self.Nt = parser.Nt 
+        self.Re = parser.Re
+        self.Pr = parser.Pr #Mag Prandtl
+
+        self.U = parser.U
+
         self.CFL = parser.CFL
-        self.nu  = parser.nu
-        
+
         L = parser.L
         dx = L/(self.Nx-1)
         
-        dt = {"dt_v" : self.CFL / self.nu * dx**2,
-              "dt_l" : self.CFL*dx}
+        self.nu = self.U * dx / self.Re
+        self.mag_diff = self.nu / self.Pr 
+        
+        self.H = 0.1 * self.U
+        print ("Hmax = %f" % self.H)
+        
+        self.Re_mag = self.H * dx / self.mag_diff        
+        
+        dt_dict = {"dt_visqueux" : self.CFL / self.nu * dx**2,
+                   "dt_lineaire" : self.CFL*dx,
+                   "dt_magnetic" : self.CFL / self.mag_diff * dx**2
+                  }
               
-        if dt["dt_v"] < dt["dt_l"] :
-            dt = dt["dt_v"]
-            print ("dt visqueux")
-        else :
-            dt = dt["dt_l"]
-            print ("dt lineaire")
+        dt = min(dt_dict.values())
         
-        print ("dt = ", dt)
+        print ("%s = %f" % (dt_dict.keys()[dt_dict.values().index(dt)], dt))
         
-        self.fac = self.nu*dt/dx**2
+        self.fac = self.nu * dt / dx**2
+
         tf = self.Nt * dt
         
         self.r = 0.5 * dt / dx
         
         self.line_x = np.arange(0,L+dx, dx)
-        
-        self.U = parser.U
-        
-        if np.abs(parser.H) < 1e-5 :
-            self.H = 0.1*self.U
-            print ("Hmax = %f" % self.H)
-        
-        else :
-            self.H = parser.H
-        
-        self.diff_ratio = parser.diff_ratio
-        self.mag_diff = self.nu / self.diff_ratio 
-        
-        
-        self.nu_reynolds = self.U * dx / self.nu
-        self.mag_reynolds = self.H * dx / self.mag_diff
         
         self.logbook_path=  osp.abspath(parser.logbook_path)
         self.datapath    =  osp.abspath(parser.datapath)
@@ -161,15 +158,16 @@ class Thomas_class() :
         self.sum_up = {"Nx" : self.Nx,
                        "Nt" : self.Nt,
                        "nu" : self.nu,
-                       "Nu_reynolds" : self.nu_reynolds,
-                       "mag_diff" : self.mag_diff,
-                       "mag_reynolds" : self.mag_reynolds,
-                       "Diffusivity ratio" : self.diff_ratio,
+                       "Reynolds_Number" : self.Re,
+                       "magnetic_diffusivity" : self.mag_diff,
+                       "magnetic_reynolds" : self.Re_mag,
+                       "Magnetic Prandtl" : self.Pr,
                        "itmax" : self.itmax,
                        "Domaine length" : self.L,
                        "CFL": self.CFL,
                        "UMax" : self.U,
-                       "HMax": self.H}
+                       "HMax": self.H
+                      }
        
         self.u_name = lambda nx, nt, nu, mag_diff, CFL, it : osp.join(self.u_dir,\
             "u_Nx:{}_Nt:{}_nu:{}_magdiff:{}_CFL:{}_it:{:04}.npy".format(nx, nt, nu, mag_diff, CFL, it))
@@ -177,8 +175,8 @@ class Thomas_class() :
         self.h_name = lambda nx, nt, nu, mag_diff, CFL, it : osp.join(self.h_dir,\
             "h_Nx:{}_Nt:{}_nu:{}_magdiff:{}_CFL:{}_it:{:04}.npy".format(nx, nt, nu, mag_diff, CFL, it))
             
-        self.thiscase = time.strftime("%Y_%m_%d_%Hh%m_%S") + "MHD_nu:%.5f_ratio:%.2f_U:%.2f_H:%.2f.txt"\
-                        %(self.nu, self.diff_ratio, self.U, self.H)
+        self.thiscase = time.strftime("%Y_%m_%d_%Hh%m_%S") + "MHD_Re:%.5f_Pr:%.2f_U:%.2f_H:%.2f.txt"\
+                        %(self.Re, self.Pr, self.U, self.H)
         
 ##---------------------------------------------------         
 ##--------------------------------------------------- 
@@ -248,28 +246,30 @@ class Thomas_class() :
         
         g = h * np.sqrt(3)
         
-#        Qu, Qh = self.correlation(u, g)
+        self.Qu, self.Qh = self.correlation(u, g)
 
         fig, axes = plt.subplots(1, 2, figsize=(8,8), num="Evolution u et g")
         
         while cpt <= self.itmax :
-            if cpt % 10 == 0 or cpt ==1 :
+            if cpt % 10 == 0 :
                 for i in [0,1]: axes[i].clear()
                 axes[0].plot(self.line_x, u, label="u it %d" % cpt, color="blue")
-                axes[0].set_ylim(-round(self.U*1.5) , round(self.U*1.5))
+                axes[0].set_ylim(-round(self.U) , round(self.U))
 
-                axes[1].plot(self.line_x, g/np.sqrt(3), label="h it %d" % cpt, color="red")
-                axes[1].set_ylim(-self.U,self.U)
+                axes[0].plot(self.line_x, g/np.sqrt(3), label="h it %d" % cpt, color="red")
+                axes[0].set_ylim(-self.U, self.U)
                 
-                for i in [0,1]: axes[i].legend(loc="best")
                                 
-                plt.pause(1)
-#                axes[1].plot(range(self.Nx), Qu, label="Correlation u it %d" % cpt, color="k")
-#                axes[1].plot(range(self.Nx), Qh, label="Correlation h it %d" % cpt,\
-#                             color="green", linestyle='--')
-#                axes[1].set_ylim(-1., 1.15)
-#                axes[1].legend(loc='best')
+                axes[1].plot(range(int(self.Nx/2.)), self.Qu, label="Correlation u it %d" % cpt, color="k")
+                axes[1].plot(range(int(self.Nx/2.)), self.Qh, label="Correlation h it %d" % cpt,\
+                             color="green", linestyle='--')
+                axes[1].set_ylim(-1., 1.15)
+                axes[1].legend(loc='best')
                 
+                axes[0].set_title("iteration t= %f" % t)
+                
+                plt.pause(1)
+                for i in [0,1]: axes[i].legend(loc="best")
 
             for j in range(1, self.Nx-1) :
                 u1 = u[j] * (1 - self.r*( u[j+1] - u[j-1] ))
@@ -302,7 +302,7 @@ class Thomas_class() :
             self.h_final = g / np.sqrt(3)
             t += self.dt
             
-        self.Qu, self.Qh = self.correlation(u, g)
+            self.Qu, self.Qh = self.correlation(u, g)
         
         plt.figure()
         plt.plot(self.line_x, self.u_final, label="u itmax %d" % self.itmax, color='blue')
@@ -317,34 +317,41 @@ class Thomas_class() :
         uu = np.copy(curr_u)
         hh = np.copy(curr_g) / np.sqrt(3)
         
-        uu = np.concatenate([uu,uu] , axis=0)
-        hh = np.concatenate([hh,hh] , axis=0)
+#        uu = np.concatenate([uu, uu] , axis=0)
+#        hh = np.concatenate([hh, hh] , axis=0)
         
-        qu = np.zeros((self.Nx))
-        qh = np.zeros((self.Nx))
+        qu = np.zeros((int(self.Nx/2.)))
+        qh = np.zeros((int(self.Nx/2.)))
         
-        for r in range(self.Nx) :
-            qu[r] = np.mean([uu[i]*uu[i+r] for i in range(self.Nx)])
-            qh[r] = np.mean([hh[i]*hh[i+r] for i in range(self.Nx)])
+        for r in range(int(self.Nx/2.)) :
+            qu[r] = np.mean([uu[i]*uu[i+r] for i in range(self.Nx - r)])
+            qh[r] = np.mean([hh[i]*hh[i+r] for i in range(self.Nx - r)])
         
         qu /= qu[0]
         qh /= qh[0]
+        
         
         return qu, qh
 ##---------------------------------------------------         
 ##--------------------------------------------------- 
 ##--------------------------------------------------- 
         
-    def write_casesumup(self): 
+    def write_casesumup(self, where = " "): 
         
-        pathtowrite = osp.join(self.logbook_path, self.thiscase)
+        if where == " " :
+            root = self.logbook_path
+        
+        else :
+            root = where
+        
+        pathtowrite = osp.join(root, self.thiscase)
 
         f = open(pathtowrite, "w")
         f.write("*"*28 + "\n")
         f.write("*"*10 + " Sum Up " + "*"*10)
         f.write("*"*28 + "\n\n")
         f.write("*"*28 + "\n")
-        f.write("Case : %s \n" % thiscase)
+        f.write("Case : %s \n" % self.thiscase)
         f.write("*"*28 + "\n")
                 
         for item in self.sum_up.iteritems() :

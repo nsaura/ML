@@ -44,7 +44,7 @@ except OSError :
 ##---------------------------------------------------         
 ##--------------------------------------------------- 
 
-def create_init(tc ,dephasage, number, kc=1, plot=False): 
+def create_init(tc ,phase,  kc=1, plot=False): 
     if tc.type_init == "random" :
         U_intervals = np.linspace(-tc.U, tc.U, 10000)
         H_intervals = np.linspace(-tc.H, tc.H, 10000)
@@ -174,6 +174,7 @@ def solve_case(tc, u_init_field, h_init_field, filename) :
 inter_deph = np.linspace(-np.pi/2., np.pi/2., 1000)
 
 choices = [np.random.choice(inter_deph) for j in range(10)]
+
 add_block = lambda u,h,j : [ u[j-1], u[j], u[j+1], h[j-1], h[j], h[j+1] ]
 
 def compute_true_u(tc, nsamples, pi_line, plot=False, write=False) :
@@ -196,9 +197,9 @@ def compute_true_u(tc, nsamples, pi_line, plot=False, write=False) :
                 
             filename[i] = osp.join(s,"cpx_init_kc%d_%d" % (1, n))
         
-        dephasage = np.random.choice(pi_line)
+        phase = np.random.choice(pi_line)
         
-        uu, hh  = create_init(tc ,dephasage, n, kc=1, plot=False)
+        uu, hh  = create_init(tc ,phase, kc=1, plot=False)
         solve_case(tc, uu, hh, filename)
         
         for it in range(1, tc.itmax) :
@@ -221,6 +222,76 @@ def compute_true_u(tc, nsamples, pi_line, plot=False, write=False) :
 ##---------------------------------------------------         
 ##--------------------------------------------------- 
           
+def MHD_NN_solver(nn_obj, tc=tc):
+    p = min(np.random.choice(inter_deph), np.random.choice(inter_deph))
+    
+#    u = cb.init_u(p, cpx=2)
+    u = harm.complex_init_sin(tc.line_x, 1, inter_deph, tc.L)
+    
+    filename = [osp.join(curr_work, "u", "test"), osp.join(curr_work, "h", "test")]
+        
+    for i, (s,k) in enumerate(zip(filename, ["u","h"])) :
+        filename[i] = osp.join(s, "%s_test" % k)
+        if osp.exists(s) == False :
+            os.mkdir(s)
+        
+    phase = np.random.choice(inter_deph)
+        
+    u, h  = create_init(tc, phase, kc=1, plot=False)
+    solve_case(tc, u, h, filename)
+    
+    print filename
+    
+    u_test_dir = osp.join(curr_work, "u", "test")
+    h_test_dir = osp.join(curr_work, "h", "test")
+    
+    
+    fetch_fields = [ lambda it : np.load(osp.join(f, "%s_test_it%d.npy"%(k, it))) for f,k in zip([u_test_dir, h_test_dir], ["u", "h"])]
+    
+    fig, axes = plt.subplots(1, 2, figsize=(9,9), num="Evolution u et h -- Prediction")
+    
+    for it in range(1, tc.itmax) :
+        if it > 1 :
+            u = u_nNext
+            h = h_nNext
+            
+        u_nNext = []
+        h_nNext = []
+            
+        for j in range(1, tc.Nx-1) :
+            xs = np.array(add_block(u, h, j))
+            
+            xs = nn_obj.scale_inputs(xs)
+            xs = xs.reshape(1, -1)
+
+            u_nNext.append(nn_obj.predict(xs)[0,0])
+        # u_nNext.shape = 30 
+        # use of list type to insert in a second time boundary condition
+        
+        u_nNext.insert(0, u[-2])
+        u_nNext.insert(len(u), u[1])
+        
+        h_nNext.insert(0, h[-2])
+        u_nNext.insert(len(h), h[1])
+        
+        u_nNext = np.array(u_nNext)
+        h_nNext = np.array(h_nNext)
+        
+        plt.clf()   
+        color = iter(["navy", "darkred"])
+        
+        for n, (ax, k, MLfield) in enumerate(zip(axes, ["u", "h"], [u_nNext, h_nNext])):
+            c = next(color)    
+            ax.plot(tc.line_x[1:tc.Nx-1], fetch_fields[n](it+1)[1:tc.Nx-1], label="True %s it = %d" %(k, it+1), c='k')
+            ax.plot(tc.line_x[1:tc.Nx-1], MLfield[1:tc.Nx-1], label="Predicted %s at it = %d" %(k, it), marker='o', fillstyle = 'none', linestyle= 'none', c=c)
+            ax.legend(loc="best")
+        
+        plt.pause(2)
+
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------           
+
 dict_layers = {"I": 3, "O" :2, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6":80}#, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
 
 def MHD_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
@@ -254,67 +325,75 @@ def MHD_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=di
     except KeyboardInterrupt :
         print ("Session closed")
         del nn_obj.sess
+    
+    return nn_obj
+    
+def plotting(nn_obj) :
+    test_line = range(len(nn_obj.X_test))
 
     beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
     
+    # Assessing scores 
+    print("To test scores : ")    
     score = nn_obj.score(beta_test_preds, nn_obj.y_test)
     print ("score of this session is : {}".format(score))
-    
-    test_line = range(len(nn_obj.X_test))
-    
-    try :
-        verbose = kwargs["verbose"]
-    except KeyError :
-        verbose = False
-    
-    deviation = np.array([ abs(beta_test_preds[j] - nn_obj.y_test[j]) for j in test_line])
-    error_estimation = sum(deviation)
 
-    dev_lab = "Pred_lr_{}_{}_{}_Maxepoch_{}".format(lr, opti, act, scaler, max_epoch)
+    pred_fields = {"u" : beta_test_preds[:,0],
+                   "h" : beta_test_preds[:,1]}
     
-    if plt.fignum_exists("Comparaison sur le test set") :
-        plt.figure("Comparaison sur le test set")
-        plt.plot(test_line, beta_test_preds, label=dev_lab, marker='+',\
-                    fillstyle='none', linestyle='none', c=nn_obj.kwargs["color"])
-
-    else :
-        plt.figure("Comparaison sur le test set")
-        plt.plot(test_line, nn_obj.y_test, label="Expected value", marker='o', fillstyle='none',\
-                    linestyle='none', c='k')   
-        plt.plot(test_line, beta_test_preds, label=dev_lab, marker='+',\
-                    fillstyle='none', linestyle='none', c=nn_obj.kwargs["color"])
- 
-    plt.legend(loc="best", prop={'size': 7})
+    exact_fields ={"u" : nn_obj.y_test[:,0],
+                   "h" : nn_obj.y_test[:,1]} 
     
-    if plt.fignum_exists("Deviation of the prediction") :
-            plt.figure("Deviation of the prediction")
-            plt.plot(nn_obj.y_test, beta_test_preds, c=nn_obj.kwargs["color"], marker='o',\
-                     linestyle='none', label=dev_lab, ms=3)
+    keys = ["u", "h"]
+    for k in keys :    
+        print  ("Score on %s : %f" % (k, nn_obj.score(pred_fields[k], exact_fields[k])))
+    
+    # Plotting 
+    fig, axes = plt.subplots(1,2, figsize=(9,9), num="Comparaison w.r.t. test set")
+    
+    deviations, rel_errors = {}, {}
         
-    else :
-        plt.figure("Deviation of the prediction")
-        plt.plot(nn_obj.y_test, nn_obj.y_test, c='k', label="reference line")
-        plt.plot(nn_obj.y_test, nn_obj.y_test, c='navy', marker='+', label="wanted value",linestyle='none')
-        plt.plot(nn_obj.y_test, beta_test_preds, c=nn_obj.kwargs["color"], marker='o',\
-                      linestyle='none', label=dev_lab, ms=3)
+    for k in keys :
+        deviations[k] = np.array([abs(pred_fields[k][j] - exact_fields[k][j]) for j in test_line])
+        rel_errors[k] = sum(deviations[k])
+    
+    for ax, k in zip(axes, keys) : 
+        key_label = "Pred_{}_lr_{}_{}_{}_Maxepoch_{}".format(k, nn.lr, nn.train_mod, nn.activation, nn.scaler_name, nn.max_epoch)
+        
+        ax.plot(test_line, pred_fields[k], label=key_label, marker='+',\
+                fillstyle='none', linestyle='none', c=nn_obj.kwargs["color"])
+                
+        ax.plot(test_line, exact_fields[k] , label="Expected value", marker='o', fillstyle='none',\
+                        linestyle='none', c='k')   
+                
+        ax.legend(loc="best", prop={'size': 7})
+    
+    fig, axes = plt.subplots(1,2, figsize=(11,5), num="Deviation w.r.t. test set")
+    
+    for ax, k in zip(axes, keys) :
+        key_label = "Pred_{}_lr_{}_{}_{}_Maxepoch_{}".format(k, nn.lr, nn.train_mod, nn.activation, nn.scaler_name, nn.max_epoch)
+        ax.plot(exact_fields[k], pred_fields[k], c=nn_obj.kwargs["color"], marker='+',\
+                 linestyle='none', label=key_label, ms=3)
+         
+        ax.plot(exact_fields[k], exact_fields[k], c='navy', label="Expected value", marker='o')
 
-    plt.legend(loc="best", prop={'size': 7}) 
+        ax.legend(loc="best", prop={'size': 7}) 
 
 #    print("Modèle utilisant N_dict_layer = {}".format(N_))\\
-    print("Modèle pour H_NL = {}, H_NN = {} \n".format(len(N_.keys())-2, N_["N1"]))
+    print("Modèle pour H_NL = {}, H_NN = {} \n".format(len(nn.N_.keys())-2, nn.N_["N1"]))
     print("Fonction d'activation : {}\n Fonction de cout : {}\n\
-    Méthode d'optimisation : {}".format(act, loss, opti))
-    print("Moyenne de la somme des écart sur le test set = {}\n".format(error_estimation))
-    
-    plt.show()
+    Méthode d'optimisation : {}".format(nn.activation, nn.err_type, nn.train_mod))
 
-    return nn_obj
+    print("Moyenne de la somme des écart sur le test set")
+    for item in rel_errors.iteritems() :
+        print("%s : %f" %(item[0], item[1]))
     
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------           
+   
     
-    
-    
-    
-# run MHDmulti_init_NN_thomas.py -Nx 1000 -nu 2.5e-3 -Nt 500 -ratio 0.5 -U 1.5 -init_u "complex"
+# run MHDmulti_init_NN_thomas.py -Nx 500 -nu 2.5e-3 -Nt 100 -ratio 0.5 -U 1.5 -init_u "complex" -itmax 300
 # X, y = compute_true_u(tc, 3, inter_deph, True, True)
 # nn =  MHD_buildNN(1e-3, X, y, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)    
     
