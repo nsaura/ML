@@ -20,7 +20,9 @@ NNC = reload(NNC)
 
 plt.ion()
 
+
 class Bootstraped_Neural_Network :
+
     def __init__(self, n_estimators, dataset) :
         
         self.n_estimators = n_estimators
@@ -31,7 +33,11 @@ class Bootstraped_Neural_Network :
         
         self.bkey = lambda b : "dataset_%s" % str(b)
         self.nnkey = lambda b : "NN_%s" % str(b)
+        
 ##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
     def resample_dataset(self):
         bootstrap_dataset = dict()
         
@@ -47,8 +53,12 @@ class Bootstraped_Neural_Network :
             bootstrap_dataset[self.bkey(b)]["target"] = ycp[permute]
         
         self.bootstrap_dataset = bootstrap_dataset
+        
 ##--------------------------------------------------------------------------------------------
-    def build_NN(self, lr, dict_layer, act, opti, loss, scaler="Standard",\
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+    
+    def build_NN(self, lr, dict_layers, act, opti, loss, palet, scaler="Standard",\
                     max_epoch=100, reduce_type="sum", rdn=0, **kwargs) :
         NN_dict = {}
         testkey = lambda key : key not in kwargs.keys()
@@ -58,7 +68,7 @@ class Bootstraped_Neural_Network :
             
         for b in range(self.n_estimators) :
             # Define an NN object
-            nn_b = NNC.Neural_Network(lr, scaler=scaler, N_=dict_layer, max_epoch=max_epoch,reduce_type=reduce_type, **kwargs)
+            nn_b = NNC.Neural_Network(lr, scaler=scaler, N_=dict_layers, max_epoch=max_epoch,reduce_type=reduce_type, color = next(palet), **kwargs)
             
             # Getting and Spliting The Data
             X_NN = np.copy(self.bootstrap_dataset[self.bkey(b)]["data"])
@@ -77,7 +87,7 @@ class Bootstraped_Neural_Network :
             nn_b.case_specification_recap()
             
             try :
-                nn_b.training_session(tol=1e-3)
+                nn_b.training_phase(tol=1e-3)
 
             except KeyboardInterrupt :
                 print ("Session closed")
@@ -88,34 +98,77 @@ class Bootstraped_Neural_Network :
             NN_dict[self.nnkey(b)] = nn_b
 
         self.NN_dict = NN_dict
+        
 ##--------------------------------------------------------------------------------------------    
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
     def bootstrap_prediction(self, xs, rescale, variance=False) :
         xs = np.copy(xs)
-        prediction =[]
+        prediction = []
         
         for b in range(self.n_estimators):
             if rescale == True :
-                xs = self.NN_dict[self.nnkey(b)].scale_inputs(xs)
+                nxs = self.NN_dict[self.nnkey(b)].scale_inputs(xs)
             
-            prediction.append(self.NN_dict[self.nnkey(b)].predict(xs, rescale_tab=False))
+            else :
+                nxs = np.copy(xs)
             
+            prediction.append(self.NN_dict[self.nnkey(b)].predict(nxs, rescale_tab=False)[0,0])
+        
+        print ("prediction = {}".format(prediction)) 
+        
         bstrap_pred = 1./(self.n_estimators-1) * sum(prediction)
         
+        print bstrap_pred
+
         if variance == True :
             return bstrap_pred, prediction
-    
         else : 
-            return bstrap_pred   
+            return bstrap_pred
+            
 ##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
     def bootstrap_variance(self, xs, rescale) :
         xs = np.copy(xs)
         ymean_bstrap, ybs_pred = self.bootstrap_prediction(xs, rescale, variance=True)
         
-        var_ymean_bstrap = sum([(y_mean_bstrap - yb)**2 for yb in ybs_pred])
+        var_ymean_bstrap = sum([(ymean_bstrap - yb)**2 for yb in ybs_pred])
         var_ymean_bstrap /= (self.n_estimators -1)
         
         return var_ymean_bstrap
+        
 ##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+    
+    def r_2_dataset(self) :#,lr, dict_layers, act, opti, loss, scaler="Standard",\
+                    #max_epoch=100, reduce_type="sum", rdn=0, **kwargs) :
+        # On utilise les NN déjà entrainés
+        # On reshuffle X :
+        
+        Xcp = np.copy(self.X)
+        ycp = np.copy(self.y)
+        
+        r = np.zeros((1))
+        r_lambda = lambda moy, ex, var : max((moy-ex)**2 - var, 0)
+        
+        for i in range(Xcp.shape[0]) :
+            moy_ = self.bootstrap_prediction(Xcp[i], rescale=True)
+            var_ = self.bootstrap_variance(Xcp[i], rescale=True)
+            
+            r = np.block([[r], [r_lambda(moy_, ycp[i], var_)]])
+        
+        r = np.delete(r, 0, axis=0)
+        
+        return r 
+        
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+##--------------------------------------------------------------------------------------------
+
     def NN_test_plot(self, nn_b) :
         lr = nn_b.lr
         act  =  nn_b.activation
@@ -168,8 +221,11 @@ if __name__ == "__main__" :
     dataset["data"] = boston.data     
     dataset["target"] = boston.target
         
-    BNN = Bootstraped_Neural_Network(5, dataset) 
+    BNN = Bootstraped_Neural_Network(2, dataset) 
     BNN.resample_dataset()       
-        
-        
-        
+    
+    color = iter(["blue", "darkred", "purple", "olive", "magenta"])
+    
+    BNN.build_NN(1e-3, {"I" : 13, "N1" : 50, "N2" : 50, "N3" : 50, "N4" : 50,  "O": 1}, "sigmoid", "Adam", "Lasso",
+                 color, scaler="Standard", max_epoch=100, reduce_type="sum", rdn=0)
+    
