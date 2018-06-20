@@ -597,7 +597,7 @@ class Neural_Network():
         else :
             classic_loss = {"OLS" : tf.square,
                              "AVL" : tf.abs} 
-            advanced_loss=["MSEGrad", "Ridge", "Lasso", "Elastic", "Custom"]
+            advanced_loss=["MSEGrad", "Ridge", "Lasso", "Elastic", "Custom", "CBS"]
             
             if err_type in advanced_loss :
                 self.advanced = True
@@ -622,6 +622,9 @@ class Neural_Network():
                 
             elif err_type == "Custom":
                 self.Custom_cost()
+            
+            elif err_type == "CBS" :
+                self.CBS()
                 
             else :
                 self.loss = self.reduce_type_fct(classic_loss[err_type](self.y_pred_model - self.t))
@@ -925,13 +928,16 @@ class Neural_Network():
         self.loss = tf.expand_dims(\
                     tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t)),\
                     tf.multiply(custom_param, self.reduce_type_fct(self.x))), 0)
-    
+
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------    
 ###------------------------------------------------------------------------------- 
-
+    
     def predict(self, xs, rescale_tab=False):
         arg = np.copy(xs)
+        
+        if len(arg.shape) == 1 :
+            arg = arg.reshape(1,-1)
         
         if rescale_tab == True :        
             if self.scaler_name != "None" :
@@ -940,7 +946,7 @@ class Neural_Network():
                 for i, std in enumerate(self.X_train_stdd) :
                     if np.abs(std) > 1e-8 :
                         arg[:, i] /= std            
-
+        
         P = self.sess.run(self.y_pred_model, feed_dict={self.x: arg})
         return P
         
