@@ -228,7 +228,7 @@ def doit() :
                 u_next = np.load(lambda_filename(it+1, p, cpx))
             
                 for j in range(1, cb.Nx-1) : #[1, Nx-1]
-                    X = np.block([[X], [u_curr[j], u_curr[j-1],u_curr[j+1]]])
+                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1]]])
                     y = np.block([[y], [u_next[j]]])
 
     X = np.delete(X, 0, axis=0)
@@ -373,7 +373,7 @@ def multiNN_solver(nn_obj, cb=cb):
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
    
-def multiRF_solver(): 
+def multiRF_solver(X, y): 
     xtr, xte, ytr, yte = train_test_split(X, y.ravel(), shuffle=True, random_state=0)
     rf = rfr(n_estimators=20)
     rf.fit(xtr, ytr)
@@ -395,7 +395,7 @@ def multiRF_solver():
             u_nNext = []
             
         for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j], u[j-1], u[j+1]]).reshape(1,-1)
+            xs = np.array([u[j-1], u[j], u[j+1]]).reshape(1,-1)
             
             u_nNext.append(rf.predict(xs))
         
@@ -412,7 +412,7 @@ def multiRF_solver():
 
 
 # run multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -typeJ "u"
-# X, y = compute_true_u(cb, 12, pi_line, plot=True, write=True)
+# X_multi, y_multi = compute_true_u(cb, 12, pi_line, plot=True, write=True)
 # nn = multi_buildNN(1e-3, X, y, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
 # multiNN_solver(nn)
 
