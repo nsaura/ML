@@ -22,15 +22,24 @@ from sklearn.model_selection import train_test_split
 from tensorflow import reset_default_graph
 
 import Class_write_case as cwc
+
 ## Import de la classe TF ##
 nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
 sys.path.append(nnc_folder)
+
+## Import de la classe TF ##
+bootstrap_folder = osp.abspath(osp.dirname("../TF/Bootstrap_NN.py"))
+sys.path.append(bootstrap_folder)
+
+import Bootstrap_NN as BNN
 
 import NN_class_try as NNC
 import Class_Vit_Choc as cvc
 import harmonic_sinus as harm
 
 NNC = reload(NNC)
+BNN = reload(BNN)
+
 cvc = reload(cvc)
 harm = reload(harm)
 
@@ -40,8 +49,11 @@ np.random.seed(1000000)
 parser = cvc.parser()
 cb = cvc.Vitesse_Choc(parser) 
 
-wdir = osp.abspath("./data/burger_dataset/complex_init_NN/")
+wdir = osp.abspath("./data/burger_dataset/complex_init_NN/Der")
 curr_work = osp.join(wdir, "Nx:%d_Nt:%d_nu:%.4f_CFL:%0.2f" % (cb.Nx, cb.Nt, cb.nu, cb.CFL)) #beta_Nx:52_Nt:32_nu:0.025_typei:sin_CFL:0.4_it:017.npy
+
+if osp.exists(curr_work) == False :
+    os.makedirs(curr_work)
 
 def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False) :
     r = cb.dt/cb.dx
@@ -102,87 +114,13 @@ def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False
             
         it += 1
     return u, abs_work
+    
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 
-def obs_res(cb, j_phase, cpx=1 ,write=False, plot=False)  : 
-    ## Déf des données du probleme 
-    curr_phase = j_phase[0] 
-    phase = j_phase[1]
-    
-    u, u_nNext = [], []
-    u = cb.init_u(phase, cpx) 
-    r = cb.dt/cb.dx
-    
-    title=lambda it,cphase,cpx:"U(x) it %d phase %d cpx %d" %(it, cphase, cpx)
-    
-    u_curr_name=lambda it,cphase,cpx:"u_it%d_%d-eme_phase_cpx%d.npy"%(it,cphase, cpx)
-    
-    # Tracés figure initialisation : 
-    if plot == True :
-        plt.figure("Resolution")
-        plt.plot(cb.line_x, u)
-        plt.title(title(0, curr_phase, cpx))
-        plt.ylim((-2.5, 2.5))
-        plt.pause(0.01)
-    
-    if write == True : 
-        filename = osp.join(curr_work, u_curr_name(0, curr_phase, cpx))
-        np.save(filename, u)
-        
-    t = it = 0
-    
-    while it <= cb.itmax+1 :
-        filename = osp.join(curr_work, u_curr_name(it, curr_phase, cpx))
-        if osp.exists(filename) == True :
-            it += 1
-            continue
-            
-        fu = np.asarray([0.5*u_x**2 for u_x in u])
-        
-        der_sec = [cb.fac*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
-        der_sec.insert(0, cb.fac*(u[1] - 2*u[0] + u[-1]))
-        der_sec.insert(len(der_sec), cb.fac*(u[0] - 2*u[-1] + u[-2]))
-
-        for i in range(1,cb.Nx-1) : # Pour prendre en compte le point Nx-2
-            u_m, u_p = cvc.intermediaires(u, fu, i, r)
-            fu_m =  0.5*u_m**2
-            fu_p =  0.5*u_p**2
-
-            u_nNext.append( u[i] - r*( fu_p - fu_m ) + der_sec[i] )
-                                        
-        # Conditions aux limites 
-        u[1:cb.Nx-1] = u_nNext  
-        u_nNext  = []
-        
-        u[0] = u[-2]
-        u[-1]= u[1]
-
-        u = np.asarray(u) 
-    
-        if write == True : 
-            np.save(filename, u)
-        
-        it += 1
-        t += cb.dt # Itération temporelle suivante
-            
-        if plot == True :
-            if it % 10 == 0 :
-                plt.clf()
-                plt.plot(cb.line_x[0:cb.Nx-1], u[0:cb.Nx-1], c='k') 
-                plt.grid()
-                plt.title(title(it, curr_phase, cpx)) 
-                plt.xticks(np.arange(0, cb.L-cb.dx, 0.25))
-#                        plt.yticks(np.arange(-2.5, 2.5, 0.5))
-                plt.ylim(-2.5,2.5)
-                plt.pause(0.1)  
-                
-#------------------------------------------------------------------
-#------------------------------------------------------------------
-#------------------------------------------------------------------
-def compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
-    X = np.zeros((3))
+def Der_compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
+    X = np.zeros((4))
     y = np.zeros((1))
     
     for n in range(nsamples) :
@@ -196,7 +134,7 @@ def compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
                 u_next = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it+1)))
 
                 for j in range(1, len(uu)-1) :
-                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1]]])        
+                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1], (u_curr[j+1] - u_curr[j-1])*0.5/cb.dx]])        
                     y = np.block([[y], [u_next[j]]])
     
     X = np.delete(X, 0, axis=0)        
@@ -211,36 +149,10 @@ def compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
 pi_line = np.linspace(-np.pi/2., np.pi/2., 1000)
 choices = [np.random.choice(pi_line) for i in range(7)]
 
-if osp.exists(curr_work) == False :
-    os.makedirs(curr_work)
 
-def doit() :
-    for j, c in enumerate(choices) :
-        obs_res(cb, [j, c], 1, True, True) 
-        obs_res(cb, [j, c], 2, True, True)
-    
-    X = np.zeros((3))
-    y = np.zeros((1))
+dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80}#, "N4":80, "N5":80, "N6":80}#, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
 
-    for p in range(len(choices)) :
-        for it in range(cb.itmax) :
-            for cpx in range(1,3) :
-                u_curr = np.load(lambda_filename(it, p, cpx))
-                u_next = np.load(lambda_filename(it+1, p, cpx))
-            
-                for j in range(1, cb.Nx-1) : #[1, Nx-1]
-                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1]]])
-                    y = np.block([[y], [u_next[j]]])
-
-    X = np.delete(X, 0, axis=0)
-    y = np.delete(y, 0, axis=0)
-    
-    return X, y
-    
-
-dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6":80}#, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
-
-def multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
+def Der_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
     print kwargs
     
@@ -331,7 +243,76 @@ def multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
 
-def multiNN_solver(nn_obj, cb=cb):
+def Der_bootstrap(num_predictors, lr, X, y, dict_layers, act, opti, loss, max_epoch, reduce_type, scaler, step=50, rdn = 0, early_stop=False, **kwargs) :
+    dataset = { "data" : X,
+                "target" : y}
+    
+    bts = BNN.Bootstraped_Neural_Network(num_predictors, dataset) 
+    bts.resample_dataset()       
+
+    color = ["blue", "darkred", "aqua", "olive", "magenta", "orange", "mediumpurple", "chartreuse", "tomato", "saddlebrown", "powderblue", "khaki", "salmon", "darkgoldenrod", "crimson", "dodgerblue", "limegreen"]
+    
+    color = iter(np.array(color)[np.random.permutation(len(color))])
+    
+    bts.build_NN(1e-3, dict_layers, act, opti, loss, palet = color, max_epoch=max_epoch, scaler=scaler, reduce_type=reduce_type, rdn=rdn, **kwargs)
+
+    return bts
+
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+
+def Der_bootstrap_solver(boot_obj, rescale, cb=cb) :
+    plt.figure()
+    p = min(np.random.choice(pi_line), np.random.choice(pi_line))
+    
+    u = harm.complex_init_sin(cb.line_x, 1, pi_line, cb.L)
+    
+    _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
+    print (abs_work)
+    
+    fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
+    
+    u_nNext = []
+    var = []
+    
+    for it in range(1, cb.itmax) :
+        if it > 1 :
+            u = u_nNext
+            u_nNext = []
+            var = []
+            
+        for j in range(1, cb.Nx-1) :
+            xs = np.array([u[j-1], u[j], u[j+1], (u[j+1] - u[j-1])/(2*cb.dx) ])
+            
+            mean_curr_pred = boot_obj.bootstrap_prediction(xs, rescale=rescale, variance=False)
+            
+            var_curr_pred = boot_obj.bootstrap_variance(xs, rescale = rescale)
+            
+            u_nNext.append(mean_curr_pred)
+            var.append(var_curr_pred)
+        # u_nNext.shape = 30 
+        # use of list type to insert in a second time boundary condition
+        
+        u_nNext.insert(0, u[-2])
+        u_nNext.insert(len(u), u[1])
+        
+        u_nNext = np.array(u_nNext)
+        
+        if it % 5 == 0 :
+            plt.clf()        
+            plt.plot(cb.line_x[1:cb.Nx-1], fetch_real_u(it+1)[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
+            plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c="red")
+            plt.fill_between(cb.line_x[1:cb.Nx-1], -var, var, facecolor= "0.2", alpha=0.4, interpolate=True, label="$\pm \sigma$")                
+            plt.legend()
+            plt.pause(2)
+    
+
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+
+def Der_multiNN_solver(nn_obj, cb=cb):
     plt.figure()
     p = min(np.random.choice(pi_line), np.random.choice(pi_line))
     
@@ -350,7 +331,7 @@ def multiNN_solver(nn_obj, cb=cb):
             u_nNext = []
             
         for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j-1], u[j], u[j+1]])
+            xs = np.array([u[j-1], u[j], u[j+1], (u[j+1] - u[j-1])/(2*cb.dx) ])
             
             xs = nn_obj.scale_inputs(xs)
             xs = xs.reshape(1, -1)
@@ -375,7 +356,7 @@ def multiNN_solver(nn_obj, cb=cb):
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
    
-def multiRF_solver(X, y): 
+def Der_multiRF_solver(X, y): 
     xtr, xte, ytr, yte = train_test_split(X, y.ravel(), shuffle=True, random_state=0)
     rf = rfr(n_estimators=20)
     rf.fit(xtr, ytr)
@@ -412,10 +393,11 @@ def multiRF_solver(X, y):
         plt.legend()
         plt.pause(2)
 
-# run multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -typeJ "u"
-# X_multi, y_multi = compute_true_u(cb, 12, pi_line, plot=True, write=True)
-# nn = multi_buildNN(1e-3, X_multi, y_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
-# multiNN_solver(nn)
+
+# run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -typeJ "u"
+# Der_X_multi, Der_y_multi = Der_compute_true_u(cb, 12, pi_line, plot=True, write=True)
+# Der_nn = Der_multi_buildNN(1e-3, Der_X_multi, Der_y_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
+# Der_multiNN_solver(Der_nn)
 
 
 

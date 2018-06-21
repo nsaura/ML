@@ -29,7 +29,7 @@ class Bootstraped_Neural_Network :
         self.X = dataset["data"]
         self.y = dataset["target"]
         
-        self.length_resample = len(self.X) // self.n_estimators
+        self.length_resample = len(self.X)
         
         self.bkey = lambda b : "dataset_%s" % str(b)
         self.nnkey = lambda b : "NN_%s" % str(b)
@@ -44,7 +44,7 @@ class Bootstraped_Neural_Network :
         for b in range(self.n_estimators) :
             bootstrap_dataset[self.bkey(b)] = {}
         
-        for b in range(self.n_estimators) :
+        for b in range(self.n_estimators) : 
             Xcp = np.copy(self.X)
             ycp = np.copy(self.y)
             
@@ -116,12 +116,8 @@ class Bootstraped_Neural_Network :
             
             prediction.append(self.NN_dict[self.nnkey(b)].predict(nxs, rescale_tab=False)[0,0])
         
-        print ("prediction = {}".format(prediction)) 
-        
         bstrap_pred = 1./(self.n_estimators-1) * sum(prediction)
         
-        print bstrap_pred
-
         if variance == True :
             return bstrap_pred, prediction
         else : 
@@ -221,11 +217,11 @@ if __name__ == "__main__" :
     dataset["data"] = boston.data     
     dataset["target"] = boston.target
         
-    BNN = Bootstraped_Neural_Network(2, dataset) 
+    BNN = Bootstraped_Neural_Network(4, dataset) 
     BNN.resample_dataset()       
     
-    color = iter(["blue", "darkred", "purple", "olive", "magenta"])
+    color = iter(["blue", "darkred", "aqua", "olive", "magenta", "orange", "mediumpurple", "chartreuse", "tomato", "saddlebrown", "powderblue", "khaki", "salmon", "darkgoldenrod", "crimson", "dodgerblue", "limegreen"])
     
-    BNN.build_NN(1e-3, {"I" : 13, "N1" : 50, "N2" : 50, "N3" : 50, "N4" : 50,  "O": 1}, "sigmoid", "Adam", "Lasso",
-                 color, scaler="Standard", max_epoch=100, reduce_type="sum", rdn=0)
+    BNN.build_NN(1e-3, {"I" : 13, "N1" : 80, "N2" : 80, "N3" : 80, "N4" : 80,  "N5" : 80, "N6": 80 ,"O": 1}, "selu", "Adam", "Ridge",
+                 color, scaler="Standard", max_epoch=500, reduce_type="sum", rdn=0, bsz = 32, BN=True)
     
