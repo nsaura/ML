@@ -150,7 +150,7 @@ class Vitesse_Choc() :
         bruits = [0.0009 * np.random.randn(Nx) for time in range(num_real)]
         self.bruits = bruits
         
-        self.line_x = np.arange(0,L+dx, dx)
+        self.line_x = np.linspace(0, L, Nx)
 
         self.cpt_max_adj = cpt_max_adj
         self.g_sup_max = g_sup_max  

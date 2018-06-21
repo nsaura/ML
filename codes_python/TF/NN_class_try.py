@@ -283,12 +283,10 @@ class Neural_Network():
         
         try :
             if self.scaler_name == "Standard" :
-                for i, mean in enumerate(self.X_train_mean) :
-                    new_xs[i] -= mean
+                new_xs -= self.X_train_mean
                 
                 for i, stdd in enumerate(self.X_train_stdd) :
-                    if np.abs(stdd) > 1e-8 :
-                        new_xs[i] /= stdd
+                    new_xs /= stdd
             
             else :
                 new_xs = self.scaler.transform(new_xs.reshape(1,-1))
@@ -597,12 +595,17 @@ class Neural_Network():
         else :
             classic_loss = {"OLS" : tf.square,
                              "AVL" : tf.abs} 
-            advanced_loss=["MSEGrad", "Ridge", "Lasso", "Elastic", "Custom", "CBS"]
+            advanced_loss=["MSEGrad", "Ridge", "Lasso", "Elastic", "Custom"]
+            
+            other_loss   = ["FVC", "CBS"]
+            
+            if err_type in other_loss :
+                self.advanced=False
             
             if err_type in advanced_loss :
                 self.advanced = True
 
-            key_to_check = advanced_loss + classic_loss.keys()
+            key_to_check = advanced_loss + classic_loss.keys() + other_loss
             
             if err_type not in key_to_check :
                 raise IndexError("{}\'s not in the list {}".format(err_type, key_to_check))
@@ -625,7 +628,10 @@ class Neural_Network():
             
             elif err_type == "CBS" :
                 self.CBS()
-                
+            
+            elif err_type == "Full_vector_cost" or err_type == "FVC" :
+                self.FVC()
+            
             else :
                 self.loss = self.reduce_type_fct(classic_loss[err_type](self.y_pred_model - self.t))
                 self.advanced = False
@@ -932,6 +938,17 @@ class Neural_Network():
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------    
 ###------------------------------------------------------------------------------- 
+
+    def FVC(self): 
+        FVC_param = 10. if "FVC_param" not in self.kwargs.keys() else self.kwargs["FVC_param"]
+
+        self.loss = tf.add(self.reduce_type_fct(tf.square(self.y_pred_model - self.t )),
+                    tf.multiply(FVC_param, self.reduce_type_fct( tf.abs( tf.square(self.y_pred_model) - tf.square(self.t) ) ))
+                          ) 
+        
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------    
+###-------------------------------------------------------------------------------
     
     def predict(self, xs, rescale_tab=False):
         arg = np.copy(xs)
