@@ -32,6 +32,14 @@ import time
 nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
 sys.path.append(nnc_folder)
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 import NN_class_try as NNC
 import Class_Vit_Choc as cvc
 

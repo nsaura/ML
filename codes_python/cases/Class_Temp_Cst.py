@@ -17,11 +17,6 @@ import numdifftools as nd
 
 import time
 
-## Import de la classe TF ##
-nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
-sys.path.append(nnc_folder)
-import NN_class_try as NNC
-
 class Temperature_cst() :
 ##---------------------------------------------------------------
     def __init__ (self, parser):
