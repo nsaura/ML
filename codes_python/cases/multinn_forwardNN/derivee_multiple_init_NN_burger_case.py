@@ -37,6 +37,15 @@ import Class_write_case as cwc
 import Class_Vit_Choc as cvc
 import harmonic_sinus as harm
 
+
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 NNC = reload(NNC)
 BNN = reload(BNN)
 
