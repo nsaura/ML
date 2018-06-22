@@ -120,7 +120,8 @@ class Neural_Network():
 
         ## Check on the keys : 
         keys = N_.keys()
-        keys.remove("I"), keys.remove("O")
+        keys.remove("I")
+        keys.remove("O")
         
         sorted_keys = sorted(keys, key=lambda x: int(x[1:]))
         
