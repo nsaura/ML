@@ -91,7 +91,7 @@ def T_to_beta_elm(T, elm, T_inf, body, m, s, scale=True):
         x_s = np.array([[T_inf[j], t]]) ## T_inf, T(z)
 #        x_s = mean_std_new_input(x_s, m, s)
         beta.append(elm.predict(x_s)[0,0])
-    print "Premier beta = {}".format(beta)
+    print ("Premier beta = {}".format(beta))
         
     beta_n = np.asarray(beta)
     

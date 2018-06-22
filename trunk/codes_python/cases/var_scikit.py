@@ -30,6 +30,14 @@ import NN_class_try as NNC
 
 import time
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 ctc = reload(ctc)
 cfa = reload(cfa)
 GPC = reload(GPC)

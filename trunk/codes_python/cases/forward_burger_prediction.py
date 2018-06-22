@@ -37,6 +37,14 @@ import NN_class_try as NNC
 import Class_Vit_Choc as cvc
 import harmonic_sinus as harm
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 NNC = reload(NNC)
 BNN = reload(BNN)
 
@@ -148,7 +156,7 @@ dict_layers = {"I": cb.Nx, "O" :cb.Nx, "N1":100, "N2":100, "N3":100, "N4":100, "
 
 def forward_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
-    print kwargs
+    print (kwargs)
     
     # Define an NN object
     nn_obj = NNC.Neural_Network(lr, scaler = scaler, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
@@ -170,7 +178,6 @@ def forward_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, sca
     kwargs = nn_obj.kwargs
     
 #    return nn_obj
-    print nn_obj.X_train.shape
     try :
         nn_obj.training_phase(tol=1e-3, early_stop=early_stop)
 
@@ -245,7 +252,7 @@ def forward_multiNN_solver(nn_obj, cb=cb):
     u = harm.complex_init_sin(cb.line_x, 1, pi_line, cb.L)
     
     _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
-    print abs_work
+    print (abs_work)
     fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
     
     u_nNext = []

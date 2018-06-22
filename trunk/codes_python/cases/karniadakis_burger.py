@@ -434,7 +434,7 @@ class Karniadakis_burger() :
             # Minimization 
             optimi_obj_n = op.minimize(J, self.lambda_prior, method=solver, options={"maxiter" : maxiter})
             
-            print "apres : ", self.U_moy_obs
+            print ("apres : ", self.U_moy_obs)
             
             print("\x1b[1;37;44mDifference de lambda it {} = {}\x1b[0m".format(it, np.linalg.norm(lambda_n - optimi_obj_n.x, np.inf)))
             lambda_n_post_inf = optimi_obj_n.x

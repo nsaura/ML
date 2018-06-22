@@ -10,7 +10,7 @@ plt.ion()
 
 s = pd.Series([909976, 8615246, 2872086, 2273305])
 
-print "s.index: {} \ns.values: {}".format(s.index, s.values)
+print ("s.index: {} \ns.values: {}".format(s.index, s.values))
 
 s.index= ["Stockholm", "London", "Rome", "Paris"]
 s.name = "Population"

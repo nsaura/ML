@@ -27,6 +27,14 @@ sys.path.append(nnc_folder)
 import NN_class_try as NNC
 import Class_Vit_Choc as cvc
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 NNC = reload(NNC)
 cvc = reload(cvc)
 
@@ -74,7 +82,7 @@ dict_layers = {"I": 1, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6"
 
 def build_direct_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, **kwargs) :
     plt.ion()
-    print kwargs
+    print (kwargs)
     
     # Define an NN object
     nn_obj = NNC.Neural_Network(lr, scaler = scaler, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
@@ -96,7 +104,7 @@ def build_direct_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
     kwargs = nn_obj.kwargs
     
 #    return nn_obj
-    print nn_obj.X_train.shape
+    print (nn_obj.X_train.shape)
     try :
         nn_obj.training_phase(tol=1e-3)
 

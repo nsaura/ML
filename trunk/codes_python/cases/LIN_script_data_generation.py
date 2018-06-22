@@ -16,6 +16,14 @@ import class_functions_aux as cfa #Pour les tracés post-process
 
 plt.ioff()
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 #run script_data_generation.py -T_inf_lst 30 -cptmax 150 -N 71 -g_sup 1e-4 -cov_mod "full"
 ctc = reload(ctl)
 cfa = reload(cfa)

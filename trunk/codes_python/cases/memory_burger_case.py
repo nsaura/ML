@@ -39,6 +39,14 @@ sys.path.append(nnc_folder)
 import NN_class_try as NNC
 import Class_Vit_Choc as cvc
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 NNC = reload(NNC)
 cvc = reload(cvc)
 cwc = reload(cwc)
@@ -234,10 +242,10 @@ def xy_burger (num_real, cb=cb, n_points=3, verbose=False) :
                 y = np.block([ [y], [beta[k]]])
         
         if verbose == True :
-            print X.shape[0]-1
+            print ("X.shape[0]-1 = %d" %(X.shape[0]-1))
             time.sleep(0.2)
 #       X Gets (Nx-2)*(num_real+1) inputs for each iteration        
-    print pbu
+    print ("pbu = {}".format(pbu))
     
     X = np.delete(X, 0, axis=0)
     y = np.delete(y, 0, axis=0)
@@ -263,7 +271,7 @@ def dict_layer(X) :
 
 def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_, step=50, **kwargs) :
     plt.ion()
-    print kwargs
+    print (kwargs)
     
     # Define an NN object
     nn_obj = NNC.Neural_Network(lr, scaler = scaler, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
@@ -285,7 +293,7 @@ def build_memory_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
     kwargs = nn_obj.kwargs
     
 #    return nn_obj
-    print nn_obj.X_train.shape
+    print ("Train number of feed = %d " % nn_obj.X_train.shape)
     try :
         nn_obj.training_phase(tol=1e-3)
 
@@ -491,9 +499,9 @@ def stack_NN_NN(nn_obj, lr, act, opti, loss, max_epoch, reduce_type, scaler, N_,
     nn_sec.cost_computation(loss)
     nn_sec.case_specification_recap()
     
-    print inputs.shape
-    print nn_sec.X_train.shape[0]
-    print nn_sec.X_test.shape[0]
+    print ("inputs.shape = {}".format(inputs.shape))
+    print ("Second NN X_train feed".format(nn_sec.X_train.shape[0]))
+#    print nn_sec.X_test.shape[0]
     
     try :
         nn_sec.training_session(tol=1e-3)

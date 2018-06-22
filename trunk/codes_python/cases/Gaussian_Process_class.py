@@ -125,7 +125,7 @@ def maximize_LML(T, X, y, var, N_sample, h_curr = 2.): #Rajouter variances
     # On inversera L plutot que phi (Voir Ramussen and Williams)
 #    L = lambda h : np.linalg.cholesky(phi(h) + var_mat) 
     
-    print phi(h_curr).shape
+    print (phi(h_curr).shape)
     
     # max(f) = -min(-f)
     m_LML = lambda h : (-1)*(-0.5)*(np.log(np.linalg.det(phi(h) + var_mat)) +\
@@ -136,7 +136,7 @@ def maximize_LML(T, X, y, var, N_sample, h_curr = 2.): #Rajouter variances
     # On calcule -LML  
     val = op.minimize_scalar(m_LML)
     h_op = val.x # On garde l'antécédent ou argument
-    print h_op, val.success
+    print ("h_op = {}\noptimizisation success ? {}".fornat(h_op, val.success))
     
     phi_op = phi(h_op)
     phi_var_inv = np.linalg.inv(phi_op + var_mat)

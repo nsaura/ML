@@ -15,8 +15,17 @@ import matplotlib.cm as cm
 import numdifftools as nd
 
 ## Import de la classe TF ##
-nnc_folder = os.abspath(os.dirname("../TF/NN_class_try.py"))
-sys.path.append(nnc_folder)
+tf_folder = os.abspath(os.dirname("../TF/"))
+sys.path.append(tf_folder)
+
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 import NN_class_try as NNC
 ##------------------------##  
 

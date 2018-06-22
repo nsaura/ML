@@ -13,15 +13,15 @@ class myThread (threading.Thread):
         self.name = name
         self.counter = counter
     def run(self, function, *args):
-        print "Starting " + self.name
+        print ("Starting " + self.name)
         print function(*args)
-        print "Exiting " + self.name
+        print ("Exiting " + self.name)
 
 def print_date(threadName, counter):
     datefields = []
     today = datetime.date.today()
     datefields.append(today)
-    print "%s[%d]: %s" % ( threadName, counter, datefields[0] )
+    print ("%s[%d]: %s" % ( threadName, counter, datefields[0] ))
 
 # Create new threads
 thread1 = myThread("Thread", 1)
@@ -37,4 +37,4 @@ thread2.start(lambda x : 5*x, 5)
 
 thread1.join()
 thread2.join()
-print "Exiting the Program!!!"
+print ("Exiting the Program!!!")

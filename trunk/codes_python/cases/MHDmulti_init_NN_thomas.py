@@ -26,6 +26,14 @@ nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
 sys.path.append(nnc_folder)
 import NN_class_try as NNC
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 harm = reload(harm)
 cmt = reload(cmt)
 NNC = reload(NNC)
@@ -240,7 +248,7 @@ def MHD_NN_solver(nn_obj, tc=tc):
     u, h  = create_init(tc, phase, kc=1, plot=False)
     solve_case(tc, u, h, filename)
     
-    print filename
+    print ("filename = % s" % filename)
     
     u_test_dir = osp.join(curr_work, "u", "test")
     h_test_dir = osp.join(curr_work, "h", "test")
@@ -296,7 +304,7 @@ dict_layers = {"I": 3, "O" :2, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6"
 
 def MHD_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
-    print kwargs
+    print( kwargs)
     
     # Define an NN object
     nn_obj = NNC.Neural_Network(lr, scaler = scaler, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
@@ -318,7 +326,7 @@ def MHD_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=di
     kwargs = nn_obj.kwargs
     
 #    return nn_obj
-    print nn_obj.X_train.shape
+    print ("X_train number of feed: %d " % nn_obj.X_train.shape)
     try :
         nn_obj.training_phase(tol=1e-3, early_stop=early_stop)
 

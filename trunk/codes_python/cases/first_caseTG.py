@@ -122,7 +122,7 @@ for T_inf in T_inf_lst :
         plt.plot(line_z[1:N_discr-1], T_nNext_2, label='Convergence Prior  -- {}'.format(T_inf), linestyle='--', marker='s', markerfacecolor='none', markersize=7 )
         plt.legend(loc='best', ncol=2, fontsize=7)
     
-    print "T_inf = {} finie".format(T_inf)
+    print ("T_inf = {} finie".format(T_inf))
     
 
 

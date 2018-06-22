@@ -162,7 +162,7 @@ dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80}#, "N4":80, "N5":80, "N
 
 def Der_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
-    print kwargs
+    print (kwargs)
     
     # Define an NN object
     nn_obj = NNC.Neural_Network(lr, scaler = scaler, N_=N_, max_epoch=max_epoch, reduce_type=reduce_type, **kwargs)
@@ -184,7 +184,6 @@ def Der_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
     kwargs = nn_obj.kwargs
     
 #    return nn_obj
-    print nn_obj.X_train.shape
     try :
         nn_obj.training_phase(tol=1e-3, early_stop=early_stop)
 
@@ -328,7 +327,7 @@ def Der_multiNN_solver(nn_obj, cb=cb):
     u = harm.complex_init_sin(cb.line_x, 1, pi_line, cb.L)
     
     _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
-    print abs_work
+    print (abs_work)
     fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
     
     u_nNext = []

@@ -26,6 +26,14 @@ import Class_Temp_Cst as ctc
 import class_functions_aux as cfa
 import Gaussian_Process_class as GPC
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 ctc = reload(ctc)
 cfa = reload(cfa)
 GPC = reload(GPC)
@@ -129,7 +137,7 @@ def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch
             nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True)
     
     except KeyboardInterrupt :
-        print "Session closed"
+        print ("Session closed")
         nn_obj.sess.close()
     
     beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))

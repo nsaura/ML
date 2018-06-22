@@ -23,10 +23,17 @@ import time
 import Class_write_case as cwc
 
 ## Import de la classe TF ##
-nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
+nnc_folder = osp.abspath(osp.dirname("../TF/"))
 sys.path.append(nnc_folder)
 
 import NN_class_try as NNC
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
 NNC = reload(NNC)
 
 from sklearn.model_selection import train_test_split

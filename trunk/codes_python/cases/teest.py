@@ -107,7 +107,7 @@ def PSI(beta) :
 def Next_hess(prev_hess_inv, y_nN, s_nN, dim ) :
     
     rho_nN  =   1./np.dot(y_nN.T, s_nN) if np.dot(y_nN.T, s_nN) is not 0 else 1./1e-5
-    print rho_nN
+    print  ("rho_nN = {}".format(rho_nN))
         
     Id      =   np.eye(dim)
         
@@ -147,16 +147,17 @@ while np.abs(errr) > 1e-5 :
 
     cpt += 1
     d_n =  np.dot(H_n, g_n)
-    print d_n
+    print ("descent of {}-eme iteration: \n{}".format(cpt, d_n))
     J_new = lambda alpha : J(beta_n + alpha * d_n)
     GJ_new= lambda alpha : grad_J(beta_n + alpha * d_n)
     
     alpha = op.linesearch.line_search_wolfe2(J_new, GJ_new, beta_n, d_n)[0]
 
-    print "alpha = {}".format(alpha,)
+    print ("alpha = {}".format(alpha))
+
     
     beta_nN = beta_n + alpha*d_n
-    print beta_nN
+    print ("beta {}-eme iteration: \n{}".format(cpt, beta_nN))
     
     g_nN    =   grad_J(beta_nN)
     s_nN    =   beta_nN - beta_n

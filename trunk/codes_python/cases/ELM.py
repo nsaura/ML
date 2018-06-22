@@ -26,6 +26,14 @@ import Class_Temp_Cst as ctc
 import class_functions_aux as cfa
 import Gaussian_Process_class as GPC
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 ctc = reload(ctc)
 cfa = reload(cfa)
 GPC = reload(GPC)
