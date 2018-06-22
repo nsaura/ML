@@ -295,11 +295,13 @@ class Neural_Network():
             
         except AttributeError :
             self.exception += 1
+            
             if self.exception == 1 :
                 print("\x1b[1;37;41mNo scaling\x1b[0m")
             
             else :
                 pass
+        
             return new_xs.reshape(1,-1)
         
 ###-------------------------------------------------------------------------------
