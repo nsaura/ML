@@ -16,6 +16,14 @@ from sklearn.model_selection import train_test_split
 from datetime import datetime
 import custom_swish_function as csf
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 csf = reload(csf)
 
 import tensorflow as tf
@@ -67,7 +75,7 @@ class Neural_Network():
         self.wlastkey = "wlast"
         self.blastkey = "blast"
         
-        print N_
+        print ("dict_layers = {}"format(N_))
         
         self.lr = lr
         self.max_epoch = max_epoch
@@ -130,7 +138,7 @@ class Neural_Network():
     def split_and_scale(self, X, y, shuffle=True, val=False, random_state=0, n_components="mle", whiten=False) :
         
         X, y = np.copy(X), np.copy(y)
-        print self.scaler_name
+        print ("Scaling used : %s " % self.scaler_name)
         if self.scaler_name == "None" :
             self.split_data(X, y, shuffle=shuffle, strat=False,\
                             standard_scale=False, val=val, random_state = random_state)
@@ -214,7 +222,6 @@ class Neural_Network():
         
         if len(y.shape) == 1:
             y = y.reshape(-1,1)
-            print y.shape
         
         self.X, self.y = X, y
         
@@ -332,7 +339,7 @@ class Neural_Network():
                         self.N_["O"]) / self.N_[prev_key]
                 biases_d[self.blastkey] = np.zeros(self.N_["O"])
                 err = True
-                print err
+#                print err
                 
             jj += 1
 
