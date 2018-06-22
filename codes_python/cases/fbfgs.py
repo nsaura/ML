@@ -124,7 +124,7 @@ s = np.asarray(tab_normal(0,1,N_discr-2)[0])
 
 for T_inf in T_inf_lst :
     sT_inf = "T_inf_"+str(T_inf)
-    print "{} ".format(sT_inf)
+    print ("{} ".format(sT_inf))
     beta_prior = np.asarray([1 for i in xrange(N_discr-2)])
 
     curr_d  =   T_obs_mean[sT_inf] 

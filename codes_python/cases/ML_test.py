@@ -23,10 +23,18 @@ import time
 import Class_write_case as cwc
 
 ## Import de la classe TF ##
-nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
+nnc_folder = osp.abspath(osp.dirname("../TF/"))
 sys.path.append(nnc_folder)
 
 import NN_class_try as NNC
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 NNC = reload(NNC)
 
 from sklearn.model_selection import train_test_split
@@ -68,8 +76,8 @@ from sklearn.neighbors import KNeighborsRegressor
 
 def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_, scale=True, step=50, **kwargs) :
     plt.ion()
-    print kwargs
-    print X.shape
+    print (kwargs)
+    print ("X.shape = {}".format(X.shape))
     nn_obj = NNC.Neural_Network(lr, N_, max_epoch=max_epoch, **kwargs)
     
     nn_obj.train_and_split(X, y, strat=False, shuffle=True, scale=scale)
@@ -82,7 +90,7 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_, scale=True
     kwargs = nn_obj.kwargs
     
 #    return nn_obj
-    print nn_obj.X_train.shape
+    print ("nn_obj.X_train.shape = {}".format(nn_obj.X_train.shape))
     try :
         nn_obj.training_session(tol=1e-7)
 
@@ -211,7 +219,7 @@ def proc(nn_obj, X_line, f, g):
     
     for j in range(start, end) :
         try : xs = inp(j)
-        except IndexError : print j; print X_line.shape, np.shape(f)
+        except IndexError : print ("j = %d" % j); print("X_line shape = {}\t f shape = {}".format(X_line.shape, np.shape(f)))
         if nn_obj.scale == True :
             recentre(xs, nn_obj.X_train_mean, nn_obj.X_train_std)
         

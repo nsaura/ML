@@ -17,6 +17,14 @@ import class_functions_aux as cfa #Pour les tracés post-process
 
 #run script_non_cst.py -T_prop 35 20 -N 71 -cov_mod "full" -g_sup 1e-2 -cptmax 200 
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 nctc = reload(nctc)
 cfa = reload(cfa)
 

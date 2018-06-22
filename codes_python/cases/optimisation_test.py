@@ -8,6 +8,7 @@ import csv, os, sys, warnings
 
 from scipy import optimize as op
 import numdifftools as nd
+
 ### Problem Constants and modules which will be converted into self when creating the class
 ##### Modules
 #-----------------
@@ -152,7 +153,7 @@ op.fmin_bfgs(J, beta_prior, fprime = Jprime)
 #    curr_h_beta =   h_beta(new_beta, T_inf, A) # To better understand
 
 err_mini = np.abs(J(new_beta))
-print compteur_mini, err_mini
+print ("compteur minimization : {}\nerreur last iteration of minimization".fomrmat(compteur_mini, err_mini))
 
     
 

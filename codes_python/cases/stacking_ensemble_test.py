@@ -22,9 +22,18 @@ import sklearn.datasets as sdata
 import tensorflow as tf
 
 ## Import de la classe TF ##
-nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
-sys.path.append(nnc_folder)
+tf_folder = osp.abspath(osp.dirname("../TF/"))
+sys.path.append(tf_folder)
 import NN_class_try as NNC
+
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 NNC = reload(NNC)
 ## -----
 ## -----
@@ -48,7 +57,7 @@ def recentre(xs, X_train_mean, X_train_std):
 ## -----
 def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_, scale=True, step=50, **kwargs) :
     plt.ion()
-    print kwargs
+    print (kwargs)
     nn_obj = NNC.Neural_Network(lr, N_, max_epoch=max_epoch, **kwargs)
     
     nn_obj.train_and_split(X,y,strat=False,shuffle=True, scale=scale)
@@ -233,7 +242,7 @@ for n in nlst :
 index_max = knnscore.values().index(max(knnscore.values()))    
 n_neigh_best = int(knnscore.keys()[index_max].split("_")[1])
 
-print n_neigh_best
+print (n_neigh_best)
 
 knn = KNeighborsRegressor(n_neighbors=n_neigh_best).fit(xtrain, ytrain.reshape(-1))
 
@@ -281,7 +290,7 @@ for N,n,imp in rff :
 index_max = rffscore.values().index(max(rffscore.values()))    
 N_est_best, md_best, imp_best = int(rffscore.keys()[index_max].split("_")[1][1:]), int(rffscore.keys()[index_max].split("_")[2][1:]), float(rffscore.keys()[index_max].split("_")[3][3:])
 
-print N_est_best, md_best
+print ("Best number of estimators : %d\t Best max_depth : %d" % (N_est_best, md_best))
 
 rff = RandomForestRegressor(n_estimators=N_est_best, max_depth = md_best).fit(xtrain, ytrain.reshape(-1))
 

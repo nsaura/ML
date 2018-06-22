@@ -24,4 +24,12 @@ from tensorflow import reset_default_graph
 tf_folder = osp.abspath(osp.dirname("../../TF/"))
 sys.path.append(tf_folder)
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 import NN_class_try as NNC

@@ -22,14 +22,22 @@ from random import randint, random
 from operator import add
 
 ## Import de la classe TF ##
-nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
-sys.path.append(nnc_folder)
+tf_folder = osp.abspath(osp.dirname("../TF/"))
+sys.path.append(tf_folder)
 
 import NN_class_try as NNC
 import Class_Temp_Cst as ctc
 import class_functions_aux as cfa
 import Gaussian_Process_class as GPC
 import NN_inference_ML as NNI
+
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
 
 ctc = reload(ctc)
 cfa = reload(cfa)
@@ -172,7 +180,7 @@ def evolve(network_configurations, len_pop, random_select, mutate_chance,  retai
     
     alpha_c = min(tests)
     
-    print sorted(costs, key=lambda x: x[0][0])
+    print ("sorted list : {}".format(sorted(costs, key=lambda x: x[0][0])))
     
     sorted_costs = [x[1] for x in sorted(costs, key=lambda x: x[0][0])]
     
@@ -187,7 +195,7 @@ def evolve(network_configurations, len_pop, random_select, mutate_chance,  retai
     for kset in sorted_costs[retain_length:] :
         if random_select > np.random.random():
             parents.append(kset)
-            print "kset {} kept".format(kset)
+            print ("kset {} kept".format(kset))
     
 #    print "\n Parents = \n", parents
     # On va incorporer des mutations dans les éléments des parents, toujours de aléatoirement

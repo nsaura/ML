@@ -22,9 +22,18 @@ import sklearn.datasets as sdata
 import tensorflow as tf
 
 ## Import de la classe TF ##
-nnc_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
-sys.path.append(nnc_folder)
+tf_folder = osp.abspath(osp.dirname("../TF/NN_class_try.py"))
+sys.path.append(tf_folder)
 import NN_class_try as NNC
+
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 NNC = reload(NNC)
 ## -----
 ## -----
@@ -48,7 +57,7 @@ def recentre(xs, X_train_mean, X_train_std):
 ## -----
 def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_, scale=True, step=50, **kwargs) :
     plt.ion()
-    print kwargs
+    print (kwargs)
     nn_obj = NNC.Neural_Network(lr, N_, max_epoch=max_epoch, **kwargs)
     
     nn_obj.train_and_split(X,y,strat=False,shuffle=True, scale=scale)
@@ -61,7 +70,7 @@ def build_case(lr, X, y, act, opti, loss, max_epoch, reduce_type, N_, scale=True
     kwargs = nn_obj.kwargs
     
     return nn_obj
-    print nn_obj.X_train.shape
+    print (nn_obj.X_train.shape)
     try :
         nn_obj.training_session(tol=1e-8, verbose=True)
 
@@ -190,7 +199,7 @@ for j, (X, y, name) in enumerate(datas) :
     color = col[int(np.random.choice(range(len(col)-1)))]
     
     nn_obj = build_case(1e-3, X, y , act="selu", opti="Adam", loss="OLS", max_epoch=3000, reduce_type="sum", verbose=True, N_=dict_layers, color=color, scale=True, BN=True, bsz=30)
-    print nn_obj.X_train.shape
+    print (nn_obj.X_train.shape)
     
     try :
         nn_obj.training_session(tol=1e-7, verbose=True)

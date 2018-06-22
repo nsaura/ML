@@ -67,14 +67,14 @@ def resolution_diff(Nx=202, tf=10, L = float(3), write=False)  :
     dt_v = dx**2 / D * CFL
     
     if dt < dt_v :
-        print "CFL lineaire"
+        print ("CFL lineaire")
     else:
-        print "CFL visqueux"      
+        print ("CFL visqueux")
         dt = dt_v
         
-    print dt 
+    print ("dt = {}".format(dt ))
     
-    print D*dt/dx**2
+    print ("CFL avec dt = {}\nCfl voulu : {}".format(D*dt/dx**2))
     
     r = dt/dx
     
@@ -263,8 +263,8 @@ def crank_nicholson(Nx=202, L = float(3), itmax = 10, write=False):
         u[-1] = u[1] 
         
         u_n = u[1:Nx-1]
-        print it 
-        print u_n
+        print ("it = %d" %it 
+        print ("u_n = \n{}".format(u_n))
         
         if it % 1 == 0 :
             plt.clf()

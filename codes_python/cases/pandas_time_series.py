@@ -32,7 +32,7 @@ ts1 = pd.Series(np.arange(31), index=pd.date_range("2015-1-1", periods=31))
 
 ts1.index[2].to_pydatetime()
 #datetime.datetime? datetime(year, month, day[, hour[, minute[, second[, microsecond[,tzinfo]]]]])
-print ts1.index[2].to_pydatetime()
+print (ts1.index[2].to_pydatetime())
 
 import datetime
 ts2 = pd.Series(np.random.rand(2), index=[datetime.datetime(2015,1,1), datetime.datetime(2015,1,1)])
@@ -50,7 +50,7 @@ ts3 = pd.Series(np.random.rand(3), index=periods)
 #2015-03    0.613808
 
 # On peut même récupérer la fréquence etc.
-print ts3.index
+print (ts3.index)
 #PeriodIndex(['2015-01', '2015-02', '2015-03'], dtype='int64', freq='M')
 
 #On peut convertir une serie en PeriodIndex 
