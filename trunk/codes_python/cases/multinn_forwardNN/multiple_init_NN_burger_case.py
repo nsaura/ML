@@ -423,7 +423,7 @@ def multiRF_solver(X, y):
         plt.legend()
         plt.pause(2)
 
-# multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 "../data/burger_dataset/"
+# multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -dp "../data/burger_dataset/"
 # X_multi, y_multi = compute_true_u(cb, 12, pi_line, plot=True, write=True)
 # nn = multi_buildNN(1e-3, X_multi, y_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
 # multiNN_solver(nn)
