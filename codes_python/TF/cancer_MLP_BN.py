@@ -14,6 +14,15 @@ cancer = load_breast_cancer()
 
 import time
 #import ./../datasets_mglearn as dsets
+
+#try:
+#    reload  # Python 2.7
+#except NameError:
+#    try:
+#        from importlib import reload  # Python 3.4+
+#    except ImportError:
+#        from imp import reload  # Python 3.0 - 3.3
+
 #dsets = reload(dsets)
 
 import tensorflow as tf
@@ -131,7 +140,7 @@ costs = []
 max_epoch, err, epoch = 100, 1, 0
 
 batch_sz = find_divisor(Nraw_Xtrain)[-3]
-print batch_sz
+print (batch_sz)
 
 n_batches= Nraw_Xtrain // batch_sz
 y_train_ind = y2indicator(y_train, K)
@@ -165,7 +174,7 @@ dd = {k:v for k,v in zip (["N","O"], np.bincount(R))}
 print ("Taux de bonne réponse : {:.2f}%".format((dd['O']/ (dd['N'] + dd['O']))))
 
 t2 = time.time()
-print np.abs(t2-t1), "s "
+print ("Temps de calculs : %fs" % np.abs(t2-t1))
 # Taux de bonne réponse : 0.91
 # En jouant un peu, on peu atteindre les 0.98
 

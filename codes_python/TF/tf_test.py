@@ -15,6 +15,15 @@ import os.path as osp
 import sklearn.datasets as sdata
 
 import NN_class_try as NNC
+
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 NNC = reload(NNC)
 
 import tensorflow as tf
@@ -69,7 +78,7 @@ max_epoch = 3000
 scale=True
 
 for j, (X, y, name) in enumerate(datas) :
-    print name 
+    print ("name of the dataset selected at %d-eme iterations: %s" %(j, name ))
 #    print X, y, name
     NN_dict = dict_layers(X.shape[1], 10)
     nn_obj = NNC.Neural_Network(lr, N_= NN_dict, max_epoch=max_epoch, **kwargs)

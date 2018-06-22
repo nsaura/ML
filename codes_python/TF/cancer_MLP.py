@@ -103,7 +103,7 @@ costs = []
 max_epoch, err, epoch = 100, 1, 0
 
 batch_sz = find_divisor(Nraw_Xtrain)[-3]
-print batch_sz
+print ("bsz = %d " % batch_sz)
 
 n_batches= Nraw_Xtrain // batch_sz
 y_train_ind = y2indicator(y_train, K)
@@ -136,7 +136,7 @@ dd = {k:v for k,v in zip (["N","O"], np.bincount(R))}
 
 print ("Taux de bonne réponse : {:.2f}%".format((dd['O']/ (dd['N'] + dd['O']))))
 t2 = time.time()
-print np.abs(t2-t1), "s "
+print ("Temps de calculs : %f s" % np.abs(t2-t1))
 # Taux de bonne réponse : 0.91
 # En jouant un peu, on peu atteindre les 0.98
 
