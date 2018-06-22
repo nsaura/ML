@@ -120,6 +120,7 @@ class Neural_Network():
 
         ## Check on the keys : 
         keys = N_.keys()
+        print (keys, type(keys))
         keys.remove("I")
         keys.remove("O")
         
