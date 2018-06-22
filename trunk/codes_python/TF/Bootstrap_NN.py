@@ -108,15 +108,13 @@ class Bootstraped_Neural_Network :
         prediction = []
         
         for b in range(self.n_estimators):
-            if rescale == True :
-                nxs = self.NN_dict[self.nnkey(b)].scale_inputs(xs)
+            nxs = self.NN_dict[self.nnkey(b)].scale_inputs(xs)
             
-            else :
-                nxs = np.copy(xs)
-            
+#            print ("b = {}, pred = {}".format(b, self.NN_dict[self.nnkey(b)].predict(nxs, rescale_tab=False)[0,0]))
             prediction.append(self.NN_dict[self.nnkey(b)].predict(nxs, rescale_tab=False)[0,0])
         
-        bstrap_pred = 1./(self.n_estimators-1) * sum(prediction)
+        bstrap_pred = 1./(self.n_estimators) * sum(prediction)
+#        print ("La moyenne : {}".format(bstrap_pred))
         
         if variance == True :
             return bstrap_pred, prediction
@@ -217,11 +215,11 @@ if __name__ == "__main__" :
     dataset["data"] = boston.data     
     dataset["target"] = boston.target
         
-    BNN = Bootstraped_Neural_Network(4, dataset) 
+    BNN = Bootstraped_Neural_Network(2, dataset) 
     BNN.resample_dataset()       
     
     color = iter(["blue", "darkred", "aqua", "olive", "magenta", "orange", "mediumpurple", "chartreuse", "tomato", "saddlebrown", "powderblue", "khaki", "salmon", "darkgoldenrod", "crimson", "dodgerblue", "limegreen"])
     
     BNN.build_NN(1e-3, {"I" : 13, "N1" : 80, "N2" : 80, "N3" : 80, "N4" : 80,  "N5" : 80, "N6": 80 ,"O": 1}, "selu", "Adam", "Ridge",
-                 color, scaler="Standard", max_epoch=500, reduce_type="sum", rdn=0, bsz = 32, BN=True)
+                 color, scaler="Standard", max_epoch=100, reduce_type="sum", rdn=0, bsz = 32, BN=True)
     
