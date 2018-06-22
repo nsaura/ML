@@ -21,14 +21,25 @@ from sklearn.model_selection import train_test_split
 
 from tensorflow import reset_default_graph
 
-import Class_write_case as cwc
 ## Import de la classe TF ##
-nnc_folder = osp.abspath(osp.dirname("../../TF/NN_class_try.py"))
+nnc_folder = osp.abspath(osp.dirname("../../TF/"))
 sys.path.append(nnc_folder)
 
+## Import du chemin cases ##
+case_folder = osp.abspath(osp.dirname("../"))
+sys.path.append(case_folder)
+ 
 import NN_class_try as NNC
 import Class_Vit_Choc as cvc
 import harmonic_sinus as harm
+
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
 
 NNC = reload(NNC)
 cvc = reload(cvc)
@@ -412,7 +423,7 @@ def multiRF_solver(X, y):
         plt.legend()
         plt.pause(2)
 
-# run multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -typeJ "u"
+# multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 "../data/burger_dataset/"
 # X_multi, y_multi = compute_true_u(cb, 12, pi_line, plot=True, write=True)
 # nn = multi_buildNN(1e-3, X_multi, y_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
 # multiNN_solver(nn)
