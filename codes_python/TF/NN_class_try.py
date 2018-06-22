@@ -75,7 +75,7 @@ class Neural_Network():
         self.wlastkey = "wlast"
         self.blastkey = "blast"
         
-        print ("dict_layers = {}"format(N_))
+        print ("dict_layers = {}".format(N_))
         
         self.lr = lr
         self.max_epoch = max_epoch
