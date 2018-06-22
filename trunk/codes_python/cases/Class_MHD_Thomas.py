@@ -19,6 +19,14 @@ import time
 import sys
 
 import harmonic_sinus as harm
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 3.0 - 3.3
+
 harm = reload(harm)
 
 def THparser() :
