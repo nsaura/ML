@@ -233,8 +233,8 @@ class Neural_Network():
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
         
-        X_train_stdd  =  X_train.std(axis=0, ddof=1)
         X_train_mean =  X_train.mean(axis=0)
+        X_train_stdd  =  X_train.std(axis=0, ddof=1)
         
         if standard_scale == True :
             # We have to normalize each dimension
@@ -244,9 +244,9 @@ class Neural_Network():
             X_train_scaled = np.zeros_like(X_train)
             X_test_scaled = np.zeros_like(X_test)
             
-            for i in range(X_train_mean.shape[0]) :
-                X_train_scaled[:, i] = X_train[:, i] -  X_train_mean[i]
-                X_test_scaled[:, i]  = X_test[:, i]  -  X_train_mean[i]
+            for i, mean in enumerate(X_train_mean) :
+                X_train_scaled[:, i] = X_train[:, i] -  mean
+                X_test_scaled[:, i]  = X_test[:, i]  -  mean
                 
                 if np.abs(X_train_stdd[i]) > 1e-12 :
                     X_train_scaled[:,i] /= X_train_stdd[i]
@@ -292,10 +292,12 @@ class Neural_Network():
         
         try :
             if self.scaler_name == "Standard" :
-                new_xs -= self.X_train_mean
                 
-                for i, stdd in enumerate(self.X_train_stdd) :
-                    new_xs /= stdd
+                for i, (mean, std) in enumerate(zip(self.X_train_mean, self.X_train_stdd)):
+                    new_xs[i] = new_xs[i] - mean
+
+                    if np.abs(std) > 1e-5 :
+                        new_xs[i] = new_xs[i] / std
             
             else :
                 new_xs = self.scaler.transform(new_xs.reshape(1,-1))
@@ -856,6 +858,7 @@ class Neural_Network():
         if self.err_type=="MSEGrad" :
             feeding = {self.x : self.X_train, self.t : self.y_train,
                        self.jac : self.sess.run(self.grads_inputs, feed_dict={self.x : self.X_train})}
+        
         # Tuning the parameters (weights, biais)
         self.sess.run(self.minimize_loss, feed_dict=feeding)
                     
@@ -1029,112 +1032,24 @@ if __name__=="__main__":
                
     N_= gen_dict(X.shape[1])
     
-#    lparams = [1e-08, 1e-07, 1e-06, 1e-05, 0.0001, 0.001, 0.01, 0.1]
-
-    lparams = [1e-9, 1e-07, 1e-3]
-    rparams = [1e-5, 1e-3, 1e-2]
-#    lparams = [1e8, 1e7, 1e6, 100000, 10000, 1000, 100, 10, 1]
-#    color = iter(cm.rainbow(np.linspace(0,1,np.shape(lparams)[0])))
-#    color = iter(sns.diverging_palette(255, 30, l=80, n=len(lparams), center='dark'))
-    color = iter(sns.color_palette("Set1", len(lparams)*len(rparams)))
-    names = iter([str(i) + "_" + str(j)  for i in lparams for j in rparams])
-    
-    finalTrain_costs = []
-    finalTest_costs = []
-    
-    elasticTrain_costs = []
-    elasticTest_costs = []
-    
-    ll, rr = [], []
-    
-#    for l in lparams :
-#        for r in rparams :
-#            TF = Neural_Network(0.0005, N_=N_, reduce_type="sum", color=next(color), bsz=64, BN=True, verbose=True,\
-#                                max_epoch=1000, clip=False, lasso_param = l, ridge_param = r)
-#        
-#            TF.train_and_split(X,y, scale=True, shuffle=True, val=False, strat=False)
-#            
-#            TF.tf_variables()
-#            TF.layer_stacking_and_act("relu")
-#            TF.def_optimizer("Adam")
-#            TF.cost_computation("Elastic")
-#            TF.case_specification_recap()
-#            
-#            TF.training_session(1e-3)
-#            
-#            elasticTrain_costs.append(TF.costs[-1][0])
-#            
-#            elasticTest_costs.append(TF.sess.run(TF.reduce_type_fct(tf.square(TF.predict(TF.X_test) - TF.y_test))))
-#            
-#            lab = next(names)
-#            
-#            plt.figure("Prediction")
-#            plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
-#            plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds %s" % lab, color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
-#            plt.legend()
-#            
-#            plt.pause(0.1)
-#            
-#            TF.sess.close()
-#            
-#            ll.append(l)
-#            rr.append(r)
-#            
-#    fig = plt.figure("3D Projection Path Elastic Net")
-#    ax = fig.gca(projection='3d')
-#    ax.plot(ll, rr, elasticTrain_costs, color='navy', label="Training cost evolution")
-#    ax.plot(ll, rr, elasticTest_costs, color='darkred', label="Ontest set cost evolution")
-
-#    ax.set_xlabel("Lasso param : $\lambda_L$")
-#    ax.set_ylabel("Ridge param : $\lambda_R$")
-#    ax.set_zlabel("Training costs")
-#    #    ax=plt.gca()
-#    #    ax.yaxis.set_label_coords(-0.08, 0.5)
-
-#    #    ax.set_xlabel("Lasso param : $\lambda_L$")
-#    #    ax.set_xlabel("Ridge param : $\lambda_R$")
-#    #    ax.set_zlabel("Test costs")
-#    #    ax=plt.gca()
-#    #    ax.yaxis.set_label_coords(-0.08, 0.5)
-#    ax.legend()
-
-#plt.pause(0.1)
-            
-#    TF.error_computation("cross_entropy")
-    
-#    TF.optimisation()
     scaler_name = ["Standard", "MinMax", "Robust", "PCA"]
     names = iter(scaler_name)
     
-    
-#    for sn in scaler_name :
-    sn = "Standard"
-    color = iter(["yellow", "green", "black", "purple", "cyan"])
-    losses = iter(["OLS", "MSEGrad", "Lasso", "Ridge", "Elastic"])
-    
-#    for i in range(5) :
-        
-    TF = Neural_Network(0.0005, N_=N_, scaler = sn, reduce_type="sum", color="black", verbose=True, max_epoch=300, clip=False, r_parameter=0.5, bsz=128, BN=True)#, lasso_param = l, ridge_param = r)
+    TF = Neural_Network(0.0005, N_=N_, scaler = "Standard", reduce_type="sum", color="black", verbose=True, max_epoch=300, clip=False, r_parameter=0.5, bsz=128, BN=True)#, lasso_param = l, ridge_param = r)
 
     TF.split_and_scale(X,y,shuffle=True, val=False)
 
     TF.tf_variables()
-    TF.layer_stacking_and_act("swish")
+    TF.layer_stacking_and_act("relu")
     TF.def_optimizer("Adam")
     TF.cost_computation("OLS")
     TF.case_specification_recap()
     
     TF.training_phase(1e-3)
 #    
-    print (TF.costs[-1])
-#    
-    print(TF.sess.run(TF.reduce_type_fct(tf.square(TF.predict(TF.X_test) - TF.y_test))))
-#    
-    lab = next(names)
-#    
     plt.figure("Prediction")
     plt.plot(TF.y_test, TF.y_test, label="Expected", color='k')
-    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds %s" % lab, color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
+    plt.plot(TF.y_test, TF.predict(TF.X_test), label="preds Standard", color=TF.kwargs["color"], marker='o', linestyle="none", fillstyle='none')
     plt.legend()
 
 ##-------------------------------------------------- NOTES --------------------------------------------------##
