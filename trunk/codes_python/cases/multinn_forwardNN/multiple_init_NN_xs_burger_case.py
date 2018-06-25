@@ -21,22 +21,17 @@ from sklearn.model_selection import train_test_split
 
 from tensorflow import reset_default_graph
 
+## Import de la classe TF ##
+nnc_folder = osp.abspath(osp.dirname("../../TF/"))
+sys.path.append(nnc_folder)
 
-## Import du chemin TF ##
-tf_folder = osp.abspath(osp.dirname("../../TF/"))
-sys.path.append(tf_folder)
-
-## Import du chemain cases ##
+## Import du chemin cases ##
 case_folder = osp.abspath(osp.dirname("../"))
 sys.path.append(case_folder)
-
-import Bootstrap_NN as BNN
+ 
 import NN_class_try as NNC
-
-import Class_write_case as cwc
 import Class_Vit_Choc as cvc
 import harmonic_sinus as harm
-
 
 try:
     reload  # Python 2.7
@@ -47,8 +42,6 @@ except NameError:
         from imp import reload  # Python 3.0 - 3.3
 
 NNC = reload(NNC)
-BNN = reload(BNN)
-
 cvc = reload(cvc)
 harm = reload(harm)
 
@@ -58,11 +51,15 @@ np.random.seed(1000000)
 parser = cvc.parser()
 cb = cvc.Vitesse_Choc(parser) 
 
-wdir = osp.abspath("./../data/burger_dataset/complex_init_NN/Der")
+wdir = osp.abspath("./data/burger_dataset/complex_init_NN/")
 curr_work = osp.join(wdir, "Nx:%d_Nt:%d_nu:%.4f_CFL:%0.2f" % (cb.Nx, cb.Nt, cb.nu, cb.CFL)) #beta_Nx:52_Nt:32_nu:0.025_typei:sin_CFL:0.4_it:017.npy
 
-if osp.exists(curr_work) == False :
-    os.makedirs(curr_work)
+
+add_block = lambda u_curr, x, j : [ x[j-1], x[j], x[j+1], u_curr[j-1], u_curr[j], u_curr[j+1] ]
+
+
+n_inputs = 6
+
 
 def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False) :
     r = cb.dt/cb.dx
@@ -123,13 +120,12 @@ def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False
             
         it += 1
     return u, abs_work
-    
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 
-def Der_compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
-    X = np.zeros((4))
+def xs_compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
+    X = np.zeros((n_inputs))
     y = np.zeros((1))
     
     for n in range(nsamples) :
@@ -137,13 +133,13 @@ def Der_compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False
             filename = "cpx_init_kc%d_%d" % (kc, n)
             uu = harm.complex_init_sin(cb.line_x, kc=kc, inter_deph=pi_line, L=cb.L, plot=plot)
             _, abs_work = LW_solver(uu, cb.itmax, filename = filename, write=write, plot=plot)
-                
+            
             for it in range(1, cb.itmax) :
                 u_curr = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it)))
                 u_next = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it+1)))
-
+                
                 for j in range(1, len(uu)-1) :
-                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1], (u_curr[j+1] - u_curr[j-1])*0.5/cb.dx]])        
+                    X = np.block([[X], add_block(u_curr, cb.line_x, j)])        
                     y = np.block([[y], [u_next[j]]])
     
     X = np.delete(X, 0, axis=0)        
@@ -158,10 +154,12 @@ def Der_compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False
 pi_line = np.linspace(-np.pi/2., np.pi/2., 1000)
 choices = [np.random.choice(pi_line) for i in range(7)]
 
+if osp.exists(curr_work) == False :
+    os.makedirs(curr_work)
 
-dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80}#, "N4":80, "N5":80, "N6":80}#, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
+dict_layers = {"I": n_inputs, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6":80}#, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
 
-def Der_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
+def xs_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
     print (kwargs)
     
@@ -252,78 +250,7 @@ def Der_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
 
-def Der_bootstrap(num_predictors, lr, X, y, dict_layers, act, opti, loss, max_epoch, reduce_type, scaler, step=50, rdn = 0, early_stop=False, **kwargs) :
-    dataset = { "data" : X,
-                "target" : y}
-    
-    bts = BNN.Bootstraped_Neural_Network(num_predictors, dataset) 
-    bts.resample_dataset()       
-
-    color = ["blue", "darkred", "aqua", "olive", "magenta", "orange", "mediumpurple", "chartreuse", "tomato", "saddlebrown", "powderblue", "khaki", "salmon", "darkgoldenrod", "crimson", "dodgerblue", "limegreen"]
-    
-    color = iter(np.array(color)[np.random.permutation(len(color))])
-    
-    bts.build_NN(1e-3, dict_layers, act, opti, loss, palet = color, max_epoch=max_epoch, scaler=scaler, reduce_type=reduce_type, rdn=rdn, **kwargs)
-
-    return bts
-
-#--------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------
-
-def Der_bootstrap_solver(boot_obj, rescale, cb=cb) :
-    plt.figure()
-    p = min(np.random.choice(pi_line), np.random.choice(pi_line))
-    
-    u = harm.complex_init_sin(cb.line_x, 1, pi_line, cb.L)
-    
-    _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
-    print (abs_work)
-    
-    fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
-    
-    u_nNext = []
-    var = []
-    
-    for it in range(1, cb.itmax) :
-        if it > 1 :
-            u = u_nNext
-            u_nNext = []
-            var = []
-            
-        for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j-1], u[j], u[j+1], (u[j+1] - u[j-1])/(2*cb.dx) ])
-            
-            mean_curr_pred = boot_obj.bootstrap_prediction(xs, rescale=rescale, variance=False)
-            
-            var_curr_pred = boot_obj.bootstrap_variance(xs, rescale = rescale)
-            
-            u_nNext.append(mean_curr_pred)
-            var.append(var_curr_pred)
-            
-            print var
-        # u_nNext.shape = 30 
-        # use of list type to insert in a second time boundary condition
-        
-        u_nNext.insert(0, u[-2])
-        u_nNext.insert(len(u), u[1])
-        
-        u_nNext = np.array(u_nNext)
-        
-        if it % 5 == 0 :
-            plt.clf()        
-            plt.plot(cb.line_x[1:cb.Nx-1], fetch_real_u(it+1)[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
-            plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c="red")
-            plt.fill_between(cb.line_x[1:cb.Nx-1], -np.array(var), np.array(var), facecolor= "0.2", alpha=0.4, interpolate=True, label="$\pm \sigma$")                
-            plt.legend()
-            plt.pause(2)
-    
-
-#--------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------
-
-def Der_multiNN_solver(nn_obj, cb=cb):
+def xs_multiNN_solver(nn_obj, cb=cb):
     plt.figure()
     p = min(np.random.choice(pi_line), np.random.choice(pi_line))
     
@@ -332,6 +259,7 @@ def Der_multiNN_solver(nn_obj, cb=cb):
     
     _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
     print (abs_work)
+    
     fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
     
     u_nNext = []
@@ -342,11 +270,17 @@ def Der_multiNN_solver(nn_obj, cb=cb):
             u_nNext = []
             
         for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j-1], u[j], u[j+1], (u[j+1] - u[j-1])/(2*cb.dx) ])
+            xs = np.array(add_block(u, cb.line_x, j))
             
-            xs = nn_obj.scale_inputs(xs)
+            if nn_obj.scaler_name != "None" :
+#                print ("Before : \n{}".format(xs))
+                xs = nn_obj.scale_inputs(xs)
+#                print ("After : \n{}".format(xs))
+#                
+#                time.sleep(2)
+            
             xs = xs.reshape(1, -1)
-
+            
             u_nNext.append(nn_obj.predict(xs)[0,0])
         # u_nNext.shape = 30 
         # use of list type to insert in a second time boundary condition
@@ -367,7 +301,7 @@ def Der_multiNN_solver(nn_obj, cb=cb):
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
    
-def Der_multiRF_solver(X, y): 
+def xs_multiRF_solver(X, y): 
     xtr, xte, ytr, yte = train_test_split(X, y.ravel(), shuffle=True, random_state=0)
     rf = rfr(n_estimators=20)
     rf.fit(xtr, ytr)
@@ -404,15 +338,10 @@ def Der_multiRF_solver(X, y):
         plt.legend()
         plt.pause(2)
 
+# run multiple_init_NN_xs_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+# Xxs_multi, yxs_multi = xs_compute_true_u(cb, 12, pi_line, plot=True, write=True)
+# nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
+# xs_multiNN_solver(nn_xs)
 
-# run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -dp "../data/burger_dataset/"
-# Der_X_multi, Der_y_multi = Der_compute_true_u(cb, 12, pi_line, plot=True, write=True)
-# Der_nn = Der_multi_buildNN(1e-3, Der_X_multi, Der_y_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
-# Der_multiNN_solver(Der_nn)
 
-# Booststrap : 
-# run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -dp "../data/burger_dataset/"
-# Der_X_multi, Der_y_multi = Der_compute_true_u(cb, 12, pi_line, plot=True, write=True)
-# boot_obj = Der_bootstrap(5, 1e-3, Der_X_multi, Der_y_multi, dict_layers, "selu", "Adam", "Lasso", 100, "sum", "Standard", bsz = 128, BN=True)
-# Der_bootstrap_solver(boot_obj, True)
 
