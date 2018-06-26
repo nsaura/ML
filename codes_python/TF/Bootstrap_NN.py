@@ -72,6 +72,8 @@ class Bootstraped_Neural_Network :
         NN_dict = {}
         testkey = lambda key : key not in kwargs.keys()
         
+        colors_dict = {}
+        
         val = False if testkey("val") else kwargs["val"]
         n_compo = "mle" if testkey("n_components") else kwargs["n_components"]
             
@@ -105,8 +107,10 @@ class Bootstraped_Neural_Network :
             self.NN_test_plot(nn_b)
                 
             NN_dict[self.nnkey(b)] = nn_b
-
+            colors_dict[self.nnkey(b)] = nn_b.kwargs["color"]
+            
         self.NN_dict = NN_dict
+        self.colors_dict = colors_dict
         
 ##--------------------------------------------------------------------------------------------    
 ##--------------------------------------------------------------------------------------------

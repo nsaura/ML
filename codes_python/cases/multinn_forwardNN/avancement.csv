@@ -1,8 +1,13 @@
 recap :
 
+###############################
+###############################
 
+            Direct
 
 ###############################
+###############################
+
 Premier
 
 dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'O': 1}
@@ -28,7 +33,7 @@ Xxs_multi, yxs_multi = xs_compute_true_u(cb, 12, pi_line, plot=True, write=True)
 dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'O': 1}
 nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "Lasso", 100, "sum", "Standard", N_=dict_layers, color="dodgerblue",  bsz=128,  BN=True)
 [ 23.29787379]
-
+###############################
 ###############################
 
 ###############################
@@ -47,25 +52,32 @@ nn = multi_buildNN(1e-3, X_multi, y_multi, "selu", "Adam", "Lasso", 200, "sum", 
 run multiple_init_NN_xs_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
 nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="dodgerblue",  bsz=128,  BN=True)
 [ 40.05745046]
-
+###############################
 ###############################
 
 ###############################
-Troisieme
+Troisieme 
+
+dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'N4': 80, 'N5': 80, 'O': 1}
+epoch = 200
+bsz = 128
 
 run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
-dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'N4': 80, 'N5': 80, 'O': 1}
 Der_nn = Der_multi_buildNN(1e-3, Der_X_multi, Der_y_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="crimson",  bsz=128,  BN=True)
 [ 5.49827846]
 
 run multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
-dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'N4': 80, 'N5': 80, 'O': 1}
 nn = multi_buildNN(1e-3, X_multi, y_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="olive",  bsz=128,  BN=True)
 [ 19.16338882]
 
 run multiple_init_NN_xs_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
-dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'N4': 80, 'N5': 80, 'O': 1}
 nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="dodgerblue",  bsz=128,  BN=True)
 [ 8.98071865]
 
+###############################
+###############################
 
+          Booststrap
+
+###############################
+###############################

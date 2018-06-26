@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sys, warnings, argparse
 
@@ -285,6 +286,20 @@ def Der_bootstrap_solver(boot_obj, rescale, cb=cb) :
     u_nNext = []
     var = []
     
+    colors = np.array([mpl.colors.to_rgb(cc) for cc in boot_obj.colors_dict.values()])
+    color = np.mean(colors, axis=0)
+    
+    inf_errs = []
+    
+    ax, axx = [], []
+    
+    ax1 = plt.subplot(221) # Erreur a l'iteration n
+    ax2 = plt.subplot(222) # Evolution de la norme infinie de l'erreur 
+    ax3 = plt.subplot(212) # Evolution de la prédiction
+    
+    ax.append(ax1) ; ax.append(ax2) ; ax.append(ax3)
+    axx.append(ax1); axx.append(ax3)
+    
     for it in range(1, cb.itmax) :
         if it > 1 :
             u = u_nNext
@@ -301,7 +316,6 @@ def Der_bootstrap_solver(boot_obj, rescale, cb=cb) :
             u_nNext.append(mean_curr_pred)
             var.append(var_curr_pred)
             
-            print var
         # u_nNext.shape = 30 
         # use of list type to insert in a second time boundary condition
         
@@ -309,16 +323,42 @@ def Der_bootstrap_solver(boot_obj, rescale, cb=cb) :
         u_nNext.insert(len(u), u[1])
         
         u_nNext = np.array(u_nNext)
+        u_nNext_ex = fetch_real_u(it+1)
+        
+        errs = np.array([(u_nNext[i] -  u_nNext_ex[i]) for i in range(cb.Nx)])
+      
+        inf_err = np.linalg.norm(errs, np.inf)
+        inf_errs.append(inf_err)
         
         if it % 5 == 0 :
-            plt.clf()        
-            plt.plot(cb.line_x[1:cb.Nx-1], fetch_real_u(it+1)[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
-            plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c="red")
-            plt.fill_between(cb.line_x[1:cb.Nx-1], -np.array(var), np.array(var), facecolor= "0.2", alpha=0.4, interpolate=True, label="$\pm \sigma$")                
-            plt.legend()
-            plt.pause(2)
-    
+            axx[0] = ax[0]
+            axx[1] = ax[-1]
+            
+            for a in axx :
+                a.cla()
+            
+            # Erreur a l'iteration n
+            ax[0].plot(cb.line_x, np.abs(errs), label="Abs error : $\hat{u}^{n+1} - u^{n+1}_t$", c=color)
+            
+            # Evolution de la norme infinie de l'erreur 
+            ax[1].scatter(it, inf_err, c=color, s=12)
+            
+            ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext_ex[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
+            ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=color)
+            
+            ax[-1].fill_between(cb.line_x[1:cb.Nx-1], -10*np.array(var), 10*np.array(var), facecolor= "0.2", alpha=0.4, interpolate=True, label="$\pm \sigma$")  
+            
+            for a in ax :
+                a.legend(prop={'size': 8})
+            
+            fig = plt.gcf()
+            fig.tight_layout()
+            
+            plt.title("Iteration %d" %it)
 
+            plt.pause(2)
+
+    return inf_errs
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
@@ -335,6 +375,16 @@ def Der_multiNN_solver(nn_obj, cb=cb):
     fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
     
     u_nNext = []
+    inf_errs = []
+    
+    ax, axx = [], []
+    
+    ax1 = plt.subplot(221) # Erreur a l'iteration n
+    ax2 = plt.subplot(222) # Evolution de la norme infinie de l'erreur 
+    ax3 = plt.subplot(212) # Evolution de la prédiction
+    
+    ax.append(ax1) ; ax.append(ax2) ; ax.append(ax3)
+    axx.append(ax1); axx.append(ax3)
     
     for it in range(1, cb.itmax) :
         if it > 1 :
@@ -355,14 +405,42 @@ def Der_multiNN_solver(nn_obj, cb=cb):
         u_nNext.insert(len(u), u[1])
         
         u_nNext = np.array(u_nNext)
+        u_nNext_ex = fetch_real_u(it+1)
+        
+        errs = np.array([(u_nNext[i] -  u_nNext_ex[i]) for i in range(cb.Nx)])
+        
+        inf_err = np.linalg.norm(errs, np.inf)
+        
+        inf_errs.append(inf_err)
         
         if it % 5 == 0 :
-            plt.clf()        
-            plt.plot(cb.line_x[1:cb.Nx-1], fetch_real_u(it+1)[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
-            plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
-            plt.legend()
+            axx[0] = ax[0]
+            axx[1] = ax[-1]
+            
+            for a in axx :
+                a.cla()
+            
+            # Erreur a l'iteration n
+            ax[0].plot(cb.line_x, np.abs(errs), label="Relative Erreur $\hat{u}^{n+1} - u^{n+1}_t$", c=nn_obj.kwargs["color"])
+            
+            # Evolution de la norme infinie de l'erreur 
+            ax[1].scatter(it, inf_err, c=nn_obj.kwargs["color"], s=12)
+            
+            ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext_ex[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
+            ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
+            
+            for a in ax :
+                a.legend(prop={'size': 8})
+            
+            fig = plt.gcf()
+            fig.tight_layout()
+            
+            plt.title("Iteration %d" %it)
+            
             plt.pause(2)
-        
+
+    return inf_errs
+    
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
@@ -408,7 +486,7 @@ def Der_multiRF_solver(X, y):
 # run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -dp "../data/burger_dataset/"
 # Der_X_multi, Der_y_multi = Der_compute_true_u(cb, 12, pi_line, plot=True, write=True)
 # Der_nn = Der_multi_buildNN(1e-3, Der_X_multi, Der_y_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
-# Der_multiNN_solver(Der_nn)
+# errs = Der_multiNN_solver(Der_nn)
 
 # Booststrap : 
 # run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 52 -Nt 32 -beta_prior 10 -dp "../data/burger_dataset/"
