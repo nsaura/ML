@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sys, warnings, argparse
 
@@ -55,11 +56,11 @@ wdir = osp.abspath("./data/burger_dataset/complex_init_NN/")
 curr_work = osp.join(wdir, "Nx:%d_Nt:%d_nu:%.4f_CFL:%0.2f" % (cb.Nx, cb.Nt, cb.nu, cb.CFL)) #beta_Nx:52_Nt:32_nu:0.025_typei:sin_CFL:0.4_it:017.npy
 
 
-add_block = lambda u_curr, x, j : [ x[j-1], x[j], x[j+1], u_curr[j-1], u_curr[j], u_curr[j+1] ]
+pi_line = np.linspace(-np.pi/2., np.pi/2., 1000)
 
-
-n_inputs = 6
-
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
 
 def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False) :
     r = cb.dt/cb.dx
@@ -119,47 +120,99 @@ def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False
                 plt.pause(0.15)
             
         it += 1
+
     return u, abs_work
+
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 
-def xs_compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
-    X = np.zeros((n_inputs))
+def amp_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, write=False) :
+    X = np.zeros((3))
     y = np.zeros((1))
     
-    for n in range(nsamples) :
-        for kc in range(1,kcmax+1) :
-            filename = "cpx_init_kc%d_%d" % (kc, n)
-            uu = harm.complex_init_sin(cb.line_x, kc=kc, inter_deph=pi_line, L=cb.L, plot=plot)
+    for amp in amp_line :
+        for n in range(nsamples) :
+            filename = "%.2f_init_kc%d_%d" % (amp, kc, n)
+            uu = cb.init_u(amp, phase = np.random.choice(pi_line))
             _, abs_work = LW_solver(uu, cb.itmax, filename = filename, write=write, plot=plot)
-            
+                    
             for it in range(1, cb.itmax) :
                 u_curr = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it)))
                 u_next = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it+1)))
-                
+
                 for j in range(1, len(uu)-1) :
-                    X = np.block([[X], add_block(u_curr, cb.line_x, j)])        
+                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1]]])        
                     y = np.block([[y], [u_next[j]]])
     
     X = np.delete(X, 0, axis=0)        
     y = np.delete(y, 0, axis=0)
     
     return X, y 
+
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
-####
 
-pi_line = np.linspace(-np.pi/2., np.pi/2., 1000)
-choices = [np.random.choice(pi_line) for i in range(7)]
+def amp_Der_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, write=False) :
+    X = np.zeros((4))
+    y = np.zeros((1))
+    
+    for amp in amp_line :
+        for n in range(nsamples) :
+            filename = "%.2f_init_kc%d_%d" % (amp, kc, n)
+            uu = cb.init_u(amp, phase = np.random.choice(pi_line))
+            _, abs_work = LW_solver(uu, cb.itmax, filename = filename, write=write, plot=plot)
+                    
+            for it in range(1, cb.itmax) :
+                u_curr = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it)))
+                u_next = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it+1)))
 
-if osp.exists(curr_work) == False :
-    os.makedirs(curr_work)
+                for j in range(1, len(uu)-1) :
+                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1],\
+                                (u_curr[j+1] - u_curr[j-1])*0.5/cb.dx]])
+                    y = np.block([[y], [u_next[j]]])
+        
+    X = np.delete(X, 0, axis=0)        
+    y = np.delete(y, 0, axis=0)
+    
+    return X, y 
 
-#dict_layers = {"I": n_inputs, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6":80}#, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+    
+def amp_xs_compute_true_u(cb, nsamples, amp_line, pi_line, kc=1, plot=False, write=False) :
+    X = np.zeros((n_inputs))
+    y = np.zeros((1))
+    
+    for amp in amp_line :
+        for n in range(nsamples) :
+            filename = "%.2f_init_kc%d_%d" % (amp, kc, n)
+            uu = cb.init_u(amp, phase = np.random.choice(pi_line))
+            _, abs_work = LW_solver(uu, cb.itmax, filename=filename, write=write, plot=plot)
+                
+            for it in range(1, cb.itmax) :
+                u_curr = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it)))
+                u_next = np.load(osp.join(abs_work, filename + "_it%d.npy" % (it+1)))
+                    
+                for j in range(1, len(uu)-1) :
+                    X = np.block([[X], add_block(u_curr, cb.line_x, j)])        
+                    y = np.block([[y], [u_next[j]]])
+        
+    X = np.delete(X, 0, axis=0)        
+    y = np.delete(y, 0, axis=0)
+    
+    return X, y 
 
-def xs_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+
+amplitude = np.linspace(1,2,10)
+dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80}
+
+def amp_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
     print (kwargs)
     
@@ -246,41 +299,64 @@ def xs_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, 
 
     return nn_obj
 
-#--------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
 
-def xs_multiNN_solver(nn_obj, cb=cb):
+def amp_multiNN_solver(nn_obj, cb=cb):
     plt.figure()
-    p = min(np.random.choice(pi_line), np.random.choice(pi_line))
     
-#    u = cb.init_u(p, cpx=2)
-    u = harm.complex_init_sin(cb.line_x, 1, pi_line, cb.L)
+    p = 0
+    p1 = np.pi
+    
+    amp = 1.5
+    amp1 = 0.7
+    
+    u1 =  amp*np.sin(np.pi/cb.L*cb.line_x + p)
+    u2 = cb.init_u(amp1, p1)
+    
+    u = u1 + u2
     
     _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
     print (abs_work)
-    
     fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
     
     u_nNext = []
+    inf_errs = []
     
+    ax, axx = [], []
+    
+    ax1 = plt.subplot(221) # Erreur a l'iteration n
+    ax2 = plt.subplot(222) # Evolution de la norme infinie de l'erreur 
+    ax3 = plt.subplot(212) # Evolution de la prédiction
+    
+    ax.append(ax1) ; ax.append(ax2) ; ax.append(ax3)
+    axx.append(ax1); axx.append(ax3)
+    
+    if nn_obj.X_train.shape[1] == 3 :
+        add_block = lambda u, j, x : [u[j-1], u[j], u[j+1]]
+    
+    if nn_obj.X_train.shape[1] == 4 :
+        add_block = lambda u, j, x : [u[j-1], u[j], u[j+1], (u[j+1] - u[j-1])/(2*cb.dx)]
+    
+    if nn_obj.X_train.shape[1] == 6 :
+        add_block = lambda u, j, x : [x[j-1], x[j], x[j+1], u[j-1], u[j], u[j+1]]
+   
+    if nn_obj.X_train.shape[1] == 7 :
+        add_block = lambda u, j, x : [x[j-1], x[j], x[j+1], u[j-1], u[j], u[j+1],\
+                                            (u[j+1] - u[j-1])/(2*cb.dx)]
+        
     for it in range(1, cb.itmax) :
         if it > 1 :
             u = u_nNext
             u_nNext = []
             
         for j in range(1, cb.Nx-1) :
-            xs = np.array(add_block(u, cb.line_x, j))
+            xs = np.array(add_block(u, j, cb.line_x))
             
-            if nn_obj.scaler_name != "None" :
-#                print ("Before : \n{}".format(xs))
-                xs = nn_obj.scale_inputs(xs)
-#                print ("After : \n{}".format(xs))
-#                
-#                time.sleep(2)
-            
+            xs = nn_obj.scale_inputs(xs)
             xs = xs.reshape(1, -1)
-            
+
             u_nNext.append(nn_obj.predict(xs)[0,0])
         # u_nNext.shape = 30 
         # use of list type to insert in a second time boundary condition
@@ -289,59 +365,46 @@ def xs_multiNN_solver(nn_obj, cb=cb):
         u_nNext.insert(len(u), u[1])
         
         u_nNext = np.array(u_nNext)
+        u_nNext_ex = fetch_real_u(it+1)
+        
+        errs = np.array([(u_nNext[i] -  u_nNext_ex[i]) for i in range(cb.Nx)])
+        
+        inf_err = np.linalg.norm(errs, 2)**2 / np.linalg.norm(u_nNext_ex, 2)**2
+        
+        inf_errs.append(inf_err)
         
         if it % 5 == 0 :
-            plt.clf()        
-            plt.plot(cb.line_x[1:cb.Nx-1], fetch_real_u(it+1)[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
-            plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
-            plt.legend()
+            axx[0] = ax[0]
+            axx[1] = ax[-1]
+            
+            for a in axx :
+                a.cla()
+            
+            # Erreur a l'iteration n
+            ax[0].plot(cb.line_x, np.abs(errs),\
+            label="Relative Erreur $|| \hat{u}^{n+1} - u^{n+1}_t ||^2_2 / $", c=nn_obj.kwargs["color"])
+            
+            # Evolution de la norme infinie de l'erreur 
+            ax[1].scatter(it, inf_err, c=nn_obj.kwargs["color"], s=12)
+            
+            ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext_ex[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
+            ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
+            
+            for a in ax :
+                a.legend(prop={'size': 8})
+            
+            fig = plt.gcf()
+            fig.tight_layout()
+            
+            plt.title("Iteration %d" %it)
             plt.pause(2)
-        
-#--------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------
-   
-def xs_multiRF_solver(X, y): 
-    xtr, xte, ytr, yte = train_test_split(X, y.ravel(), shuffle=True, random_state=0)
-    rf = rfr(n_estimators=20)
-    rf.fit(xtr, ytr)
-    
-    plt.figure()
-    p = np.random.choice(pi_line)
-    
-    u = cb.init_u(p) + cb.init_u(np.random.choice(pi_line))
-    
-    _, abs_work = LW_solver(u, "u_test", write=True)
-    
-    fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
-    
-    u_nNext = []
-    
-    for it in range(1, cb.itmax) :
-        if it > 1 :
-            u = u_nNext
-            u_nNext = []
-            
-        for j in range(1, cb.Nx-1) :
-            xs = np.array([u[j-1], u[j], u[j+1]]).reshape(1,-1)
-            
-            u_nNext.append(rf.predict(xs))
-        
-        u_nNext.insert(0, u[-2])
-        u_nNext.insert(len(u), u[1])
-        
-        u_nNext = np.array(u_nNext).ravel()
-        
-        plt.clf()        
-        plt.plot(cb.line_x[1:cb.Nx-1], fetch_real_u(it+1)[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
-        plt.plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="RF Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c="green")
-        plt.legend()
-        plt.pause(2)
 
-# run multiple_init_NN_xs_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
-# Xxs_multi, yxs_multi = xs_compute_true_u(cb, 12, pi_line, plot=True, write=True)
+    return inf_errs
+    
+# run amplitudes_init_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+
+# ampDerX_multi, ampDery_multi = amp_Der_compute_true_u(cb, 1, amplitude, pi_line, plot=True, write=True)
+
 # nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
+
 # xs_multiNN_solver(nn_xs)
-
-
-

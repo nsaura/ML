@@ -114,85 +114,11 @@ def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False
             
         it += 1
     return u, abs_work
+    
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 
-def obs_res(cb, j_phase, cpx=1 ,write=False, plot=False)  : 
-    ## Déf des données du probleme 
-    curr_phase = j_phase[0] 
-    phase = j_phase[1]
-    
-    u, u_nNext = [], []
-    u = cb.init_u(phase, cpx) 
-    r = cb.dt/cb.dx
-    
-    title=lambda it,cphase,cpx:"U(x) it %d phase %d cpx %d" %(it, cphase, cpx)
-    
-    u_curr_name=lambda it,cphase,cpx:"u_it%d_%d-eme_phase_cpx%d.npy"%(it,cphase, cpx)
-    
-    # Tracés figure initialisation : 
-    if plot == True :
-        plt.figure("Resolution")
-        plt.plot(cb.line_x, u)
-        plt.title(title(0, curr_phase, cpx))
-        plt.ylim((-2.5, 2.5))
-        plt.pause(0.01)
-    
-    if write == True : 
-        filename = osp.join(curr_work, u_curr_name(0, curr_phase, cpx))
-        np.save(filename, u)
-        
-    t = it = 0
-    
-    while it <= cb.itmax+1 :
-        filename = osp.join(curr_work, u_curr_name(it, curr_phase, cpx))
-        if osp.exists(filename) == True :
-            it += 1
-            continue
-            
-        fu = np.asarray([0.5*u_x**2 for u_x in u])
-        
-        der_sec = [cb.fac*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
-        der_sec.insert(0, cb.fac*(u[1] - 2*u[0] + u[-1]))
-        der_sec.insert(len(der_sec), cb.fac*(u[0] - 2*u[-1] + u[-2]))
-
-        for i in range(1,cb.Nx-1) : # Pour prendre en compte le point Nx-2
-            u_m, u_p = cvc.intermediaires(u, fu, i, r)
-            fu_m =  0.5*u_m**2
-            fu_p =  0.5*u_p**2
-
-            u_nNext.append( u[i] - r*( fu_p - fu_m ) + der_sec[i] )
-                                        
-        # Conditions aux limites 
-        u[1:cb.Nx-1] = u_nNext  
-        u_nNext  = []
-        
-        u[0] = u[-2]
-        u[-1]= u[1]
-
-        u = np.asarray(u) 
-    
-        if write == True : 
-            np.save(filename, u)
-        
-        it += 1
-        t += cb.dt # Itération temporelle suivante
-            
-        if plot == True :
-            if it % 10 == 0 :
-                plt.clf()
-                plt.plot(cb.line_x[0:cb.Nx-1], u[0:cb.Nx-1], c='k') 
-                plt.grid()
-                plt.title(title(it, curr_phase, cpx)) 
-                plt.xticks(np.arange(0, cb.L-cb.dx, 0.25))
-#                        plt.yticks(np.arange(-2.5, 2.5, 0.5))
-                plt.ylim(-2.5,2.5)
-                plt.pause(0.1)  
-                
-#------------------------------------------------------------------
-#------------------------------------------------------------------
-#------------------------------------------------------------------
 def compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
     X = np.zeros((3))
     y = np.zeros((1))
@@ -215,6 +141,7 @@ def compute_true_u(cb, nsamples, pi_line, kcmax = 1, plot=False, write=False) :
     y = np.delete(y, 0, axis=0)
     
     return X, y 
+    
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
@@ -225,30 +152,6 @@ choices = [np.random.choice(pi_line) for i in range(7)]
 
 if osp.exists(curr_work) == False :
     os.makedirs(curr_work)
-
-def doit() :
-    for j, c in enumerate(choices) :
-        obs_res(cb, [j, c], 1, True, True) 
-        obs_res(cb, [j, c], 2, True, True)
-    
-    X = np.zeros((3))
-    y = np.zeros((1))
-
-    for p in range(len(choices)) :
-        for it in range(cb.itmax) :
-            for cpx in range(1,3) :
-                u_curr = np.load(lambda_filename(it, p, cpx))
-                u_next = np.load(lambda_filename(it+1, p, cpx))
-            
-                for j in range(1, cb.Nx-1) : #[1, Nx-1]
-                    X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1]]])
-                    y = np.block([[y], [u_next[j]]])
-
-    X = np.delete(X, 0, axis=0)
-    y = np.delete(y, 0, axis=0)
-    
-    return X, y
-    
 
 dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6":80}#, "N7":80, "N8":80, "N9":80, "N10":80}#, "N11":40}
 
@@ -517,7 +420,7 @@ def multi_bootstrap_solver(boot_obj, rescale, cb=cb) :
             ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext_ex[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
             ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=color)
             
-            ax[-1].fill_between(cb.line_x[1:cb.Nx-1], -10*np.array(var), 10*np.array(var), facecolor= "0.2", alpha=0.4, interpolate=True, label="$\pm \sigma$")  
+            ax[-1].fill_between(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1]-10*np.array(var), u_nNext[1:cb.Nx-1]+10*np.array(var), facecolor= "0.2", alpha=0.4, interpolate=True, label="$\pm \sigma$")  
             
             for a in ax :
                 a.legend(prop={'size': 8})
