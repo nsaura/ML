@@ -939,8 +939,8 @@ class Temperature_cst() :
                 g_sup, beta_last, d_n_last))
             
             # Tracés beta_last et grad_J(beta_last)
-            ax[1].plot(self.line_z, g_last, label="gradient last")
-            ax[0].plot(self.line_z, beta_last, label="beta_n last")
+            ax[1].semilogy(self.line_z, g_last, label="gradient last")
+            ax[0].semilogy(self.line_z, beta_last, label="beta_n last")
             
             # Construction de la C_bmap
             try :

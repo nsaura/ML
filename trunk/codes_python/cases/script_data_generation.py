@@ -14,7 +14,7 @@ from scipy import optimize as op
 import Class_Temp_Cst as ctc  #Pour utiliser les fonctions de classs_temp
 import class_functions_aux as cfa #Pour les tracés post-process
 
-plt.ioff()
+plt.ion()
 
 try:
     reload  # Python 2.7
@@ -41,7 +41,7 @@ temp.obs_pri_model()
 temp.get_prior_statistics()
 
 # Optimization de la fonction de coût J définie équation (7) par deux méthodes :
-temp.adjoint_bfgs(inter_plot=False, verbose=False) # Optimization "maison";
+temp.adjoint_bfgs(inter_plot=True, verbose=True) # Optimization "maison";
 #temp.adjoint_circle(inter_plot=True, verbose=False)
 temp.optimization()                 # Optimization de Scipy qui sert de référence.
 
