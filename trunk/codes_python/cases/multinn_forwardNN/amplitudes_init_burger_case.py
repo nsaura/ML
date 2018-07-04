@@ -159,10 +159,24 @@ def amp_Der_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, 
     X = np.zeros((4))
     y = np.zeros((1))
     
+#    colors = iter(cm.gist_heat(np.arange(len(amp_line)*10)))
+    colors = iter(cm.gnuplot(np.arange(len(amp_line)*10)))
+    
     for amp in amp_line :
         for n in range(nsamples) :
             filename = "%.2f_init_kc%d_%d" % (amp, kc, n)
             uu = cb.init_u(amp, phase = np.random.choice(pi_line))
+            
+            for cc in range(8) :
+                next(colors)
+            
+            plt.figure("Initialisation cases")
+            plt.plot(cb.line_x, uu, color=next(colors))
+            plt.xlabel("X-domain")
+            plt.ylabel("init conditions")
+            plt.ylim((-2.1,2.1))
+            plt.pause(0.01)
+            
             _, abs_work = LW_solver(uu, cb.itmax, filename = filename, write=write, plot=plot)
                     
             for it in range(1, cb.itmax) :
@@ -186,6 +200,7 @@ def amp_Der_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, 
 def amp_xs_compute_true_u(cb, nsamples, amp_line, pi_line, kc=1, plot=False, write=False) :
     X = np.zeros((n_inputs))
     y = np.zeros((1))
+    colors = iter(cm.plasma(np.arange(len(amp_line))))
     
     for amp in amp_line :
         for n in range(nsamples) :
@@ -347,7 +362,7 @@ def amp_multiNN_solver(nn_obj, cb=cb):
         add_block = lambda u, j, x : [x[j-1], x[j], x[j+1], u[j-1], u[j], u[j+1],\
                                             (u[j+1] - u[j-1])/(2*cb.dx)]
         
-    for it in range(1, cb.itmax) :
+    for it in range(1, cb.itmax + 1)  :
         if it > 1 :
             u = u_nNext
             u_nNext = []
@@ -374,7 +389,7 @@ def amp_multiNN_solver(nn_obj, cb=cb):
         
         inf_errs.append(inf_err)
         
-        if it % 5 == 0 :
+        if it % 5 == 0 or it ==1:
             axx[0] = ax[0]
             axx[1] = ax[-1]
             

@@ -91,7 +91,7 @@ ampDerX_multi, ampDery_multi = amp_Der_compute_true_u(cb, 1, amplitude, pi_line,
 
 amp_nn = amp_multi_buildNN(1e-3, ampDerX_multi, ampDery_multi, "selu", "Adam", "Lasso", 500, "sum", "Standard", N_=dict_layers, color="blue")
 
-amp_multiNN_solver(amp_n)
+amp_multiNN_solver(amp_nn)
 
 ###############################
 ###############################
