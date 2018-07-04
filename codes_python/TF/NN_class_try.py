@@ -734,12 +734,16 @@ class Neural_Network():
                     err, feeding = self.batched_training(n_batch, left)
                     curr_effective_epoch = n_batch * epoch 
                     final_effective_epoch = n_batch * self.max_epoch
+                    
+                    legend_to_plots = "Train error (with batch_size = %d)" % (self.kwargs["bsz"])
              
             else :
                 err, feeding = self.non_batched_training()
                 curr_effective_epoch = epoch 
                 final_effective_epoch = self.max_epoch
-            
+                
+                legend_to_plots = "Train error (without batch)"
+                
             if early_stop == True :
                 y_pred = self.predict(self.X_train, rescale_tab=False)
                 score_test.append(self.score(y_pred, self.y_train))
@@ -754,14 +758,17 @@ class Neural_Network():
                     file_writer.add_summary(summary_str, curr_effective_epoch)
                 
                 if self.verbose == True :
-                    axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color)
-                    axes[1].plot(epoch, costs[-1], marker='o', color=self.color)
+                    axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color, linestyle="None")
+                    axes[1].plot(epoch, costs[-1], marker='o', color=self.color, linestyle="None")
                     
                     fig.tight_layout()
                     plt.pause(0.001)
                 
                 print("(effective) epoch {}/{}, cost = {}".format(curr_effective_epoch, final_effective_epoch, err))
-
+            
+            for a in axes :
+                a.legend([legend_to_plots])
+                
             if np.abs(costs[-1]) < 1e-6 :
                 print ("Final Cost ".format(costs[-1]))
                 break
@@ -783,6 +790,15 @@ class Neural_Network():
         
         self.costs = costs
         
+        if plt.fignum_exists("Cost Evolution : loglog and lin") :
+            leg_0 = axes[0].get_legend()
+            leg_1 = axes[1].get_legend()
+            
+            leg_0.legendHandles[-1].set_color(self.color)
+            leg_1.legendHandles[-1].set_color(self.color)
+            
+            fig.tight_layout()
+            
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------
 ###-------------------------------------------------------------------------------

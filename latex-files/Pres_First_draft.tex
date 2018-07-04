@@ -34,6 +34,10 @@
 	\left[ #1 \right]  
 }
 
+\newcommand{\norm}[1]{
+	\left \vert \left \vert #1 \right \vert  \right \vert
+}
+
 \usepackage{siunitx}
 
 \usepackage{pifont}
@@ -368,12 +372,186 @@ $T_\infty = 35 + 20\sin(2\pi x)$
 		\item[$\bullet$] Different sinusoides as initial conditions
 
 		\begin{itemize}
-			\sarrow Different amplitudes (between 1 and 2)
+			\sarrow Different amplitudes (between 1 and 2) -- 15 cases
 			\sarrow Random phases
  		\end{itemize}
-
+	
+	\begin{figure}[H]
+		\vspace{-0.3cm}		
+		\centering
+		\includegraphics[scale=0.3]{Initialisation_cases.png}
+	\end{figure}			
+		
  		\item[$\bullet$] Lax Wendroff scheme to solve each initial condition
 	\end{itemize}
+\end{frame}
+
+\begin{frame}{Strategy employed here}
+	Construction $X$ and $y$ iteration by iteration, case by case.\\
+
+	\begin{multicols}{2}
+	\noindent
+	$$ X = \left[ \begin{array}{c} \cdot \\ \cdot \\ U^n_{i-1},U^n_{i}, U^n_{i+1}, \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}  \\ \cdot \\ \cdot
+				  \end{array}
+		   \right]
+	$$
+	\columnbreak
+	$$ y = \left[ \begin{array}{c} \cdot \\ \cdot \\ U^{n+1}_i \\ \cdot \\ \cdot
+			  \end{array}
+	   \right]
+	$$
+	\end{multicols}
+	
+	\begin{itemize}
+		\item[\checkmark] $\displaystyle \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}$ to better catch chocs \\
+		\item[\checkmark] Each line of X describes the local velocity field around the i$^{\text{th}}$ point and its local variation linked with the value of the velocity at the same i$^{\text{th}}$ point
+	\end{itemize}		
+	
+\end{frame}
+
+\begin{frame}{Training of the algorithm}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.5]{Cost_Evolution_:_loglog_and_lin.png}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Graph architecture}
+	Graph with \red 6 hidden layers \bk with \red 80 hidden nodes \bk in each. Adam optimizer (better and the most used in literature) and \navy Lasso \bk cost function.\\
+	
+	TensorFlow graph that can be visualized with Tensorboard :
+	
+	\begin{multicols}{2}	
+		\noindent		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[scale=0.2]{Graphs.png}
+		\end{figure}
+	
+	\columnbreak
+		\centering
+		\vspace{1cm}
+		\begin{itemize}
+			\sarrow \footnotesize Lasso = $\norm{ y_{\text{tr}} - y_{\text{pred}}}^2_{L_2} + \lambda \norm{w}_{L_1}$		 \\[1.5cm]
+		
+			\sarrow Activation function : selu
+			\begin{figure}[H]
+			\centering
+			\includegraphics[scale=0.3]{SELU.png}
+			\caption{From Wikipedia}
+			\end{figure}
+		
+		\end{itemize}
+	\end{multicols}
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D I}
+	New initial velocity field (first we deal with the \color{orange} orange \bk one) : 
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.4]{Initialisation_cases_Andu1.png}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D I}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.4]{Pres_First_Iteration_1.png}
+	\end{figure} 
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D I}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{Pres_Tenth_Iteration_1.png}
+	\end{figure} 
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D I}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{Pres_50th_Iteration_1.png}
+	\end{figure} 
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D I}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.42]{Pres_Last_Iteration_1.png}
+	\end{figure} 
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D II}
+	New initial velocity field (we deal now with the \color{cyan} cyan \bk one) : 
+\vspace{-0.3cm}	
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{Initialisation_cases_Last.png}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D II}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{Pres_First_Iteration_2.png}
+	\end{figure} 
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D II}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{Pres_Tenth_Iteration_2.png}
+	\end{figure} 
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D II}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{Pres_50th_Iteration_2.png}
+	\end{figure} 
+\end{frame}
+
+\begin{frame}{Brute Force on VBE 1D II}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{Pres_Last_Iteration_2.png}
+	\end{figure} 
+\end{frame}
+
+\begin{frame}{Conclusion on Brute Force}
+	\begin{block}{Still can be improved}
+		\begin{itemize}
+			\item[$\bullet$] Good approximations but can be better
+			\item[$\bullet$] Accumulative errors phenomena that impose to differ local error (on the on going iteration) and global errors (accumulated through time iterations)
+			\item[$\bullet$] Genetic Algorithm can be used to get the best architecture but the possible features are infinite \\[0.5cm]
+		\end{itemize}
+	\end{block}
+
+	\begin{exampleblock}{Solution : Learn !}
+	The solution is to use Reinforcement learning to learn the physics
+	\begin{itemize}
+		\item[\checkmark] Auto ajust weights given an environment 
+		\item[\checkmark] Ensure to respect conservation physics law
+		\item[\checkmark] Auto adjust global and local error
+	\end{itemize}
+	\end{exampleblock}
+\end{frame}
+
+\begin{frame}{OnGoing Deep ReiL Framework}
+	
+	\begin{itemize}
+		\item[$\bullet$] Deep Reinforcement Learning (DQL) code in ealy stage of test.
+		\item[$\bullet$] A strategy has been established and wait to be tested
+		
+		\item[$\bullet$] More soon .. ;)
+		
+	\end{itemize}
+
+\end{frame}
+\begin{frame}
+\begin{center}
+	\color{FireBrick} \textbf{\textit{\Large{Thank you for your attention}}} \bk
+\end{center}
 \end{frame}
 
 \begin{frame}
