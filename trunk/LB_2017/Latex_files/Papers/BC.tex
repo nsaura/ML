@@ -1,0 +1,148 @@
+\documentclass[french]{article}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{array}    %% Pour les tableaux
+\geometry{hmargin=3.5cm, vmargin = 3cm}
+%%% Personnalisation des en-têtes et pieds de pages
+
+%\fancyhead[C]{\leftmark}
+
+\usepackage[svgnames]{xcolor}				% Voir : http://calque.pagesperso-orange.fr/latex/latexps.html
+\usepackage{listings}					% Pour citer du code
+\usepackage{etex}
+\usepackage{scrbase}
+\newcommand{\pathpic}{/home/saura/Documents/Latex_files/Pic/}
+
+%%% Couleurs %%%
+\xdefinecolor{purple}{named}{MediumVioletRed}
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{forest}{named}{DarkMagenta}
+\xdefinecolor{dgreen}{named}{DarkOliveGreen}
+\xdefinecolor{sbrown}{named}{SaddleBrown}
+\xdefinecolor{brick}{named}{FireBrick}
+\xdefinecolor{dred}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{choco}{named}{Chocolate}
+
+\newcommand{\brick}{\color{brick}}
+\newcommand{\npurple}{\color{forest}}
+\newcommand{\dgreen}{\color{dgreen}}
+\newcommand{\sbrown}{\color{sbrown}}
+\newcommand{\brik}{\color{brick}}
+\newcommand{\navy}{\color{navy}}
+\newcommand{\dred}{\color{dred}}
+\newcommand{\choco}{\color{choco}}
+
+\newcommand{\bl}{\color{blue}}
+\newcommand{\bk}{\color{black}}
+\newcommand{\red}{\color{red}}
+\newcommand{\gre}{\color{green}}
+
+\newcommand{\cad}{c'est-à-dire}
+\newcommand{\vav}{vis-à-vis}
+\newcommand{\iieme}{i$^{\text{ème}}$}
+\newcommand{\jeme}{j$^{\text{ème}}$}
+
+\newcommand{\xhhu}{$\mathsf{x}$, $\mathsf{h}$ et $\mathsf{hu}$}
+\newcommand{\hhu}{$\mathsf{h}$ et $\mathsf{hu}$}
+\newcommand{\fhfu}{$\mathsf{fh}$ et $\mathsf{fu}$}
+
+%\newcommand{\pathpic}{/home/saura/Documents/Latex_files/Pic/}
+\newcommand{\scidatalogo}{\includegraphics[height=50pt]{\pathpic polytech.jpg}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+
+\renewcommand{\footrulewidth}{5pt} %%% Une barre en haut
+\renewcommand{\headrulewidth}{1pt} %%% Une barre en haut
+
+\setlength{\headheight}{20pt} 
+\lhead{\textsc{\scidatalogo}}
+\rhead{\textsc{Bilan de compétences }}
+% Hyper ref
+\usepackage[linkcolor=Chocolate,colorlinks=true]{hyperref} 	
+\begin{document}
+
+\title{\navy \textbf{SAURA} \bk \textbf{Nathaniel}}
+\author{\textbf{Bilan de compétences} :}
+
+\date{}
+\maketitle
+
+\thispagestyle{fancy}
+
+Futur diplômé de l'école d'ingénieur Polytechnique universitaire de Lyon (\textsc{EPUL}) et d'un Master Mécanique des Fluide et Énergétique (\textsc{MFE}) de l'école doctorale \textsc{MEGA}, je présente dans ce document les diverses compétences que j'ai acquises et mise en œuvre au cours de mes cinq années d'études, lesquelles incluant différents stages.\\
+
+ \section*{\brick Compétences acquises au cours de ma scolarité}
+ \subsubsection*{\sbrown Dans le domaine des sciences}
+ Durant mes deux premières années d'étude, j'ai suivi le cursus de la prépa intégrée à l'EPUL. Au cours de ces deux années, j'ai appris rigueur et organisation, qualités indispensables pour bien réussir ces deux années décisives puisque charnières entre Lycée et école d'ingénieur.\\
+ Les divers enseignements de Mathématique et de Physique dispensés m'ont permis de construire petit à petit une pensée rationnelle et critique sur les phénomènes étudiés ou rencontrés lors d'exercices.\\
+ La partie expérimentale de certains enseignements comme l'électromagnétisme ou la thermodynamique m'a amené à synthétiser la théorie et à rechercher dans nos expériences des explications physiques afin d'interpréter les résultats obtenus.\\
+ Une fois entré en école d'ingénieur, nous avons été initié aux divers méthodes numériques, tout de suite mises en pratique au travers de travaux pratiques (TP) sur ordinateur. Nous avons alors utilisé les différentes méthodes numériques utiles en Mécanique (Interpolation, Runge-Kutta ...) pour la résolution d'équation(s) différentielle(s) ou encore les méthodes des différences, éléments et volumes finis pour la résolution d'équation(s) aux dérivées partielles, les deux types d'équations étant les piliers de la mécanique.\\
+ Évidemment, pour pouvoir se servir de ces méthodes, connaître les langages de programmation C, C++ ou Matlab était indispensable. Ces trois langages furent enseignés en même temps. 
+ Parallèlement aux aspects numériques, nous avons appris à mettre en équations un problème de Mécanique, étape indispensable pour la modélisation et la résolution numérique du problème, via les outils algorithmiques décrits plus haut. \\
+ Les différents TP nécessitaient donc de mobiliser des connaissances en Mathématiques, Physique et Algorithmie, ainsi qu'un esprit critique pour analyser les résultats et discuter de leur véracité sur le plan physique et numérique.\\
+ 
+ Ces cinq années, j'ai également eu l'occasion de prendre en main des logiciels de simulation numérique comme Fluent, un logiciel de système multicorps permettant le dimensionnement et l'optimisation d'utilisation de pièces ou de composantes d'ensemble mécanique (véhicule de Formule 1 entre autres).\\
+ Des enseignements de CAO m'ont permis de créer des pièces inédites, et de mener à bien une partie capitale de mon stage de M1 (Voir plus bas).\\
+ Pour tous les différents projets, il était indispensable de maîtriser des outils comme la suite Microsoft Office ou LibreOffice afin d'élaborer les rapports de stage et les diverses présentations imposées par les modalités d'évaluation de ces projets.
+ 
+ \subsubsection*{\sbrown  Ouverture vers le monde de l'entreprise}
+ Tout au long de ces cinq dernières années, j'ai participé à plusieurs projets ayant pour but de préparer le futur ingénieur à gérer des équipes, à établir des plans d'actions pour mener à bien des projets ou encore analyser et segmenter les marchés, communiquer en interne ou externe, établir des plans marketing etc.
+\\
+J'ai participé au concours régional Campus Création dont l'objectif était d'imaginer un produit ou un concept, d'étudier le marché relatif à ce dernier et de justifier sa viabilité économique pour trois ans. Le concept de l'équipe dont j'étais le leader, nous a conduit jusqu'à la demi finale du concours. Notre équipe était constituée d'élèves de différentes filières de Polytech et d'élèves d'autres écoles, la communication était primordiale et dans mon rôle de leader je devais m'assurer que les informations étaient bien transmises et parfois prendre des décisions qui s'imposaient. Ce fut l'occasion pour moi d'appliquer les principes du management vus en cours.\\
+Pour un autre projet, en équipe également, nous avons créé un site internet axé sur la vente de vêtements et d'accessoires éco responsables pour enfants ainsi qu'une page Facebook respectant certaines contraintes, et présenter nos travaux devant l'ensemble des élèves en 5ème année d'ingénieur.
+ 
+ \section*{\brick Compétences acquises au cours de mes stages}
+  \subsubsection*{\sbrown  Stage de M1 : ondes internes spiralantes}
+ Mon stage de M1 s'est déroulé dans le Laboratoire de Mécaniques des Fluides et Acoustique à l'École Centrale de Lyon. Il consistait en l'instigation numérique d'ondes de gravité océaniques internes se développant en spirales. \\
+ Il m'a fallu dans un premier temps me documenter sur les différentes observations \textit{in situ} de ce type de pattern, afin de justifier une telle recherche mais également pour pouvoir juger les résultats de mes simulations numériques, dans un second temps. \\
+ Les ondes internes étant un sujet nouveau pour moi, je devais saisir très vite les concepts fondamentaux relatifs à cette thématique. Pour cela, à partir de documents de référence fournis par mes encadrants de stage, j'ai étoffé mes recherches en tentant de relier les différents éléments que je découvrais avec les bases de la Physique enseignées dans ma scolarité.\\
+ 
+ Après avoir réussi cette première étape, je devais apprendre le langage de programmation Python pour pouvoir m'approprier les diverses algorithmes déjà construits mais également améliorer et étoffer quelques uns de ces codes et en créer d'autres. Pour cela, j'ai du synthétiser mes connaissances en programmation pour à la fois comprendre la syntaxe et les particularités du langage, mais également pour déchiffrer les différents codes. 
+ Évidemment, cette étape de découverte ne fut pas instantanée mais grâce aux échanges constructifs que j'ai pu avoir avec mes différents encadrants, cet apprentissage fut pédagogique et pérenne. \\ 
+ Rapidement, j'eus des missions pointues et complètements inédites : à partir d'un code C/C++, lancer une routine python créant dossiers et fichiers relatifs à la simulation en cours. Préalablement, on m'a demandé de penser à une hiérarchisation des simulations afin de m'y retrouver rapidement et de pouvoir présenter de manière ordonnée, les différents résultats.\\
+ On m'a vite laissé en autonomie pour la recherche d'informations et la réalisation des différentes tâches mises à jour quotidiennement.\\
+ Au niveau de l'analyse de données, je n'avais pas de compétences avant d'entrer en stage. J'ai appris à créer des fichiers HDF5 via les langages C++ et Python . J'ai également imaginer et écrit des codes de traitement des données qu'ils contiennent, de les trier et d'enregistrer les différents tracés obtenus.\\
+   Les fichiers HDF5 ne se prêtant pas tels quels à la visualisation 3D des données, j'ai donc écrit des fichiers traduisant les données HDF5 en fichiers visualisables en trois dimensions. \\
+   
+ Un autre aspect du stage était la partie expérimentale. Je devais me familiariser avec les codes de remplissages de la cuve du Laboratoire dans laquelle nous allions générer des ondes internes expérimentalement.\\
+    La génération d'ondes internes n'étant possible que dans un fluide stratifié, j'ai étudié les différents paramètres de l'algorithme et participer à sa calibration pour obtenir une stratification du fluide dans la cuve, exactement comme nous la voulions.\\
+    De plus, le développement de ces ondes en spirales nécessitait la création d'une source d'excitation en hélice. Je l'ai donc designé, dans un premier temps,  via l'outil CAO Catia V5, puis envoyé en impression 3D.\\
+    La création de cette géométrie particulière étant très complexe puisque faisant appel à des outils non usuels, nous avons beaucoup débattu avec mon maître de Stage et l'ingénieur Bureau d'Études du Laboratoire sur la meilleur façon de la créer.\\
+    
+   Dans l'optique d'écrire un rapport de stage relatant mes divers travaux, j'ai pris en main le langage de programmation \LaTeX $ $ afin de pouvoir incorporer directement des équations ou formules et de citer de manière élégante des parties de codes de mes algorithmes pour ensuite les commenter. Au cours de ce stage, les recherches bibliographiques étaient permanentes et une des choses les plus importantes était de noter les références des documents que je lisais. Lors de l'écriture du rapport, avoir les références à portée de main me fit gagner énormément de temps.   
+\\
+   Les modalités d'évaluation  du stage incluant en outre une présentation orale, j'ai élaboré une présentation PowerPoint reprenant les grands thèmes de mon stage. \\
+   
+  \subsubsection*{\sbrown  Mobilité internationale : Monitoring and troubleshooting on heavy Caterpillar machinery}
+  Ce stage s'est déroulé à Holon, Israel. Sa particularité est d'avoir été entièrement anglais et en hébreu. En dehors du stage, je vivais à Tel Aviv, cette immersion me fit énormément progresser au niveau de mon anglais et de mon hébreu, mais m'a fait découvrir des personnes différentes et complexes enrichissant ma personnalité, mon vécu et changeant ma façon de voir les choses.\\
+Nous devions contrôler les messages envoyés par l'unité informatique des machines de chantiers reliées à un réseau spécialement dédié à ces machines. Lorsque qu'un capteur interne à la machine détecte un voltage non usuel, il transmet l'information à l'unité informatique embarquée dans le véhicule qui elle, fait parvenir un message spécifique au centre de monitoring, là où j'ai travaillé deux mois. \\
+Après une rapide introduction sur comment récupérer ces messages, les ingénieurs qui m'encadraient m'ont laissé faire mes preuves avec à disposition les documentations sur les différentes pièces de ces véhicules, leur fonctionnement et quelques routines pour assurer la prévention d'une panne générale et peut-être définitive du véhicule.\\
+
+  D'une façon générale, il fallait recouper les différents messages sur une machine en les triant selon la rareté et la gravité des événements, mais également selon l'endroit d'opération de la machine (déserts, montagnes, zones côtières), et les (mauvaises) habitudes des utilisateurs etc.\\
+  
+  La pierre angulaire de ce stage, au delà de l'aspect recherche constante d'informations, fut la communication. Les enjeux étaient trop importants pour avoir le droit à l'erreur, il était alors impératif de transmettre mes analyses, mes suspicions mais également des solutions pour éviter que les bug ne s'aggravent et conduisent à l'immobilisation du véhicule.\\
+  À la fin de mon stage, on m'a confié le monitoring des machines de clients en phase d'essai de l'outil de contrôle, je devais donc détailler les origines potentielles des erreurs et proposer aux utilisateurs, des routines de tests pour cibler la véritable cause des problèmes reçus et les corriger.\\ 
+  
+  En plus de perfectionner mon anglais, j'ai appris à communiquer, à affirmer mes positions parfois, mais surtout à collaborer avec une équipe bien établie et ne parlant pas français.
+ 
+ \subsubsection*{\sbrown Stage Ouvrier : Développement stratégie marketing École de Musique Muscial'Idée} 
+ Dans le cadre du stage ouvrier obligatoire de Polytech entre la première et deuxième année, j'ai été en charge d'augmenter la visibilité d'une école de musique située sur Villeurbanne, Musical'Idée. \\
+ Après avoir établi une liste des missions avec mon encadrant de stage et directeur de l'école de musique, je me suis familiarisé avec le F-Commerce et plus généralement avec l'utilisation des réseaux sociaux comme levier principal de marketing. \\
+
+ J'ai alors créé puis géré une chaîne de vidéo Vimeo dont le principe est le même que Youtube. J'ai également effectué des montages vidéos mettant en valeur les performances des élèves.\\
+ Lors de l'upload des vidéos, il a fallu prendre en compte le fait que certains parents ne voulaient pas que la vidéo soit accessible par n'importe quelle internaute ; nous avons mis en place un système de génération de code et de vidéos protégées afin de satisfaire cette condition.\\
+ Nous avons alors imaginé une classification des mots de passe ainsi que des données personnelles en utilisant notamment le logiciel de bureautique Excel de la suite Microsoft Office. \\ 
+ J'ai ensuite créé dans la foulée une page Facebook renvoyant vers les différents supports numériques de l'école : le site internet et la chaiîne Vimeo. Sur cette page Facebook, nous avons implémenté les différents éléments du F-Commerce pour gagner de la visibilité et se faire connaître petit à petit.\\
+ J'ai également était en charge de mettre à jour le site internet de l'école via la plateforme Wix afin d'améliorer l'ergonomie du site mais également de créer un blog avec des liens renvoyant vers les vidéos non protégées.\\
+ Puisque je suis compositeur de musique, j'ai enregistré quelques instrumentales et jingles et les ai implémentés dans les différentes vidéos pour dynamiser les débuts et fins.\\
+ 
+\noindent En fin de stage, j'ai effectué une présentation PowerPoint pour présenter à l'ensemble du personnel de l'école mes avancées et ce qu'il restait à faire.
+\end{document}
+
+

@@ -1,0 +1,45 @@
+\documentclass{beamer}
+
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usetheme{CambridgeUS}
+
+\title{PFE : Étude des instabilités }
+\author{Camille Castells \& Nathaniel Saura}
+\begin{document}
+
+
+\begin{frame}
+ \titlepage
+\end{frame}
+
+\begin{frame}
+\frame{\tableofcontents} 
+\end{frame}
+
+\begin{frame}
+\section{La première}
+  Voila
+  \subsection{Le commencement}
+  Voila
+  \subsection{BLIBLI}
+  Voila
+  \subsection{BLOUBLOU}
+  Voila
+  \end{frame}
+  
+  \begin{frame}
+
+\section{Ici autres choses}
+  \subsection{fff}
+  Wouwou
+  \subsection{fdfd}
+\end{frame}
+
+  \begin{frame}
+    \section{Le commencement}
+    NiarknNIark
+    \end{frame}
+
+
+\end{document}

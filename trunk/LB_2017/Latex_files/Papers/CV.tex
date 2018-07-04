@@ -1,0 +1,170 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% LaTeX Template: Curriculum Vitae
+%
+% Source: http://www.howtotex.com/
+% Feel free to distribute this template, but please keep the
+% referal to HowToTeX.com.
+% Date: July 2011
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% How to use writeLaTeX: 
+%
+% You edit the source code here on the left, and the preview on the
+% right shows you the result within a few seconds.
+%
+% Bookmark this page and share the URL with your co-authors. They can
+% edit at the same time!
+%
+% You can upload figures, bibliographies, custom classes and
+% styles using the files menu.
+%
+% If you're new to LaTeX, the wikibook is a great place to start:
+% http://en.wikibooks.org/wiki/LaTeX
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[paper=a4,fontsize=10pt]{scrartcl} % KOMA-article class
+							
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[protrusion=true,expansion=true]{microtype}
+\usepackage{amsmath,amsfonts,amsthm}     % Math packages
+\usepackage{graphicx}                    % Enable pdflatex
+\usepackage[svgnames]{xcolor}            % Colors by their 'svgnames'
+\usepackage{geometry}
+\geometry{vmargin=1.cm, hmargin = 2.1cm}
+	\textheight=700px                    % Saving trees ;-)
+\usepackage{url}
+\usepackage[linkcolor=DarkRed,colorlinks=true]{hyperref}
+
+\xdefinecolor{dred}{named}{DarkRed}
+\xdefinecolor{indigo}{named}{Indigo}
+\xdefinecolor{dcyan}{named}{DarkCyan}
+
+\newcommand{\indigo}{\color{indigo}}
+\newcommand{\dred}{\color{dred}}
+\newcommand{\bk}{\color{black}}
+\newcommand{\dcyan}{\color{dcyan}}
+
+\frenchspacing              % Better looking spacings after periods
+\pagestyle{empty}           % No pagenumbers/headers/footers
+
+%%% Custom sectioning (sectsty package)
+%%% ------------------------------------------------------------
+\usepackage{sectsty}
+
+\sectionfont{%			            % Change font of \section command
+	\usefont{OT1}{phv}{b}{n}%		% bch-b-n: CharterBT-Bold font
+	\sectionrule{0pt}{0pt}{-5pt}{3pt}}
+
+%%% Macros
+%%% ------------------------------------------------------------
+\newlength{\spacebox}
+\settowidth{\spacebox}{8888888888}			% Box to align text
+\newcommand{\sepspace}{\vspace*{1em}}		% Vertical space macro
+
+\newcommand{\MyName}[1]{ % Name
+		\Huge \usefont{OT1}{phv}{b}{n} \hfill #1
+		\par \normalsize \normalfont}
+		
+\newcommand{\MySlogan}[1]{ % Slogan (optional)
+		\large \usefont{OT1}{phv}{m}{n}\hfill \textit{#1}
+		\par \normalsize \normalfont}
+
+\newcommand{\NewPart}[1]{\section*{\uppercase{#1}}}
+
+\newcommand{\PersonalEntry}[2]{
+		\noindent\hangindent=2em\hangafter=0 % Indentation
+		\parbox{\spacebox}{        % Box to align text
+		\textit{#1}}		       % Entry name (birth, address, etc.)
+		\hspace{1.5em} #2 \par}    % Entry value
+
+\newcommand{\SkillsEntry}[2]{      % Same as \PersonalEntry
+		\noindent\hangindent=0em\hangafter=0 % Indentation
+		\parbox{\spacebox}{        % Box to align text
+		\textit{#1}}			   % Entry name (birth, address, etc.)
+		\hspace{3em} #2 \par}    % Entry value	
+		
+\newcommand{\EducationEntry}[4]{
+		\noindent \textbf{#1} \hfill      % Study
+		\colorbox{DarkRed}{%  LightBlue, SkyBlue, CadetBlue, Tan
+			\parbox{6em}{%
+			\hfill\color{White}#2}} \par  % Duration
+		\noindent \textit{#3} \par        % School
+		\noindent\hangindent=2em\hangafter=0 \small #4 % Description
+		\normalsize \par}
+
+
+\newcommand{\EducationEntrie}[4]{
+		\noindent \textbf{#1} \hfill      % Study
+		\colorbox{white}{%  LightBlue, SkyBlue, CadetBlue, Tan
+			\parbox{10em}{%
+			\hfill\dred#2 }} \par  % Duration
+		\noindent \textit{#3} \par        % School
+		\noindent\hangindent=2em\hangafter=0 \small #4 % Description
+		\normalsize \par}
+
+
+\newcommand{\WorkEntry}[4]{				  % Same as \EducationEntry
+		\noindent \textbf{#1} \hfill      % Jobname
+		\colorbox{Black}{\color{White}#2} \par  % Duration
+		\noindent \textit{#3} \par              % Company
+		\noindent\hangindent=2em\hangafter=0 \small #4 % Description
+		\normalsize \par}
+
+%%% Begin Document
+%%% ------------------------------------------------------------
+\begin{document}
+% you can upload a photo and include it here...
+%\begin{wrapfigure}{l}{0.5\textwidth}
+%	\vspace*{-2em}
+%		\includegraphics[width=0.15\textwidth]{photo}
+%\end{wrapfigure}
+
+\MyName{\dred SAURA \bk Nathaniel}
+\MySlogan{Curriculum \dred Vitae \bk}
+
+
+%%% Personal details
+%%% ------------------------------------------------------------
+\NewPart{Personal details}{} \bk
+
+\PersonalEntry{Birth}{August 2, 1994}
+%\PersonalEntry{Address}{111 First St, New York}
+\PersonalEntry{Phone}{(+33) 7 82 47 09 35}
+\PersonalEntry{Mail}{\href{mailto:saura.nathaniel@gmail.com}{saura.nathaniel@gmail.com}} \bk
+
+%%% Education
+%%% ------------------------------------------------------------
+\NewPart{Education}{}
+\EducationEntry{PhD Candidate}{\textbf{2017-}}{Laboratoire de Mécanique des Fluides de Lille (LMFL)}{Subject of the on-going thesis: Data driven turbulence modeling for turbulent boundary layer control}
+\sepspace
+
+\EducationEntry{Masters degree in Fluid Mechanics and Energetics}{\textbf{2016-2017}}{Université Lyon 1 - Ecole Centrale de Lyon}{Combustion, Flow Stability, Statistical Physics, Turbulence, High Performance Computing (MPI), Polyphasic and Complex Flow, Finite Volume Method, Gas dynamics and Aeroacoustics}
+\sepspace
+
+\EducationEntry{Mechanical Engineering}{\textbf{2014-2017}}{Ecole Polytechnique Universitaire de Lyon (EPUL)}{Solid, Continuum \& Fluid Mechanics, Thermodynamics, applied and theoretical Mathematics, Vibration theory, Acoustics, Numerical methods, overview of several commercial softwares}
+\sepspace
+
+\EducationEntry{Baccalauréat \& Preparatory Classes}{\textbf{2012-2014}}{}{}
+\vspace{-0.7cm}
+%%% Work experience
+%%% ------------------------------------------------------------
+\NewPart{Work experience}{}
+
+\EducationEntrie{Heavy gases dispersion in a turbulent boundary layer}{\textbf{Spring 2017}}{6-month Internship ; LMFA\footnote{\label{note1}Laboratoire de Mécanique des Fluides et Acoustique}, Lyon - France}{Numerical investigation of buoyant gases dispersion in a turbulent boundary layer, steady and unsteady source, using \textit{Lattice Boltzmann Method}. Priminary study using \textsc{fluent}\\ \footnotesize{References: Louis Gostiaux, Emmanuel Lévêque, Pietro Salizzoni, Lionel Soulhac}}
+\sepspace
+
+\EducationEntrie{Monitoring and troubleshooting on Caterpillar heavy machinery}{\textbf{Summer 2016}}{Zoko Enterprises, Holon - Israel}{With a team of engineers: performed upstream monitoring and troubleshouting on Caterpillar heavy machinery, to prevent breakdown. Internship in English and Hebrew. \\ \footnotesize{References : Yuri Sandler, David Joseph}}
+\sepspace
+
+\EducationEntrie{Spiral internal waves }{\textbf{Spring 2016}}{5-month Internship, LMFA\footref{note1}, Lyon - France}{Numerical instigation of spiral internal waves generated by a helical forcing. Performed heavy numerical simulations using the \textit{Lattice Boltzmann Method} \\ \footnotesize{References: Louis Gostiaux, Alessandro De Rosis, Emmanuel Lévêque}}
+
+%%% ------------------------------------------------------------
+\NewPart{Skills}{}
+\SkillsEntry{\dred \small \textbf{Languages }\bk}{French \footnotesize{(mother tongue)}, English \footnotesize{(advanced)}, Hebrew \footnotesize{(intermediate)}\\ }
+\normalsize	
+\SkillsEntry{\dred \small \textbf{Programming} \bk}{\footnotesize{C/C++, \LaTeX, Python, Bash, SLURM, HTML}}
+\SkillsEntry{  }{\footnotesize{\hspace{0.25cm}HDF5 (C/C++, Python), Embedding (Python in C/C++), MPI, Lattice Boltzmann Method} \\}
+\normalsize	
+
+\end{document}
