@@ -34,6 +34,17 @@
 	\left[ #1 \right]  
 }
 
+\usepackage{siunitx}
+
+\usepackage{pifont}
+\newcommand{\bwarrow}{\item[\color{DarkRed} \ding{227}]}
+\newcommand{\warrow}{\item[\color{blue!50!black!70} \tiny{\ding{109}}]}
+\newcommand{\sarrow}{\item[\color{blue!50!black!70!orange!60} \tiny{\ding{55}}]}
+
+
+\usepackage{geometry}
+\geometry{hmargin=1.cm, vmargin=0cm}
+
 \xdefinecolor{bviolet}{named}{BlueViolet}
 
 %%%%%%%%%%%%%%%%%%%%
@@ -54,12 +65,25 @@
 \newcommand{\dgreen}{\color{dgreen}}
 \newcommand\red{\color{red}}
 
+\usepackage{setspace}
+
+    \expandafter\def\expandafter\insertshorttitle\expandafter{%
+       \insertshorttitle\hfill%
+       \insertframenumber\,/\,\inserttotalframenumber}
 
 % Things for first slide :
 \title[Machine learning in Physics fields]{An attempt to learn Physics : ML in fluid mechanics problems}
-\author{Saura Nathaniel\\}
-\institute{\bf LMFL}
+\author{Saura Nathaniel (PHD Candidate)\\}
+
 \date{$5^{\text{th}}$ July 2018}
+\institute{\bf LMFL
+\begin{center}
+	\begin{minipage}[!ht]{0.9\textwidth}
+	\centering
+	\includegraphics[scale=0.75]{logo_lmfl_border.png}
+	\end{minipage}
+\end{center}
+}
 
 % Begin 
 \begin{document}
@@ -79,8 +103,8 @@
 \begin{block}{ML algorithms exploding development (in every field)}
 \begin{itemize}
 \item[$\bullet$] Gaussian Process
-\item[$\bullet$] RForests, NNetworks (Supervised) for classification or regression tasks (more and more papers in Physics field)
-\item[$\bullet$] Reinforcement Learning (Semi-Supervised) (few papers)
+\item[$\bullet$] RForests, NNetworks (Supervised) for classification or regression tasks (more and more papers in fluid mechanics)
+\item[$\bullet$] Reinforcement Learning (few papers in fluid mechanics so far)
 \end{itemize}
 \end{block}
 
@@ -90,7 +114,7 @@
 \begin{block}{Different implementations}
 \begin{itemize}
 	\item[$\bullet$] Data-Driven augmentation (use of high fidelity datasets) with a combination of Bayesian Inference and Gaussian Process (or other ML methods)
-	\item[$\bullet$] Machine Learning to whole recover physical behaviour
+	\item[$\bullet$] Machine Learning to fully recover physical behaviour
 \end{itemize}
 \end{block} 
 
@@ -164,12 +188,13 @@ $\rightarrow s \sim \mathcal{N}\bepar{0, 1},\ \text{and}\ \beta_{\text{final}} \
 
 \end{frame}
 
-\begin{frame}{BIF : Few figures based on inversion ($T_\infty = 15$C)}
+\begin{frame}{BIF : Few figures based on inversion ($T_\infty = \ang{15}$C)}
 \begin{multicols}{2}
 \noindent
 	\begin{figure}[H]
 	\centering
-	\includegraphics[scale=0.2]{Pres_Evolution_beta_map.png}
+	\includegraphics[scale=0.25]{Pres_Evolution_beta_map.png}
+	\caption{Evolution of beta through the minimization process}
 	\end{figure}
 
 \columnbreak
@@ -180,10 +205,10 @@ $\rightarrow s \sim \mathcal{N}\bepar{0, 1},\ \text{and}\ \beta_{\text{final}} \
 	\includegraphics[height=4cm, width=6cm]{Pres_T_15_Full_Beta_Comp.png}
 	\end{figure}
 	
-	\vspace*{-2cm}
+	\vspace*{-2.5cm}
 	\begin{figure}[H]
 	\centering
-	\includegraphics[height=4cm, width=6cm]{Pres_Evolution_de_l'erreur_T_inf_15.png}
+	\includegraphics[height=4cm, width=6cm]{Evolution_de_l'erreur_T_inf_15.png}
 	\end{figure}		
 
 
@@ -210,6 +235,145 @@ $$ y = \left[ \begin{array}{c} \cdot \\ \cdot \\ \beta(x) \\ \cdot \\ \cdot
 $$
 \end{multicols}
 Neural Network generalizes $\beta_1, \beta_2, ..., \beta_n \rightarrow \beta_{\text{ML}} = \mathcal{F}\bepar{T_{\text{inf}}, T}$
+\end{frame}
+
+\begin{frame}{(BIF) : Prediction with NN }
+$T_\infty = \ang{28}$C 
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{T_True_vs_T_ML_N_sample_5_T_inf_28_Adam-mean.png}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}
+$T_\infty = \ang{55}$C 
+\begin{figure}[H]
+	\centering	
+	\includegraphics[scale=0.5]{TBeta_True_vs_TBeta_ML_N_sample_=_5_T_inf_=_55.png}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}
+$T_\infty = 35 + 20\sin(2\pi x)$ 
+\begin{figure}[H]
+	\centering	
+	\includegraphics[scale=0.5]{T_True_vs_T_ML_N_sample_5_T_inf_35_+_20sin_2piz_adam-mean.png}
+\end{figure}
+\end{frame}
+
+
+\begin{frame}{(BIF) Viscous Burgers Equation 1D}
+	
+	\begin{block}{Equations}
+		\begin{itemize}
+			\item[$\bullet$] Real equation :
+				\begin{center}
+					$\displaystyle \frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} - \frac{\partial^2 u}{\partial x^2} = 0$
+				\end{center}
+			\item[$\bullet$] (Inference) Model equation (1) :
+				\begin{center}
+					$\displaystyle \frac{\partial u}{\partial t} + u \color{BlueViolet} \beta(x,t) \bk - \frac{\partial^2 u}{\partial x^2} = 0$
+				\end{center}
+		\end{itemize} 
+	\end{block}
+
+	\begin{itemize}
+		\item[\checkmark] Real solution obtained with Lax Wendroff Scheme
+		\item[\checkmark] Infered solution obtained with Crank Nicholson Scheme
+		\red \item[\red \checkmark \bk] One inference at each time iteration \bk
+	\end{itemize}
+
+\end{frame}
+
+\begin{frame}{(BIF) VBE 1D : Inference step}
+	\begin{block}{A look at the future}
+		At each iteration $n$ we compute the $\beta_{\text{MAP}}$ minimizing a cost function that depends on the solution at $n+1$ : \\ 
+		\begin{center}
+			$\displaystyle \mathcal{J}^n = \frac{1}{2} \bepar{\Delta_{_{\text{LW-CN}}}U^{n+1}}^T \text{C}_\text{obs}^{-1} \bepar{\Delta_{_{\text{LW-CN}}}U^{n+1}} + \lambda \bepar{\beta^n -
+			\beta_{\text{p}}}^T \text{I}_d \bepar{\beta^n - \beta_\text{p}}$
+		\end{center}
+		Where $\Delta_{_{\text{LW-CN}}}U^{n+1} = \bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}$\\
+		And \\
+		\begin{center}
+			$\displaystyle \beta_{\text{MAP}}^n = \argmin \mathcal{J}^n$
+		\end{center}
+	\end{block}
+	
+	\begin{itemize}
+		\item[\checkmark] Initialize the problem with $u_0(x,t) = \sin((2\pi x)/L)$ in L-length domain
+		\item[\checkmark] Periodic boundary condition
+	\end{itemize} 
+\end{frame}
+
+\begin{frame}{(BIF) VBE 1D : Inference step (figures)}
+\vspace{-1cm}
+\begin{multicols}{2}
+\noindent
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width = 6cm, height= 6cm]{nu0_0250_CFL0_40_Nx_52_InferenceVSTrue_it5.png}
+		\vspace{-0.5cm}	
+		\caption{Left : Beta at time $n$ Right : Comparaison between reel solution and inferred solution at iteration 1(red) and 6(blue)}
+	\end{figure}
+
+\columnbreak
+
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width = 6cm, height=6cm]{nu0_0250_CFL0_40_Nx_52_InferenceVSTrue_it35.png}
+		\vspace{-0.5cm}	
+		\caption{Left : Beta at time $n$ Right : Comparaison between reel solution and inferred solution at iteration 31(red) and last(blue)}
+	\end{figure}
+
+\end{multicols}
+
+\end{frame}
+
+
+\begin{frame}{(BIF) VBE 1D : Machine Learning step}
+	More difficult now : what are $\eta$ to use in $\beta = \mathcal{F}(\eta)$ ?
+	\begin{itemize}
+		\item[$\bullet$]$\beta^{n+1} = \bepar{U_{i-1}^n, U_i^n, U^n_{i+1}}$ 
+		
+		\item[$\bullet$] $\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		
+		
+		\item[$\bullet$] $\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, 
+		U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, 
+		U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		
+		
+		\item[$\bullet$] \scriptsize$\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, 
+		U_{_{\bk i-1}}^{\navy n-2}, U_{\bk i}^{\navy n-2}, U_{_{\bk i+1}}^{\navy n-2},
+		U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		\\[0.54cm]
+	\end{itemize}
+	\normalsize
+
+	Problem linked to this framework :
+	\begin{itemize}
+		\sarrow Inversion can take long time to give $\beta_{\text{MAP}}$
+		\sarrow The need to produce various inferences to construct wide datasets
+	\end{itemize}
+	
+	\begin{exampleblock}{Idea}
+		Can we use NN brute force to infer the behaviour of U through time ?
+	\end{exampleblock}	
+	No more inference needed
+\end{frame}
+
+\section{Neural network brute force (NNBF)}
+\begin{frame}{Building the datasets}
+
+	\begin{itemize}
+		\item[$\bullet$] Different sinusoides as initial conditions
+
+		\begin{itemize}
+			\sarrow Different amplitudes (between 1 and 2)
+			\sarrow Random phases
+ 		\end{itemize}
+
+ 		\item[$\bullet$] Lax Wendroff scheme to solve each initial condition
+	\end{itemize}
 \end{frame}
 
 \begin{frame}

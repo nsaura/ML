@@ -753,6 +753,8 @@ class Temperature_cst() :
             err_beta = err_hess = err_j = 1            
             cpt, cptMax =   0, self.cpt_max_adj
             
+            colors = iter(cm.plasma_r(np.arange(cptMax)))
+            
             sup_g_lst = [] # Pour tester si la correction a stagné
             corr_chol = [] # Pour comptabiliser les fois ou la hessienne n'était pas définie positive
             al2_lst  =  [] # Comptabilise les fois où les DEUX conditions de Wolfe sont vérifiés
@@ -802,11 +804,33 @@ class Temperature_cst() :
                     #MAJ des figures avec nouveaux tracés
                     plt.figure("Evolution de l'erreur %s" %(sT_inf))
                     plt.scatter(cpt, g_sup, c='black')
+                    plt.xlabel("Iterations")
+                    plt.ylabel("J(beta_n)")
+                    
                     if inter_plot == True :
                         plt.pause(0.05)
+                    
+                    c = next(colors) 
+                    
+                    ax[0].plot(self.line_z, beta_n, color=c)
+                    ax[1].semilogy(self.line_z, g_n, color=c)
+                    
+                    ax[0].legend(["beta cpt%d_%s" %(cpt, sT_inf)])
+                    ax[1].legend(["grad cpt%d" %(cpt)])
+                    
+                    ax[0].set_xlabel("X-domain")
+                    ax[0].set_ylabel("Beta in optimization")
+                    
+                    ax[1].set_xlabel("X-domain")
+                    ax[1].set_ylabel("Gradient(J) (beta ongoing)")
+                    
+                    leg_0 = ax[0].get_legend()
+                    leg_1 = ax[1].get_legend()
 
-                    ax[0].plot(self.line_z, beta_n, label="beta cpt%d_%s" %(cpt, sT_inf))
-                    ax[1].plot(self.line_z, g_n, label="grad cpt%d" %(cpt), marker='s')
+                    leg_0.legendHandles[-1].set_color(c)
+                    leg_1.legendHandles[-1].set_color(c)
+                    
+                    fig.tight_layout()
                     
                     # MAJ de la liste des gradient.                      
                     sup_g_lst.append(g_sup)
@@ -827,9 +851,11 @@ class Temperature_cst() :
                         print("cpt = {} \t err_beta = {} \t err_hess = {}".format(cpt, \
                                                            err_beta, err_hess) )
                         print ("Hess cpt {}:\n{}".format(cpt, H_n_inv))
+                
                 #################
                 ##-- Routine --##
                 #################
+                
                 # Calcule : -np.dot(grad_J(bk), d_n). 
                 # GD pour Gradient Descent.  Doit être négatif (voir après et Nocedal et Wright)
                 GD = lambda H_n_inv :  -np.dot(g_n[np.newaxis, :],\
@@ -913,7 +939,10 @@ class Temperature_cst() :
                 print("\n")
                 cpt +=  1    
                 # n --> n+1 si non convergence, sort de la boucle sinon 
-                
+            
+            plt.figure("Evolution de l'erreur %s" %(sT_inf))
+            plt.legend(["Cost function vs number of iterations"])
+              
             ######################
             ##-- Post Process --##
             ######################
@@ -939,9 +968,12 @@ class Temperature_cst() :
                 g_sup, beta_last, d_n_last))
             
             # Tracés beta_last et grad_J(beta_last)
-            ax[1].semilogy(self.line_z, g_last, label="gradient last")
-            ax[0].semilogy(self.line_z, beta_last, label="beta_n last")
+            ax[0].plot(self.line_z, beta_last, color=c)
+            ax[1].semilogy(self.line_z, g_last, color=c)
             
+            ax[0].legend(["Last beta"])
+            ax[1].legend(["Last gradient(J)(Last beta)"])
+                        
             # Construction de la C_bmap
             try :
                 R   =   np.linalg.cholesky(H_last)
