@@ -1,0 +1,95 @@
+\documentclass[11pt]{beamer}
+\usetheme{CambridgeUS}                     %Bergen, CambridgeUS
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+%\usepackage{helvet}
+%\author{}
+%\title{}
+%\setbeamercovered{transparent} 
+%\setbeamertemplate{navigation symbols}{} 
+%\logo{} 
+%\institute{} 
+%\date{} 
+%\subject{} 
+%\begin{frame}
+%\titlepage
+%\end{frame}
+
+%\begin{frame}
+%\tableofcontents
+%\end{frame}
+\setbeamercolor{title}{fg=blue, bg=magenta}
+
+\usecolortheme[RGB={128,128,255}]{structure} 
+\setbeamercolor*{block title example}{fg=red!50!black,bg= green!80!black!50}
+\setbeamercolor*{block body example}{fg=green!20!black, bg= green!15}
+\setbeamercolor*{block body alerted}{fg= orange!50!black, bg= orange!15}
+\setbeamercolor*{block title alerted}{fg=yellow!50, bg= orange!50!red}
+\usepackage[skins]{tcolorbox}
+
+
+\begin {document}
+\begin{frame}{Sandwich box a la Beamer}
+
+\begin{columns}[c]
+\begin{column}{.3\linewidth} %décale la colonne de gauche
+\begin{block}{Block}Text\end{block} %Bloc de texte classique qui suit le thème
+\begin{exampleblock}{Example  block}Text\end{exampleblock} % Bloc d´ exemple classique
+\begin{alertblock}{Alert block}Text\end{alertblock} % Bloc d´ alerte classique
+\end{column}
+\begin{column}{.4\linewidth}
+
+% Without beamer skin: 
+
+\begin{tcolorbox}[
+left=1mm,right=1mm,top=1mm,bottom=1mm,middle=1mm,
+skin=bicolor,
+arc=5pt, %arrrondit les bords
+bottomrule=0pt,
+leftrule=00pt, % Met de la boite à gauche 
+rightrule=0pt,
+toprule=0pt,
+colback=block body alerted.bg, %Colorie la deuxième case
+colbacklower=block body example.bg, %Colorie la dernière case
+collower=block title.bg,
+colframe=block title.bg!1!black, %structure, %blue!75!black,
+frame style={left color=block title.bg,
+right color=block title example.bg!100!black}, %% framestyle right and left pour avoir le dégradé
+% better shadow than beamer skin
+fuzzy shadow={1mm}{-1mm}{-.25mm}{.5pt}{structure!20!black}% blue!30!black!80} % On personnalise les ombres 
+,title=Testing Sans utiliser -beamer ]
+A bicolor box
+\tcblower
+a la \dotfill \alert{no} Beamer mode 
+\end{tcolorbox}
+
+\bigskip
+
+% With beamer skin: 
+
+
+\begin{tcolorbox}[
+left=1mm,right=1mm,top=1mm,bottom=1mm,middle=1mm, % place le titre
+beamer, % Warning: must be before of bicolor skin
+skin=bicolor,
+colback=block body.bg, %mystère
+colbacklower=block body example.bg, % Colorie l'intérieur de la colonne la plus basse
+collower=block body alerted.fg, %Colorie le text de la colonne la plus basse
+colupper=block body example.fg, %Colorie le text de la colonne en dessous le titre
+%colframe=block title.bg,
+coltitle=block title alerted.fg, %Couleur du titre
+frame style={draw=none,fill=none, left color=block title.bg!2!blue, right color=block title.bg!20!black},
+interior style={left color=block body alerted.bg, right color=block title alerted.bg}, %colorie l'intérieur de la deuxième colonne
+,title=Pas mal celle la ]
+A bicolor box
+\tcblower %séparateur de colonne
+a la Beamer mode
+
+\end{tcolorbox}
+
+\end{column}
+\end{columns}
+\end{frame}
+\end{document}

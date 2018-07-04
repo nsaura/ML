@@ -1,0 +1,78 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}		 			% Inclusion des figures 
+
+\usepackage{multicol}					% Pour utiliser \hfill
+\usepackage{wrapfig} 					% Pour pouvoir placer une image à côté de texte
+
+\usepackage{amsmath, amsfonts, amssymb}
+%\sepackage[linkcolor=red,colorlinks=true]{hyperref}
+\usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
+\usepackage[svgnames]{xcolor}
+
+%%%%%%%%%%%%%%%%%%%
+%%% Couleurs %%%
+\xdefinecolor{purple}{named}{MediumVioletRed}
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{forest}{named}{DarkMagenta}
+\xdefinecolor{dgreen}{named}{DarkOliveGreen}
+
+\newcommand{\brick}{\color{brick}}
+\newcommand{\npurple}{\color{forest}}
+\newcommand{\dgreen}{\color{dgreen}}
+
+\newcommand{\bl}{\color{blue}}
+\newcommand{\bk}{\color{black}}
+\newcommand{\rd}{\color{red}}
+%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\pathpic}{/home/saura/Documents/Latex_files/Pic/}
+
+\usepackage{geometry}
+\geometry{hmargin=1.4cm, vmargin=1cm}
+
+%opening
+\title{Notes Interaction fluides structures}
+\author{N-S }
+
+\begin{document}
+%\maketitle
+\vspace{-1cm} \bl
+\section{Écoulements polyphasiques} \bk
+\noindent \textbf{$\rightarrow$ Interface :\\}
+Zone de séparation entre deux phases liquides. Frontières libres, mobiles et déformables, d'épaisseurs négligeables. Elle imposent des conditions aux limites particulières pour les fluides des deux phases. Eau-Air : différents régimes :
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height = 5.5cm, width = 8 cm]{\pathpic bubly1.png} \hfill
+\includegraphics[height = 5.5cm, width = 8 cm]{\pathpic bubly2.png}
+\caption{Différents régimes en conduite verticale}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height = 5cm, width=9cm]{\pathpic horizontal.png}
+\caption{Différents régimes en conduite horizontale}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height = 6cm, width=8cm]{\pathpic cdr_vert.png} \hfill
+\includegraphics[height = 6cm, width=8cm]{\pathpic cdr_horiz.png}
+%\caption{On a recourt aux cartes de régimes}
+\end{figure}
+Avec pour la figure de gauche \bl
+\begin{equation*}
+j_G = \frac{Q_g}{A} \text{\hspace{2mm} \bk et\bl \hspace{2mm}} j_L = \frac{Q_L}{A}
+\end{equation*}
+\bk Et pour la figure de gauche :
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height = 1.5 cm, width = 3cm]{\pathpic X.png} \hfill
+\includegraphics[height = 2 cm, width = 3.5cm]{\pathpic T.png} \hfill
+\includegraphics[height = 1.7 cm, width = 3.5cm]{\pathpic F.png} \hfill
+\includegraphics[height = 1.5 cm, width = 5.5cm]{\pathpic K.png} 
+\end{figure}
+
+\end{document}
