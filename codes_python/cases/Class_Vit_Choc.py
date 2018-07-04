@@ -320,7 +320,7 @@ class Vitesse_Choc() :
             if plot == True :
                 plt.figure("Resolution")
                 plt.plot(self.line_x, u)
-                plt.title("U vs X iteration 0 bruit %d" %(j))
+                plt.title("U vs X iteration 0 noise %d" %(j))
                 plt.ylim((-2.5, 2.5))
                 plt.pause(0.01)
             
@@ -661,8 +661,11 @@ class Vitesse_Choc() :
 
                 axes[1].set_ylim((-2.0, 2.0))
                 axes[1].legend(loc = "best")
-                    
+                 
                 plt.pause(0.01)
+                
+                plt.savefig("./res_all_T_inf/burger_fig/nu%.4f_CFL%.2f_Nx_%d_InferenceVSTrue_it%d.png" %(self.nu, self.CFL, self.Nx, it))
+                
                 evol += 1
             ## End of the while loop ## 
         

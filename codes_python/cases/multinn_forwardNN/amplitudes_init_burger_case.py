@@ -57,7 +57,6 @@ curr_work = osp.join(wdir, "Nx:%d_Nt:%d_nu:%.4f_CFL:%0.2f" % (cb.Nx, cb.Nt, cb.n
 
 
 pi_line = np.linspace(-np.pi/2., np.pi/2., 1000)
-
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
@@ -72,9 +71,11 @@ def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False
         if "test" in filename.split("_") :
             abs_work = osp.join(curr_work, "tests_case")
             if osp.exists(abs_work) == False:
-                os.mkdir(abs_work)
+                os.makedirs(abs_work)
         else :
             abs_work = curr_work
+            if osp.exists(abs_work) == False:
+                os.makedirs(abs_work)
             
         curr_filename = filename + "_it%d.npy"%(it+1)
         curr_filename = osp.join(abs_work, curr_filename)
@@ -127,7 +128,7 @@ def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 
-def amp_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, write=False) :
+def amp_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, write=True) :
     X = np.zeros((3))
     y = np.zeros((1))
     
@@ -209,8 +210,8 @@ def amp_xs_compute_true_u(cb, nsamples, amp_line, pi_line, kc=1, plot=False, wri
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 
-amplitude = np.linspace(1,2,10)
-dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80}
+amplitude = np.linspace(0.4,2,15)
+dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6":80}
 
 def amp_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
@@ -405,6 +406,6 @@ def amp_multiNN_solver(nn_obj, cb=cb):
 
 # ampDerX_multi, ampDery_multi = amp_Der_compute_true_u(cb, 1, amplitude, pi_line, plot=True, write=True)
 
-# nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
+# amp_nn = amp_multi_buildNN(1e-3, ampDerX_multi, ampDery_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
 
-# xs_multiNN_solver(nn_xs)
+# amp_multiNN_solver(nn_xs)
