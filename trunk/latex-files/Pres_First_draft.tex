@@ -77,7 +77,7 @@
 
 % Things for first slide :
 \title[Machine learning in Physics fields]{An attempt to learn Physics : ML in fluid mechanics problems}
-\author{Saura Nathaniel (PHD Candidate)\\}
+\author{Saura Nathaniel (PHD Student)\\}
 
 \date{$5^{\text{th}}$ July 2018}
 \institute{\bf LMFL
@@ -130,7 +130,7 @@
 \begin{frame}{Infer beta through inversion}
 \begin{block}{Modified closure equation }
 The main idea of RANS models is to add a closure equation. The main idea of BI is to add a flexible term in this closure to correct the error injected.  
-\center{$\displaystyle \mathcal{F}\bepar{\color{BlueViolet} \beta(\mathbf{x}, t) \bk P_{\text{roduction}}  - D_{\text{issipation} } + T_{\text{ransport}}} = 0 $}
+\center{$\displaystyle \mathcal{F}\bepar{\color{BlueViolet} \beta(\mathbf{x}, t) \bk P_{\text{roduction}}  , D_{\text{issipation} }, T_{\text{ransport}}} = 0 $}
 \end{block}
 $$ \beta_M = \argmin \mathcal{J}$$
 $$\mathcal{J} = \becro{\frac{1}{2} \bepar{\text{Obs} - h\bepar{\beta}}^T\textbf{C}^{-1}_m\bepar{\text{Obs} - h\bepar{\beta}} + \bepar{\beta - \beta_{\text{p}}}^T\textbf{C}_\beta^{-1}\bepar{\beta - \beta_{\text{p}}}}$$
@@ -185,9 +185,8 @@ $\displaystyle \frac{d^2T}{dz^2} + \varepsilon_0\color{BlueViolet}\beta(z)\bk\be
 \item[\dgreen \checkmark] BFGS method to minimize $\mathcal{J}$ $\rightarrow$ $\beta_{\text{MAP}}$ \& $\text{Hess}^{-1}_{\beta_{\text{MAP}}}$
 \item[\dgreen \checkmark] Create $\beta_{\text{final}}$ distribution : \\
 \begin{center}
-$ \beta_{\text{final}} = \beta_M + \text{Chol}\bepar{{\text{Hess}^{-1}_{\beta_{\text{MAP}}}}}\cdot\ \text{s}$
+$ \beta_{\text{final}} \equiv \beta \sim \mathcal{N}\bepar{\beta_{\text{MAP}}, {\text{Hess}^{-1}_{\beta_{\text{MAP}}}}}$
 \end{center}
-$\rightarrow s \sim \mathcal{N}\bepar{0, 1},\ \text{and}\ \beta_{\text{final}} \equiv \beta \sim \mathcal{N}\bepar{\beta_{\text{MAP}}, {\text{Hess}^{-1}_{\beta_{\text{MAP}}}}}$
 \end{itemize}
 
 \end{frame}
@@ -238,7 +237,10 @@ $$ y = \left[ \begin{array}{c} \cdot \\ \cdot \\ \beta(x) \\ \cdot \\ \cdot
 	   \right]
 $$
 \end{multicols}
-Neural Network generalizes $\beta_1, \beta_2, ..., \beta_n \rightarrow \beta_{\text{ML}} = \mathcal{F}\bepar{T_{\text{inf}}, T}$
+Neural Network generalization : \\
+\begin{center}
+ $\beta_1(x), ..., \beta_n(x) \rightarrow \beta_{\text{ML}} = \mathcal{F}\bepar{\eta_1 = T_{\text{inf}}, \eta_2= T}$
+\end{center}
 \end{frame}
 
 \begin{frame}{(BIF) : Prediction with NN }
@@ -387,6 +389,10 @@ $T_\infty = 35 + 20\sin(2\pi x)$
 \end{frame}
 
 \begin{frame}{Strategy employed here}
+	We want to find the functionnal linking the solution $U^{n+1}$ and some n$^{\text{th}}$ parameters :\\
+	\begin{center}
+	$ \displaystyle U^{n+1} = \mathcal{F}\bepar{\eta^n}$ \\
+	\end{center}
 	Construction $X$ and $y$ iteration by iteration, case by case.\\
 
 	\begin{multicols}{2}
@@ -412,7 +418,7 @@ $T_\infty = 35 + 20\sin(2\pi x)$
 \begin{frame}{Training of the algorithm}
 	\begin{figure}[H]
 		\centering
-		\includegraphics[scale=0.5]{Cost_Evolution_:_loglog_and_lin.png}
+		\includegraphics[scale=0.45]{Cost_Evolution_:_loglog_and_lin.png}
 	\end{figure}
 \end{frame}
 
@@ -519,6 +525,7 @@ $T_\infty = 35 + 20\sin(2\pi x)$
 \end{frame}
 
 \begin{frame}{Conclusion on Brute Force}
+VBE is not the simpliest equation to solve since sharp chocs
 	\begin{block}{Still can be improved}
 		\begin{itemize}
 			\item[$\bullet$] Good approximations but can be better
