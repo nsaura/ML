@@ -159,11 +159,19 @@ def amp_Der_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, 
     X = np.zeros((4))
     y = np.zeros((1))
     
+    cb.Nx = 202
+    cb.Nt = 202
+    
+    cb.line_x = np.linspace(0, cb.L, cb.Nx)
+    cb.itmax = 250
 #    colors = iter(cm.gist_heat(np.arange(len(amp_line)*10)))
     colors = iter(cm.gnuplot(np.arange(len(amp_line)*10)))
     
     for amp in amp_line :
+        print ("nsample(s) = %d" % nsamples) 
         for n in range(nsamples) :
+            print ( "amp = %.2f \t n = %d" %(amp, n) )
+            
             filename = "%.2f_init_kc%d_%d" % (amp, kc, n)
             uu = cb.init_u(amp, phase = np.random.choice(pi_line))
             

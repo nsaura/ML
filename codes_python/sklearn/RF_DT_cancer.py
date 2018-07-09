@@ -22,7 +22,7 @@ forest = RandomForestClassifier(n_estimators=100, random_state=0)
 forest.fit(X_train, y_train)
 
 print("Train Accuracy: {:.3f}".format(forest.score(X_train, y_train)))
-print("Train Accuracy: {:.3f}".format(forest.score(X_test, y_test)))
+print("Test Accuracy: {:.3f}".format(forest.score(X_test, y_test)))
 
 n_features = X.shape[1]
 plt.barh(xrange(n_features), forest.feature_importances_, align='center')
