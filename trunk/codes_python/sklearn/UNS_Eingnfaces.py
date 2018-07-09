@@ -70,7 +70,7 @@ knn.fit(X_train, y_train)
 ### On va plutôt utiliser des méthodes non supervisées --> PCA
 from sklearn.decomposition import PCA
 
-pca = PCA(n_components=100,whiten=True,random_state=0).fit(X_train) #Pas besoin de labels
+pca = PCA(n_components=25,whiten=True,random_state=0).fit(X_train) #Pas besoin de labels
 X_train_pca = pca.transform(X_train)
 X_test_pca  = pca.transform(X_test)
 
