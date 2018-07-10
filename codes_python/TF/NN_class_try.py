@@ -334,8 +334,7 @@ class Neural_Network():
             prev_key = "N%d" %(jj-1) if jj != 1 else "I" 
             curr_key = "N%d" %(jj)
             try :
-                w_dict[wkey] = np.random.randn(self.N_[prev_key],\
-                        self.N_[curr_key]) / np.sqrt(self.N_[prev_key])
+                w_dict[wkey]=np.random.randn(self.N_[prev_key],self.N_[curr_key])/np.sqrt(self.N_prev_key])
                 biases_d[bkey] = np.zeros(self.N_[curr_key])
             
             except KeyError :
