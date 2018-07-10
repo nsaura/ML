@@ -22,6 +22,8 @@ except NameError:
     except ImportError:
         from imp import reload  # Python 3.0 - 3.3
 
+import tflearn
+
 import tensorflow as tf
 
 config = tf.ConfigProto(
@@ -30,13 +32,19 @@ config = tf.ConfigProto(
     
 sess = tf.InteractiveSession(config=config)
 
+
 x = np.linspace(0,1,500).reshape(-1,1)
 s = np.sin(2*np.pi*x).reshape(1,-1)
 
 s_dim = x.shape
 
-# add an extra layer just for fun
 M1 = 20
+
+##############################
+##############################
+######  Pour l'action  #######
+##############################
+##############################
 
 w1_init = np.random.randn(s_dim[1], M1) / 28
 b1_init = np.zeros(M1)
@@ -84,6 +92,46 @@ actor_gradients = list(map(labda x : tf.div(x, batch_size), unnormalized_actor_g
 
 optimize = tf.train.AdamOptimizer(learning_rate).\
             apply_gradients(zip(actor_gradients, network_params))
+
+##############################
+##############################
+###### Pour la critique ######
+##############################
+##############################
+
+w11_init = np.random.randn(s_dim[1], M1) / 28
+b11_init = np.zeros(M1)
+w22_init = np.random.randn(M1, s_dim[1]) / np.sqrt(M1)
+b22_init = np.zeros(s_dim[1])
+
+# define variables and expressions
+inputs = tf.placeholder(tf.float32, shape=(None, s_dim[1]), name='inputs')
+actions = tf.placeholder(tf.float32, shape=(None, s_dim[1]), name='target')
+
+# Architecture du critique particuliere : première entrée puis deuxième 
+# On va utiliser tflearn.fully_connected
+net = tflearn.fully_connected(inputs, 20) #crée matrices de poids et biais pour cette couche
+#net = tflearn.layers.normalization.batch_normalization(net)
+net = tflearn.activations.relu(net)
+
+t1 = tflearn.fully_connected(net, 20) #On crée une deuxième hidden layer pour les inputs
+t2 = tflearn.fully_connected(actions, 20) #On crée une autre branche
+
+net_crits = tf.activation(
+        tf.matmul(net, t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
+
+# Puis une couche linear representant la TD valeur cad la Qvalue ici
+w_init = tflearn.initializations.uniforme(minval=-0.003, minval=+0.003) #Toujours pour bounder
+out_crits = tflearn.fully_connected(net_crits, 1, weights_init=w_init)
+
+
+#Fonction de cout pour le critic
+predicted_q_value = tf.placeholder(tf.float, [None, 1])
+
+loss_crits = tflearn.mean_square(predicted_q_value, out_crits)
+optimize = tf.train.AdamOptimizer(learning_rate_crits).minimize(loss)
+
+action_grads = tf.gradients(out_crits, action) #Grad Out wrt action
 
 #Pour faire des tests ensuite
 init = tf.global_variables_initializer()
