@@ -13,12 +13,10 @@ import seaborn as sns
 import os
 import os.path as osp
 
-from sklearn.model_selection import train_test_split
+import numdifftools as nd
 
 import tflearn
 import tensorflow as tf
-
-import custom_swish_function as csf
 
 try:
     reload  # Python 2.7
@@ -28,18 +26,68 @@ except NameError:
     except ImportError:
         from imp import reload  # Python 3.0 - 3.3
 
-csf = reload(csf)
-
 config = tf.ConfigProto(
         device_count = {'GPU': 0}
     )
 
+import time
+
 #dict_layers = {"inputs" : [1], "N1" : [20, "tanh"], "N2" : ["20", "tanh"], "action":[1]}
+
+def LW_solver(u_init, Nx, dx, dt, nu) :
+    def intermediaires (var, flux ,incr, r) :
+        """ Fonction qui calcule les valeurs de la variables  aux points (n + 1/2 , i - 1/2) et (n + 1/2 , i + 1/2)   
+            Parametres :
+            -------------
+            var : Celle dont on veut calculer l'étape intermediaire. C'est un tableau de valeur
+            flux : le flux correspondant à la valeur var        
+            incr : l'indice en cours indispensable pour evaluer l'etape intermediaire
+            r : rapport dt/dx
+            
+            Retour : 
+            ------------
+            f_m = la valeur intermediaire au point (n + 1/2 , i - 1/2)
+            f_p = la valeur intermediaire au point (n + 1/2 , i + 1/2)
+        """
+        f_m = 0.5 * ( var[incr] + var[incr-1] ) - 0.5 * r * ( flux[incr]- flux[incr-1] )
+        f_p = 0.5 * ( var[incr+1] + var[incr] ) - 0.5 * r * ( flux[incr+1] - flux[incr] )
+        return f_m,f_p
+    
+    r = dt / dx
+    t = it = 0
+    u = np.copy(u_init)
+    u_nNext = []
+    
+    fac = nu * dt / dx **2
+    
+    fu = np.asarray([0.5*u_x**2 for u_x in u])
+    
+    der_sec = [fac*(u[k+1] - 2*u[k] + u[k-1]) for k in range(1, len(u)-1)]
+    der_sec.insert(0, fac*(u[1] - 2*u[0] + u[-1]))
+    der_sec.insert(len(der_sec), fac*(u[0] - 2*u[-1] + u[-2]))
+    
+    for i in range(1, Nx-1) :
+        u_m, u_p = intermediaires(u, fu, i, r)
+        fu_m =  0.5*u_m**2
+        fu_p =  0.5*u_p**2
+
+        u_nNext.append( u[i] - r*( fu_p - fu_m ) + der_sec[i] )
+                                    
+    # Conditions aux limites 
+    u[1:Nx-1] = u_nNext  
+    u_nNext  = []
+    
+    u[0] = u[-2]
+    u[-1]= u[1]
+    
+    u = np.asarray(u) 
+        
+    return u
 
 ###-------------------------------------------------------------------------------
 
 class actor_deepNN() :
-    def __init__(self, dict_layers, lr, op_name="Adam", loss_name="OLS", reduce_type="sum"):
+    def __init__(self, dict_layers, lr, op_name="Adam", loss_name="OLS", reduce_type="sum", case_filename='./../cases/multinn_forwardNN/data/burger_dataset/'):
         nodes, acts = {}, {}
         
         act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu", "selu", "swish"]
@@ -47,7 +95,6 @@ class actor_deepNN() :
         act_str_to_tf = {"relu"     :   tf.nn.relu,
                          "tanh"     :   tf.nn.tanh,
                          "selu"     :   tf.nn.selu,
-                         "swish"    :   csf.tf_swish,
                          "sigmoid"  :   tf.nn.sigmoid,
                          "leakyrelu":   tf.nn.leaky_relu
                         }
@@ -72,9 +119,11 @@ class actor_deepNN() :
         
         self.dict_layers = dict_layers
 
+
         self.state = tf.placeholder(tf.float32, shape=(None, s_dim), name='inputs')
         self.action = tf.placeholder(tf.float32, shape=(None, s_dim), name='action')
-        
+
+
         self.sess = tf.InteractiveSession(config=config)
 
         self.act_func_lst = act_func_lst
@@ -90,8 +139,29 @@ class actor_deepNN() :
         self.opt_str_to_tf = opt_str_to_tf
         
         self.loss_name = loss_name
+        self.case_filename = case_filename
         
         self.reduce_fct = tf.reduce_sum if reduce_type == "sum" else tf.reduce_mean
+        
+        self.init_NN_Actor_parameter()
+        self.build_NN_operating_Actor_graph()
+        
+        self.def_optimizer()
+        
+        self.network_params = tf.trainable_variables()
+        
+        # Op for periodically updating target network with online network
+        # weights
+#        self.update_target_network_params = \
+#            [self.target_network_params[i].assign(tf.multiply(self.network_params[i], self.tau) +
+#                                                  tf.multiply(self.target_network_params[i], 1. - self.tau))
+#            for i in range(len(self.target_network_params))]
+        
+        self.action_gradient = tf.placeholder(tf.float32, (None, s_dim))
+        self.actor_gradients = tf.gradients(self.NN_guess, self.network_params, self.action_gradient)
+        
+        
+        self.optimize = self.tf_optimizer.apply_gradients(zip(self.actor_gradients, self.network_params))
         
 ###-------------------------------------------------------------------------------
 
@@ -146,9 +216,6 @@ class actor_deepNN() :
             w_key = self.layer_key("w", nlayer)
             a_key = self.layer_key("act", nlayer)
             
-#        for kact, kw in zip(self.acts.keys(), self.weights.keys()) :        
-#            print kact, kw
-#            nlayer = int(kact[1:])
             action_layer = tf.matmul(incoming_layer, self.weights[w_key])
             action_layer = self.acts[a_key](action_layer, name=self.layer_name("act", nlayer))
             
@@ -185,88 +252,161 @@ class actor_deepNN() :
         
         self.tf_optimizer = tf_optimizer
         
-###-------------------------------------------------------------------------------
-
-    def def_loss(self, r=1, alpha=1e-7) :
-        
-        classic_loss = {"OLS" = tf.square, "AVL" : tf.abs}
-        regress_loss = ["Lasso", "Ridge", "Elastic"]
-        
-        if self.loss_name in classic_loss.keys() :
-            loss_function = classic_loss[self.loss_name]
-        
-        else :
-            if self.loss_name == "Lasso" :
-                loss_function = self.Elastic_cost(r=1, alpha=alpha)
-            
-            if self.loss_name == "Ridge" :
-                loss_function = self.Elastic_cost(r=0, alpha=alpha)
-            
-            if self.loss_name == "Elastic" :
-                loss_function = self.Elastic_cost(r=r, alpha=alpha)
-        
-        self.loss_name = self.reduce_fct(loss_function)
-        
-###-------------------------------------------------------------------------------        
-        
-    def Elastic_cost(self, r=1) :
-        # Pseudo code : 
-        # J = MSE + r*alpha * sum(|weights|) + (1-r)*0.5*alpha * sum(tf.square(weights))
-        # if r == 0 ---> Ridge
-        # if r == 1 ---> Lasso 
-        
-        if np.abs(r) < 1e-8 :
-            print ("r = %f --> Ridge function selected" % r)
-        
-        if np.abs(r-1) < 1e-8 :
-            print ("r = %f --> Lasso function selected" % r)
-        
-        self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
-        
-        MSE_part = self.reduce_type_fct(tf.square(self.NN_guess - self.action))
-        
-        Ela_part = tf.add(tf.multiply(r*alpha, self.reduce_type_fct(tf.abs(self.weight_sum))),
-               tf.multiply((1.-r)*0.5*alpha, self.reduce_type_fct(tf.square(self.weight_sum))))
-        
-        return tf.add(MSE_part, Ela_part) 
-                
 ###-------------------------------------------------------------------------------                
-                
-    def update_network_params(self, tau=0.001) :
-        self.network_params = tf.trainable_variables()
-        target_network_variables = tf.trainable_variables()[len(network_params):]
-        
-        
-        self.update_target_network_params = \
-            [target_network_variables[i].assign(tf.mul(network_params[i], tau) +\
-             tf.mul(target_network_variables[i], 1-tau))
-             for i in range(len(target_network_variables))]
      
-     def update_target_network(self):   
-        
+    def update_target_network(self, tau=0.001) : 
+        self.sess.run(self.update_target_network_params())        
        
 ###-------------------------------------------------------------------------------        
     
-    def train_DRL(self) :
-        self.action_gradient = tf.placeholder(tf.float32, (None, 1))
-        
-        self.unnormalized_actor_gradient = tf.gradients(\
-                    self.NN_guess, self.network_params, -self.action_gradient)
-        
-        self.tf_optimizer = tf_optimizer.minimize.\
-                    apply_gradients(zip(self.actor_gradients, self.network_params))
-        
-        
-        
+    def A_prediction(self, state) :
+        return self.sess.run(self.NN_guess, feed_dict={self.state : state}).reshape(-1)
 
+###-------------------------------------------------------------------------------
+
+    def rewards (self, action):
+        penalty = np.zeros((action.ravel().size))
         
+        for j in range(1, len(action)-1) :
+            temp = (action[j] - self.prev[j])/self.dt
+            
+            NL_t = self.prev[j] * (self.prev[j+1] - self.prev[j-1])/(2*self.dx)
+            
+            diff = self.nu*(self.prev[j+1] - 2*self.prev[j] + self.prev[j-1])/self.dx**2
+            
+            penalty[j] = temp + NL_t - diff
+        
+        penalty[0] = penalty[-2]
+        penalty[-1] = penalty[1]
+    
+        return np.mean(-penalty)
+    
+###-------------------------------------------------------------------------------    
+    def DRL(self, itmax, Nx, dx, dt, nu, line_x, L):
+        
+        true_action = np.zeros((0))
+        self.dt = dt
+        self.dx = dx
+        self.nu = nu
+        
+#        rewards = lambda action : (true_action - action).T.dot(true_action - action)
+        dJ = nd.Gradient(self.rewards)      
+                
+        init = tf.global_variables_initializer()
+        self.sess.run(init)
+        
+        true_incoming_field = np.sin(2*np.pi*line_x/L)
+        pred_incoming_field = np.sin(2*np.pi*line_x/L)
+        
+        fig, axes = plt.subplots(1, 2, figsize=(8,8))
+        
+        for it in range(itmax) :
+            self.prev = pred_incoming_field
+            it_pred = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
+        
+            true_action = LW_solver(true_incoming_field, Nx, dx, dt, nu)
+            
+            print ("it_pred it = {}:\n{}".format(it, it_pred))
+            
+            reward = self.rewards(it_pred) 
+            grad = dJ(it_pred)
+            
+            print ("grad = {}:\n".format(grad))
+            
+            grad = np.array(grad)
+            
+            axes[0].semilogy(it, reward, color="crimson", marker="o", linestyle='none')
+            axes[0].set_title("First estimation")
+            
+            plt.pause(0.01)
+            
+            self.sess.run(self.optimize, feed_dict={self.state : pred_incoming_field.reshape(1,-1),
+                                                    self.action_gradient : grad.reshape(1,-1)})
+            
+            
+            it_pred_2 = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
+            reward_2 = self.rewards(it_pred_2)
+            
+            axes[0].semilogy(it, reward_2, color="navy", marker="o", linestyle='none')
+            
+            axes[0].legend(["Red : First estimation", "Blue : Second estimation"])
+            
+            axes[1].cla()
+            axes[1].plot(line_x, true_action, label="True value it %d" %it, color="blue")
+            axes[1].plot(line_x, it_pred, label="First value", linestyle="none", marker="o", c='green', fillstyle="none")
+            axes[1].plot(line_x, it_pred_2, label="second Pred value", linestyle="none", marker="o", c='crimson', fillstyle="none")
+            
+            axes[1].legend()            
+            
+            plt.pause(1)
+                    
+            true_incoming_field = true_action
+            pred_incoming_field = it_pred
+            
+            print ("weights = \n{}".format(self.sess.run(tf.trainable_variables()[0])))
+            
+            time.sleep(5)
+###------------------------------------------------------------------------------- 
+
 if __name__=="__main__" :
 #    run ReiLFramework_Actor_block.py
-    dict_layers = {"inputs" : [1], "N1" : [20, "tanh"], "N2" : [40, "tanh"], "action":[1]}
+    try :
+        tf.reset_default_graph()
+    except :
+        print ("This time the graph won't be deleted")
+        pass
     
-    actor = actor_deepNN(dict_layers)
+    dict_layers = {"inputs" : [82], "N1" : [20, "tanh"], "N2" : [40, "tanh"], "action":[82]}
+    
+    actor = actor_deepNN(dict_layers, 1e-3)
     actor.init_NN_Actor_parameter()
     
+
+
+####-------------------------------------------------------------------------------
+
+#    def def_loss(self, r=1, alpha=1e-7) :
+#        
+#        classic_loss = {"OLS" = tf.square, "AVL" : tf.abs}
+#        regress_loss = ["Lasso", "Ridge", "Elastic"]
+#        
+#        if self.loss_name in classic_loss.keys() :
+#            loss_function = classic_loss[self.loss_name]
+#        
+#        else :
+#            if self.loss_name == "Lasso" :
+#                loss_function = self.Elastic_cost(r=1, alpha=alpha)
+#            
+#            if self.loss_name == "Ridge" :
+#                loss_function = self.Elastic_cost(r=0, alpha=alpha)
+#            
+#            if self.loss_name == "Elastic" :
+#                loss_function = self.Elastic_cost(r=r, alpha=alpha)
+#        
+#        self.loss_name = self.reduce_fct(loss_function)
+#        
+####-------------------------------------------------------------------------------        
+#        
+#    def Elastic_cost(self, r=1) :
+#        # Pseudo code : 
+#        # J = MSE + r*alpha * sum(|weights|) + (1-r)*0.5*alpha * sum(tf.square(weights))
+#        # if r == 0 ---> Ridge
+#        # if r == 1 ---> Lasso 
+#        
+#        if np.abs(r) < 1e-8 :
+#            print ("r = %f --> Ridge function selected" % r)
+#        
+#        if np.abs(r-1) < 1e-8 :
+#            print ("r = %f --> Lasso function selected" % r)
+#        
+#        self.weight_sum = tf.placeholder(np.float32, (None), name="weight_sum")
+#        
+#        MSE_part = self.reduce_type_fct(tf.square(self.NN_guess - self.action))
+#        
+#        Ela_part = tf.add(tf.multiply(r*alpha, self.reduce_type_fct(tf.abs(self.weight_sum))),
+#               tf.multiply((1.-r)*0.5*alpha, self.reduce_type_fct(tf.square(self.weight_sum))))
+#        
+#        return tf.add(MSE_part, Ela_part) 
 
         
 #        log_path = os.path.abspath("./logs")
