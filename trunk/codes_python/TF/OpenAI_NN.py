@@ -91,10 +91,10 @@ def discount_and_normalize_rewards(all_rewards, discount_rate) :
 
 n_iterations = 20
 n_max_steps = 1000
-n_games_per_update = 10
-save_iterations = 10
-
 discount_rate = 0.95
+save_iterations = 10
+n_games_per_update = 10
+
 
 with tf.Session() as sess :
     init.run()
@@ -135,9 +135,9 @@ with tf.Session() as sess :
             all_rewards.append(current_rewards)     # On les enregistre pour les n_max_step
             all_gradients.append(current_gradients) # On les enregistre pour les n_max_step
         
+        feed_dict = {}
         all_rewards = discount_and_normalize_rewards(all_rewards, discount_rate)
 
-        feed_dict={}
         
         for var_index, grad_placeholder in enumerate(gradient_placeholders) :
             mean_gradients = np.mean([reward * all_gradients[game_index][step][var_index] for game_index, rewards in enumerate(all_rewards) for step, reward in enumerate(rewards)], axis=0)
