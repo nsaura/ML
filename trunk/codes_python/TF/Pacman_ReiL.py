@@ -21,6 +21,11 @@ obs = env.reset()
 mspacman_color = np.array([210, 164, 74]).mean()
 # env.action_space --> Discrete(9) i.e 9 actions possible
 
+try :
+    tf.reset_default_graph()
+except :
+    pass
+
 def preprocess_observation(obs):
     img = obs[1:176:2, ::2]
     img = img.mean(axis=2)
@@ -54,24 +59,24 @@ initializer = tf.contrib.layers.variance_scaling_initializer()
 def q_network(X_state, name) :  
     prev_layer = X_state
     with tf.variable_scope(name) as scope :
-        for n_maps, kernel_size, stides, padding, actication in zip(
+        for n_maps, kernel_size, strides, padding, activation in zip(
             conv_n_maps, conv_kernel_sizes, conv_strides, conv_paddings, conv_activation) :
             
-            prev_layer = tf.layers.conv2d(prev_layer, filters=n_maps, kernel=kernel_size,
+            prev_layer = tf.layers.conv2d(prev_layer, filters=n_maps, kernel_size=kernel_size,
                                           strides=strides, padding=padding,
-                                          activation=activation, kernel_initializer=intializer)
+                                          activation=activation, kernel_initializer=initializer)
 
         last_conv_layer_flat = tf.reshape(prev_layer, shape=[-1, n_hidden_in])
 
         hidden = tf.layers.dense(last_conv_layer_flat, n_hidden,
                                  activation = hidden_activation,
-                                 kernel_initializer = intializer)
+                                 kernel_initializer = initializer)
                                  
-        outputs = tf.layers.dense(hidden, n_outputs, kernel = kernel_initializer)
+        outputs = tf.layers.dense(hidden, n_outputs, kernel_initializer=initializer)
         
-    trainable_vars = tf.get.collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope.name)
+    trainable_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope.name)
     
-    trainable_vars_by_name = {var.name[len(scope.name:] : var for var in trainable_vars}
+    trainable_vars_by_name = {var.name[len(scope.name):] : var for var in trainable_vars}
     
     return outputs, trainable_vars_by_name
     
@@ -83,7 +88,7 @@ target_q_values, target_vars = q_network(X_state, name="q_neworks/target")
 
 copy_ops = [target_var.assign(online_vars[var_name])
                 for var_name, target_var in target_vars.items()]
-copy_online_to_target = tf.group(*copy_obs)
+copy_online_to_target = tf.group(*copy_ops)
 
 X_action = tf.placeholder(tf.int32, shape=[None])
 q_value = tf.reduce_sum(target_q_values * tf.one_hot(X_action, n_outputs), axis=1, keep_dims=True)
@@ -121,7 +126,7 @@ def sample_memory(batch_size) :
         for col, value in zip(cols, memory) :
             col.append(value)
     
-    cols = [np.array(col), for col in cols]
+    cols = [np.array(col) for col in cols]
     return (cols[0], cols[1], cols[2].reshape(-1, 1), cols[3], cols[4].reshape(-1, 1))
     
 # epsilon-greedy policy 
@@ -180,7 +185,9 @@ with tf.Session() as sess :
         obs, reward, done, info = env.step(action)
         next_state = preprocess_observation(obs)
         
-        replay_memory.append(state, action, reward, next_state, 1.0 - done)
+        env.render()
+        
+        replay_memory.append((state, action, reward, next_state, 1.0 - done))
         state = next_state
         
         if iteration < training_start or iteration % training_interval != 0 :
@@ -200,3 +207,4 @@ with tf.Session() as sess :
         
         if step % save_steps == 0 :
             saver.save(sess, checkpoint_path)
+
