@@ -158,11 +158,11 @@ class actor_deepNN() :
 #            for i in range(len(self.target_network_params))]
         
         self.action_gradient = tf.placeholder(tf.float32, (None, s_dim))
-        self.actor_gradients = tf.gradients(self.NN_guess, self.network_params, self.action_gradient)
         
+#        https://datascience.stackexchange.com/questions/18695/understanding-the-training-phase-of-the-tutorial-using-keras-and-deep-determini/18705#18705
+        self.actor_gradients = tf.gradients(self.NN_guess, self.network_params, -self.action_gradient) # On multiplie le dernier grdient par le gradient de l'action
         
         self.optimize = self.tf_optimizer.apply_gradients(zip(self.actor_gradients, self.network_params))
-        
 ###-------------------------------------------------------------------------------
 
     def init_NN_Actor_parameter(self) :
@@ -289,8 +289,8 @@ class actor_deepNN() :
         self.dx = dx
         self.nu = nu
         
-#        rewards = lambda action : (true_action - action).T.dot(true_action - action)
-        dJ = nd.Gradient(self.rewards)      
+        rewards = lambda action : (true_action - action).T.dot(true_action - action)
+        dJ = nd.Gradient(rewards)      
                 
         init = tf.global_variables_initializer()
         self.sess.run(init)
@@ -308,42 +308,51 @@ class actor_deepNN() :
             
             print ("it_pred it = {}:\n{}".format(it, it_pred))
             
-            reward = self.rewards(it_pred) 
-            grad = dJ(it_pred)
+            rew_lst = []
+            gra_lst = []
             
-            print ("grad = {}:\n".format(grad))
+            ranged = 10
             
-            grad = np.array(grad)
+            for rep in range(ranged) :
+                it_pred = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
+                rew_lst.append(rewards(it_pred))
+                gra_lst.append(dJ(it_pred))
             
-            axes[0].semilogy(it, reward, color="crimson", marker="o", linestyle='none')
+            print rew_lst
+            
+            grads_to_apply = np.sum([rew_lst[i]*gra_lst[i] for i in range(ranged)])
+            vectorized_grads = np.full((1, np.shape(true_action)[0]), grads_to_apply)
+            
+            print ("grad = {}:\n".format(grads_to_apply))
+            
+            axes[0].semilogy(it, grads_to_apply, color="crimson", marker="o", linestyle='none')
             axes[0].set_title("First estimation")
             
             plt.pause(0.01)
             
             self.sess.run(self.optimize, feed_dict={self.state : pred_incoming_field.reshape(1,-1),
-                                                    self.action_gradient : grad.reshape(1,-1)})
+                                                    self.action_gradient : vectorized_grads})
             
-            
-            it_pred_2 = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
-            reward_2 = self.rewards(it_pred_2)
-            
-            axes[0].semilogy(it, reward_2, color="navy", marker="o", linestyle='none')
-            
-            axes[0].legend(["Red : First estimation", "Blue : Second estimation"])
-            
-            axes[1].cla()
-            axes[1].plot(line_x, true_action, label="True value it %d" %it, color="blue")
-            axes[1].plot(line_x, it_pred, label="First value", linestyle="none", marker="o", c='green', fillstyle="none")
-            axes[1].plot(line_x, it_pred_2, label="second Pred value", linestyle="none", marker="o", c='crimson', fillstyle="none")
-            
-            axes[1].legend()            
-            
+#            it_pred_2 = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
+#            reward_2 = self.rewards(it_pred_2)
+#            
+#            axes[0].semilogy(it, reward_2, color="navy", marker="o", linestyle='none')
+#            
+#            axes[0].legend(["Red : First estimation", "Blue : Second estimation"])
+#            
+#            axes[1].cla()
+#            axes[1].plot(line_x, true_action, label="True value it %d" %it, color="blue")
+#            axes[1].plot(line_x, it_pred, label="First value", linestyle="none", marker="o", c='green', fillstyle="none")
+#            axes[1].plot(line_x, it_pred_2, label="second Pred value", linestyle="none", marker="o", c='crimson', fillstyle="none")
+#            
+#            axes[1].legend()            
+#            
             plt.pause(1)
                     
             true_incoming_field = true_action
             pred_incoming_field = it_pred
             
-            print ("weights = \n{}".format(self.sess.run(tf.trainable_variables()[0])))
+#            print ("weights = \n{}".format(self.sess.run(tf.trainable_variables()[0])))
             
             time.sleep(5)
 ###------------------------------------------------------------------------------- 
@@ -360,8 +369,8 @@ if __name__=="__main__" :
     
     actor = actor_deepNN(dict_layers, 1e-3)
     actor.init_NN_Actor_parameter()
-    
-
+    actor.build_NN_operating_Actor_graph()
+    actor.def_optimizer()
 
 ####-------------------------------------------------------------------------------
 
