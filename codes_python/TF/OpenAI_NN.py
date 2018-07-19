@@ -24,6 +24,8 @@ n_hidden = 4
 
 n_outputs = 1
 
+all_env  =  list(gym.envs.registry.all())
+
 try :
     tf.reset_default_graph()
 except : 
