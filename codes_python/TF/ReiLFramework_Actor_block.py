@@ -15,8 +15,9 @@ import os.path as osp
 
 import numdifftools as nd
 
-import tflearn
 import tensorflow as tf
+
+from threading import Thread, RLock
 
 try:
     reload  # Python 2.7
@@ -31,6 +32,17 @@ config = tf.ConfigProto(
     )
 
 import time
+
+
+verrou= RLock()
+
+dx = 0.037037037037037035
+dt = 0.014814814814814815
+nu = 0.025
+CFL = 0.4
+Nx = 81
+L = 3
+line_x = np.arange(0,L,dx)
 
 #dict_layers = {"inputs" : [1], "N1" : [20, "tanh"], "N2" : ["20", "tanh"], "action":[1]}
 
@@ -86,13 +98,27 @@ def LW_solver(u_init, Nx, dx, dt, nu) :
 
 ###-------------------------------------------------------------------------------
 
+#class Calcul_gradient(Thread) :
+#    def __init__(self, grad):
+#        Thread.__init__(self)
+#        self.grad = grad
+#    
+#    def set_field(self, field) :
+#        self.field = field
+#    
+#    def run(self):
+#        return self.grad(self.field)
+###-------------------------------------------------------------------------------                
+###-------------------------------------------------------------------------------                
+    
 class actor_deepNN() :
-    def __init__(self, dict_layers, lr, op_name="Adam", loss_name="OLS", reduce_type="sum", case_filename='./../cases/multinn_forwardNN/data/burger_dataset/'):
+    def __init__(self, dict_layers, lr, N_thread = 10, op_name="Adam", loss_name="OLS", reduce_type="sum", case_filename='./../cases/multinn_forwardNN/data/burger_dataset/'):
         nodes, acts = {}, {}
         
         act_func_lst = ["relu", "sigmoid", "tanh", "leakyrelu", "selu", "swish"]
         
-        act_str_to_tf = {"relu"     :   tf.nn.relu,
+        act_str_to_tf = {"elu"      :   tf.nn.elu,
+                         "relu"     :   tf.nn.relu,
                          "tanh"     :   tf.nn.tanh,
                          "selu"     :   tf.nn.selu,
                          "sigmoid"  :   tf.nn.sigmoid,
@@ -118,7 +144,7 @@ class actor_deepNN() :
         s_dim = dict_layers["inputs"][0]
         
         self.dict_layers = dict_layers
-
+        self.N_thread = N_thread
 
         self.state = tf.placeholder(tf.float32, shape=(None, s_dim), name='inputs')
         self.action = tf.placeholder(tf.float32, shape=(None, s_dim), name='action')
@@ -289,7 +315,7 @@ class actor_deepNN() :
         self.dx = dx
         self.nu = nu
         
-        rewards = lambda action : (true_action - action).T.dot(true_action - action)
+        rewards = lambda action : -(true_action - action).T.dot(true_action - action)
         dJ = nd.Gradient(rewards)      
                 
         init = tf.global_variables_initializer()
@@ -301,54 +327,110 @@ class actor_deepNN() :
         fig, axes = plt.subplots(1, 2, figsize=(8,8))
         
         for it in range(itmax) :
-            self.prev = pred_incoming_field
-            it_pred = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
-        
-            true_action = LW_solver(true_incoming_field, Nx, dx, dt, nu)
-            
-            print ("it_pred it = {}:\n{}".format(it, it_pred))
-            
-            rew_lst = []
-            gra_lst = []
-            
-            ranged = 10
-            
-            for rep in range(ranged) :
+            ranged_2 = 50
+            ranged = 5
+            for k in range(ranged_2) : 
+                colorss=iter(cm.spectral_r(np.arange(ranged_2)))
+
+                self.prev = pred_incoming_field
                 it_pred = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
-                rew_lst.append(rewards(it_pred))
-                gra_lst.append(dJ(it_pred))
+        
+                true_action = LW_solver(true_incoming_field, Nx, dx, dt, nu)
             
-            print rew_lst
+                print ("it_pred it = {}:\n{}".format(it, it_pred))
+                if k ==0 :
+                    prev_rew_lst = [0 for r in range(ranged)]
+                else :
+                    prev_rew_lst = [r*0.95 for r in rew_lst]
+                rew_lst = []
+                gra_lst = []
+                gra_thread_lst = []
             
-            grads_to_apply = np.sum([rew_lst[i]*gra_lst[i] for i in range(ranged)])
-            vectorized_grads = np.full((1, np.shape(true_action)[0]), grads_to_apply)
             
-            print ("grad = {}:\n".format(grads_to_apply))
-            
-            axes[0].semilogy(it, grads_to_apply, color="crimson", marker="o", linestyle='none')
-            axes[0].set_title("First estimation")
-            
-            plt.pause(0.01)
-            
-            self.sess.run(self.optimize, feed_dict={self.state : pred_incoming_field.reshape(1,-1),
-                                                    self.action_gradient : vectorized_grads})
-            
-#            it_pred_2 = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
-#            reward_2 = self.rewards(it_pred_2)
+#            n_rotation = ranged // self.N_thread
+#            leftover = ranged % self.N_thread
 #            
-#            axes[0].semilogy(it, reward_2, color="navy", marker="o", linestyle='none')
+#            print ("N_rotation = {}\nLeftover={}".format(n_rotation, leftover))
 #            
-#            axes[0].legend(["Red : First estimation", "Blue : Second estimation"])
+#            thread_dict = {}
+#            for thread in range(self.N_thread) :
+#                thread_dict["thread_%d" % thread] = Calcul_gradient(dJ)
 #            
-#            axes[1].cla()
-#            axes[1].plot(line_x, true_action, label="True value it %d" %it, color="blue")
-#            axes[1].plot(line_x, it_pred, label="First value", linestyle="none", marker="o", c='green', fillstyle="none")
-#            axes[1].plot(line_x, it_pred_2, label="second Pred value", linestyle="none", marker="o", c='crimson', fillstyle="none")
+#            self.thread_dict = thread_dict
 #            
-#            axes[1].legend()            
+#            time_1 = time.time()
 #            
-            plt.pause(1)
-                    
+#            for rep in range(n_rotation) :
+#                for titem in thread_dict.iteritems() :  
+#                    it_pred = self.A_prediction(state=(pred_incoming_field.reshape(1,-1) + np.random.normal(0,1,Nx)))    
+##                    titem[1].set_field(it_pred)
+#                    gra_thread_lst.append(titem[1].run(it_pred))
+#                    
+##                    print titem[0] 
+#                    
+#                print np.shape(gra_thread_lst)
+##                
+##                for thread in range(self.N_thread) :
+##                    print ("thread_{} : {}".format(thread, thread_dict["thread_%d" % thread]))
+##                    thread_dict["thread_%d" % thread].join()
+#            
+#            for rep in range(leftover) :
+#                it_pred = self.A_prediction(state=(pred_incoming_field.reshape(1,-1) + np.random.normal(0,1,Nx)))    
+##                thread_dict["thread_%d" % thread].set_field(it_pred)
+#                gra_thread_lst.append(thread_dict["thread_%d" % thread].run(it_pred))
+#                
+#            
+##            for thread in range(leftover) :
+##                try :
+##                    thread_dict["thread_%d" % thread].join()
+##                except :
+##                    pass
+
+                time_2 = time.time()
+#            print ("Time for multithreading part = {}s".format(abs(time_1-time_2)))
+            
+                for rep in range(ranged) :
+                    it_pred = self.A_prediction(state=(pred_incoming_field.reshape(1,-1) + np.random.normal(0,1,Nx)))    
+                    rew_lst.append(rewards(it_pred)+prev_rew_lst[rep])
+                    gra_lst.append(dJ(it_pred))
+                
+                time_3 = time.time()            
+                print ("temps de calcul = {}s".format(abs(time_3 - time_2)))
+                print rew_lst
+                
+                grads_to_apply = np.mean([rew_lst[i]*gra_lst[i] for i in range(ranged)])
+                vectorized_grads = np.full((1, np.shape(true_action)[0]), grads_to_apply)
+                
+                print ("grad = {}:\n".format(grads_to_apply))
+                
+                c= next(colorss)
+                axes[0].plot(it, grads_to_apply, color=c, marker="o", linestyle='none')
+                axes[0].set_title("it %d, it %d" % (it, k))
+                
+                plt.pause(0.01)
+                
+                self.sess.run(self.optimize, feed_dict={self.state : pred_incoming_field.reshape(1,-1),
+                                                        self.action_gradient : vectorized_grads})
+                
+    #            it_pred_2 = self.A_prediction(state=pred_incoming_field.reshape(1,-1))
+    #            reward_2 = self.rewards(it_pred_2)
+    #            
+    #            axes[0].semilogy(it, reward_2, color="navy", marker="o", linestyle='none')
+    #            
+    #            axes[0].legend(["Red : First estimation", "Blue : Second estimation"])
+    #            
+#                axes[1].cla()
+                if k == 0 :
+                    axes[1].plot(line_x, true_action, label="True value it %d" %it, color="blue")
+                axes[1].plot(line_x, it_pred, label="First value", linestyle="none", marker="o", c=c, fillstyle="none")
+    #            axes[1].plot(line_x, it_pred_2, label="second Pred value", linestyle="none", marker="o", c='crimson', fillstyle="none")
+    #            
+    #            axes[1].legend()            
+    #            
+                plt.pause(1)
+                
+                [self.network_params[i].assign(tf.multiply(self.network_params[i], 0.95)) for i in range(len(self.network_params))]
+                        
             true_incoming_field = true_action
             pred_incoming_field = it_pred
             
@@ -365,12 +447,13 @@ if __name__=="__main__" :
         print ("This time the graph won't be deleted")
         pass
     
-    dict_layers = {"inputs" : [82], "N1" : [20, "tanh"], "N2" : [40, "tanh"], "action":[82]}
+    dict_layers = {"inputs" : [81], "N1" : [5, "sigmoid"],# "N2" : [20, "sigmoid"],  "N3" : [20, "sigmoid"], "N4" : [20, "sigmoid"],
+                   "action":[81]}
     
-    actor = actor_deepNN(dict_layers, 1e-3)
+    actor = actor_deepNN(dict_layers, 1e-2)
     actor.init_NN_Actor_parameter()
     actor.build_NN_operating_Actor_graph()
-    actor.def_optimizer()
+    actor.def_optimizer(beta2=0.5)
 
 ####-------------------------------------------------------------------------------
 
