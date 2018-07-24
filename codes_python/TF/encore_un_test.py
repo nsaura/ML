@@ -21,7 +21,7 @@ sess = tf.InteractiveSession(config=config)
 
 
 class Create_Graph() :
-    def __init__(self, key, n_hidden = 40, lr=0.001) :
+    def __init__(self, key, n_hidden = 10, lr=0.01) :
         self.g = tf.Graph()
         self.initializer = tf.contrib.layers.variance_scaling_initializer()
         self.n_hidden = n_hidden
@@ -78,7 +78,7 @@ X = np.sin(x)
 first = np.full((n), 1, dtype=np.float)
 current = np.copy(first)
 
-mepoch = 1000
+mepoch = 5000
 
 for e in range(mepoch) :
     feeds = []
@@ -116,7 +116,7 @@ for e in range(mepoch) :
     plt.clf()
     plt.plot(x, X)
     plt.plot(x, current)
-    plt.pause(0.01)
+    plt.pause(0.001)
 #gr = tf.Graph()
 #with gr.as_default() as g :
 #    with g.name_scope("gr") as gr_scope :
