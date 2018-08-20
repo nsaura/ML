@@ -1,4 +1,4 @@
-\documentclass[a4paper,12pt]{report} 
+\documentclass[a4paper,12pt]{article} 
 \usepackage[utf8x]{inputenc}
 \usepackage[french]{babel}
 \usepackage{mathtools}
@@ -9,6 +9,8 @@
 \usepackage{tabularx}	 				% Gestion avancée des tableaux
 \usepackage{longtable}		
 %\usepackage{cleveref}
+
+\usepackage{mathrsfs}
 
 \usepackage{enumitem}
 \usepackage{wrapfig}
@@ -90,7 +92,7 @@ keywordstyle=[0]{\color{red}},
 \usepackage[authoryear]{natbib}
 
 \usepackage{geometry}
-\geometry{hmargin=2cm, vmargin=2cm}
+\geometry{hmargin=2cm, vmargin=1.8cm}
 
 %%%%%%%%%%%%%%%%%%%%
 %%% Couleurs %%%
@@ -147,7 +149,8 @@ keywordstyle=[0]{\color{red}},
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \lhead{\textbf{Nathaniel} \brick \textbf{\textsc{Saura}}}
-\rhead{\markright}
+\rhead{\small Rapport première année}
+%\rhead{\markright}
 \cfoot{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
@@ -167,46 +170,89 @@ keywordstyle=[0]{\color{red}},
 \makeatother
 
 \begin{document}
-\maketitle
-\section*{Introduction du sujet}
-La turbulence est l'état d'un fluide dont l'écoulement possède des caractéristiques stochastiques, parfois chaotiques, qui passionne les chercheurs et les ingénieurs depuis plusieurs siècles.\\ Même si Léonard De Vinci au $\text{XV}^{\text{ème}}$ siècle avait mentionné ce caractère aléatoire et décrit quantitativement le phénomène par des observations, Osborne Reynolds en 1883 amorça la description qualitative et mathématique que nous utilisons aujourd'hui; il fut suivi par d'autres grands noms de la mécanique des fluides comme Richardson, Kolmogorov puis d'autres. \\
+\begin{titlepage} \centering
+\vspace*{\fill}
+\Huge \navy \textbf{Rapport CST fin première année} \bk \normalsize
+\vspace*{\fill}
+\end{titlepage}
+%\maketitle
+%\end{center}
+\newpage
+
+\section{Introduction du sujet} 
+\Large{$\mathscr{L}$}\normalsize a turbulence est l'état d'un fluide dont l'écoulement possède des caractéristiques stochastiques, qui passionne les chercheurs et les ingénieurs depuis plusieurs siècles.\\ 
+Même si Léonard De Vinci au $\overline{\underline{\text{XV}}}^{\, \text{ème}}$ siècle avait mentionné ce caractère aléatoire et décrit quantitativement le phénomène par des observations, Osborne Reynolds en 1883 amorça la description qualitative et mathématique que nous utilisons aujourd'hui; il fut suivi par d'autres grands noms de la mécanique des fluides comme Richardson, Kolmogorov puis d'autres. \\
 %Il construisit le nombre caractéristique dit de Reynolds qui compare les effets d'inertie et les effets visqueux. \\
 
 \noindent Cette discipline est une des branches de la mécanique des fluides les plus actives qui attire énormément de chercheurs d'horizons plus ou moins éloignés de la mécanique des fluides ; Kolmogorov sus-mentionné était avant tout mathématicien.\\
-Ils existent de nombreux facteurs qui jouent sur la popularité de la discipline, sans être exhaustif, il est possible d'en développer deux : dans un premier temps c'est une théorie qui traite d'écoulement que l'on retrouve autour de soi dans notre vie de tous les jours, mais également dans les océans, le ciel et dans l'espace. Le deuxième facteur clé découle du premier : au fur et à mesure que de nouvelles technologies impliquant ce genre d'écoulement émergent, de l'intelligence provenant d'autres domaines de la Physique, de l'Informatique ou des Mathématiques devient nécessaire et même indispensable. \\
+Il existe de nombreux facteurs qui jouent sur la popularité de la discipline, sans être exhaustif, il est possible d'en développer deux : dans un premier temps cette théorie traite d'écoulement que l'on retrouve autour de soi dans notre vie de tous les jours (sillage d'une voiture, couche limite sur les ailes d'un avion etc...) mais également dans les océans, le ciel et l'espace. \\
+Le deuxième facteur clé découle du premier : au fur et à mesure que de nouvelles technologies impliquant ce genre d'écoulement émergent, de l'intelligence provenant d'autres domaines de la Physique, de l'Informatique ou des Mathématiques devient nécessaire voire indispensable. \\
 
-Au travers de ses équations, la théorie de la Turbulence entend modéliser les fluides dont les effets d'inerties ne sont pas négligeables devant les effets visqueux. Les équations de Navier-Stokes constituent la base de cette discipline. Si on considère une parcelle de fluide et que l'on y effectue un bilan de quantité de mouvement, on obtient dans un cas incompressible \footnote{Sans forces extérieures, avec $\rho$ la masse volumique (constante)	, $\nu$ la viscosité cinématique de l'écoulement et $p$  le champ de pression} :\\
-\begin{equation*}
+Au travers de ses équations, la théorie de la Turbulence entend modéliser les fluides dont les effets d'inerties ne sont pas négligeables devant les effets visqueux. Les équations de Navier-Stokes constituent la base de cette discipline. Si on considère une parcelle de fluide et que l'on y effectue un bilan de quantité de mouvement, on obtient dans un cas incompressible \footnote{Sans forces extérieures, avec $\rho$ la masse volumique (constante), $\nu$ la viscosité cinématique de l'écoulement et $p$  le champ de pression} :\\
+\begin{equation}
 \frac{\partial u_i}{\partial t} + \underset{\text{\red Inertie -  terme non linéaire \bk}}{\text{\red \circled{\bk $u_j\, \frac{\partial u_i}{\partial x_j}$}}} \bk = - \frac{1}{\rho} \frac{\partial p_i}{\partial x_j} + \underset{\text{\navy Visqueux \bk}}{\text{\navy \circled{\bk $\nu \frac{\partial^2 u_i }{\partial x_j^2}$}}} \bk 
 %\tag{Navier-Stokes} 
-\end{equation*}
-Les termes d'inerties (de dimension de Joule par unité de volume) apparaissent dans le terme non-linéaire des équations de Navier-Stokes traduisant l'apport local d'énergie cinétique du fluide autour de la parcelle contrôlée.\\
+\end{equation}
+Les termes d'inerties ou de convection (nous considérons ici des flux ou des transports d'énergie mesurés en Watt) apparaissent dans le terme non-linéaire des équations de Navier-Stokes traduisant l'apport local d'énergie cinétique du fluide autour de la parcelle contrôlée.\\
+Les effets visqueux traduisent la capacité du fluide à dissiper l'énergie de l'écoulement sous forme de chaleur.\\
 
 Reynolds construisit un nombre sans dimension comparant les effets d'inertie sur les 
 effets visqueux; il est appelé nombre de Reynolds, abrégé Reynolds; il peut s'écrire comme $$ \text{Re} = \bepar{u_j\, \frac{\partial u_i}{\partial x_j}} / \bepar{\nu \frac{\partial^2 u_i }{\partial x_j^2}} = \frac{\text{Effets inertiels} }{\text{Effets visqueux}} $$ \\
 Ce nombre  caractérise l'état de l'écoulement. Pour un Reynolds faible (jusqu'à quelques centaines voire quelques miliers selon les cas), l'écoulement est dit laminaire. Lorsqu'il est au delà de la dizaine de milliers, l'écoulement est dit turbulent. \\
-Entre les deux états, on parlera d'état de transition : des instabilités naissent dans l'écoulement rendant le champ de vitesse fluctuant. Plus le Reynolds augmente et plus ces fluctutations sont fortes, jusqu'à arriver à un champ de vitesse complétement aléatoire (turbulent).	 \\
-La viscosité d'un fluide filtre en quelque sorte le champ de vitesse de ses fluctuations, dont l'intensité peut être déduite de l'inertie de l'écoulement. On peut dire également que la vsicosité absorbe l'énergie cinétique en la dissipant en chaleur. \\
+Entre les deux états, on parlera d'état de transition : des instabilités naissent dans l'écoulement rendant le champ de vitesse fluctuant. Plus le Reynolds augmente et plus ces fluctutations sont fortes, jusqu'à arriver à un champ de vitesse complétement aléatoire (turbulent). \\
 
-Par analyse dimensionnelle, le nombre de Reynolds peut être construit comme le rapport $$ \text{Re} = \frac{\text{UL}}{\nu}$$ La notion clé dans la théorie de la turbulence est que les échelles spatiales L, temporelles T et leurs combinaisons (comme la vitesse U = L/T) se décomposent en un nombre très élevé de sous-échelles.
-Il faut alors préciser que dans le cadre de la turbulence, lorsqu'il est question de nombre de Reynolds élevé, il est ici fait allusion au nombre de Reynolds de la plus grande échelle spatiale L, pour une échelle de vitesse U donnée. \\
-La première structure turbulente qui apparaît est alors un tourbillon dont les échelles caractéristiques sont similaires à celles utilisées pour le calcul du Reynolds global. En prime, il est nécessaire de construire un temps de retournement du tourbillon $\tau_{\text{retournement}} = L/U$. \\
-Plus le Reynolds est grand et moins le fluide sera capable d'absorber les instabilités induites par l'inertie du fluide. En conséquence, à haut Reynolds, de l'énergie est constamment injectée dans la zone d'intérêt. Cette énergie est à l'origine de la multitude des échelles spatiales (et donc de toutes les autres) ; on parle de cascade\footnote{L'idée de cascade fut proposée par Richardson, mais sa description s'est avérée fausse. Kolmogorov en 1941 mis en évidence la casacade de Richardson de manière plus mathématique, sans pour autant utiliser cette appellation.} ou de brisure des échelles, c'est-à-dire que l'énergie cinétique des premières structures de turbulence (à la suite d'instabilité) est distribuée de façon incohérente à des structures de taille plus petite. Ce processus est répété jusqu'à ce que le fluide soit capable de dissiper en chaleur l'énergie cinétique liées aux structures ainsi crées. \\
+Par analyse dimensionnelle, le nombre de Reynolds peut être construit comme le rapport 
+\begin{equation}
+ \text{Re} = \frac{\text{UL}}{\nu}
+\end{equation} 
+ La notion clé dans la théorie de la turbulence est que les échelles spatiales L, temporelles T et leurs combinaisons (comme la vitesse U = L/T) se décomposent en un nombre très élevé de sous-échelles.
+Dans le cadre de la turbulence, on fera allusion au Reynolds des plus grandes échelles lorsqu'il sera question de nombre de Reynolds sans plus de précision sur l'échelle spatiale ou de vitesse. \\
+Le passage du laminaire au turbulent est marqué par un changement topographique de l'écoulement. La première structure turbulente qui apparaît est en général un tourbillon dont les échelles caractéristiques sont similaires à celles du Reynolds «global». Sur ces échelles on pourra définir un temps caractéristique de retournement du tourbillon $\tau_{\text{retournement}} = L/U$. \\
+Plus le Reynolds est grand et moins le fluide sera capable d'absorber les instabilités induites par l'inertie du fluide. En conséquence, à haut Reynolds, de l'énergie est constamment injectée dans la zone d'intérêt. Cette énergie est à l'origine de la multitude des échelles spatiales (et donc de toutes les autres) ; on parle de cascade\footnote{L'idée de cascade fut proposée par Richardson, mais sa description s'est avérée fausse. Kolmogorov en 1941 mis en évidence la casacade de Richardson de manière plus mathématique, sans pour autant utiliser cette appellation.} ou de brisure des échelles, \cad $ $ que l'énergie cinétique des premières structures de turbulence (à la suite d'instabilité) est distribuée de façon incohérente à des structures de taille plus petite. Ce processus est répété jusqu'à ce que le fluide soit capable de dissiper en chaleur l'énergie cinétique liées aux structures ainsi créées. \\
 
-D'un point de vue pratique, les équations de \NS $ $ ne sont actuellement solubles «à la main» uniquement pour des cas relativemenent simple. Pour la majorité des écoulements turbulents, il est nécessaire d'utiliser des outils numériques.\\
-La méthode la plus proche de la Physique (puisqu'elle résout les équations de \NS $ $ elles-mêmes) est la méthode dite directe, ou DNS (Direct Numerical Simulation). Cette méthode est extrêmement coûteuse puisqu'au fur et à mesure que le processus de turbulence se développe et se propage dans l'écoulement, il est nécessaire de raffiner le maillage sur lequel les équations sont résolues. \\
-Cette méthode est souvent utilisée pour produire des résultats de référence pour l'établissement de modèles numériques moins couteux et plus ou moins précis.\\
-Dans un ordre de précision, les méthodes dites de LES (Large Eddy Scales) suivent les DNS. Schématiquement, cette catégorie de méthodes consiste à définir un seuil de prise en compte des échelles\footnote{Alors que la DNS entend résoudre les équations de \NS $ $ sur toutes les échelles.}, accélérant ainsi les calculs. Pour assurer une prise en compte de la physique des plus petites échelles, la communauté utilisant ces méthodes construisent des modèles basés sur des termes modélisant la physique des échelles non prises en compte.\\
- Enfin, il existe une dernière catégorie de méthodes consistant à construire des équations modélisant le(s) transport(s) de l'énergie cinétique, du taux de dissipation de cette énergie, parfois les deux, ou bien le transport d'autres quantités (comme l'intermittence ou la viscosité turbulente). On parle de modèle à un ou deux équations.\\
-Ces modèles sont basés sur trois idées : la première est une idée utilisée dans la théorie de la turbulence qui consiste à décomposer les trois compsantes spatiales des champs de vitesse $U_i$ et de pression $P_i$ en champs moyens (temporels) $\overline{U_i}$ et $\overline{P_i}$ et en champs fluctuants $u_i$ et $p_i$ ; 
-on parle de Décomposition de Reynolds. On peut écrire l'équation de \NS $ $ pour le champ moyen, on parlera d'équation RANS pour Reynolds Averaged \NS $ $ : $$ \frac{\partial \overline{U}_i}{\partial t} + \overline{U}_j \frac{\partial \overline{U}_i}{\partial x_j} = -\frac{1}{\rho} \frac{\partial \overline{P}}{\partial x_j} + \nu \frac{\partial^2 \overline{U}_i}{\partial x_j^2}  - \frac{\partial \, \overline{u_iu_j}}{\partial x_j}$$ \\
-Lorsque l'on opère à cette décomposition, il s'avère que le transport d'énergie associée à la partie fluctuante influe dans l'évolution du champ moyen. Ce flux d'énergie représentée par le tenseur d'ordre deux $-\rho \overline{u_iu_j}$ est appelée tenseur de Reynolds. On le note $\tau_{ij}$.\\
+D'un point de vue pratique, les équations de \NS $ $ ne sont actuellement solubles «à la main» seulement pour des cas relativemenent simples. Pour la majorité des écoulements turbulents, il est nécessaire d'utiliser des outils numériques.\\
+L'approche la plus précise pour résoudre ces équations est la méthode dite directe, ou DNS (Direct Numerical Simulation). Cette méthode entend résoudre les équations de \NS $ $ à toutes les échelles, et nécessite donc un maillage très resserré dans toutes les dimensions du problème, dont le pas est donnée par la théorie elle même. \\
+Cette méthode est nécessite des ordinateurs très performants et plusieurs mois de calculs. Elle est souvent utilisée pour produire des résultats de référence pour être en mesure de critiquer les résultats de modèles numériques moins couteux et moins précis.\\
+Dans un ordre de précision, les méthodes dites de LES (Large Eddy Scales) suivent les DNS. Schématiquement, cette catégorie de méthodes consiste à définir un seuil de prise en compte des échelles, accélérant ainsi les calculs. Pour assurer une prise en compte de la physique des plus petites échelles, la communauté utilisant ces méthodes construisent des modèles basés sur des termes modélisant la physique des échelles non prises en compte. Même si une partie des échelles est modélisée, ces méthodes restent fiables mais toujours 
+trop lentes pour un usage en industrie.\\
+
+ Enfin, il existe une dernière catégorie de méthodes consistant à construire des équations modélisant le(s) transport(s) de l'énergie cinétique turbulente $k$, du taux de dissipation de cette énergie $\varepsilon$, parfois les deux, ou parfois d'autres quantités (comme l'intermittence $\gamma$ ou la viscosité turbulente $\nu_T$). On parle de modèle à un ou deux équations; les plus connus sont le \keps, le Spalart-Allmaras et le $k-\omega$. Pour des raisons exposées plus tard, ces méthodes sont appelées méthodes RANS.\\
+Ces modèles sont au cœur du travail effectué durant cette première année. Ils sont basés sur plusieurs idées propres à la théorie de la turbulence ou bien à leur construction.\\
+ 
+\noindent Les designers de ces approches entendaient résoudre la turbulence uniquement pour les grandes échelles en modélisant les actions des autres échelles par des termes issus d'observations.\\
+Les grandes échelles évoquées ici correspondent en fait au champ moyen de l'écoulement. En effet, une des idées de base de la théorie de la turbulence est la décomposition, dite de Reynolds. Elle consiste à écrire un champ turbulent en une somme d'une partie moyenne (temporelle) et d'une partie fluctuante. Les conventions variant d'un auteur à l'autre, dans le cadre de ce travail, les champs moyens seront écrits avec une barre au dessus (par exemple $\overline{U_i}$), les champs fluctuants seront écrits en minuscule.\\
+
+Lorsque l'on injecte cette décomposition dans les équations de \NS $ $ sur la vitesse et la pression, on peut distinguer deux équations, une pour chacun des champs moyen et fluctuant. Pour plus de clarté, on écrit l'équation de \NS $ $ pour le champ moyen : 
+\begin{equation}
+ \frac{\partial \overline{U}_i}{\partial t} + \overline{U}_j \frac{\partial \overline{U}_i}{\partial x_j} = -\frac{1}{\rho} \frac{\partial \overline{P}}{\partial x_j} + \nu \frac{\partial^2 \overline{U}_i}{\partial x_j^2}  - \frac{\partial \, \overline{u_iu_j}}{\partial x_j} \label{meanfield}
+ \end{equation}
+  Cette équation est appelée RANS pour Reynolds Averaged \NS. On peut remarquer que le champ fluctuant agit directement sur le champ moyen l'évolution de ce dernier prend en compte un transport d'énergie associée à la partie fluctuante. Ce flux d'énergie représentée par le tenseur d'ordre deux $-\rho \overline{u_iu_j}$ est appelé tenseur de Reynolds. On le note $\tau_{ij}$.\\
 Pour modéliser \taur, il est nécesaire de modéliser le tenseur d'ordre trois $-\overline{u_iu_ju_k}$ dont la modélisation nécessite celle du tenseur d'ordre quatre $-\overline{u_iu_ju_ku_l}$ et ainsi de suite. \\
 Le fait de d'avoir besoin d'un tenseur d'ordre n+1 pour la modélisation de celui d'ordre n schématise la cascade sus-décrite et indique que les fluctuations aux différentes échelles sont fortement couplées.\\
-  Il s'avère en fin de compte que le système formé des équations RANS et de celles du champ flucutant est ouvert c'est-à-dire qu'il y a plus d'inconnu que d'équations, il faut alors en rajouter une appelée l'équation de fermeture.\\
+  Il s'avère en fin de compte que le système formé des équations RANS et de celles du champ fluctuant est ouvert \cad $ $ qu'il y a plus d'inconnus que d'équations, il faut alors en rajouter une appelée l'équation de fermeture, c'est l'objet des méthodes à une ou plusieurs équation(s). L'effort dans ces approches et de simuler le terme de fluctuations pour obtenir le champ moyen, d'où l'appellation RANS.\\
   
-  \noindent Dans les méthodes à une ou deux équations, on utilise l'hypothèse de Boussinesq. Celle-ci se base sur le fait que la création de nouvelles échelles augmente la stochasticité du champ de vitesse et donc de la friction au sein de l'écoulement.\\
-  Il est proposé alors de construire un terme de viscosité de turbulence à partir d'une analagie à la viscosité cinématique. La formule proposée par Boussinesq en 1890 s'écrit alors : $$ \tau_{ij} = \rho \nu_T\bepar{\frac{\partial \overline{U}_i}{\partial x_j} + \frac{\partial \overline{U}_j}{\partial x_i}} - \frac{2}{3} \rho \overline{u_iu_i} \delta_{ij}$$
+  \noindent Dans ces méthodes RANS, on utilise l'hypothèse de Boussinesq. Celle-ci se base sur le fait que la création de nouvelles échelles augmente la stochasticité du champ de vitesse et donc de la friction au sein de l'écoulement.\\
+  Il est alors proposé de construire un terme de viscosité liée à la turbulence à partir d'une analagie à la viscosité cinématique. La formule proposée par Boussinesq en 1890 s'écrit alors : 
+\begin{equation}
+\tau_{ij} = \rho \nu_T\bepar{\frac{\partial \overline{U}_i}{\partial x_j} + \frac{\partial \overline{U}_j}{\partial x_i}} - \frac{2}{3} \rho \overline{u_iu_i} \delta_{ij} \label{boussi}
+\end{equation} 
+   La quantité $\frac{1}{2}\overline{u_iu_i} $ est appelée énergie cinétique turbulente.\\La troisième idée que les méthodes dont il est question utilisent est d'utiliser des observations pour écrire des relations entre différentes quantités turbulente de l'écoulement. \\
+Par exemple pour les modèles à deux équations \keps $ $ ou $k-\omega$ respectivement on utilisera une relation entre $k$ $\nu_t$ et $\varepsilon$ (resp. $\omega$). Des équations de transports modéliseront l'évolution (spatiale car ce sont des modèles stationnaires) de $k$ et de $\varepsilon$ (resp. $\omega$). Ces équations sont construites en injectant des constantes empiriques qui ont pour but de modéliser l'action (et les rétro-actions puisqu'il y a couplage) des petites échelles.\\
+
+Pour les approches DNS les résultats corroborent exactement avec les résultats expérimentaux, la majeur contrepartie est le temps de calculs qui est encore très élevé malgré la parallélisation massive et l'utilisation de cluster d'ordinateurs. \\
+Pour les méthodes LES et RANS les modélisations des effets de petites échelles ont tendance à perturber les résultats et impliquent une perte de précision. En revanche, pour des écoulements complexes les résultats sont bien plus probants avec l'approche LES que l'approche RANS.\\
+Les méthodes RANS reposent beaucoup sur des constantes dont les valeurs sont déterminées par l'intuition, du réglages ou sur des valeurs standards définies à partir d'observations expérimentales sur une plage de cas peu variés.\\
+Alors que les industriels n'utilisent en majorité que ce type d'approche afin de générer des résultats représentatifs rapidement, la question de la fiabilité des résultats se pose. En parallèle la théorie de la turbulence n'a que très peu avancé depuis les années 1980 et de nouvelles approches doivent être explorées comme il fut fait dans le passé.\\
+
+En parallèle, notre ère connait une hausse de l'utilisation d'algorithmes d'intelligence artificielle (IA) ou d'élaboration de procédés de résolution de problème pilotées par les données; et le nombre d'articles sur ces thèmes ainsi que leurs applications pratiques explosent. L'idée majeur de ce genre de méthode est le fait qu'on peut découvrir de l'information au sein des données afin de les généraliser (dans le cas d'IA.) ou de s'en servir pour corriger les prédictions de modèles peu fiables (dans le cas des méthodes pilotées par les données).\\
+Appliqués aux problématiques de la turbulence, ces algorithmes pourraient par exemple aider à identifier les régions ou les modélisations RANS ne sont pas fiables \citep{ling2015evaluation}, tirer le meilleure de résultats algébriques comme ceux de \citep{pope1975more} pour élaborer des modèles RANS augmentés par une IA type réseaux de neurones ou forêt aléatoire \citep{ling2016machine}.\\
+À partir de méthodes type inférence baysienne, on peut également construire des méthodes utilisant la structure de modèles RANS à une ou deux équations en injectant un vecteur de correction d'une itération à l'autre en comparant avec des cas dont les résultats DNS ou expérimentaux sont connus c'est en partie le travail effectué par \citep{singh2017machine}, \citep{parish2016paradigm} ou encore \citep{tracey2015machine} pour ne citer que quelques travaux.\\
+
+   
+\pagebreak
+
+\bibliographystyle{apalike}
+\bibliography{bibliotheque}
 
 
 \end{document}
