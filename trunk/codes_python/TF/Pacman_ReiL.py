@@ -151,7 +151,7 @@ training_start = 10000
 training_interval = 4
 
 save_steps = 1e3
-copy_steps = 10000
+copy_steps = 1000
 
 discount_rate = 0.99
 skip_start = 90
