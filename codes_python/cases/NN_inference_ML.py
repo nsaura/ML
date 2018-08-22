@@ -55,16 +55,16 @@ if  __name__ == "__main__" :
     X,y,v,m,s = GPC.training_set(T, parser.N_sample)
 
 dict_layers = {"I" : 2,\
-               "N1" : 100,\
-               "N2" : 50,\
-               "N3" : 10,\
+               "N1" : 5,\
+               "N2" : 5,\
+               "N3" : 5,\
                "N4" : 10,\
                "N5" : 10,\
                "N6" : 10,\
-               "N7" : 10,\
-               "N8" : 10,\
-               "N9" : 10,\
-               "N10": 10,\
+#               "N7" : 10,\
+#               "N8" : 10,\
+#               "N9" : 10,\
+#               "N10": 10,\
                "O"  : 1}
 
 #dict_layers = {"I" : 2,\
@@ -101,52 +101,26 @@ def recentre(xs, X_train_mean, X_train_std):
 
     return xs
 ###-------------------------------------------------------------------------------
-def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, **kwargs) :
+def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, verbose=True, **kwargs) :
     # build_case(1e-3, X, y , act="relu", opti="RMS", loss="OLS", decay=0.7, momentum=0.8, max_epoch=1000) marche très bien avec [10, 15, 20, 25, 30, 35, 40, 45, 50]
     # nn_adam_mean = build_case(1e-3, X, y , act="relu", opti="Adam", loss="OLS", decay=0.7, momentum=0.8, max_epoch=2000, reduce_type="mean")
 #    nn_adam_mean = build_case(1e-3, X, y , act="relu", opti="Adam", loss="OLS", decay=0.7, momentum=0.8, max_epoch=4000, reduce_type="mean")
 
 #   Ce cas nous donne une erreur totale moyennée  0.00099802657]
+    
+    nn_obj = NNC.Neural_Network(lr, N_=N_, scaler = "Standard", reduce_type=reduce_type, color=kwargs["color"], verbose=verbose, max_epoch=max_epoch, clip=False, r_parameter=0.5)
 
-    nn_obj = NNC.Neural_Network(lr, N_=dict_layers, max_epoch=max_epoch)
-    
-    nn_obj.train_and_split(X,y,strat=False,shuffle=True, scale=scale)
-#       nn.X_train, nn.X_test
-#       nn.y_train, nn.y_test
+    nn_obj.split_and_scale(X, y, shuffle=True, val=False)
     nn_obj.tf_variables()
-#       nn.w_tf_d 
-#       nn.w_tf_d
-    nn_obj.feed_forward(activation=act)
-#       nn.Z
-#nn.def_training("RMS", decay=0.99, momentum=0.9)
-#    dico = dict()
-#    for k in kwargs :
-#        dico[item[0]] = item[1]
-    nn_obj.def_training(opti, **kwargs)
-#       nn.train_op
-    nn_obj.cost_computation(loss, reduce_type=reduce_type)
-    nn_obj.def_optimization()
-#       nn.minimize_loss
-    try :
-        b_sz = kwargs["batch_sz"]
-        print ("Batch size = ", b_sz)
-        if "color" in kwargs.keys() :
-            nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True, color = kwargs["color"])
-        
-        else :
-            nn_obj.training_session(tol=1e-3, batch_sz=b_sz, step=50, verbose=True)
+    nn_obj.layer_stacking_and_act(act)
+    nn_obj.def_optimizer("Adam")
+    nn_obj.cost_computation(loss)
+    nn_obj.case_specification_recap()    
     
-    except KeyboardInterrupt :
-        print ("Session closed")
-        nn_obj.sess.close()
+    nn_obj.training_phase(1e-3)
     
     beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
     test_line = range(len(nn_obj.X_test))
-    
-    try :
-        verbose = kwargs["verbose"]
-    except KeyError :
-        verbose = False
     
     deviation = np.array([ abs(beta_test_preds[j] - nn_obj.y_test[j]) for j in test_line])
     error_estimation = sum(deviation)

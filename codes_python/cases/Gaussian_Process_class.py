@@ -53,13 +53,13 @@ def training_set(T, N_sample, scale=False, shuffle=False):
         sT_inf = "T_inf_" + str(t)  # Clé pour les dictionnaires de l'objet T
         
         if t != 50 :        
-            bmap_ = "opti_scipy_beta_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
-            chol_ = "opti_scipy_cholesky_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+            bmap_ = "opti_scipy_beta_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
+            chol_ = "opti_scipy_cholesky_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
             print ("Pour T_inf = {}, Opti selectionné".format(t))
             
         else :
-            bmap_ = "adj_bfgs_beta_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
-            chol_ = "adj_bfgs_cholesky_%s_N%d_cov%s.csv" %(sT_inf, T.N_discr-2, T.cov_mod)
+            bmap_ = "adj_bfgs_beta_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
+            chol_ = "adj_bfgs_cholesky_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
             print ("Pour T_inf = {}, Adj_BFGS selectionné".format(t))
             
         bmap_ = osp.join("./data/matrices",bmap_)
@@ -111,10 +111,7 @@ def training_set(T, N_sample, scale=False, shuffle=False):
         X[:,1]  = (X[:,1] - mean[1]) / std[1]
     
     return X, y, variances, mean, std
-#-------------------------------------------#
-#def split(X,y) :
-#    return train_test_split(X, y, random_state=0)
-#-------------------------------------------#            
+###-------------------------------------------------------------------------------       
 def maximize_LML(T, X, y, var, N_sample, h_curr = 2.): #Rajouter variances
     N = N_sample*(T.N_discr-2)*len(T.T_inf_lst)
     var_mat = var*np.eye(N)
@@ -142,7 +139,7 @@ def maximize_LML(T, X, y, var, N_sample, h_curr = 2.): #Rajouter variances
     phi_var_inv = np.linalg.inv(phi_op + var_mat)
     
     return h_op, phi_var_inv 
-#-------------------------------------------#
+###-------------------------------------------------------------------------------
 def ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s) :
     """
     h ici est supposée optimizée pour maximiser la correspondance entre les prédictions sur Y_train et la fonction de covariance phi
@@ -160,7 +157,7 @@ def ML(T, X_train, Y_train, var, phi_var_inv, h_op, N_sample, x_s) :
     sigma_ML = 1 - phi_vec_s.dot(phi_var_inv.dot(phi_vec_s))
 
     return beta_ML, sigma_ML
-#-------------------------------------------#
+###-------------------------------------------------------------------------------
 def True_Temp(T, T_inf, body) :
     """
     T_inf doit être une liste
@@ -197,7 +194,7 @@ def True_Temp(T, T_inf, body) :
 #    plt.legend()
     
     return T_nNext_obs
-#-------------------------------------------#    
+###-------------------------------------------------------------------------------    
 def True_Beta(T, temp, T_inf) :
     """
     Calcul de beta théorique pour un cas considéré
@@ -217,7 +214,7 @@ def True_Beta(T, temp, T_inf) :
     t2 = np.asarray([T.h / T.eps_0*(T_inf[i] - temp[i])/(T_inf[i]**4 - temp[i]**4)  for i in range(T.N_discr-2)]) 
     
     return t1 + t2
-#-------------------------------------------#
+###-------------------------------------------------------------------------------
 def beta_to_T(T, beta, T_inf, body) :
     T_n = np.asarray(map(lambda x : 0., T.line_z) )
     B_n = np.zeros((T.N_discr-2))
@@ -245,7 +242,7 @@ def beta_to_T(T, beta, T_inf, body) :
     print ("Erreur sur la température = {} ".format(err))    
     print ("Iterations = {} ".format(compteur))
     return T_nNext 
-#------------------------------------#
+###-------------------------------------------------------------------------------
 def T_to_beta(T, X_train, Y_train, var, mean, std, phi_var_inv, h_op, N_sample, T_inf, body, scale):
     T_n = np.asarray(map(lambda x : 0, T.line_z) )
     beta, sigma =  [], []
@@ -319,7 +316,7 @@ def T_to_beta(T, X_train, Y_train, var, mean, std, phi_var_inv, h_op, N_sample, 
     print ("Iterations = {} ".format(compteur))
     
     return T_nNext, beta_nNext, sigma
-#-------------------------------------------#
+###-------------------------------------------------------------------------------
 def solver_ML(T, X, y, var, mean, std, h_op, phi_var_inv, N_sample, T_inf, body, scale, verbose = False):
 #    X_train, Y_train, var = training_set(T, N_sample)
     T_inf_lambda = T_inf
@@ -358,4 +355,5 @@ def solver_ML(T, X, y, var, mean, std, h_op, phi_var_inv, N_sample, T_inf, body,
         plt.legend()
     
     return GP_out
-        
+###-------------------------------------------------------------------------------
+###-------------------------------------------------------------------------------
