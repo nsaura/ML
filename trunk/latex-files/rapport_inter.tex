@@ -72,7 +72,7 @@ columns=flexible, %
 tabsize=4, %
 extendedchars=true, %
 showspaces=false, %
-showstringspaces=false, % %
+showstringspaces=false, %
 numberstyle=\small, %
 breaklines=true, %
 breakautoindent=true, %
@@ -179,7 +179,7 @@ keywordstyle=[0]{\color{red}},
 %\end{center}
 \newpage
 
-\section{Introduction du sujet} 
+\navy \section{Introduction du sujet}  \bk
 \Large{$\mathscr{L}$}\normalsize a turbulence est l'état d'un fluide dont l'écoulement possède des caractéristiques stochastiques, qui passionne les chercheurs et les ingénieurs depuis plusieurs siècles.\\ 
 Même si Léonard De Vinci au $\overline{\underline{\text{XV}}}^{\, \text{ème}}$ siècle avait mentionné ce caractère aléatoire et décrit quantitativement le phénomène par des observations, Osborne Reynolds en 1883 amorça la description qualitative et mathématique que nous utilisons aujourd'hui; il fut suivi par d'autres grands noms de la mécanique des fluides comme Richardson, Kolmogorov puis d'autres. \\
 %Il construisit le nombre caractéristique dit de Reynolds qui compare les effets d'inertie et les effets visqueux. \\
@@ -244,21 +244,47 @@ Pour les méthodes LES et RANS les modélisations des effets de petites échelle
 Les méthodes RANS reposent beaucoup sur des constantes dont les valeurs sont déterminées par l'intuition, du réglages ou sur des valeurs standards définies à partir d'observations expérimentales sur une plage de cas peu variés, ou du moins non représentatif de la variété et la complexité des écoulements que l'on peut retrouver dans la nature.\\
 Alors que les industriels n'utilisent en majorité que ce type d'approche afin de générer des résultats représentatifs rapidement, la question de la fiabilité des résultats se pose. En parallèle la théorie de la turbulence n'a que très peu avancé depuis les années 1980 et de nouvelles approches doivent être explorées comme il fut fait dans le passé.\\[2mm]
 
-Au fur et à mesure que les méthodes numériques, les machines et les méthodes expérimentales se perfectionnaient, une quantité importante de données a pu être accumulée couvrant des écoulements classiques aux complexes, balayant des topologies variées et des spécificités propres aux différentes branches de la mécanique des fluides. Des méthodes ayant pour but d'utiliser ces données ont alors vu le jour, on parle de méthode pilotées par les données. Une des plus couramment utilisées est la méthode dite d'inversion : elle consiste à retrouver les paramètres d'un modèle, ayant des données issues de ce modèle et ses variables d'états. \\
+Au fur et à mesure que les méthodes numériques, les machines et les méthodes expérimentales se perfectionnaient, une quantité importante de données a pu être accumulée couvrant des écoulements classiques aux complexes, balayant des topologies variées et des spécificités propres aux différentes branches de la mécanique des fluides. Des méthodes ayant pour but d'utiliser ces données ont alors vu le jour, on parle de méthode pilotées par les données. Une des plus couramment utilisées est la méthode dite d'inversion : elle consiste à retrouver les paramètres d'un modèle, disposant auparavant des données issues de ce dernier et de ses variables d'états. \\
 
-\noindent Cette méthode dans sa philosophie, est en fait propre à l'élaboration de théories Physique. En effet, face à une situation (un écoulement, une onde se propageant...), les scientifiques réalisent des mesures de quantités d'intérêts, essaient de déterminer quelles sont les variables qui régissent le mieux le phénomène, établissent des équations en fonction des variables choisies et les quantités observées puis confrontent leur théorie avec les mesures réalisées en amont. Si la correspondance est bonne, la théorie est acceptée et testée dans d'autres cas. Si les équations ne rendent pas compte convenablement de la réalité, elles sont retravaillées. \\
-On peut alors dire qu'intrinsèquement la Physique telle que nous la concevons a toujours été pilotée par les données disponibles et s'amèliorent avec les nouvelles observations expérimentales ou numériques.\\
+\noindent Cette méthode, dans sa philosophie, est en fait propre à l'élaboration de théories Physique. En effet, face à une situation (un écoulement, une onde se propageant...), les scientifiques réalisent des mesures de quantités d'intérêts, essaient de déterminer quelles sont les variables qui régissent le mieux le phénomène, établissent des équations en fonction des variables choisies et les quantités observées puis confrontent leur théorie avec les mesures réalisées en amont. 
+Si la correspondance est bonne, la théorie est acceptée et testée dans d'autres cas. 
+Si les équations ne rendent pas compte convenablement de la réalité, elles sont retravaillées. \\
+On peut alors dire qu'intrinsèquement la Physique telle que nous la concevons a toujours été pilotée par les données disponibles et s'amèliorent avec les nouvelles observations expérimentales ou numériques. \\
 
-\noindent Grâce au formalisme Bayesien, il devient possible d'utiliser ce même procédé mais pour cette fois trouver les paramètres du modèle le moins précis (par exemple RANS ou LES) qui approcheraient le mieux les solutions de références (DNS ou expériences).\\ Le procédé est le suivant : on injecte un terme optimisable dans les équations du modèles le moins précis, on évalue en chaque point la différence entre la solution fournie par ce dernier et la solution attendue (celle de référence), puis grâce à des méthodes d'opimisation on s'assure que le terme injecté corrige suffisamment bien pour que cet écart soit en dessous un seuil voulu. Ce procédé s'appelle la «maximalisation \textit{a posteriori}» de la fonction évaluant la probabilité d'obtenir le bon terme correctif sachant les observations disponibles. \\
-Ainsi théoriquement, il devient possible de combiner rapidité de calcul et précision.\\
+\noindent Grâce au formalisme Bayesien (on parlera d'inférence Baysienne), il devient possible d'utiliser ce même procédé mais pour cette fois trouver les paramètres du modèle le moins précis (par exemple RANS ou LES) qui approcheraient le mieux les solutions de référence (DNS ou expériences).\\ 
+Le procédé est le suivant : on injecte un terme optimisable dans les équations du modèles le moins précis, on évalue en chaque point la différence entre la solution fournie par ce dernier et la solution attendue (celle de référence), puis grâce à des méthodes d'opimisation on s'assure que le terme injecté corrige suffisamment bien cet écart jusqu'à atteindre le seuil voulu. \\
+Ce procédé s'appelle la «maximalisation \textit{a posteriori}» de la fonction évaluant la probabilité d'obtenir le bon terme correctif sachant les observations disponibles.
+Ainsi théoriquement, il devient possible de combiner rapidité de calcul et précision en «augmentant» les modèles RANS ou LES avec un terme correctif issu des données.\\
 Cependant, cette inversion reste limitée par l'existence et la disponibilité de telles données, ce qui empêche la généralisation de cette même méthode.\\
 
 La solution à ce problème fut également élaborée le siècle dernier. En effet, des méthodes d'apprentissage et de généralisation de pattern émergèrent. Une fois encore, la communauté scientifique saisit l'énorme (voire infini) potentiel de ces algorithmes avec l'amélioration des capacités des ordinateurs et la disponibilité des données.\\ L'ensemble de ces méthodes sont désignées aujourd'hui sous l'appellation d'intelligence artificielle (IA). Bien implémentées, ces méthodes permettent d'assimiler le processus liant les données entre elles et permettent sous certaines conditions de généraliser les données.\\
-L'idée de généraliser les termes de corrections optimum issus d'inversions grâce aux IA émergea alors naturellement.
 
-En parallèle, notre ère connait une hausse de l'utilisation d'algorithmes d'intelligence artificielle (IA) ou d'élaboration de procédés de résolution de problème pilotées par les données; et le nombre d'articles sur ces thèmes ainsi que leurs applications pratiques explosent. L'idée majeur de ce genre de méthode est le fait qu'on peut découvrir de l'information au sein des données afin de les généraliser (dans le cas d'IA.) ou de s'en servir pour corriger les prédictions de modèles peu fiables (dans le cas des méthodes pilotées par les données).\\
-Appliqués aux problématiques de la turbulence, ces algorithmes pourraient par exemple aider à identifier les régions ou les modélisations RANS ne sont pas fiables \citep{ling2015evaluation}, tirer le meilleure de résultats algébriques comme ceux de \citep{pope1975more} pour élaborer des modèles RANS augmentés par une IA type réseaux de neurones ou forêt aléatoire \citep{ling2016machine}.\\
-À partir de méthodes type inférence baysienne, on peut également construire des méthodes utilisant la structure de modèles RANS à une ou deux équations en injectant un vecteur de correction d'une itération à l'autre en comparant avec des cas dont les résultats DNS ou expérimentaux sont connus c'est en partie le travail effectué par \citep{singh2017machine}, \citep{parish2016paradigm} ou encore \citep{tracey2015machine} pour ne citer que quelques travaux.\\
+\noindent Depuis les années 2000, la recherche en Physique a vu l'incorporation toujours plus grande d'IA que ce soit pour améliorer la prédiction de modèles plus ou moins fiables, pour l'analyse de données, pour la détection de structures entre autres. \\
+Avant d'entrer dans le vif du rapport, nous en présentons succintement le plan : le cœur de la première partie sera l'inférence et sa généralisation par réseau de neurones ou autres algorithmes. Les étapes du procédés seront détaillées ainsi que des résultats obtenu sur des problèmes différents. Les objectifs sur le court et le moyen terme seront également évoqués.\\
+La deuxième partie se concentrera sur l'utilisation des réseaux de neurones comme seul outil de prédiction. Plusieurs remarques concernant le devenir de ces travaux au cours des deux prochaines années seront faites.\\
+Dans une troisième partie plusieurs pistes d'études autour de ces thématiques seront abordées de manières plus brèves. L'accent sera porté sur l'origine de ces idées et sur l'importance qu'elles occuperont par la suite.
+
+\pagebreak
+
+\navy \section{Combiner vitesse et précision au travers l'association inférence et machine learning}
+ \bk
+Dans l'introduction générale de ce rapport, l'inférence et son principe ont été présenté superficiellement pour pouvoir introduire la notion de méthode pilotée par les données. Nous proposons ici de rentrer plus en détail dans la théorie et dans son utilisation. 
+
+\subsection{Présentation de l'inférence}
+L'inférence Bayesienne se base sur le théorème de Bayes établit fin du $\overline{\underline{\text{XVIII}}}^{\, \text{ème}}$ siècle. Il permet d'évaluer une distribution de probabilité des paramètres que l'on cherche à évaluer, sachant les observations ou les mesures.\\
+Dans l'étude présentée, le paramètre recherché est un vecteur noté $\beta$, les observations seront notés \textbf{d}. Le théorème de Bayes permettra d'évaluer la probabilité $p\bepar{\beta\,|\,d}$; on l'écrira alors 
+\begin{equation}
+p\bepar{\beta\,|\,\textbf{d}} = \frac{h\bepar{\textbf{d}\,|\,\beta}p\bepar{\beta}}{c} \tag{Théorème de Bayes}
+\end{equation}
+Ce théorème lie la probabilité d'obtenir les observations sachant un premier essai de $\beta$ (on parlera d'information \textit{à priori}) $h\bepar{\textbf{d}\,|\,\beta}$, avec la distribution de probabilité \textit{a priori} de ce vecteur $\beta$ : $p\bepar{\beta}$. Le premier terme est appelée distribution de correspondance ou \textit{likelihood distribution}.\\
+Au dénominateur, le terme $c$ représente la \textit{likelihood marginalisée} par tous les paramètres possibles. Le but étant de construire une moyenne de $h\bepar{\textbf{d}\,|\,\beta}$ par rapport aux choix de paramètres à priori. $c$ s'écrira donc 
+\begin{equation*}
+c = \int_{\beta} h\bepar{\textbf{d}\,|\,\beta}p\bepar{\beta} d\beta
+\end{equation*}\\
+Calculer $p\bepar{\beta\,|\,\textbf{d}}$ peut se faire en supposant des distributions de \textbf{d}, $\beta$ et de la likelihood gaussiennes comme suggéré par \citep{parish2016paradigm} \citep{aster2011parameter} ou encore \citep{tarantola2005inverse}.
+%En parallèle, notre ère connait une hausse de l'utilisation d'algorithmes d'intelligence artificielle (IA) ou d'élaboration de procédés de résolution de problème pilotées par les données; et le nombre d'articles sur ces thèmes ainsi que leurs applications pratiques explosent. L'idée majeur de ce genre de méthode est le fait qu'on peut découvrir de l'information au sein des données afin de les généraliser (dans le cas d'IA.) ou de s'en servir pour corriger les prédictions de modèles peu fiables (dans le cas des méthodes pilotées par les données).\\
+%Appliqués aux problématiques de la turbulence, ces algorithmes pourraient par exemple aider à identifier les régions ou les modélisations RANS ne sont pas fiables \citep{ling2015evaluation}, tirer le meilleure de résultats algébriques comme ceux de \citep{pope1975more} pour élaborer des modèles RANS augmentés par une IA type réseaux de neurones ou forêt aléatoire \citep{ling2016machine}.\\
+%À partir de méthodes type inférence baysienne, on peut également construire des méthodes utilisant la structure de modèles RANS à une ou deux équations en injectant un vecteur de correction d'une itération à l'autre en comparant avec des cas dont les résultats DNS ou expérimentaux sont connus c'est en partie le travail effectué par \citep{singh2017machine}, \citep{parish2016paradigm} ou encore \citep{tracey2015machine} pour ne citer que quelques travaux.\\
 
 %\href{./objectif.pdf}{This is my link}
 

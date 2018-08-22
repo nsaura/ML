@@ -25,6 +25,7 @@ except NameError:
         from imp import reload  # Python 3.0 - 3.3
 
 #run script_data_generation.py -T_inf_lst 30 -cptmax 150 -N 71 -g_sup 1e-4 -cov_mod "full"
+#run script_data_generation.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -cptmax 150 -N 71 -g_sup 1e-4 -cov_mod "full" 
 ctc = reload(ctc)
 cfa = reload(cfa)
 
@@ -56,7 +57,4 @@ cfa.subplot_cst(temp, method="opti", comp=False, save=True)
 cfa.sigma_plot_cst(temp, save=True)
 plt.ion()
 plt.show()
-
-
-
 

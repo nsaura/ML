@@ -249,14 +249,14 @@ class Temperature_cst() :
                 for f, s in zip([self.betamap, self.cholesky],["beta", "cholesky"]) :
                     path_tosave = "opti_scipy_%s_%s_N%d_cov%s.npy" %(s, sT_inf, self.N_discr-2, self.cov_mod)
                     path_tosave = osp.join(self.path_fields, path_tosave)
-                    self.pd_write_csv(path_tosave, f[sT_inf])
+                    np.save(path_tosave, f[sT_inf])
                     
             
             if self.bool_method["adj_bfgs_%s" %(sT_inf)] :
                 for f, s in zip([self.bfgs_adj_bmap, self.bfgs_adj_cholesky],["beta", "cholesky"]) :
                     path_tosave = "adj_bfgs_%s_%s_N%d_cov%s.npy" %(s, sT_inf, self.N_discr-2, self.cov_mod)
                     path_tosave = osp.join(self.path_fields, path_tosave)
-                    self.pd_write_csv(path_tosave, f[sT_inf])
+                    np.save(path_tosave, f[sT_inf])
 
         print("Fields written see {}".format(self.path_fields))
 ##---------------------------------------------------   
