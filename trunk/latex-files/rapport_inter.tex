@@ -16,7 +16,7 @@
 \usepackage{wrapfig}
 %\usepackage[squaren]{SIunits}
 %\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
-\usepackage[linkcolor=Indigo,colorlinks=true, citecolor=SaddleBrown, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage[linkcolor=Indigo,colorlinks=true, citecolor=DarkSlateBlue, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
 \usepackage{listings}					% Pour citer du code
 \usepackage[justification=centering]{caption}
 \usepackage{sistyle} 
@@ -99,12 +99,16 @@ keywordstyle=[0]{\color{red}},
 \xdefinecolor{brick}{named}{DarkRed}
 \xdefinecolor{navy}{named}{Navy}
 \xdefinecolor{midblue}{named}{MidnightBlue}
-\xdefinecolor{dsb}{named}{DarkSlateGray}
+\xdefinecolor{dsb}{named}{DarkSlateBlue}
 \xdefinecolor{dgreen}{named}{DarkGreen}
 \xdefinecolor{indian}{named}{IndianRed}
 
 %%% 	Raccourcis 	%%%
 \newcommand{\keps}{$k-\varepsilon$}
+\newcommand{\covobs}{\text{C}^{-1}_{\text{obs}}}
+\newcommand{\covpri}{\text{C}^{-1}_{\text{pri}}}
+\newcommand{\bmap}{\beta_{\text{MAP}}}
+\newcommand{\J}{\mathcal{J}}
 \newcommand\bk{\color{black}}
 \newcommand\brick{\color{brick}}
 \newcommand\navy{\color{navy}}
@@ -268,20 +272,88 @@ Dans une troisième partie plusieurs pistes d'études autour de ces thématiques
 
 \navy \section{Combiner vitesse et précision au travers l'association inférence et machine learning}
  \bk
-Dans l'introduction générale de ce rapport, l'inférence et son principe ont été présenté superficiellement pour pouvoir introduire la notion de méthode pilotée par les données. Nous proposons ici de rentrer plus en détail dans la théorie et dans son utilisation. 
-
-\subsection{Présentation de l'inférence}
+\noindent Dans l'introduction générale de ce rapport, l'inférence et son principe ont été présenté superficiellement pour pouvoir introduire la notion de méthode pilotée par les données. Nous proposons ici de rentrer plus en détail dans la théorie et dans son utilisation. \\
+Dans l'ensemble de ce rapport, $\beta$ est un vecteur.
+\brick \subsection{Présentation de l'inférence et de ses outils} \bk
+\dsb \subsubsection{Théorème de Bayes et fonction de correspondance} \bk
 L'inférence Bayesienne se base sur le théorème de Bayes établit fin du $\overline{\underline{\text{XVIII}}}^{\, \text{ème}}$ siècle. Il permet d'évaluer une distribution de probabilité des paramètres que l'on cherche à évaluer, sachant les observations ou les mesures.\\
-Dans l'étude présentée, le paramètre recherché est un vecteur noté $\beta$, les observations seront notés \textbf{d}. Le théorème de Bayes permettra d'évaluer la probabilité $p\bepar{\beta\,|\,d}$; on l'écrira alors 
+Dans l'étude présentée, le paramètre recherché est un vecteur noté $\beta$, les observations seront notés \textbf{d}. Le théorème de Bayes permettra d'évaluer la probabilité $p\bepar{\beta\,|\,d}$; il établit 
 \begin{equation}
-p\bepar{\beta\,|\,\textbf{d}} = \frac{h\bepar{\textbf{d}\,|\,\beta}p\bepar{\beta}}{c} \tag{Théorème de Bayes}
+p\bepar{\beta\,|\,\textbf{d}} = \frac{\mathcal{L}\bepar{\textbf{d}\,|\,\beta}p\bepar{\beta}}{c} %\tag{Théorème de Bayes}
 \end{equation}
-Ce théorème lie la probabilité d'obtenir les observations sachant un premier essai de $\beta$ (on parlera d'information \textit{à priori}) $h\bepar{\textbf{d}\,|\,\beta}$, avec la distribution de probabilité \textit{a priori} de ce vecteur $\beta$ : $p\bepar{\beta}$. Le premier terme est appelée distribution de correspondance ou \textit{likelihood distribution}.\\
-Au dénominateur, le terme $c$ représente la \textit{likelihood marginalisée} par tous les paramètres possibles. Le but étant de construire une moyenne de $h\bepar{\textbf{d}\,|\,\beta}$ par rapport aux choix de paramètres à priori. $c$ s'écrira donc 
-\begin{equation*}
-c = \int_{\beta} h\bepar{\textbf{d}\,|\,\beta}p\bepar{\beta} d\beta
-\end{equation*}\\
-Calculer $p\bepar{\beta\,|\,\textbf{d}}$ peut se faire en supposant des distributions de \textbf{d}, $\beta$ et de la likelihood gaussiennes comme suggéré par \citep{parish2016paradigm} \citep{aster2011parameter} ou encore \citep{tarantola2005inverse}.
+Ce théorème lie la probabilité d'obtenir les observations sachant un premier essai de $\beta$ (on parlera d'information \textit{à priori}) $\mathcal{L}\bepar{\textbf{d}\,|\,\beta}$, avec la distribution \textit{a priori} du vecteur $\beta$, $p\bepar{\beta}$. Le premier terme est appelée distribution de correspondance ou \textit{likelihood distribution} $\mathcal{L}$.\\
+Au dénominateur, le terme $c$ représente la \textit{likelihood marginalisée} par tous les paramètres possibles. Le but étant de construire une moyenne de $\mathcal{L}\bepar{\textbf{d}\,|\,\beta}$ par rapport aux choix de paramètres à priori. $c$ s'écrira donc 
+\begin{equation}
+c = \int_{\beta} \mathcal{L}\bepar{\textbf{d}\,|\,\beta}p\bepar{\beta} d\beta
+\end{equation} \\
+Calculer $p\bepar{\beta\,|\,\textbf{d}}$ peut se faire en supposant que \textbf{d}, $\beta$ et $\mathcal{L}$ ont des distributions gaussiennes comme suggéré par \citep{parish2016paradigm} \citep{aster2011parameter} ou encore \citep{tarantola2005inverse}.\\
+La méthode MAP pour \textit{Maximum A Posteriori} utilisée par les références citées, consiste à calculer la valeur de $\beta$ la plus probable plutôt que de déterminer de l'entière distribution. L'objectif est alors de maximiser la correspondance entre modèle et observation soit 
+\begin{equation}
+\beta_{\text{MAP}} = \underset{\beta}{\text{arg}\, \text{max}} \ p\bepar{\beta\,|\,\textbf{d}} \label{bmap}
+\end{equation}
+À partir de développement mathématique qui ne seront pas mentionnés ici, il est possible d'écrire $\mathcal{L}$ comme une fonction de coût. Souvent les données expérimentales sont obtenues avec une incertitude propre à la méthode de mesure ou aux outils utilisés. Ces incertitudes devant apparaître, on construit une matrice de covariance $\covobs$ (nous n'utiliserons que son inverse). \\
+Idem, puisque $\mathcal{L}$ prend en compte la première valeur (premier choix ou first guess) $\beta_{\text{pri}}$ et sa distribution, la fonction de coût équivalente doit faire apparaître la covariance $\covpri$.\\
+Finalement avec $\textbf{h}_\beta \equiv \textbf{h}(\beta)$ la prédiction du modèle qu'on essaie de corriger, effectuer une inversion revient à estimer 
+\begin{equation}
+\bmap = \underset{\beta}{\text{arg}\, \text{min}}\ \frac{1}{2}\becro{\bepar{\textbf{d} - \textbf{h}_\beta}^T \covobs \bepar{\textbf{d} - \textbf{h}_\beta} + \bepar{\beta - \beta_{\text{pri}}}^T \covpri  \bepar{\beta - \beta_{\text{pri}}}} \label{bmapJ}
+\end{equation}
+La fonction à minimiser est la fonction de coût sus-mentionnée, elle est notée $\mathcal{J}$ dans la suite.
+
+\dsb \subsubsection{L'algorithme BFGS} \bk
+
+\noindent La résolution de ce problème devient alors un problème de minimisation. Nous utilisons l'algorithme Broyden-Fletcher-Goldfarb-Shanno abbrégé BFGS dans la suite \citep{nocedal2006numerical}.
+Contrairement aux Algorithmes de gradient classiques, le BFGS est un algorithme d'ordre deux. Il utilise une une approximation de la hessienne de $\J$ afin de ne pas avoir à effectuer le calcul de cette matrice qui peut s'avérer très lourd.\\
+C'est une méthode itérative mettant à jour le vecteur d'intérêt $\beta_k$ ainsi que sa hesienne inverse notée $B^{-1}_k$ à partir d'un algorithme d'exploration appelé \textit{line search} dont nous évoquerons brièvement les spécificités.\\
+Pour atteindre le minimum global de l'équation \eqref{bmapJ}, il est nécessaire d'incrémenter la valeur de $\beta_k$ par une variation $d\beta_k$ vérifiant l'inégalité suivante
+\begin{equation}
+\nabla\J_k = \frac{\partial \J}{\partial \beta_k} = \frac{\J\bepar{\beta_k+ d\beta_k} - \J\bepar{\beta_k}}{d\beta_k} < 0
+\end{equation}
+Pour déterminer la forme de cet incrément le BFGS procède en deux étapes : dans un premier temps l'algorithme détermine la \textit{direction} du gradient puis la \textit{longueur} de l'incrément. \\
+On note le vecteur de direction $\mathbf{p}_k$, il s'écrit :
+\begin{equation}
+\mathbf{p}_k = -B_k^{-1}\nabla_k\J
+\end{equation}
+Pour vérifier que ce vecteur pointe dans la bonne direction, le produit scalaire du gradient $\nabla_k\J$ projeté sur la hessienne doit vérifier l'inéquation:
+\begin{equation}
+-\nabla_k^T\J\, B_k^{-1}\, \nabla_k\J = \mathbf{p}_k^T\, \nabla_k\J < 0
+\end{equation}
+Cette condition est une conséquence directe du développement de Taylor autour de l'incrément.\\
+
+\noindent Une fois la direction calculée, il reste à déterminer l'amplitude de l'incrémentation. En effet, puisque l'on cherche le minimum global de $\J$, il faut veiller à ne pas «tourner autour» du $\bmap$ indéfiniment, et adapter le pas au fur et à mesure que l'optimisation se déroule.\\ 
+Sans rentrer dans dans tous les détails, le BFGS utilise un algorithme de \textit{line search} pour trouver $ \displaystyle \alpha_k$ tel que $d\beta_k = \alpha_k\mathbf{p}_k$. Cette recherche doit satisfaire deux critères sur $\beta_{k+1}$: 
+\begin{itemize}
+\item[$\bullet$] Une condition sur la nouvelle valeur de la fonction de coût : \begin{equation}
+\J\bepar{\beta_{k+1}} - \J\bepar{\beta_k} < C_1
+\end{equation} 
+
+\item[$\bullet$] Une condition sur la pente (ou la courbure) : 
+\begin{equation}
+|\nabla(\beta_{k+1})|^T\textbf{p}_k < C_2 |\nabla_k^T\textbf{p}_k|
+\end{equation}
+\end{itemize} 
+$C_1$ et $C_2$ étant deux seuils préalablement définis.\\
+La dernière étape de l'algorithme consiste à incrémenter $B_{k+1}^{-1}$ utilisant $\alpha_k$ ainsi que d'autres termes construit à partir de $\beta_{k+1}$.\\
+
+\pagebreak
+
+\brick \subsection{Utilisation de l'inférence sur différents cas} \bk
+Le premier cas sur lequel nous avons utilisé l'inférence est sur un problème thermique provenant de \citep{parish2016paradigm}.\\
+Le but est d'établir l'évolution du champ de température dans un barreau dont les températures au début et en fin de domaine sont nulles. Cette évolution se fait sous des termes de conduction, de convection et de radiation.\\
+L'équation exacte qui régit ce problème s'écrit 
+\begin{equation}
+ \frac{d^2T}{dz^2} + \varepsilon(T)\bepar{T^4_\infty - T^4} + h\bepar{T_\infty - T} = 0 \label{Ttrue} \tag{EE}
+ \end{equation} 
+ Avec 
+ \begin{equation}
+ \varepsilon(T) = \becro{1 + 5 \sin\bepar{\frac{3\pi}{200}\, T} + \exp\bepar{0.02\,T}+ \mathcal{N}\bepar{0,\, 0.1^2}} \times 10^{-4} \label{epsilon}
+ \end{equation}
+ On commence par résoudre ce problème exact pour plusieurs tirage de $\varepsilon$. En même temps de construire une dataset de référence, on évalue la sensibilité des résultats par rapport à la distribution $\mathcal{N}$ présente dans l'équation \eqref{epsilon}. Cette sensibilité se traduit par la construction d'une matrice de covariance des données observables issues de ce problème exact.\\
+ Afin de tester l'inférence, nous biaisons l'équation exact \eqref{Ttrue} et établissons un problème inexacte (E$\beta$) :
+\begin{equation}
+\frac{d^2T}{dz^2} + \varepsilon_0\beta(z)\bepar{T^4_\infty - T^4}= 0 \tag{E$\beta$} \label{Tinex}
+\end{equation}
+Nous construisons la $\covpri$ en diagonalisant des valeurs fournies par \citep{parish2016paradigm}.\\
+Nous minimisons alors la fonction de coût pour trouver $\bmap$ selon la formule \eqref{bmapJ}. On compare ensuite 
 %En parallèle, notre ère connait une hausse de l'utilisation d'algorithmes d'intelligence artificielle (IA) ou d'élaboration de procédés de résolution de problème pilotées par les données; et le nombre d'articles sur ces thèmes ainsi que leurs applications pratiques explosent. L'idée majeur de ce genre de méthode est le fait qu'on peut découvrir de l'information au sein des données afin de les généraliser (dans le cas d'IA.) ou de s'en servir pour corriger les prédictions de modèles peu fiables (dans le cas des méthodes pilotées par les données).\\
 %Appliqués aux problématiques de la turbulence, ces algorithmes pourraient par exemple aider à identifier les régions ou les modélisations RANS ne sont pas fiables \citep{ling2015evaluation}, tirer le meilleure de résultats algébriques comme ceux de \citep{pope1975more} pour élaborer des modèles RANS augmentés par une IA type réseaux de neurones ou forêt aléatoire \citep{ling2016machine}.\\
 %À partir de méthodes type inférence baysienne, on peut également construire des méthodes utilisant la structure de modèles RANS à une ou deux équations en injectant un vecteur de correction d'une itération à l'autre en comparant avec des cas dont les résultats DNS ou expérimentaux sont connus c'est en partie le travail effectué par \citep{singh2017machine}, \citep{parish2016paradigm} ou encore \citep{tracey2015machine} pour ne citer que quelques travaux.\\
