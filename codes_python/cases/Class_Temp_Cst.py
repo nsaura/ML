@@ -3,7 +3,10 @@
 import numpy as np
 import pandas as pd
 
+from matplotlib import rc
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+
 import sys, warnings, argparse
 
 import os
@@ -11,12 +14,12 @@ import os.path as osp
 
 from scipy import optimize as op
 from itertools import cycle
-import matplotlib.cm as cm
 
 import numdifftools as nd
 
 import time
 
+rc('text', usetex=True)
 class Temperature_cst() :
 ##---------------------------------------------------------------
     def __init__ (self, parser):
@@ -802,11 +805,12 @@ class Temperature_cst() :
                     H_n_inv   =   H_nNext_inv
 
                     #MAJ des figures avec nouveaux tracés
-                    plt.figure("Evolution de l'erreur %s" %(sT_inf))
-                    plt.scatter(cpt, g_sup, c='black')
+                    plt.figure("Evolution de l'erreur Tinf=%d" %(T_inf))
+                    plt.scatter(cpt, g_sup, c='black', s=7)
                     plt.xlabel("Iterations")
-                    plt.ylabel("J(beta_n)")
                     
+                    plt.ylabel("loglog " + r"$||\nabla_k J(\beta)||_\infty$")
+
                     if inter_plot == True :
                         plt.pause(0.05)
                     
@@ -815,7 +819,7 @@ class Temperature_cst() :
                     ax[0].plot(self.line_z, beta_n, color=c)
                     ax[1].semilogy(self.line_z, g_n, color=c)
                     
-                    ax[0].legend(["beta cpt%d_%s" %(cpt, sT_inf)])
+                    ax[0].legend(["beta cpt%d %s" %(cpt, sT_inf)])
                     ax[1].legend(["grad cpt%d" %(cpt)])
                     
                     ax[0].set_xlabel("X-domain")
@@ -940,9 +944,11 @@ class Temperature_cst() :
                 cpt +=  1    
                 # n --> n+1 si non convergence, sort de la boucle sinon 
             
-            plt.figure("Evolution de l'erreur %s" %(sT_inf))
-            plt.legend(["Cost function vs number of iterations"])
-              
+            plt.figure("Evolution de l'erreur Tinf=%d" %(T_inf))
+            figgg = plt.gca()
+            figgg.set_yscale('log')
+            plt.legend(["loglog "+r"$||\nabla_k J(\beta_k)||$" + " Vs Iterations; T inf = %d" %T_inf])
+            
             ######################
             ##-- Post Process --##
             ######################
@@ -966,14 +972,25 @@ class Temperature_cst() :
             # Affichage récapitulatif pour se rassurer ou ...            
             print ("\x1b[1;35;47mFinal Sup_g = {}\nFinal beta = {}\nFinal direction {}\x1b[0m".format(\
                 g_sup, beta_last, d_n_last))
-            
+
+            rc('text', usetex=False)
+            ax[1].cla()
             # Tracés beta_last et grad_J(beta_last)
             ax[0].plot(self.line_z, beta_last, color=c)
-            ax[1].semilogy(self.line_z, g_last, color=c)
+            ax[1].plot(self.line_z, g_last, color=c)
             
-            ax[0].legend(["Last beta"])
-            ax[1].legend(["Last gradient(J)(Last beta)"])
+            ax[0].legend(["Last beta %s" %sT_inf], fontsize=11)
+            ax[1].legend(["Last gradient(J)(Last beta) %s" % sT_inf], fontsize=11)
                         
+            leg_0 = ax[0].get_legend()
+            leg_1 = ax[1].get_legend()
+            
+            leg_0.legendHandles[-1].set_color(c)
+            leg_1.legendHandles[-1].set_color(c)
+            
+            leg_0.legendHandles[-1].set_linewidth(2.0)
+            leg_1.legendHandles[-1].set_linewidth(2.0)
+            
             # Construction de la C_bmap
             try :
                 R   =   np.linalg.cholesky(H_last)
@@ -1044,37 +1061,37 @@ class Temperature_cst() :
             
             plt.legend(loc="best") # légende des figures tracé plus haut
             
-            try :
-                # On va récapituler différentes évolutions au cours de l'optimization
-                fiig, axxes = plt.subplots(2,2,figsize=(8,8))
-                
-                axxes[0][0].set_title("alpha vs iterations T_inf %d " %(T_inf))
-                axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o',\
-                                            linestyle='none', markersize=8)
-                axxes[0][0].set_xlabel("Iterations")
-                axxes[0][0].set_ylabel("alpha")
-                
-                axxes[0][1].set_title("err_hess vs iterations ")
-                axxes[0][1].plot(range(cpt), err_hess_lst, marker='s',\
-                                            linestyle='none', markersize=8)
-                axxes[0][1].set_xlabel("Iterations")
-                axxes[0][1].set_ylabel("norm(H_nNext_inv - H_n_inv, 2)")
-                
-                axxes[1][0].set_title("err_beta vs iterations ")
-                axxes[1][0].plot(range(cpt), err_beta_lst, marker='^',\
-                                            linestyle='none', markersize=8)
-                axxes[1][0].set_xlabel("Iterations")
-                axxes[1][0].set_ylabel("beta_nNext - beta_n")            
-                
-                axxes[1][1].set_title("||d_n|| vs iterations")
-                axxes[1][1].plot(range(cpt), dir_lst, marker='v',\
-                                            linestyle='none', markersize=8)
-                axxes[1][1].set_xlabel("Iteration")
-                axxes[1][1].set_ylabel("Direction")            
-            
-            except ValueError :
-                break
-            
+#            try :
+#                # On va récapituler différentes évolutions au cours de l'optimization
+#                fiig, axxes = plt.subplots(2,2,figsize=(8,8))
+#                
+#                axxes[0][0].set_title("alpha vs iterations T_inf %d " %(T_inf))
+#                axxes[0][0].plot(range(cpt), self.alpha_lst, marker='o',\
+#                                            linestyle='none', markersize=8)
+#                axxes[0][0].set_xlabel("Iterations")
+#                axxes[0][0].set_ylabel("alpha")
+#                
+#                axxes[0][1].set_title("err_hess vs iterations ")
+#                axxes[0][1].plot(range(cpt), err_hess_lst, marker='s',\
+#                                            linestyle='none', markersize=8)
+#                axxes[0][1].set_xlabel("Iterations")
+#                axxes[0][1].set_ylabel("norm(H_nNext_inv - H_n_inv, 2)")
+#                
+#                axxes[1][0].set_title("err_beta vs iterations ")
+#                axxes[1][0].plot(range(cpt), err_beta_lst, marker='^',\
+#                                            linestyle='none', markersize=8)
+#                axxes[1][0].set_xlabel("Iterations")
+#                axxes[1][0].set_ylabel("beta_nNext - beta_n")            
+#                
+#                axxes[1][1].set_title("||d_n|| vs iterations")
+#                axxes[1][1].plot(range(cpt), dir_lst, marker='v',\
+#                                            linestyle='none', markersize=8)
+#                axxes[1][1].set_xlabel("Iteration")
+#                axxes[1][1].set_ylabel("Direction")            
+#            
+#            except ValueError :
+#                break
+#            
             # On précise que le cas en cours a été traité. On pourra alors le tracé (voir class_functions_aux.py subplot_cst) et l'écrire
             self.bool_method["adj_bfgs_"+sT_inf] = True
             
