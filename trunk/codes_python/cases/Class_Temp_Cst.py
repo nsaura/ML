@@ -1,13 +1,18 @@
 #!/usr/bin/python2.7
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8-*-
+
 import numpy as np
 import pandas as pd
 
-from matplotlib import rc
+import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import sys, warnings, argparse
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+import argparse
 
 import os
 import os.path as osp
@@ -19,7 +24,8 @@ import numdifftools as nd
 
 import time
 
-rc('text', usetex=True)
+#rc('text', usetex=False)
+
 class Temperature_cst() :
 ##---------------------------------------------------------------
     def __init__ (self, parser):
@@ -273,7 +279,7 @@ class Temperature_cst() :
         B_n = np.zeros((self.N_discr-2))
         T_nNext = T_n
         
-        err, tol, compteur, compteur_max = 1., 1e-6, 0, 4000
+        err, tol, compteur, compteur_max = 1., 1e-7, 0, 5000
         if verbose == True :
             plt.figure()
             
@@ -303,7 +309,7 @@ class Temperature_cst() :
                 plt.plot(self.line_z, T_nNext, label='tracer cpt %d' %(compteur))
             
             if compteur == compteur_max :
-                warnings.warn("\x1b[7;1;255mH_BETA function's compteur has reached its maximum value, still, the erreur is {} whereas the tolerance is {} \t \x1b[0m".format(err, tol))
+                print("\x1b[7;1;255mH_BETA function's counteur reached max value, err is {} not below tol {} \x1b[0m".format(err, tol))
 
             if verbose==True :
                 print ("Err = {} ".format(err))
@@ -417,7 +423,7 @@ class Temperature_cst() :
                 np.save(pri_filename, T_nNext_pri)             
             
             if compteur == 0:
-                print("Pour T_inf = {}, les fichiers ont été chargés.".format(T_inf))
+                print("T_inf = {}, files loaded.".format(T_inf))
             else : 
                 print ("Calculus with T_inf={} completed. Convergence status :".format(T_inf))
                 print ("Err_obs = {} ".format(err_obs))    
@@ -564,7 +570,7 @@ class Temperature_cst() :
         Fonction utilisant la fonction op.minimize de scipy. La méthode utilisée est BFGS.
         La dérivée est calculée à partir de la méthode utilisant les adjoints.
         """
-        print("Début de l\'optimisation scipy\n")
+        print("-- The scipy OP began --\n")
         
         # Mesure de sécurité        
         if self.bool_method["stat"] == False : self.get_prior_statistics()
@@ -702,7 +708,7 @@ class Temperature_cst() :
         inter_plot to see the evolution of the inference
         verbose to print different information during the optimization
         """
-        print("Début de l\'optimisation maison\n")
+        print("-- Home made ADJ_BFGS OP began --\n")
         if self.bool_method["stat"] == False : self.get_prior_statistics() 
         
         self.debug = dict()
@@ -710,7 +716,10 @@ class Temperature_cst() :
         # On fonctionne donc en dictionnaire pour stocker les valeurs importantes relatives à la température en 
         # cours. De cette façon, on peut passer d'une température à une autre, et donc recommencer une optimisation 
         # pour T_inf différente, sans craindre de perdre les résultats de la T_inf précédente
-
+        
+        matplotlib.rcParams['text.usetex'] = True
+        matplotlib.rcParams['text.latex.unicode'] = True
+        
         bfgs_adj_grad,   bfgs_adj_gamma     =   dict(), dict()
         bfgs_adj_bmap,   bfgs_adj_bf        =   dict(), dict()
         bfgs_adj_hessinv,bfgs_adj_cholesky  =   dict(), dict()
@@ -724,6 +733,8 @@ class Temperature_cst() :
         sup_g_stagne = False
 
         s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0]) # vecteur aléatoire
+        
+#        rc('text', usetex=True)
         
         for T_inf in self.T_inf_lst :
             sT_inf      =   "T_inf_%d" %(T_inf) # Clé pour simplifier
@@ -781,9 +792,12 @@ class Temperature_cst() :
             self.debug["first_hess"] = H_n_inv
             
             # Tracé des différentes figures (Evolutions de béta et du gradient en coursc d'optimization)
-            fig, ax = plt.subplots(1,2,figsize=(13,7))
-            ax[0].plot(self.line_z, beta_n, label="beta_prior")
-            ax[1].plot(self.line_z, g_n,    label="gradient prior")
+            if inter_plot==True :
+                fig, ax = plt.subplots(1,2,figsize=(13,7))
+                ax[0].plot(self.line_z, beta_n, label="beta_prior")
+                ax[1].plot(self.line_z, g_n,    label="gradient prior")
+            
+                plt.pause(0.05)
             
             self.alpha_lst, err_hess_lst, err_beta_lst = [], [], []
             dir_lst =   []
@@ -809,33 +823,37 @@ class Temperature_cst() :
                     plt.scatter(cpt, g_sup, c='black', s=7)
                     plt.xlabel("Iterations")
                     
+#                    rc('text', usetex=True)
                     plt.ylabel("loglog " + r"$||\nabla_k J(\beta)||_\infty$")
-
-                    if inter_plot == True :
-                        plt.pause(0.05)
+#                    rc('text', usetex=False)
                     
                     c = next(colors) 
                     
                     ax[0].plot(self.line_z, beta_n, color=c)
                     ax[1].semilogy(self.line_z, g_n, color=c)
                     
-                    ax[0].legend(["beta cpt%d %s" %(cpt, sT_inf)])
+                    ax[0].legend(["beta cpt%d " %(cpt) + r"$T_{\infty} = %d$" %(T_inf)])
                     ax[1].legend(["grad cpt%d" %(cpt)])
                     
                     ax[0].set_xlabel("X-domain")
                     ax[0].set_ylabel("Beta in optimization")
                     
                     ax[1].set_xlabel("X-domain")
-                    ax[1].set_ylabel("Gradient(J) (beta ongoing)")
+#                    rc('text', usetex=True)
+                    ax[1].set_ylabel(r"$\nabla J(\beta_k)$")
                     
                     leg_0 = ax[0].get_legend()
                     leg_1 = ax[1].get_legend()
-
+#                    rc('text', usetex=False)
+                    
                     leg_0.legendHandles[-1].set_color(c)
                     leg_1.legendHandles[-1].set_color(c)
                     
                     fig.tight_layout()
                     
+                    if inter_plot == True :
+                        plt.pause(0.05)
+                                        
                     # MAJ de la liste des gradient.                      
                     sup_g_lst.append(g_sup)
                     if len(sup_g_lst) > 6 :
@@ -947,7 +965,8 @@ class Temperature_cst() :
             plt.figure("Evolution de l'erreur Tinf=%d" %(T_inf))
             figgg = plt.gca()
             figgg.set_yscale('log')
-            plt.legend(["loglog "+r"$||\nabla_k J(\beta_k)||$" + " Vs Iterations; T inf = %d" %T_inf])
+            plt.legend(["loglog "+r"$||\nabla_k J(\beta_k)||$ " +\
+                        "Vs Iterations; "+ r"$T_{\infty} = %d$" %T_inf])
             
             ######################
             ##-- Post Process --##
@@ -973,15 +992,17 @@ class Temperature_cst() :
             print ("\x1b[1;35;47mFinal Sup_g = {}\nFinal beta = {}\nFinal direction {}\x1b[0m".format(\
                 g_sup, beta_last, d_n_last))
 
-            rc('text', usetex=False)
+#            rc('text', usetex=False)
             ax[1].cla()
             # Tracés beta_last et grad_J(beta_last)
             ax[0].plot(self.line_z, beta_last, color=c)
             ax[1].plot(self.line_z, g_last, color=c)
             
-            ax[0].legend(["Last beta %s" %sT_inf], fontsize=11)
-            ax[1].legend(["Last gradient(J)(Last beta) %s" % sT_inf], fontsize=11)
-                        
+            ax[0].legend(["Last "+r"$\beta;\ T_{\infty} = %d$" %T_inf], fontsize=11)
+#            rc('text', usetex=True)
+            ax[1].legend(["Last "+r"$\nabla J(\beta});\ T_{\infty} =%d$" % T_inf], fontsize=11)
+#            rc('text', usetex=False)
+            
             leg_0 = ax[0].get_legend()
             leg_1 = ax[1].get_legend()
             
@@ -990,6 +1011,8 @@ class Temperature_cst() :
             
             leg_0.legendHandles[-1].set_linewidth(2.0)
             leg_1.legendHandles[-1].set_linewidth(2.0)
+            
+            plt.pause(0.001)
             
             # Construction de la C_bmap
             try :
@@ -1139,6 +1162,9 @@ class Temperature_cst() :
         # obsolète et inutile mais sait-on jamais
         self.al2_lst    =    al2_lst
         self.corr_chol  =   corr_chol
+        
+        # mise a jour des figures
+        plt.pause(0.001)
         #########
         #- Fin -#
         #########
