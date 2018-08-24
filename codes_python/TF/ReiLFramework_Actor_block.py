@@ -393,6 +393,8 @@ class actor_deepNN() :
                     it_pred = self.A_prediction(state=(pred_incoming_field.reshape(1,-1) + np.random.normal(0,1,Nx)))    
                     rew_lst.append(rewards(it_pred)+prev_rew_lst[rep])
                     gra_lst.append(dJ(it_pred))
+                    
+                    # Pour pouvoir évaluer une moyenne du gradient
                 
                 time_3 = time.time()            
                 print ("temps de calcul = {}s".format(abs(time_3 - time_2)))

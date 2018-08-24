@@ -46,19 +46,20 @@ temp.get_prior_statistics()
 # Optimization de la fonction de coût J définie équation (7) par deux méthodes :
 temp.adjoint_bfgs(inter_plot=True, verbose=True) # Optimization "maison";
 #temp.adjoint_circle(inter_plot=True, verbose=False)
-#temp.optimization()                 # Optimization de Scipy qui sert de référence.
+temp.optimization()                 # Optimization de Scipy qui sert de référence.
 
-#temp.write_fields()
+temp.write_fields()
 
-#rc('text', usetex=False)
-## Tracés:
-## Tracés de beta_map pour les deux solutions, et on compare les distribution autour de beta_map.
-## On trace également le champ de température obtenu en injectant beta_map dans le problème non exact
-#cfa.subplot_cst(temp, save=True)
-#cfa.subplot_cst(temp, method="opti", comp=False, save=True)
+rc('text', usetex=False)
+# Tracés:
+# Tracés de beta_map pour les deux solutions, et on compare les distribution autour de beta_map.
+# On trace également le champ de température obtenu en injectant beta_map dans le problème non exact
+cfa.subplot_cst(temp, save=True)
+cfa.subplot_cst(temp, method="opti", comp=False, save=True)
 
-## On compare les sigma de la covariance a posteri pour les deux méthodes, avec les sigmas attendus.
-#cfa.sigma_plot_cst(temp, save=True)
+# On compare les sigma de la covariance a posteri pour les deux méthodes, avec les sigmas attendus.
+cfa.sigma_plot_cst(temp, save=True)
 
 plt.show()
 
+rc('text', usetex=True)

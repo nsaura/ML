@@ -28,7 +28,8 @@
 \usepackage{setspace}
 
 \usepackage{graphicx}		 			% Inclusion des figures
-\graphicspath{{./pic/}}
+\graphicspath{{./pic/}, {../figures/full_69_rapport/}}
+
 \usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
 
 
@@ -109,6 +110,7 @@ keywordstyle=[0]{\color{red}},
 \newcommand{\covpri}{\text{C}^{-1}_{\text{pri}}}
 \newcommand{\bmap}{\beta_{\text{MAP}}}
 \newcommand{\J}{\mathcal{J}}
+\newcommand{\tinf}{$T_\infty$}
 \newcommand\bk{\color{black}}
 \newcommand\brick{\color{brick}}
 \newcommand\navy{\color{navy}}
@@ -337,8 +339,11 @@ La dernière étape de l'algorithme consiste à incrémenter $B_{k+1}^{-1}$ util
 \pagebreak
 
 \brick \subsection{Utilisation de l'inférence sur différents cas} \bk
-Le premier cas sur lequel nous avons utilisé l'inférence est sur un problème thermique provenant de \citep{parish2016paradigm}.\\
-Le but est d'établir l'évolution du champ de température dans un barreau dont les températures au début et en fin de domaine sont nulles. Cette évolution se fait sous des termes de conduction, de convection et de radiation.\\
+
+Nous avons mis en place les outils présentés ci-dessus dans plusieurs cas, nous n'en présenterons que deux : un problème thermique monodimensionnel provenant de \citep{parish2016paradigm}, puis sur la propagation d'une onde à travers l'équation de Burgers 1d.
+
+\dsb \subsubsection{Problème thermique} \bk
+Le but est d'établir l'évolution du champ de température dans un barreau dont les températures au début et en fin de domaine sont nulles. Cette évolution se fait sous des termes de conduction, de convection et de radiation. Le paramètre de ce problème sera la température extérieure au barreau $T_\text{inf}$. 
 L'équation exacte qui régit ce problème s'écrit 
 \begin{equation}
  \frac{d^2T}{dz^2} + \varepsilon(T)\bepar{T^4_\infty - T^4} + h\bepar{T_\infty - T} = 0 \label{Ttrue} \tag{EE}
@@ -347,13 +352,81 @@ L'équation exacte qui régit ce problème s'écrit
  \begin{equation}
  \varepsilon(T) = \becro{1 + 5 \sin\bepar{\frac{3\pi}{200}\, T} + \exp\bepar{0.02\,T}+ \mathcal{N}\bepar{0,\, 0.1^2}} \times 10^{-4} \label{epsilon}
  \end{equation}
- On commence par résoudre ce problème exact pour plusieurs tirage de $\varepsilon$. En même temps de construire une dataset de référence, on évalue la sensibilité des résultats par rapport à la distribution $\mathcal{N}$ présente dans l'équation \eqref{epsilon}. Cette sensibilité se traduit par la construction d'une matrice de covariance des données observables issues de ce problème exact.\\
+ On commence par résoudre ce problème exact pour plusieurs tirage de $\varepsilon$. On utilise a méthode de Crank-Nicholson pour résoudre ce problème, en ajoutant artificiellement un terme d'évolution temporelle.\\
+ En même temps de construire une dataset de référence, on évalue la sensibilité des résultats par rapport à la distribution $\mathcal{N}$ présente dans l'équation \eqref{epsilon}. Cette sensibilité se traduit par la construction d'une matrice de covariance des données observables issues de ce problème exact.\\
  Afin de tester l'inférence, nous biaisons l'équation exact \eqref{Ttrue} et établissons un problème inexacte (E$\beta$) :
 \begin{equation}
 \frac{d^2T}{dz^2} + \varepsilon_0\beta(z)\bepar{T^4_\infty - T^4}= 0 \tag{E$\beta$} \label{Tinex}
 \end{equation}
-Nous construisons la $\covpri$ en diagonalisant des valeurs fournies par \citep{parish2016paradigm}.\\
-Nous minimisons alors la fonction de coût pour trouver $\bmap$ selon la formule \eqref{bmapJ}. On compare ensuite 
+Nous construisons $\covpri$ en diagonalisant des valeurs fournies par \citep{parish2016paradigm}.\\
+
+Au cours de la minimisation,  afin de pouvoir voir la solution se dessiner, il a été nécessaire de coder un solver BFGS en suivant \citep{nocedal2006numerical}. Un exemple de cette évolution pour \tinf = $50$ est illustrée Fig.\eqref{tinf50}.\\
+Le critère de convergence est ici une condition sur $||\nabla_{\beta_k}\J||_\infty$ ou bien sur un nombre limite d'itérations. La figure Fig.\eqref{s} récapitule l'évolution de cette grandeur en cours d'optimisation.\\
+\indent La méthode BFGS permet également d'avoir accès à la hessienne inverse de $\J$ évaluée sur $\bmap$. Grâce à sa décomposition de Cholesky, on peut construire une approximation de la distribution $p\bepar{\beta\,|\,\textbf{d}}$ autour de $\bmap$. \\
+On note $R$ tel que $\text{Chol}\bepar{B_{\bmap}^{-1}} = \text{R}\text{R}^T$ et $s \sim \mathcal{N}\bepar{0,1}$. Ainsi 
+\begin{equation}
+p\bepar{\beta\,|\,\textbf{d}} \approx \bmap + \text{R}s
+\end{equation}
+Il devient possible d'évaluer la variance de cette distribution. Sur 250 tirages de $\beta$, on résout \eqref{Tinex}, on calcule les extrema ainsi que les déviations standards. On fait de même avec $\bmap$ solution de l'optimisation de scipy, et l'on compare les extrema sur chacun des points du domaine; disposant d'une écriture analytique pour $\beta_{\text{True}}$, on peut évaluer la fiabilité de la méthode en traçant toutes ces grandeurs dans une même figure voir Fig.\eqref{s}: 
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.52]{Just_bmapTinf50.png}
+\caption{À gauche évolution de beta au cours de l'optimisation pour $T_\infty$. La droite bleue représente le first guess de $\beta$. Plus la teinte est foncée plus on se rapproche de $\bmap$.}
+\label{tinf50}
+\end{figure}
+
+\dsb \subsubsection{Propagation d'une onde en fluide visqueux} \bk
+L'équation de Burgers permet d'étudier la propagation des ondes et peut faire apparaître des chocs. Nous voulons dans un premier temps déterminer si l'inférence peut capturer les chocs. Dans un second temps, nous voulons déterminer si ce genre de méthode permet de capturer les non-linéarités. \\
+Notons que cette démarche s'inscrit dans un projet plus vaste : utiliser une combinaison de méthode pilotée par les données et de machine learning pour construire un modèle de différences finies augmentées dépassant les capacités des méthodes de différences finies classiques.\\
+
+\noindent Contrairement au cas précédent, l'équation de Burgers est instationnaire. Il a fallu alors écrire un code qui réalise une inférence à chaque itération temporelle. Le principe de l'inférence, la façon dont elle est réalisée et son objectif sont les mêmes que décrits plus haut.\\
+
+\noindent L'équation de Burger visqueuse (VBE) s'écrit 
+\begin{equation}
+\frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} = \nu\frac{\partial^2 u}{\partial x^2}  \label{VBETrue} \tag{VBE}
+\end{equation}
+Nous résolvons cette équation en utilisant le schéma de Lax-Wendroff. La condition initiale est est un sinus de déphasage nulle, aniti-symétrique par rapport au centre du domaine.\\
+Comme précédemment, il nous faut approximer cette équation avec un terme $\beta$ modélisant un des termes de l'équation précédente. Nous remplaçons ici le terme non-linéaire de convection $\displaystyle u \frac{\partial u}{\partial x}$. On définit alors
+
+\begin{equation}
+\frac{\partial u}{\partial t} + u \beta(x,t) = \nu \frac{\partial^2 u}{\partial x^2} \label{VBEbeta} \tag{VBE$\beta$}
+\end{equation}
+L'équation précédente est linéaire en $u$ alors que l'équation \eqref{VBETrue} ne l'est pas.\\
+On définit la fonction de coût en comparant les solutions de ces deux équations. Si $n$ est l'itération courante, ajuster $\beta_n$ nécessite donc d'évaluer l'écart entre les solutions exactes et inexactes à l'itération $n+1$.\\
+Pour éviter toutes ambiguïtés, on précise les indices dans la fonction de coût suivante 
+\begin{equation}
+\mathcal{J}^n = \frac{1}{2} \bepar{\Delta_{_{\text{LW-CN}}}U^{n+1}}^T \text{C}_\text{obs}^{-1} \bepar{\Delta_{_{\text{LW-CN}}}U^{n+1}} + \lambda \bepar{\beta^n -
+			\beta_{\text{p}}}^T \text{I}_d \bepar{\beta^n - \beta_\text{p}}
+\end{equation}
+Avec 
+\begin{equation}
+\Delta_{_{\text{LW-CN}}}U^{n+1} = \bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}
+\end{equation}
+De façon similaire, $\bmap^{n}$ sera obtenu en résolvant un problème d'optimisation :
+\begin{equation}
+\beta_{\text{MAP}}^n = \argmin \mathcal{J}^n
+\end{equation}
+Il est nécessaire de vérifier si les solutions sont similaires à toutes les itérations. Dans la figure suivante, une comparaison aux itérations 30 et 35 (sur 50) des champs $u^n_{\text{True}}$ et $u^n_{\beta}$ sont présentées. 
+
+\begin{figure}[!ht]
+\vspace{-5mm}
+\centering
+\includegraphics[scale=0.7]{nu0_0250_CFL0_40_Nx_52_InferenceVSTrue_it35.png}
+\caption{}
+\label{}
+\end{figure}
+
+Les zones opaques représentent les variations possibles des distributions des $\bmap$. Leurs amplitudes assez grandes proviennent du fait qu'un nombre d'itérations maximales assez faible à été imposé lors de la minimisation.\\ 
+Toujours est il que la superposition est parfaite pour toutes les itérations et qu'on a prouvé que l'inférence pouvait être utilisée même dans des cas instationnaires.\\
+Le choc est bien capturé et la dissipation par effet visqueux dans la suite de la simulation est également parfaitement retrouvée.\\
+
+\noindent Dans cette thèse, mettre en place une procédure d'inférence n'est pas une fin en soi, mais une étape qu'il était indispensable de maîtriser pour l'atteinte des objectifs visés.\\
+Comprendre le formalisme mathématique de cet outil, avec la fonction de correspondance $\mathcal{L}$, l'optimisation de paramètres $\beta$ pour faire correspondre modèle et observations, permet d'avoir une première approche des algorithmes d'entraînement des intelligences artificielles comme le réseau de neurones.\\
+En effet, les algorithmes de machine learning (ML) fonctionnent sur un principe très similaire à celui de l'inférence Bayesienne puisqu'ils cherchent à ajuster plusieurs paranmètres (parfois des milliers voire des millions) afin de faire correspondre des entrées (\textit{input)} à des sorties, toutes les deux fournies par l'utilisateur; c'est ce qu'on appelle l'entraînement ou \textit{learning}. Une fois ces paramètres établi, ces méthodes entendent prédire des sorties à partir d'entrées inédites, c'est ce qu'on appelle la prédiction.\\
+L'idée de généraliser les données de l'inférence par ML est donc de d'apprendre la fonctionnelle qui existe entre les caractéristiques d'un problème et le vecteur $\bmap$ calculé au préalable sur plusieurs cas, afin de pouvoir prédire dans des cas inédits le bon vecteur de correction.\\
+
+\brick \subsection{Les réseaux de neurones} \bk
 %En parallèle, notre ère connait une hausse de l'utilisation d'algorithmes d'intelligence artificielle (IA) ou d'élaboration de procédés de résolution de problème pilotées par les données; et le nombre d'articles sur ces thèmes ainsi que leurs applications pratiques explosent. L'idée majeur de ce genre de méthode est le fait qu'on peut découvrir de l'information au sein des données afin de les généraliser (dans le cas d'IA.) ou de s'en servir pour corriger les prédictions de modèles peu fiables (dans le cas des méthodes pilotées par les données).\\
 %Appliqués aux problématiques de la turbulence, ces algorithmes pourraient par exemple aider à identifier les régions ou les modélisations RANS ne sont pas fiables \citep{ling2015evaluation}, tirer le meilleure de résultats algébriques comme ceux de \citep{pope1975more} pour élaborer des modèles RANS augmentés par une IA type réseaux de neurones ou forêt aléatoire \citep{ling2016machine}.\\
 %À partir de méthodes type inférence baysienne, on peut également construire des méthodes utilisant la structure de modèles RANS à une ou deux équations en injectant un vecteur de correction d'une itération à l'autre en comparant avec des cas dont les résultats DNS ou expérimentaux sont connus c'est en partie le travail effectué par \citep{singh2017machine}, \citep{parish2016paradigm} ou encore \citep{tracey2015machine} pour ne citer que quelques travaux.\\
