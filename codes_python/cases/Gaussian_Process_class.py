@@ -52,15 +52,15 @@ def training_set(T, N_sample, scale=False, shuffle=False):
     for t in T.T_inf_lst :
         sT_inf = "T_inf_" + str(t)  # Clé pour les dictionnaires de l'objet T
         
-        if t != 50 :        
-            bmap_ = "opti_scipy_beta_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
-            chol_ = "opti_scipy_cholesky_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
-            print ("Pour T_inf = {}, Opti selectionné".format(t))
+#        if t != 50 :        
+#            bmap_ = "opti_scipy_beta_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
+#            chol_ = "opti_scipy_cholesky_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
+#            print ("Pour T_inf = {}, Opti selectionné".format(t))
             
-        else :
-            bmap_ = "adj_bfgs_beta_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
-            chol_ = "adj_bfgs_cholesky_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
-            print ("Pour T_inf = {}, Adj_BFGS selectionné".format(t))
+#        else :
+        bmap_ = "adj_bfgs_beta_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
+        chol_ = "adj_bfgs_cholesky_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
+        print ("Pour T_inf = {}, Adj_BFGS selectionné".format(t))
             
         bmap_ = osp.join("./data/matrices",bmap_)
         chol_ = osp.join("./data/matrices",chol_)

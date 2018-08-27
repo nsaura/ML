@@ -360,22 +360,52 @@ L'équation exacte qui régit ce problème s'écrit
 \end{equation}
 Nous construisons $\covpri$ en diagonalisant des valeurs fournies par \citep{parish2016paradigm}.\\
 
-Au cours de la minimisation,  afin de pouvoir voir la solution se dessiner, il a été nécessaire de coder un solver BFGS en suivant \citep{nocedal2006numerical}. Un exemple de cette évolution pour \tinf = $50$ est illustrée Fig.\eqref{tinf50}.\\
-Le critère de convergence est ici une condition sur $||\nabla_{\beta_k}\J||_\infty$ ou bien sur un nombre limite d'itérations. La figure Fig.\eqref{s} récapitule l'évolution de cette grandeur en cours d'optimisation.\\
-\indent La méthode BFGS permet également d'avoir accès à la hessienne inverse de $\J$ évaluée sur $\bmap$. Grâce à sa décomposition de Cholesky, on peut construire une approximation de la distribution $p\bepar{\beta\,|\,\textbf{d}}$ autour de $\bmap$. \\
+Au cours de la minimisation,  afin de pouvoir voir la solution se dessiner, il a été nécessaire de coder un solver BFGS en suivant \citep{nocedal2006numerical}. Un exemple de cette évolution pour \tinf = $50$ est illustrée Fig.\eqref{tinf50cpt_500}.\\
+Le critère de convergence est ici une condition sur $||\nabla_{\beta_k}\J||_\infty$ ou bien sur un nombre limite d'itérations. La figure Fig.\eqref{evolT50} récapitule l'évolution de cette grandeur en cours d'optimisation.\\
+
+\noindent La méthode BFGS permet également d'avoir accès à la hessienne inverse de $\J$ évaluée sur $\bmap$. Grâce à sa décomposition de Cholesky, on peut construire une approximation de la distribution $p\bepar{\beta\,|\,\textbf{d}}$ autour de $\bmap$. 
 On note $R$ tel que $\text{Chol}\bepar{B_{\bmap}^{-1}} = \text{R}\text{R}^T$ et $s \sim \mathcal{N}\bepar{0,1}$. Ainsi 
 \begin{equation}
-p\bepar{\beta\,|\,\textbf{d}} \approx \bmap + \text{R}s
+p\bepar{\beta\,|\,\textbf{d}} \approx \bmap + \text{R}s \label{distribbmap}
 \end{equation}
-Il devient possible d'évaluer la variance de cette distribution. Sur 250 tirages de $\beta$, on résout \eqref{Tinex}, on calcule les extrema ainsi que les déviations standards. On fait de même avec $\bmap$ solution de l'optimisation de scipy, et l'on compare les extrema sur chacun des points du domaine; disposant d'une écriture analytique pour $\beta_{\text{True}}$, on peut évaluer la fiabilité de la méthode en traçant toutes ces grandeurs dans une même figure voir Fig.\eqref{s}: 
+Il devient possible d'évaluer la variance de cette distribution. Sur 250 tirages de $\beta$, on résout \eqref{Tinex}, on calcule les extrema ainsi que les déviations standards. On fait de même avec $\bmap$ solution de l'optimisation de Scipy, et l'on compare les extrema sur chacun des points du domaine; disposant d'une écriture analytique pour $\beta_{\text{True}}$, on peut évaluer la fiabilité de la méthode en traçant toutes ces grandeurs dans une même figure voir Fig.\eqref{comp_bmap_hbmap}. \\
+ Il arrive que la méthode scipy sorte de la boucle d'optimisation pour des raisons propres à l'implémentation. C'est en parti pour cela que nous avons recodé la méthode, et aussi pour comprendre le processus et avoir accès aux différents $\beta$, aux valeurs des hessiennes inverse etc.\\
+ Le temps de calcul est toutefois nettement plus conséquent avec le code «maison». Les différences ne sont jamais vraiment grandes à part pour le cas \tinf = 50 que nous présentons ici. 
+
+\pagebreak
 
 \begin{figure}[!ht]
 \centering
 \includegraphics[scale=0.52]{Just_bmapTinf50.png}
-\caption{À gauche évolution de beta au cours de l'optimisation pour $T_\infty$. La droite bleue représente le first guess de $\beta$. Plus la teinte est foncée plus on se rapproche de $\bmap$.}
-\label{tinf50}
+\caption{\small{À gauche évolution de beta au cours de l'optimisation pour $T_\infty$. La droite bleue représente le first guess de $\beta$. Plus la teinte est foncée plus on se rapproche de $\bmap$.}}
+\label{tinf50cpt_500}
 \end{figure}
 
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.75]{bmap_adjbfgs_T50500png.png}
+\caption{\small{Évolution de la norme infinie du gradient de la fonction de coût évalué en $\beta$ au cours de l'optimisation. On voit que cette grandeur tend vers une valeur bien inférieure à zéro, attestant la convergence de l'optimisation.}}
+\label{evolT50}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=10cm, width=8.43cm]{bmap_50_adjVStheo.png} \hfill
+\includegraphics[height=10cm, width=8.43cm]{hbmap_50_VS_ObsField.png}
+\caption{\small{\textbf{À gauche} : comparaison du champ $\bmap$ obtenu avec le code BFGS «maison» (points oranges) et du champ $\beta$ théorique obtenu à partir de \eqref{Ttrue}. Les points verts représentent un tirage de \eqref{distribbmap}. Les carrés mauves et noirs représentent les minimums et maximums des tirages (250) de $\beta$. \\ \textbf{À droite} : comparaison du champ de température exact, solution de \eqref{Ttrue} (ligne solide) avec la solution de \eqref{Tinex} en prenant $\bmap$ (points oranges) ou un tirage de \eqref{distribbmap} (points vert).}}
+\label{comp_bmap_hbmap}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=10cm, width=8.43cm]{bmap_50_scipyVStheo.png} \hfill
+\includegraphics[height=10cm, width=8.43cm]{hbmap_50scipy_VS_ObsField.png}
+\caption{\small{Même légende que Fig.\eqref{comp_bmap_hbmap}. La procédure est exactement la même que décrite précedemment sauf que le code BFGS utilisé est celui de Scipy. L'optimisation s'est vraisemblablement terminé avant convergence.}}
+\label{scipycomp_bmap_hbmap}
+\end{figure}
+
+ 
+ 
 \dsb \subsubsection{Propagation d'une onde en fluide visqueux} \bk
 L'équation de Burgers permet d'étudier la propagation des ondes et peut faire apparaître des chocs. Nous voulons dans un premier temps déterminer si l'inférence peut capturer les chocs. Dans un second temps, nous voulons déterminer si ce genre de méthode permet de capturer les non-linéarités. \\
 Notons que cette démarche s'inscrit dans un projet plus vaste : utiliser une combinaison de méthode pilotée par les données et de machine learning pour construire un modèle de différences finies augmentées dépassant les capacités des méthodes de différences finies classiques.\\
@@ -412,9 +442,9 @@ Il est nécessaire de vérifier si les solutions sont similaires à toutes les i
 \begin{figure}[!ht]
 \vspace{-5mm}
 \centering
-\includegraphics[scale=0.7]{nu0_0250_CFL0_40_Nx_52_InferenceVSTrue_it35.png}
-\caption{}
-\label{}
+\includegraphics[scale=0.65]{burgers_deuxiteration35.png}
+\caption{\small{\textbf{À droite}: comparaison des champs de vitesse exactes (lignes solides) et des $u\bepar{\bmap}$ (cercles) obtenues à partir de \eqref{VBEbeta}, des itérations \textit{temporelles} différentes. La correspondance est très précise. \textbf{À gauche} Les corrections $\beta$ et leurs variances, élevées à cause d'un nombre d'itération seuil fixé.}}
+\label{burger2it}
 \end{figure}
 
 Les zones opaques représentent les variations possibles des distributions des $\bmap$. Leurs amplitudes assez grandes proviennent du fait qu'un nombre d'itérations maximales assez faible à été imposé lors de la minimisation.\\ 
@@ -423,17 +453,91 @@ Le choc est bien capturé et la dissipation par effet visqueux dans la suite de 
 
 \noindent Dans cette thèse, mettre en place une procédure d'inférence n'est pas une fin en soi, mais une étape qu'il était indispensable de maîtriser pour l'atteinte des objectifs visés.\\
 Comprendre le formalisme mathématique de cet outil, avec la fonction de correspondance $\mathcal{L}$, l'optimisation de paramètres $\beta$ pour faire correspondre modèle et observations, permet d'avoir une première approche des algorithmes d'entraînement des intelligences artificielles comme le réseau de neurones.\\
-En effet, les algorithmes de machine learning (ML) fonctionnent sur un principe très similaire à celui de l'inférence Bayesienne puisqu'ils cherchent à ajuster plusieurs paranmètres (parfois des milliers voire des millions) afin de faire correspondre des entrées (\textit{input)} à des sorties, toutes les deux fournies par l'utilisateur; c'est ce qu'on appelle l'entraînement ou \textit{learning}. Une fois ces paramètres établi, ces méthodes entendent prédire des sorties à partir d'entrées inédites, c'est ce qu'on appelle la prédiction.\\
-L'idée de généraliser les données de l'inférence par ML est donc de d'apprendre la fonctionnelle qui existe entre les caractéristiques d'un problème et le vecteur $\bmap$ calculé au préalable sur plusieurs cas, afin de pouvoir prédire dans des cas inédits le bon vecteur de correction.\\
+En effet, les algorithmes de machine learning (ML) fonctionnent sur un principe très similaire à celui de l'inférence Bayesienne puisqu'ils cherchent à ajuster plusieurs paramètres (parfois des milliers voire des millions) afin de faire correspondre des entrées (\textit{inputs)} à des sorties, toutes les deux fournies par l'utilisateur; c'est ce qu'on appelle l'entraînement ou \textbf{\textit{training}}. Une fois ces paramètres établis, ces méthodes entendent prédire des sorties à partir d'entrées inédites, c'est ce qu'on appelle \textbf{la prédiction}.\\
 
+\noindent L'idée de généraliser les données de l'inférence par ML est donc de découvrir la fonctionnelle (si elle existe) liant les caractéristiques (\textit{inputs}) d'un problème et le vecteur $\bmap$ calculé au préalable sur plusieurs cas, afin de pouvoir prédire la bonne correction dans des cas inédits.
+ 
 \brick \subsection{Les réseaux de neurones} \bk
+Sans entrer dans trop de détails historiques ou mathématiques, le réseau de neurones (abrégé NN pour Neural Network) est un algorithme d'intelligence artificielle datant des années 50. Cette algorithme a été sous-estimé et sous-utilisé notamment parce que les ordinateurs de l'époque n'étaient pas en capacité d'exploiter les possibilités de cet outil et qu'on manquait de données.\\
+Aujourd'hui les NN sont utilisés dans énormément de champs de la physique, de la médecine de l'informatique (évidemment) à tel point qu'ils sont omniprésents dans notre vie quotidienne.\\
+En ce qui concerne leur utilisation dans le domaine de la Turbulence, les NN se font de plus en plus de place. On distingue deux grandes tendances dans l'utilisation des IA dans la turbulence : la première consiste à découvrir les \textit{équations} dans les données, on peut citer les travaux de \citep{kutz2017deep} ou \citep{raissi2018hidden} parmi beaucoup d'autres. \\
+La deuxième approche, et c'est celle qui est suivie dans ce travail, et d'essayer de corriger les erreurs pour des modèles qui sont le plus utilisés, comme le \keps $ $. Les études de référence qui constituent la base de cette thèse sont \citep{parish2016paradigm}, \citep{singh2017machine}, \citep{wu2018data} ou encore \citep{wang2017physics} entre autres. \\
+Cette approche peut faire émerger de nouveaux modèles, dits augmentées, qui pourraient ne pas être limités comme le sont les schémas aux différences finies. C'est l'idée qui se cache derrière l'injection du vecteur $\beta$ dans l'équation \eqref{VBEbeta}.\\
+
+\noindent Nous allons revenir sur les cas évoqués lors de la section précédente et présenter la procédure de généralisation par NN.
+
+\dsb \subsubsection{Problème thermique} \bk
+Jusqu'à présent, le problème inverse consistant à trouver $\beta$ en fonction des obervations. \\
+La fomulation du problème augmenté est directe, \cad  $ $, qu'on va chercher $\beta$ en fonctions de caractéristiques du problème.\\
+La force de cette approche est que l'on peut choisir le nombres de caractéristiques que l'on veut, ou aui s'avèrent prodiguer la meilleur capacité de généralisation du réseau sur des problèmes inédits.\\
+De façon schématique, le NN cherche à trouver $\mathcal{F}$ tel que 
+\begin{equation}
+\beta = \mathcal{F}\bepar{\eta_1,\,\eta_2,\, ...,\eta_n}
+\end{equation}
+Les $\eta_i$ représentent les caractéristiques ou inputs choisies.\\
+Dans le cas du problème thermique la température du fluide à l'extérieur du barreau \tinf $ $ ainsi que la température au point courant dans le barreau sont séléctionnés comme $\eta_1$ et $\eta_2$. On cherchera alors pour chaque point de discrétisation:
+\begin{equation}
+\beta_i = \mathcal{F}\bepar{T_{\text{inf}}, \, T_i}, \ \ \forall i \in \becro{0,\, N-1} 
+\end{equation}
+Il faut à présent contruire la matrice $X$ des entrées. Cette matrice prend la valeur du couple $\bepar{T_{\text{inf}}, \, T_i}$ pour tous les cas de \tinf $ $ considérés, et pour chaque point de discrétisation du domaine.\\
+En face de ce couple, on fait correspondre la valeur de $\beta_i$ à laquelle on veut que nos poids et nos transformations nous amènent. La matrice des $\beta$ empilés sera notée $Y$.\\
+
+\noindent On considère \tinf $ $ de 5 à 50 degré par pas de 5, soit 10 cas. La discrétisation spatiale se fait sur 69 points.\\
+On découpe ensuite $X$ et $y$ en deux ensembles le \textit{training set} : $X_{\text{train}} = 80\% X$, $y_{\text{train}}= 80\% y$ et les 20 pourcents restant formeront le \textit{test set}. Les données seront préalablement mélangés aléatoirement pour briser toute corrélation entre les points.\\
+Il faut également réduire et recentrer les données. On calculera la déviation standard et la moyenne sur le \textit{training set}; c'est l'échelle qu'on gardera également pour lors de la phase de prédiction.\\
+Comme pour l'inférence, on compare les $y$ du train set avec les prédiction du réseau sur les $X$. On peut soit prendre la somme, soit prendre la moyenne de cet écart sur l'ensemble du training set. L'exemple le plus simple de fonction de coût $\J$ est la formulation des moindres carrées ordinaires (OLS)  :
+\begin{equation}
+\J = \sum_{x, \, y\, \in\, \{X_{\text{train}},\, y_{\text{train}}\}} \bepar{y - y^*\bepar{x}}^2 \tag{OLS} \label{JOLS}
+\end{equation}
+Avec $y^*$ représentant la prédiction du réseau. \\
+On minimise cette erreur en cherchant la plus grande pente (voir les algorithmes de Gradient Descent \citep{Goodfellow-et-al-2016} ou Adam \citep{kingma2014adam}).\\
+Enfin après avoir mis à jour les poids, on calcule $\J$ sur le test set. Si l'erreur est suffisamment basse, cela voudra dire que les poids du réseau sont optimum pour pouvoir généraliser les données de l'apprentissage.\\
+
+En attendant  : formule du Lasso 
+
+\begin{equation}
+\J = \sum_{x, \, y\, \in\, \{X_{\text{train}},\, y_{\text{train}}\}} \bepar{y - y^*\bepar{x}}^2 + \lambda \sum_{w\, \in\, W} |w| \tag{OLS} \label{JOLS}
+\end{equation}
+\noindent 
+%\noindent On pourra schématiser un réseau de neurones comme une succession de transformations pour qu'un ensemble de données A (inputs) deviennent un ensemble B, de taille et composition différents.\\
+%Les successions de transformation se font en couche et une matrice de poids lie chaque couche. \\
+%L'idée du training d'un réseau de neurones et de trouver les poids qui maximisent la correspondance entre les entrées et les sorties.\\
+
+
+
 %En parallèle, notre ère connait une hausse de l'utilisation d'algorithmes d'intelligence artificielle (IA) ou d'élaboration de procédés de résolution de problème pilotées par les données; et le nombre d'articles sur ces thèmes ainsi que leurs applications pratiques explosent. L'idée majeur de ce genre de méthode est le fait qu'on peut découvrir de l'information au sein des données afin de les généraliser (dans le cas d'IA.) ou de s'en servir pour corriger les prédictions de modèles peu fiables (dans le cas des méthodes pilotées par les données).\\
 %Appliqués aux problématiques de la turbulence, ces algorithmes pourraient par exemple aider à identifier les régions ou les modélisations RANS ne sont pas fiables \citep{ling2015evaluation}, tirer le meilleure de résultats algébriques comme ceux de \citep{pope1975more} pour élaborer des modèles RANS augmentés par une IA type réseaux de neurones ou forêt aléatoire \citep{ling2016machine}.\\
 %À partir de méthodes type inférence baysienne, on peut également construire des méthodes utilisant la structure de modèles RANS à une ou deux équations en injectant un vecteur de correction d'une itération à l'autre en comparant avec des cas dont les résultats DNS ou expérimentaux sont connus c'est en partie le travail effectué par \citep{singh2017machine}, \citep{parish2016paradigm} ou encore \citep{tracey2015machine} pour ne citer que quelques travaux.\\
 
 %\href{./objectif.pdf}{This is my link}
 
-   
+\pagebreak
+
+\dsb \subsubsection{Propagation d'une onde en fluide visqueux} \bk
+\noindent On va ici utiliser les mêmes étapes que précédemment dans la construction de $X$ et $y$. Mais le choix des inputs est ici plus compliqué car le problème présente deux aspects à apprendre : 
+\begin{itemize}[leftmargin=5mm]
+\item[--] D'abord apprendre la fonctionnelle entre les entrées et les sorties;
+\item[--] Et réfléchir pour prendre en compte la dynamique.
+\end{itemize}   
+Sur l'apprentissage de la dynamique beaucoup de travaux ont été effecutés notamment en utilisant des méthodes de réduction \citep{parish2016reduced}. Ces travaux se basent sur la théorie de \citep{chorin2002optimal} et \citep{tsung1995phase}. Ces méthodes sont en pleines expansions et nous projettons d'y passer encore du temps.\\
+
+\noindent Sans utiliser ce genre de méthode, et sans se placer dans l'espace des phases, nous avons commencé à tester s'il était possible de résoudre l'équation de Brugers dans une forme linéaire avec un modèle de Crank-Nicholson augmenté par un NN.\\
+Dans un premier temps, il faut réaliser l'inférence sur plusieurs cas en faisant varier la viscosité et en enregistrant la valeur du $\bmap$ pour tous les cas et toutes les itérations temporelles. Mais il faut aussi veiller à ce que la viscosité soi pas trop faible. Dans le cas échéant, le modèle de Lax-Wendroff devenant instable au niveau du choc, des valeurs corrompues se propagent dans tous le domaine.\\
+
+\pagebreak
+
+\navy \section{Conclusion} \bk
+\noindent Pour résumer, durant cette première année, nous nous sommes tout d'abord concentrés sur les basiques du ML et sur les articles de références comme ceux cités dans le corps du rapport. Ces premiers pas nous ont permis de nous familiariser avec les mathématiques propres à la discipline et nous a aidé à mieux comprendre les enjeux des méthodes et du projet.\\
+À partir d'une étude bibliographique, nous avons pu déterminer les pistes à approfondir pour tenter de mener à bien notre projet qui est d'instiller des loi sde conservations dans un apprentissage pour être sur que la prédiction d'une IA respecte la Physique et qu'elle soit donc viable.\\
+Nous avons alors essayé plusieurs méthodes : des méthodes à deux temps comme la combinaison inférence/Machine learning ou bien des méthodes de prédiction directes comme le deuxième cas de Burgers (section \eqref{d}). Nous avons également essayé d'aller plus loin que l'équation de Burgers en regardant l'équation de Thomas pour le cas magnéto-hydrodynamique.\\
+
+\noindent Au moment d'écrire ce rapport nous étudions la possibilité d'utiliser les algorithmes d'\textit{apprentissage renforcé} pour corriger la prédiction d'un réseau de neurones conformément à une politique. Cette politique est bien naturellement la conservation de l'énergie dans le problème avec le champ de vitesse issue de la prédiction du NN. \\
+Si l'énergie est conservée d'une itération à l'autre, alors la politique donne une appréciation positive à la prédiction du NN. Dans le cas contraire, elle donne une apprédiation négative et la prédiction recommence.\\
+Ce procédé s'arrête lorsque les points du NN seront en mesure de faire des prédictions à l'image d'une équation.\\
+
+
+
+
 \pagebreak
 
 \bibliographystyle{apalike}
