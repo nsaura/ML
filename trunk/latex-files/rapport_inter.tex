@@ -330,7 +330,7 @@ Sans rentrer dans dans tous les détails, le BFGS utilise un algorithme de \text
 
 \item[$\bullet$] Une condition sur la pente (ou la courbure) : 
 \begin{equation}
-|\nabla(\beta_{k+1})|^T\textbf{p}_k < C_2 |\nabla_k^T\textbf{p}_k|
+|\nabla(\beta_{k+1})^T\textbf{p}_k| < C_2 |\nabla\bepar{\beta_k}^T\textbf{p}_k|
 \end{equation}
 \end{itemize} 
 $C_1$ et $C_2$ étant deux seuils préalablement définis.\\
@@ -374,35 +374,35 @@ Il devient possible d'évaluer la variance de cette distribution. Sur 250 tirage
 
 \pagebreak
 
-\begin{figure}[!ht]
-\centering
-\includegraphics[scale=0.52]{Just_bmapTinf50.png}
-\caption{\small{À gauche évolution de beta au cours de l'optimisation pour $T_\infty$. La droite bleue représente le first guess de $\beta$. Plus la teinte est foncée plus on se rapproche de $\bmap$.}}
-\label{tinf50cpt_500}
-\end{figure}
+%\begin{figure}[!ht]
+%\centering
+%\includegraphics[scale=0.52]{Just_bmapTinf50.png}
+%\caption{\small{À gauche évolution de beta au cours de l'optimisation pour $T_\infty$. La droite bleue représente le first guess de $\beta$. Plus la teinte est foncée plus on se rapproche de $\bmap$.}}
+%\label{tinf50cpt_500}
+%\end{figure}
 
-\begin{figure}[!ht]
-\centering
-\includegraphics[scale=0.75]{bmap_adjbfgs_T50500png.png}
-\caption{\small{Évolution de la norme infinie du gradient de la fonction de coût évalué en $\beta$ au cours de l'optimisation. On voit que cette grandeur tend vers une valeur bien inférieure à zéro, attestant la convergence de l'optimisation.}}
-\label{evolT50}
-\end{figure}
+%\begin{figure}[!ht]
+%\centering
+%\includegraphics[scale=0.75]{bmap_adjbfgs_T50500png.png}
+%\caption{\small{Évolution de la norme infinie du gradient de la fonction de coût évalué en $\beta$ au cours de l'optimisation. On voit que cette grandeur tend vers une valeur bien inférieure à zéro, attestant la convergence de l'optimisation.}}
+%\label{evolT50}
+%\end{figure}
 
-\begin{figure}[!ht]
-\centering
-\includegraphics[height=10cm, width=8.43cm]{bmap_50_adjVStheo.png} \hfill
-\includegraphics[height=10cm, width=8.43cm]{hbmap_50_VS_ObsField.png}
-\caption{\small{\textbf{À gauche} : comparaison du champ $\bmap$ obtenu avec le code BFGS «maison» (points oranges) et du champ $\beta$ théorique obtenu à partir de \eqref{Ttrue}. Les points verts représentent un tirage de \eqref{distribbmap}. Les carrés mauves et noirs représentent les minimums et maximums des tirages (250) de $\beta$. \\ \textbf{À droite} : comparaison du champ de température exact, solution de \eqref{Ttrue} (ligne solide) avec la solution de \eqref{Tinex} en prenant $\bmap$ (points oranges) ou un tirage de \eqref{distribbmap} (points vert).}}
-\label{comp_bmap_hbmap}
-\end{figure}
+%\begin{figure}[!ht]
+%\centering
+%\includegraphics[height=10cm, width=8.43cm]{bmap_50_adjVStheo.png} \hfill
+%\includegraphics[height=10cm, width=8.43cm]{hbmap_50_VS_ObsField.png}
+%\caption{\small{\textbf{À gauche} : comparaison du champ $\bmap$ obtenu avec le code BFGS «maison» (points oranges) et du champ $\beta$ théorique obtenu à partir de \eqref{Ttrue}. Les points verts représentent un tirage de \eqref{distribbmap}. Les carrés mauves et noirs représentent les minimums et maximums des tirages (250) de $\beta$. \\ \textbf{À droite} : comparaison du champ de température exact, solution de \eqref{Ttrue} (ligne solide) avec la solution de \eqref{Tinex} en prenant $\bmap$ (points oranges) ou un tirage de \eqref{distribbmap} (points vert).}}
+%\label{comp_bmap_hbmap}
+%\end{figure}
 
-\begin{figure}[!ht]
-\centering
-\includegraphics[height=10cm, width=8.43cm]{bmap_50_scipyVStheo.png} \hfill
-\includegraphics[height=10cm, width=8.43cm]{hbmap_50scipy_VS_ObsField.png}
-\caption{\small{Même légende que Fig.\eqref{comp_bmap_hbmap}. La procédure est exactement la même que décrite précedemment sauf que le code BFGS utilisé est celui de Scipy. L'optimisation s'est vraisemblablement terminé avant convergence.}}
-\label{scipycomp_bmap_hbmap}
-\end{figure}
+%\begin{figure}[!ht]
+%\centering
+%\includegraphics[height=10cm, width=8.43cm]{bmap_50_scipyVStheo.png} \hfill
+%\includegraphics[height=10cm, width=8.43cm]{hbmap_50scipy_VS_ObsField.png}
+%\caption{\small{Même légende que Fig.\eqref{comp_bmap_hbmap}. La procédure est exactement la même que décrite précedemment sauf que le code BFGS utilisé est celui de Scipy. L'optimisation s'est vraisemblablement terminé avant convergence.}}
+%\label{scipycomp_bmap_hbmap}
+%\end{figure}
 
  
  
@@ -439,13 +439,13 @@ De façon similaire, $\bmap^{n}$ sera obtenu en résolvant un problème d'optimi
 \end{equation}
 Il est nécessaire de vérifier si les solutions sont similaires à toutes les itérations. Dans la figure suivante, une comparaison aux itérations 30 et 35 (sur 50) des champs $u^n_{\text{True}}$ et $u^n_{\beta}$ sont présentées. 
 
-\begin{figure}[!ht]
-\vspace{-5mm}
-\centering
-\includegraphics[scale=0.65]{burgers_deuxiteration35.png}
-\caption{\small{\textbf{À droite}: comparaison des champs de vitesse exactes (lignes solides) et des $u\bepar{\bmap}$ (cercles) obtenues à partir de \eqref{VBEbeta}, des itérations \textit{temporelles} différentes. La correspondance est très précise. \textbf{À gauche} Les corrections $\beta$ et leurs variances, élevées à cause d'un nombre d'itération seuil fixé.}}
-\label{burger2it}
-\end{figure}
+%\begin{figure}[!ht]
+%\vspace{-5mm}
+%\centering
+%\includegraphics[scale=0.65]{burgers_deuxiteration35.png}
+%\caption{\small{\textbf{À droite}: comparaison des champs de vitesse exactes (lignes solides) et des $u\bepar{\bmap}$ (cercles) obtenues à partir de \eqref{VBEbeta}, des itérations \textit{temporelles} différentes. La correspondance est très précise. \textbf{À gauche} Les corrections $\beta$ et leurs variances, élevées à cause d'un nombre d'itération seuil fixé.}}
+%\label{burger2it}
+%\end{figure}
 
 Les zones opaques représentent les variations possibles des distributions des $\bmap$. Leurs amplitudes assez grandes proviennent du fait qu'un nombre d'itérations maximales assez faible à été imposé lors de la minimisation.\\ 
 Toujours est il que la superposition est parfaite pour toutes les itérations et qu'on a prouvé que l'inférence pouvait être utilisée même dans des cas instationnaires.\\
@@ -522,7 +522,22 @@ En attendant  : formule du Lasso
 Sur l'apprentissage de la dynamique beaucoup de travaux ont été effecutés notamment en utilisant des méthodes de réduction \citep{parish2016reduced}. Ces travaux se basent sur la théorie de \citep{chorin2002optimal} et \citep{tsung1995phase}. Ces méthodes sont en pleines expansions et nous projettons d'y passer encore du temps.\\
 
 \noindent Sans utiliser ce genre de méthode, et sans se placer dans l'espace des phases, nous avons commencé à tester s'il était possible de résoudre l'équation de Brugers dans une forme linéaire avec un modèle de Crank-Nicholson augmenté par un NN.\\
-Dans un premier temps, il faut réaliser l'inférence sur plusieurs cas en faisant varier la viscosité et en enregistrant la valeur du $\bmap$ pour tous les cas et toutes les itérations temporelles. Mais il faut aussi veiller à ce que la viscosité soi pas trop faible. Dans le cas échéant, le modèle de Lax-Wendroff devenant instable au niveau du choc, des valeurs corrompues se propagent dans tous le domaine.\\
+Dans un premier temps, il faut réaliser l'inférence sur plusieurs cas en faisant varier la viscosité et en enregistrant la valeur du $\bmap$ pour tous les cas et toutes les itérations temporelles. \\
+Il faut aussi veiller à ce que la valeur de la viscosité soit suffisamment élevée. Dans le cas contraire, les modèles numériques devenant instables au niveau du choc, des valeurs corrompues se propagent dans tout le domaine.\\
+
+\noindent Il a fallu alors réfléchir aux inputs $\eta_i^n$ à choisir pour constituer la fonctionnelle $\beta^n = \mathcal{F}\bepar{\eta_i^n}$ . En s'inspirant des différence finies, nous avons considéré un nœud spatial centré au point $i$ de l'itération $n$ : $$X = \{ u^n_{i-1},\, u^n_{i},\, u^n_{i+1}\}$$. L'idée est de déterminer si il était possible de trouver dans les données une corrélation spatiale propre au champ de vitesse.\\
+Nous avons également essayé de rajouter les coordonnées spatiales dans chacun des entrées, améliorant la réduction de l'erreur sur le \textit{training set}. La matrice d'entrées devint alors $$X = \{ x_{i-1}, \, x_i,\, x_{i+1},, u^n_{i-1},\, u^n_{i},\, u^n_{i+1}\}$$
+Enfin nous avons également considéré des entrées prenant les valeurs du champ de vitesse aux itérations précédentes (une ou deux). Nous écrivons la matrice $X$ pour une itération : $$ \beta^{n+1} = \bepar{x_{i-1}^n, x_i^n, x^n_{i+1}, U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, U_{i-1}^n, U_i^n, U^n_{i+1}} $$.\\
+Tout ces cas sont encore en cours de traîtement, en effet la majeur contrepartie dans ce problème est le manque de diversité de données sur lesquelles les inférences ont été effectuées. Les résultats n'étaient pas probants, il fut long de comprendre la source des erreurs. \\
+Dans la suite de la thèse nous investiguerons ces différents cas et tenterons de déterminer lequel de ces modèles fournira des résultats les plus physiquement viables.\\
+
+\noindent Come nous l'avons brièvement évoqué, beaucoup de temps fut consacré à l'identification de l'élément qui empêchaient l'entraînement des poids du NN de se faire.\\
+En parallèle nous avons eu l'idée de développer un solver en utilisant directement le réseau de neurones, sans passer par une phase d'inversion.\\
+
+\pagebreak
+
+\navy \section{Utiliser les IA pour prédire la physique} \bk
+\brick \subsubsection{Propagation d'ondes en milieu visqueux}\bk
 
 \pagebreak
 
@@ -530,7 +545,7 @@ Dans un premier temps, il faut réaliser l'inférence sur plusieurs cas en faisa
 \noindent Pour résumer, durant cette première année, nous nous sommes tout d'abord concentrés sur les basiques du ML et sur les articles de références comme ceux cités dans le corps du rapport. Ces premiers pas nous ont permis de nous familiariser avec les mathématiques propres à la discipline et nous a aidé à mieux comprendre les enjeux des méthodes et du projet.\\
 À partir d'une étude bibliographique, nous avons pu déterminer les pistes à approfondir pour tenter de mener à bien notre projet qui est d'instiller des loi sde conservations dans un apprentissage pour être sur que la prédiction d'une IA respecte la Physique et qu'elle soit donc viable.\\
 Nous avons alors essayé plusieurs méthodes : des méthodes à deux temps comme la combinaison inférence/Machine learning ou bien des méthodes de prédiction directes comme le deuxième cas de Burgers (section \eqref{d}). Nous avons également essayé d'aller plus loin que l'équation de Burgers en regardant l'équation de Thomas pour le cas magnéto-hydrodynamique.\\
-
+	
 \noindent Au moment d'écrire ce rapport nous étudions la possibilité d'utiliser les algorithmes d'\textit{apprentissage renforcé} pour corriger la prédiction d'un réseau de neurones conformément à une politique. Cette politique est bien naturellement la conservation de l'énergie dans le problème avec le champ de vitesse issue de la prédiction du NN. \\
 Si l'énergie est conservée d'une itération à l'autre, alors la politique donne une appréciation positive à la prédiction du NN. Dans le cas contraire, elle donne une apprédiation négative et la prédiction recommence.\\
 Ce procédé s'arrête lorsque les points du NN seront en mesure de faire des prédictions à l'image d'une équation.\\
