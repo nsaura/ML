@@ -294,6 +294,10 @@ class Neural_Network():
             if self.scaler_name == "Standard" :
                 
                 for i, (mean, std) in enumerate(zip(self.X_train_mean, self.X_train_stdd)):
+#                    print new_xs
+#                    print new_xs.shape
+#                    print mean
+                    
                     new_xs[i] = new_xs[i] - mean
 
                     if np.abs(std) > 1e-5 :
@@ -720,7 +724,7 @@ class Neural_Network():
             condition = lambda epoch, err : (epoch <= self.max_epoch and err < tol)
         
         else :
-            err = 1.
+            err = 1000.
             condition = lambda epoch, err : (epoch <= self.max_epoch and err > tol)
         
         if self.verbose == True :
