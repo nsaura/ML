@@ -187,12 +187,12 @@ keywordstyle=[0]{\color{red}},
 
 \navy \section{Introduction du sujet}  \bk
 \Large{$\mathscr{L}$}\normalsize a turbulence est l'état d'un fluide dont l'écoulement possède des caractéristiques stochastiques, qui passionne les chercheurs et les ingénieurs depuis plusieurs siècles.\\ 
-Même si Léonard De Vinci au $\overline{\underline{\text{XV}}}^{\, \text{ème}}$ siècle avait mentionné ce caractère aléatoire et décrit quantitativement le phénomène par des observations, Osborne Reynolds en 1883 amorça la description qualitative et mathématique que nous utilisons aujourd'hui; il fut suivi par d'autres grands noms de la mécanique des fluides comme Richardson, Kolmogorov puis d'autres. \\
+%Même si Léonard De Vinci au $\overline{\underline{\text{XV}}}^{\, \text{ème}}$ siècle avait mentionné ce caractère aléatoire et décrit quantitativement le phénomène par des observations, Osborne Reynolds en 1883 amorça la description qualitative et mathématique que nous utilisons aujourd'hui; il fut suivi par d'autres grands noms de la mécanique des fluides comme Richardson, Kolmogorov puis d'autres. \\
 %Il construisit le nombre caractéristique dit de Reynolds qui compare les effets d'inertie et les effets visqueux. \\
 
-\noindent Cette discipline est une des branches de la mécanique des fluides les plus actives qui attire énormément de chercheurs d'horizons plus ou moins éloignés de la mécanique des fluides ; Kolmogorov sus-mentionné était avant tout mathématicien.\\
-Il existe de nombreux facteurs qui jouent sur la popularité de la discipline, sans être exhaustif, il est possible d'en développer deux : dans un premier temps cette théorie traite d'écoulement que l'on retrouve autour de soi dans notre vie de tous les jours (sillage d'une voiture, couche limite sur les ailes d'un avion etc...) mais également dans les océans, le ciel et l'espace. \\
-Le deuxième facteur clé découle du premier : au fur et à mesure que de nouvelles technologies impliquant ce genre d'écoulement émergent, de l'intelligence provenant d'autres domaines de la Physique, de l'Informatique ou des Mathématiques devient nécessaire voire indispensable. \\
+%\noindent Cette discipline est une des branches de la mécanique des fluides les plus actives qui attire énormément de chercheurs d'horizons plus ou moins éloignés de la mécanique des fluides. \\ %Kolmogorov sus-mentionné était avant tout mathématicien.\\
+%Il existe de nombreux facteurs qui jouent sur la popularité de la discipline, sans être exhaustif, il est possible d'en développer deux : dans un premier temps cette théorie traite d'écoulement que l'on retrouve autour de soi dans notre vie de tous les jours (sillage d'une voiture, couche limite sur les ailes d'un avion etc...) mais également dans les océans, le ciel et l'espace. \\
+%Le deuxième facteur clé découle du premier : au fur et à mesure que de nouvelles technologies impliquant ce genre d'écoulement émergent, de l'intelligence provenant d'autres domaines de la Physique, de l'Informatique ou des Mathématiques devient nécessaire voire indispensable. \\
 
 Au travers de ses équations, la théorie de la Turbulence entend modéliser les fluides dont les effets d'inerties ne sont pas négligeables devant les effets visqueux. Les équations de Navier-Stokes constituent la base de cette discipline. Si on considère une parcelle de fluide et que l'on y effectue un bilan de quantité de mouvement, on obtient dans un cas incompressible \footnote{Sans forces extérieures, avec $\rho$ la masse volumique (constante), $\nu$ la viscosité cinématique de l'écoulement et $p$  le champ de pression} :\\
 \begin{equation}
@@ -207,7 +207,7 @@ effets visqueux; il est appelé nombre de Reynolds, abrégé Reynolds; il peut s
 Ce nombre  caractérise l'état de l'écoulement. Pour un Reynolds faible (jusqu'à quelques centaines voire quelques miliers selon les cas), l'écoulement est dit laminaire. Lorsqu'il est au delà de la dizaine de milliers, l'écoulement est dit turbulent. \\
 Entre les deux états, on parlera d'état de transition : des instabilités naissent dans l'écoulement rendant le champ de vitesse fluctuant. Plus le Reynolds augmente et plus ces fluctutations sont fortes, jusqu'à arriver à un champ de vitesse complétement aléatoire (turbulent). \\
 
-Par analyse dimensionnelle, le nombre de Reynolds peut être construit comme le rapport 
+\noindent  Par analyse dimensionnelle, le nombre de Reynolds peut être construit comme le rapport 
 \begin{equation}
  \text{Re} = \frac{\text{UL}}{\nu}
 \end{equation} 
@@ -330,7 +330,7 @@ Sans rentrer dans dans tous les détails, le BFGS utilise un algorithme de \text
 
 \item[$\bullet$] Une condition sur la pente (ou la courbure) : 
 \begin{equation}
-|\nabla(\beta_{k+1})^T\textbf{p}_k| < C_2 |\nabla\bepar{\beta_k}^T\textbf{p}_k|
+|\nabla\J \bepar{\beta_{k+1}}^T\textbf{p}_k| < C_2 |\nabla\J \bepar{\beta_k}^T\textbf{p}_k|
 \end{equation}
 \end{itemize} 
 $C_1$ et $C_2$ étant deux seuils préalablement définis.\\
@@ -374,35 +374,35 @@ Il devient possible d'évaluer la variance de cette distribution. Sur 250 tirage
 
 \pagebreak
 
-%\begin{figure}[!ht]
-%\centering
-%\includegraphics[scale=0.52]{Just_bmapTinf50.png}
-%\caption{\small{À gauche évolution de beta au cours de l'optimisation pour $T_\infty$. La droite bleue représente le first guess de $\beta$. Plus la teinte est foncée plus on se rapproche de $\bmap$.}}
-%\label{tinf50cpt_500}
-%\end{figure}
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.52]{Just_bmapTinf50.png}
+\caption{\small{À gauche évolution de beta au cours de l'optimisation pour $T_\infty$. La droite bleue représente le first guess de $\beta$. Plus la teinte est foncée plus on se rapproche de $\bmap$.}}
+\label{tinf50cpt_500}
+\end{figure}
 
-%\begin{figure}[!ht]
-%\centering
-%\includegraphics[scale=0.75]{bmap_adjbfgs_T50500png.png}
-%\caption{\small{Évolution de la norme infinie du gradient de la fonction de coût évalué en $\beta$ au cours de l'optimisation. On voit que cette grandeur tend vers une valeur bien inférieure à zéro, attestant la convergence de l'optimisation.}}
-%\label{evolT50}
-%\end{figure}
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.75]{bmap_adjbfgs_T50500png.png}
+\caption{\small{Évolution de la norme infinie du gradient de la fonction de coût évalué en $\beta$ au cours de l'optimisation. On voit que cette grandeur tend vers une valeur bien inférieure à zéro, attestant la convergence de l'optimisation.}}
+\label{evolT50}
+\end{figure}
 
-%\begin{figure}[!ht]
-%\centering
-%\includegraphics[height=10cm, width=8.43cm]{bmap_50_adjVStheo.png} \hfill
-%\includegraphics[height=10cm, width=8.43cm]{hbmap_50_VS_ObsField.png}
-%\caption{\small{\textbf{À gauche} : comparaison du champ $\bmap$ obtenu avec le code BFGS «maison» (points oranges) et du champ $\beta$ théorique obtenu à partir de \eqref{Ttrue}. Les points verts représentent un tirage de \eqref{distribbmap}. Les carrés mauves et noirs représentent les minimums et maximums des tirages (250) de $\beta$. \\ \textbf{À droite} : comparaison du champ de température exact, solution de \eqref{Ttrue} (ligne solide) avec la solution de \eqref{Tinex} en prenant $\bmap$ (points oranges) ou un tirage de \eqref{distribbmap} (points vert).}}
-%\label{comp_bmap_hbmap}
-%\end{figure}
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=10cm, width=8.43cm]{bmap_50_adjVStheo.png} \hfill
+\includegraphics[height=10cm, width=8.43cm]{hbmap_50_VS_ObsField.png}
+\caption{\small{\textbf{À gauche} : comparaison du champ $\bmap$ obtenu avec le code BFGS «maison» (points oranges) et du champ $\beta$ théorique obtenu à partir de \eqref{Ttrue}. Les points verts représentent un tirage de \eqref{distribbmap}. Les carrés mauves et noirs représentent les minimums et maximums des tirages (250) de $\beta$. \\ \textbf{À droite} : comparaison du champ de température exact, solution de \eqref{Ttrue} (ligne solide) avec la solution de \eqref{Tinex} en prenant $\bmap$ (points oranges) ou un tirage de \eqref{distribbmap} (points vert).}}
+\label{comp_bmap_hbmap}
+\end{figure}
 
-%\begin{figure}[!ht]
-%\centering
-%\includegraphics[height=10cm, width=8.43cm]{bmap_50_scipyVStheo.png} \hfill
-%\includegraphics[height=10cm, width=8.43cm]{hbmap_50scipy_VS_ObsField.png}
-%\caption{\small{Même légende que Fig.\eqref{comp_bmap_hbmap}. La procédure est exactement la même que décrite précedemment sauf que le code BFGS utilisé est celui de Scipy. L'optimisation s'est vraisemblablement terminé avant convergence.}}
-%\label{scipycomp_bmap_hbmap}
-%\end{figure}
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=10cm, width=8.43cm]{bmap_50_scipyVStheo.png} \hfill
+\includegraphics[height=10cm, width=8.43cm]{hbmap_50scipy_VS_ObsField.png}
+\caption{\small{Même légende que Fig.\eqref{comp_bmap_hbmap}. La procédure est exactement la même que décrite précedemment sauf que le code BFGS utilisé est celui de Scipy. L'optimisation s'est vraisemblablement terminé avant convergence.}}
+\label{scipycomp_bmap_hbmap}
+\end{figure}
 
  
  
@@ -439,13 +439,13 @@ De façon similaire, $\bmap^{n}$ sera obtenu en résolvant un problème d'optimi
 \end{equation}
 Il est nécessaire de vérifier si les solutions sont similaires à toutes les itérations. Dans la figure suivante, une comparaison aux itérations 30 et 35 (sur 50) des champs $u^n_{\text{True}}$ et $u^n_{\beta}$ sont présentées. 
 
-%\begin{figure}[!ht]
-%\vspace{-5mm}
-%\centering
-%\includegraphics[scale=0.65]{burgers_deuxiteration35.png}
-%\caption{\small{\textbf{À droite}: comparaison des champs de vitesse exactes (lignes solides) et des $u\bepar{\bmap}$ (cercles) obtenues à partir de \eqref{VBEbeta}, des itérations \textit{temporelles} différentes. La correspondance est très précise. \textbf{À gauche} Les corrections $\beta$ et leurs variances, élevées à cause d'un nombre d'itération seuil fixé.}}
-%\label{burger2it}
-%\end{figure}
+\begin{figure}[!ht]
+\vspace{-5mm}
+\centering
+\includegraphics[scale=0.65]{burgers_deuxiteration35.png}
+\caption{\small{\textbf{À droite}: comparaison des champs de vitesse exactes (lignes solides) et des $u\bepar{\bmap}$ (cercles) obtenues à partir de \eqref{VBEbeta}, des itérations \textit{temporelles} différentes. La correspondance est très précise. \textbf{À gauche} Les corrections $\beta$ et leurs variances, élevées à cause d'un nombre d'itération seuil fixé.}}
+\label{burger2it}
+\end{figure}
 
 Les zones opaques représentent les variations possibles des distributions des $\bmap$. Leurs amplitudes assez grandes proviennent du fait qu'un nombre d'itérations maximales assez faible à été imposé lors de la minimisation.\\ 
 Toujours est il que la superposition est parfaite pour toutes les itérations et qu'on a prouvé que l'inférence pouvait être utilisée même dans des cas instationnaires.\\
@@ -490,15 +490,41 @@ Comme pour l'inférence, on compare les $y$ du train set avec les prédiction du
 \J = \sum_{x, \, y\, \in\, \{X_{\text{train}},\, y_{\text{train}}\}} \bepar{y - y^*\bepar{x}}^2 \tag{OLS} \label{JOLS}
 \end{equation}
 Avec $y^*$ représentant la prédiction du réseau. \\
+Nous avons utiliser cette fonction de coût mais également la fonction de coût avec la régulariation sur la norme L1 des poids (Lasso):
+\begin{equation}
+\J = \sum_{x, \, y\, \in\, \{X_{\text{train}},\, y_{\text{train}}\}} \bepar{y - y^*\bepar{x}}^2 + \lambda \sum_{w\, \in\, W} |w| \tag{Lasso} \label{Lasso}
+\end{equation}
 On minimise cette erreur en cherchant la plus grande pente (voir les algorithmes de Gradient Descent \citep{Goodfellow-et-al-2016} ou Adam \citep{kingma2014adam}).\\
 Enfin après avoir mis à jour les poids, on calcule $\J$ sur le test set. Si l'erreur est suffisamment basse, cela voudra dire que les poids du réseau sont optimum pour pouvoir généraliser les données de l'apprentissage.\\
+On trace dans la figure Fig.\eqref{loglog_tempCost} l'évolution de la somme des erreurs sur le \textit{training set}. On évalue l'erreur sur le test set pour être sur de ne pas overfitté, on utilise le calcule de la valeur absolue de l'erreur moyenne\footnote{\url{http://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_error.html}} entre la prédiction de $X_{\text{test}}$ et $y_{\text{test}}$, elle est évaluée à $0 \pnt 011$.
 
-En attendant  : formule du Lasso 
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.5]{loglog_Cost_ML_Temp.png}
+\caption{\small{Évolution de \eqref{Lasso} évaluée sur le \textit{training set} au cours de l'optimisation des poids réseau. L'échelle est logarithmique.}}
+\label{loglog_tempCost} \vspace{-3mm}
+\end{figure}
+\noindent L'entraînement s'est fait sur des cas dont la température extérieure \tinf $ $ est constante. Après s'être assuré que l'entraînement était efficace, nous avons testé l'algorithme pour prédire un vecteur de correction $\beta$ sur des cas différents. Nous présentons un cas avec $T_\infty =  35 - 15 \cos(\pi\,x)$.\\
 
-\begin{equation}
-\J = \sum_{x, \, y\, \in\, \{X_{\text{train}},\, y_{\text{train}}\}} \bepar{y - y^*\bepar{x}}^2 + \lambda \sum_{w\, \in\, W} |w| \tag{OLS} \label{JOLS}
-\end{equation}
-\noindent 
+\noindent Les prédictions sont faites sur $\beta$ puis on résout \eqref{Tinex} avec le $\beta$ prédit par le réseau de neurones. Comme nous l'avons précisé, nous nous assurons de la convergence du modèle en ajoutant un terme de dérivée temporelle pour pouvoir contrôler la convergence spatiale de la solution. À chaque itération, le $\beta$ est prédit, puis la solution \eqref{Tinex} est calculée. Si le résidu entre deux itération temporelle est très inférieur à $10^{-7}$ alors la solution est convergée.\\
+On présente les prédictions du $\beta$ obtenu pour lequel le residu est inférieur à la tolérance Fig.\eqref{beta35-15cospix}. Cette figure présente des zones où les $\beta$ prédits et théoriques sont bien différents. On pourrait s'attendre à une non-correspondance entre les champs de température prédit (solution de \eqref{Tinex}) et théorique (solution de \eqref{Ttrue}). Ces deux éléments sont représentés Fig.\eqref{Tbeta35-15cospix}.
+\vspace{-0.3cm}
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.7]{Beta_NN_vs_True_35-15cos_pix.png}
+\vspace{-3mm}
+\caption{\small{Comparaison du $\beta$ théorique (pointillée) et des prédictions (cercles mauves). La ligne jaune symbolise le $\beta$ prior.}}
+\label{beta35-15cospix}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.7]{T_True_vs_T_ML___T_inf_=_35-15cos_pix.png}
+\vspace{-3mm}
+\caption{\small{Comparaison du $T$ théorique (pointillée) et du T solution de \eqref{Tinex} avec $\beta$ présentés Fig.\eqref{beta35-15cospix} (cercles rouges). La ligne verte symbolise le champ de température T solution de \eqref{Tinex} avec $\beta$ prior.}}
+\label{Tbeta35-15cospix}
+\end{figure}
+
 %\noindent On pourra schématiser un réseau de neurones comme une succession de transformations pour qu'un ensemble de données A (inputs) deviennent un ensemble B, de taille et composition différents.\\
 %Les successions de transformation se font en couche et une matrice de poids lie chaque couche. \\
 %L'idée du training d'un réseau de neurones et de trouver les poids qui maximisent la correspondance entre les entrées et les sorties.\\
@@ -527,14 +553,24 @@ Il faut aussi veiller à ce que la valeur de la viscosité soit suffisamment él
 
 \noindent Il a fallu alors réfléchir aux inputs $\eta_i^n$ à choisir pour constituer la fonctionnelle $\beta^n = \mathcal{F}\bepar{\eta_i^n}$ . En s'inspirant des différence finies, nous avons considéré un nœud spatial centré au point $i$ de l'itération $n$ : $$X = \{ u^n_{i-1},\, u^n_{i},\, u^n_{i+1}\}$$. L'idée est de déterminer si il était possible de trouver dans les données une corrélation spatiale propre au champ de vitesse.\\
 Nous avons également essayé de rajouter les coordonnées spatiales dans chacun des entrées, améliorant la réduction de l'erreur sur le \textit{training set}. La matrice d'entrées devint alors $$X = \{ x_{i-1}, \, x_i,\, x_{i+1},, u^n_{i-1},\, u^n_{i},\, u^n_{i+1}\}$$
-Enfin nous avons également considéré des entrées prenant les valeurs du champ de vitesse aux itérations précédentes (une ou deux). Nous écrivons la matrice $X$ pour une itération : $$ \beta^{n+1} = \bepar{x_{i-1}^n, x_i^n, x^n_{i+1}, U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, U_{i-1}^n, U_i^n, U^n_{i+1}} $$.\\
+Enfin nous avons également considéré des entrées prenant les valeurs du champ de vitesse aux itérations précédentes (une ou deux). Nous écrivons la matrice $X$ pour une itération : $$ \beta^{n+1} = \bepar{x_{i-1}^n, x_i^n, x^n_{i+1}, U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, U_{i-1}^n, U_i^n, U^n_{i+1}} $$\\
 Tout ces cas sont encore en cours de traîtement, en effet la majeur contrepartie dans ce problème est le manque de diversité de données sur lesquelles les inférences ont été effectuées. Les résultats n'étaient pas probants, il fut long de comprendre la source des erreurs. \\
-Dans la suite de la thèse nous investiguerons ces différents cas et tenterons de déterminer lequel de ces modèles fournira des résultats les plus physiquement viables.\\
+Dans la suite de la thèse, nous investiguerons ces différents cas et tenterons de déterminer lequel de ces modèles fournira des résultats les plus physiquement viables.\\
 
-\noindent Come nous l'avons brièvement évoqué, beaucoup de temps fut consacré à l'identification de l'élément qui empêchaient l'entraînement des poids du NN de se faire.\\
+\dsb \subsubsection{Effet dynamo et equations de Thomas} \bk
+La cas turbulent de l'effet dynamo est un problème qui concerne la hausse ou le déclin d'un champ magnétique initialement faible, à l'intérieur d'un fluide conducteur, de turbulence développé (haut nombre de Reynolds).\\
+Les équations de la Magnéto-Hydrodynamique (MHD) fournit les équations pour traiter de ce genre de problème. \cite{thomas1968numerical} établit des équations réduites pour traiter de ce problème, avec $u$ le champ de vitesse, $h$ le champ magnétique, et $\lambda$ la diffusivité magnétique : 
+\begin{align}
+\frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} -3h\, \frac{\partial h}{\partial x} &= \nu \frac{\partial^2 u}{\partial x^2} \label{uthomas} \\[3mm]
+\frac{\partial h}{\partial t} + u \frac{\partial h}{\partial x} - h \frac{\partial u}{\partial x} &= \lambda \frac{\partial^2 h}{\partial x^2} 
+\end{align}
+Nous projetons de résoudre dans un premier temps avec un solver différence finie classique, avec un maillage très ressérer pour être pris comme référence.\\
+Puis nous injecterons un terme $\beta$ dans la première ou la deuxième (ou les deux) équations, utiliserons le procédés d'inférence pour reconstituer les champs $u$ et $h$.\\ On calculera les corrélations des deux champs après inférence mais également les spectres d'énergies afin de contrôler si la Physique est respectée également.\\
+
+On généralisera aussi ce $\beta$ avec un NN. \\
+
 En parallèle nous avons eu l'idée de développer un solver en utilisant directement le réseau de neurones, sans passer par une phase d'inversion.\\
 
-\pagebreak
 
 \navy \section{Utiliser les IA pour prédire la physique} \bk
 \brick \subsubsection{Propagation d'ondes en milieu visqueux}\bk
