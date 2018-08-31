@@ -55,7 +55,7 @@ if  __name__ == "__main__" :
     X,y,v,m,s = GPC.training_set(T, parser.N_sample)
 
 dict_layers = {"I" : 2,\
-               "N1" : 5,\
+               "N1" : 100,\
                "N2" : 5,\
                "N3" : 5,\
                "N4" : 10,\
@@ -83,24 +83,24 @@ dict_layers = {"I" : 2,\
 N_hidden_layer = len(dict_layers.keys()) - 2
 #nn = NNC.Neural_Network(parser.lr, N_=dict_layers, max_epoch=parser.N_epoch)
 ###-------------------------------------------------------------------------------
-def recentre(xs, X_train_mean, X_train_std):
-    """
-    This function refocuses the input before prediction. It needs three arguments :
-    
-    xs              :   The input to refocuses
-    X_train_mean    :   The mean vector calculated according to the training set
-    X_train_std     :   The standard deviation vector calculated according to the training set   
-    
-    xs is a vector of shape [N] 
-    X_train_mean and X_train_std are vectors of whose shape is [N_features]
-    """
-    for i in range(np.size(X_train_mean)) :
-        xs[i] -= X_train_mean[i]
-        if np.abs(X_train_std[i]) > 1e-12 :
-            xs[i] /= X_train_std[i]
+#def recentre(xs, X_train_mean, X_train_std):
+#    """
+#    This function refocuses the input before prediction. It needs three arguments :
+#    
+#    xs              :   The input to refocuses
+#    X_train_mean    :   The mean vector calculated according to the training set
+#    X_train_std     :   The standard deviation vector calculated according to the training set   
+#    
+#    xs is a vector of shape [N] 
+#    X_train_mean and X_train_std are vectors of whose shape is [N_features]
+#    """
+#    for i in range(np.size(X_train_mean)) :
+#        xs[i] -= X_train_mean[i]
+#        if np.abs(X_train_std[i]) > 1e-12 :
+#            xs[i] /= X_train_std[i]
 
-    return xs
-###-------------------------------------------------------------------------------
+#    return xs
+####-------------------------------------------------------------------------------
 def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, verbose=True, **kwargs) :
     # build_case(1e-3, X, y , act="relu", opti="RMS", loss="OLS", decay=0.7, momentum=0.8, max_epoch=1000) marche très bien avec [10, 15, 20, 25, 30, 35, 40, 45, 50]
     # nn_adam_mean = build_case(1e-3, X, y , act="relu", opti="Adam", loss="OLS", decay=0.7, momentum=0.8, max_epoch=2000, reduce_type="mean")
@@ -117,7 +117,7 @@ def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch
     nn_obj.cost_computation(loss)
     nn_obj.case_specification_recap()    
     
-    nn_obj.training_phase(1e-3)
+    nn_obj.training_phase(1e-2)
     
     beta_test_preds = np.array(nn_obj.predict(nn_obj.X_test))
     test_line = range(len(nn_obj.X_test))
@@ -176,9 +176,10 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
     beta= []    
         
     for j,t in enumerate(T_n) :
-        x_s = np.array([[T_inf[j], t]]) ## T_inf, T(z)
-        x_s = recentre(x_s[0], nn_obj.train_mean, nn_obj.train_std)
-        beta.append(nn_obj.sess.run(nn_obj.y_pred_model, feed_dict={nn_obj.x: x_s})[0,0])
+        x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
+#        print x_s
+        x_s = nn_obj.scale_inputs(x_s) #[0], nn_obj.train_mean, nn_obj.train_std)
+        beta.append(nn_obj.predict(x_s)[0,0])
     
     beta_n = np.asarray(beta)
     
@@ -204,9 +205,9 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
         beta = []
         for j,t in enumerate(T_n) :
             x_s = np.array([T_inf[j], t]) ## T_inf, T(z)
-            x_s = recentre(x_s, nn_obj.train_mean, nn_obj.train_std)
-            x_s = x_s.reshape(-1,1)
-            beta.append(nn_obj.sess.run(nn_obj.y_pred_model, feed_dict={nn_obj.x: x_s})[0,0])
+            x_s = nn_obj.scale_inputs(x_s)
+            x_s = x_s.reshape(1,-1)
+            beta.append(nn_obj.predict(x_s)[0,0])
         
 #        print ("beta premiere iteration :\n {}".format(beta))
         
@@ -230,19 +231,31 @@ def T_to_beta_NN(T, nn_obj, T_inf, body):
 #-------------------------------------------#
 #-------------------------------------------#
 def solver_NN(T, nn_obj, T_inf, body,  N_sample= parser.N_sample, verbose = False) :
-    T_inf_lambda = T_inf
-    T_inf = map(T_inf, T.line_z) 
+    if callable (T_inf) == False :
+        T_inf_lambda = lambda x : T_inf
+        
+    else :
+        T_inf_lambda = T_inf
 
+    T_inf = map(T_inf_lambda, T.line_z) 
+    
+#    print ("T_inf = {}".format(T_inf))
+    
     T_ML, beta_ML = T_to_beta_NN(T, nn_obj, T_inf, body)
 
     T_true = GPC.True_Temp(T, T_inf, body)
 
     n = T.N_discr-2
     T_true = T_true.reshape(n)
+#    print "T_true = {}".format(T_true)
     T_ML = T_ML.reshape(n)
+#    print "T_ML = {}".format(T_ML)
     T_base = GPC.beta_to_T(T, T.beta_prior, T_inf, body+"_base")
+#    print "T_base = {}".format(T_base)
     
-    true_beta = GPC.True_Beta(T, T_true, map(T_inf_lambda, T.line_z))
+    true_beta = GPC.True_Beta(T, T_true, T_inf)
+    
+#    print true_beta
     #    T_nmNext= T_nmNext.reshape(n)
     #    T_nMNext= T_nMNext.reshape(n)
     

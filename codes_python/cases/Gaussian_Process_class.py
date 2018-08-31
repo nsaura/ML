@@ -89,8 +89,8 @@ def training_set(T, N_sample, scale=False, shuffle=False):
                 variances.append(np.std(distrib_bmap(s_curr))**2)
             # On empile la ligne "line" sous la dernière ligne du Y_train
     
-    X =   np.delete(X, 0, axis=0)        # On enlève les lignes de zéros
-    y =   np.delete(y, 0, axis=0)        # On enlève les lignes de zéros
+    X   =   np.delete(X, 0, axis=0)        # On enlève les lignes de zéros
+    y   =   np.delete(y, 0, axis=0)        # On enlève les lignes de zéros
     variances = np.asarray(variances)
     
     if shuffle == True :
@@ -210,6 +210,9 @@ def True_Beta(T, temp, T_inf) :
     -------
     beta_theorique
     """
+#    print temp.shape
+#    print np.shape(T_inf)
+    
     t1 = np.asarray([ 1./T.eps_0*(1. + 5.*np.sin(3.*np.pi/200. * temp[i]) + np.exp(0.02*temp[i])) *10**(-4) for i in range(T.N_discr-2)])
     t2 = np.asarray([T.h / T.eps_0*(T_inf[i] - temp[i])/(T_inf[i]**4 - temp[i]**4)  for i in range(T.N_discr-2)]) 
     
