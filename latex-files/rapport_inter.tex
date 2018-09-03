@@ -166,9 +166,9 @@ keywordstyle=[0]{\color{red}},
 \newcommand{\vect}[1]{\accentset{\Rightarrow}{#1}}
 
 \usepackage{multicol}		% Pour utiliser \hfill et découper une partie de son texte en colonnes
-\setlength{\columnseprule}{0.1pt}
-\def\columnseprulecolor{\color{red}}
-\setlength{\columnsep}{1.5cm}
+\setlength{\columnseprule}{0.pt}
+%\def\columnseprulecolor{\color{red}}
+%\setlength{\columnsep}{1.5cm}
 
 % Numéro Roman pour le texte
 \makeatletter
@@ -425,7 +425,9 @@ Pour éviter toute ambiguïté, on précise les indices dans la fonction de coû
 \mathcal{J}^n = \frac{1}{2} \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}}^T \text{C}_\text{obs}^{-1} \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}} + \\ \lambda \bepar{\beta^n -
 			\beta_{\text{p}}}^T \text{I}_d \bepar{\beta^n - \beta_\text{p}}
 \end{equation}
-De façon similaire, $\bmap^{n}$ sera obtenu en résolvant un problème d'optimisation :
+
+\vspace{5mm}
+\noindent De façon similaire au cas thermique, $\bmap^{n}$ sera obtenu en résolvant un problème d'optimisation :
 \begin{equation}
 \beta_{\text{MAP}}^n = \argmin \mathcal{J}^n
 \end{equation}
@@ -438,13 +440,12 @@ Il est nécessaire de vérifier si les solutions sont similaires à toutes les i
 \caption{\small{\textbf{À droite}: comparaison des champs de vitesse exactes (lignes solides) et des $u\bepar{\bmap}$ (cercles) obtenues à partir de \eqref{VBEbeta}, des itérations \textit{temporelles} différentes. La correspondance est très précise. \textbf{À gauche} Les corrections $\beta$ et leurs variances, élevées à cause d'un nombre d'itération seuil fixé.}}
 \label{burger2it}
 \end{figure}
-
-\noindent sur la figure de gauche, les zones opaques représentent les variations possibles des distributions des $\bmap$. Leurs amplitudes assez grandes proviennent du fait qu'un nombre d'itérations maximales assez faible à été imposé lors de la minimisation.\\ 
+\noindent Sur la comparaison de gauche (Fig.\eqref{burger2it}) de gauche, les zones opaques représentent les variations possibles des distributions des $\bmap$. Leurs amplitudes assez grandes proviennent du fait qu'un nombre d'itérations maximales assez faible à été imposé lors de la minimisation.\\ 
 Toujours est il que la superposition est parfaite pour toutes les itérations et qu'on a prouvé que l'inférence pouvait être utilisée même dans des cas instationnaires.\\
 Le choc est bien capturé et la dissipation par effet visqueux dans la suite de la simulation est également parfaitement retrouvée.
 
-\dsb \subsubsection{Effet dynamo et equations de Thomas} \bk
-\noindent Le cas turbulent de l'effet dynamo est un problème qui concerne la hausse ou le déclin d'un champ magnétique initialement faible, à l'intérieur d'un fluide conducteur, de turbulence développé (haut nombre de Reynolds).\\
+\dsb \subsubsection{Effet dynamo et equations de Thomas 1d} \bk
+\noindent Le cas turbulent de l'effet dynamo est un problème qui concerne la hausse ou le déclin d'un champ magnétique initialement faible, à l'intérieur d'un fluide conducteur, de turbulence développée (haut nombre de Reynolds).\\
 Les équations de la Magnéto-Hydrodynamique (MHD) fournit les équations pour traiter de ce genre de problème. \cite{thomas1968numerical} établit des équations réduites pour traiter de ce problème, avec $u$ le champ de vitesse, $h$ le champ magnétique, et $\lambda$ la diffusivité magnétique : 
 \begin{align}
 \frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} -3h\, \frac{\partial h}{\partial x} &= \nu \frac{\partial^2 u}{\partial x^2} \label{uthomas} \\[3mm]
@@ -457,12 +458,10 @@ Puis nous injecterons un terme $\beta$ dans la première ou la deuxième (ou les
 Comprendre le formalisme mathématique de cet outil, avec la fonction de correspondance $\mathcal{L}$, l'optimisation de paramètres $\beta$ pour faire correspondre modèle et observations, permet d'avoir une première approche des algorithmes d'entraînement des intelligences artificielles comme le réseau de neurones.\\
 En effet, les algorithmes de machine learning (ML) fonctionnent sur un principe très similaire à celui de l'inférence Bayesienne puisqu'ils cherchent à ajuster plusieurs paramètres (parfois des milliers voire des millions) afin de faire correspondre des entrées (\textit{inputs)} à des sorties, toutes les deux fournies par l'utilisateur; c'est ce qu'on appelle l'entraînement ou \textbf{\textit{training}}. Une fois ces paramètres établis, ces méthodes entendent prédire des sorties à partir d'entrées inédites, c'est ce qu'on appelle \textbf{la prédiction}.\\
 
-\noindent L'idée de généraliser les données de l'inférence par ML est donc de découvrir la fonctionnelle (si elle existe) liant les caractéristiques (\textit{inputs}) d'un problème et le vecteur $\bmap$ calculé au préalable sur plusieurs cas, afin de pouvoir prédire la bonne correction dans des cas inédits. Dans cette thèse, mettre en place une procédure d'inférence n'est pas une fin en soi, mais une étape qu'il était indispensable de maîtriser pour l'atteinte des objectifs visés.\\
-Comprendre le formalisme mathématique de cet outil, avec la fonction de correspondance $\mathcal{L}$, l'optimisation de paramètres $\beta$ pour faire correspondre modèle et observations, permet d'avoir une première approche des algorithmes d'entraînement des intelligences artificielles comme le réseau de neurones.\\
-En effet, les algorithmes de machine learning (ML) fonctionnent sur un principe très similaire à celui de l'inférence Bayesienne puisqu'ils cherchent à ajuster plusieurs paramètres (parfois des milliers voire des millions) appelés poids et biais, afin de faire correspondre des entrées (\textit{inputs)} à des sorties, toutes les deux fournies par l'utilisateur; c'est ce qu'on appelle l'entraînement ou \textbf{\textit{training}}. Une fois ces paramètres établis, ces méthodes entendent prédire des sorties à partir d'entrées inédites, c'est ce qu'on appelle \textbf{la prédiction}.\\
+\noindent L'idée de généraliser les données de l'inférence par ML est consiste en fait à découvrir la fonctionnelle liant les caractéristiques (\textit{inputs}) d'un problème et le vecteur $\bmap$ calculé au préalable sur plusieurs cas.\\
+Avec la bonne architecture de réseau et des données assez variées, il devient possible d'utiliser le réseau comme une fonction qui à des entrées associe une sortie. Dans les cas qui nous occupe dans cette section, les entrées seront des grandeurs spécifiques au phénomère étudié, les sorties seront toujours des paramètres de correction.
 
-\noindent L'idée de généraliser les données de l'inférence par ML est donc de découvrir la fonctionnelle (si elle existe) liant les caractéristiques (\textit{inputs}) d'un problème et le vecteur $\bmap$ calculé au préalable sur plusieurs cas, afin de pouvoir prédire la bonne correction dans des cas inédits. 
- 
+
 \brick \subsection{Les réseaux de neurones} \bk
 \noindent Sans entrer dans trop de détails historiques ou mathématiques, le réseau de neurones (abrégé NN pour Neural Network) est un algorithme d'intelligence artificielle datant des années 50. Cette algorithme a été sous-estimé et sous-utilisé notamment parce que les ordinateurs de l'époque n'étaient pas en capacité d'exploiter les possibilités de cet outil et qu'on manquait de données.\\
 Aujourd'hui les NN sont utilisés dans énormément de champs de la physique, de la médecine de l'informatique (évidemment) à tel point qu'ils sont omniprésents dans notre vie quotidienne. En ce qui concerne leur utilisation dans le domaine de la Turbulence, les NN se font de plus en plus de place. \\
@@ -569,7 +568,7 @@ Cette intuition est vérifiée par l'incapacité du réseau de prédire une corr
 
 \pagebreak
 
-\dsb \subsubsection{Propagation d'une onde en fluide visqueux} \bk
+\dsb \subsubsection{Propagation d'une onde en fluide visqueux} \bk \label{burgerBIF}
 \noindent On va ici utiliser les mêmes étapes que précédemment dans la construction de $X$ et $y$. Mais le choix des inputs est ici plus compliqué car le problème présente deux aspects à apprendre : 
 \begin{itemize}[leftmargin=5mm]
 \item[--] D'abord apprendre la fonctionnelle entre les entrées et les sorties;
@@ -588,9 +587,101 @@ Tout ces cas sont encore en cours de traîtement, en effet la majeur contreparti
 Dans la suite de la thèse, nous investiguerons ces différents cas et tenterons de déterminer lequel de ces modèles fournira des résultats les plus physiquement viables.\\
 En parallèle nous avons eu l'idée de développer un solver en utilisant directement le réseau de neurones, sans passer par une phase d'inversion.\\
 
+\dsb \subsubsection{Aller Plus loin} \bk
+\noindent De nombreux codes effectifs ont été écrits au cours de cette première année et de nombreuses idées ont été élaborées. Puisqu'il fallait d'abord mettre l'accès sur les objectifs premiers de la thèse, certain ont été mis temporairement de côté.\\
+ Néanmoins, il est possible qu'au cours des deux prochaines années, certaines d'entre elles reviennent au centre de nos travaux.
+ \begin{itemize}[leftmargin=1cm]
+ \item[--] Problème de MHD : retrouver par inférence le champ magnétique de la Terre à l'intérieur des données DNS pour améliorer les solver moins coûteux, et mieux connaître ce champ;
+ \item[--] Proposer un modèle de EDQNM pouvant traiter des cas de turbulence inhomogène ou anisotrope en inférant un terme instationnaire à partir de données DNS;
+ \item[--] Faire du tracking de structures turbulentes pour étudier directement l'évolution d'une instabilité, explorer pourquoi pas les régimes de transitions.
+ \end{itemize}
 
+\noindent Nous avons également tenté d'utiliser les réseaux de neurones comme force brute pour prédire la physique, sans passer par une phase d'inférence qui peut s'avérer assez longue.
 \navy \section{Utiliser les IA pour prédire la physique} \bk
-\brick \subsubsection{Propagation d'ondes en milieu visqueux}\bk
+\noindent Cette partie est une ébauche de deux travaux en cours. Nous allons tout d'abord présenter les premiers résultats sur l'utilisation d'un réseau de neurones pour la prédiction d'une solution de l'équation de Burgers, y expliquer la procédure que nous avons suivi et également les éléments que nous cherchons à améliorer. \\
+Nous parlerons alors d'un aspect fondamental des NN : leur architecture.\\
+La deuxième partie traitera de l'apprentissage renforcée. Nous y consacrerons quelques lignes car l'idée est encore naissante.
+\brick \subsection{Propagation d'ondes en milieu visqueux}\bk
+\noindent Nous reprenons notre équation de Burgers visqueux monodimensionnel : 
+\begin{equation}
+\frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} = \nu\frac{\partial^2 u}{\partial x^2}  \label{VBETrue2} \tag{VBE}
+\end{equation}
+L'idée ici n'est plus d'injecter un terme à découvrir mais de générer des solutions de cette équations pour des conditions initiales sinusoïdales différentes et tenter d'apprendre à un NN la dynamique régie par \eqref{VBETrue2}. On représente les différentes conditions initiales dans la figure Fig.\eqref{initNN}
+
+\begin{figure}[!ht]
+\centering
+\vspace{-5mm}
+\includegraphics[scale=0.6]{Initialisation_cases.png}
+\caption{\small{Différentes conditions intiales résolues avec un solver Lax Wendrof sur 80 itérations temporelles. Les solutions à toutes les itérations sont utilisées pour entraîner un réseau de neurones.}}
+\label{initNN}
+\end{figure}
+
+\noindent Avec un solver Lax-Wendroff, nous résolvons sur 80 itérations temporelles les différentes conditions initiales et enregistrons les champs de vitesse pour chacune des itérations.\\
+Puis nous voulons construire les matrice $X$ et $y$. Comme nous l'avions évoqués dans le paragraphe \eqref{burgerBIF}, cette étape est délicate car il existe une infinité de possibilités. Ici nous avons considéré des lignes d'entrées telles que :
+\begin{multicols}{2}
+	\noindent
+	$$ X = \left[ \begin{array}{c} \cdot \\ U^n_{i-1},U^n_{i}, U^n_{i+1}, \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}  \\ \cdot 
+					  \end{array}
+		   \right]
+	$$
+	\columnbreak
+	$$ y = \left[ \begin{array}{c} \cdot \\ U^{n+1}_i \\ \cdot 
+			  \end{array}
+	   \right]
+	$$
+	\end{multicols}
+  
+\noindent Avec $U_i^n$ la valeur de la vitesse au i$^{\text{ème}}$ point de discrétisation spatiale, à la n$^{\text{ème}}$ itération temporelle.\\
+ Les trois premiers inputs imitent les schémas aux différences finies classique avec une maille centré, la quatrième caractéristiques est le taux de variations de ce champ de vitesse pour renseigner la valeur de la pente sur à chaque point \footnote{Cette dernière entrée a été rajoutée après avoir constaté que des informations étaient nécessaire au NN pour découvrir la fonctionnelle}. \\
+ Finalement la fonctionnelle $\mathcal{F}$ s'écrit $$U^{n+1}_i =  \mathcal{F}\bepar{U^n_{i-1},U^n_{i}, U^n_{i+1}, \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}}$$.\\
+   On découpe $X$ et $y$ en un \textit{training set} et une partie de nos données pour tester le \textit{training}, nous recentrons les données conformément à ce qu'lon a évoqué plus tôt, et commençons l'optimisation des poids avec la fonction d'activation SeLu pour l'ensemble des neurones et l'algorithme Adam pour l'optimisation. L'architecture du réseau est la suivante : 6 couches de 80 neurones.\\
+    On représente la fonction de coût figure Fig.\eqref{trainingNNvbe}
+    \begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=0.6]{loglogvbeNN.png}
+    \caption{\small{Evolution de la fonction de coût \eqref{Lasso}} pour la prédiction de la physique directe. La courbe tracée n'est pas la moyenne des erreurs mais la sommes des erreurs commises sur les prédiction sur tout $X_{\text{train}}$ }
+    \label{trainingNNvbe}
+    \end{figure}
+    
+\noindent Le choix de l'architecture est fortuit. Nous avions écrit un algorithme génétique pour découvrir l'architecture optimale en revanche ce sont des algorithmes qui nécessitent énormément de temps; nous l'avons donc pas encore utilisé sur ce cas.\\
+L'erreur de la fonction de coût décroît fortement jusqu'à quelques unités. Nous n'avons pas augmenté le nombre d'itération pour ne pas avoir à faire aux problèmes liés à l'overfitting.\\
+
+\noindent Nous générons à présent une condition intiale nouvelle par rapport aux $X$  et $y$. Nous comparons les prédictions à chaque itération avec les données exactes obtenues en résolvant cette condition intiale dans le solver LW. \\
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.5]{Initialisation_cases_Andu1.png}
+\caption{\small{Nous voulons prédire l'évolution du champ de vitesse orange différent en amplitude et déphasage des données utilisées pour l'entraînement}}
+\label{newinputNN}
+\end{figure}
+
+\noindent Les figures qui suivent présentent les comparaisons (partie inférieure), les erreurs relatives (partie supérieure gauche) et la norme infinie de l'erreur (partie supérieure droite).
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[scale=0.6]{Pres_First_Iteration_1.png}
+	\caption{\small{Comparaison entre la deuxième itération du LW et la prédiction du NN utilisant le champ de la première itération comme unique référence.}}
+	\label{FirstItNewNN1}
+\end{figure} 
+
+\pagebreak
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[scale=0.75]{Pres_Tenth_Iteration_1.png}
+	\caption{\small{Comparaison entre la onzième itération du LW et la prédiction du NN utilisant le champ de la dixième itération comme unique référence.}}
+	\label{10ItNewNN1}
+\end{figure} 
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[scale=0.7]{Pres_Last_Iteration_1.png}
+	\caption{\small{Comparaison entre la 81 ème itération du LW et la prédiction du NN utilisant le champ de la 80 ème itération comme unique référence.}}
+	\label{LastItNewNN1}
+\end{figure}
+
+
+\noindent Au fur et à mesure que les itérations se déroulent, les erreurs sur les prédictions s'accumulent corrompant petit à petit les entrées des NN. Cela met en évidence deux origines d'erreur : une locale propre à chaque prédiction, et une globale qui s'accumule.\\
+Ceci pose un problème car a priori les erreurs globales ne devraient pas exister.
 
 \pagebreak
 
