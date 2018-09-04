@@ -674,14 +674,35 @@ L'erreur de la fonction de coût décroît fortement jusqu'à quelques unités. 
 
 \begin{figure}[!ht]
 	\centering
-	\includegraphics[scale=0.7]{Pres_Last_Iteration_1.png}
+	\includegraphics[scale=0.67]{Pres_Last_Iteration_1.png}
 	\caption{\small{Comparaison entre la 81 ème itération du LW et la prédiction du NN utilisant le champ de la 80 ème itération comme unique référence.}}
 	\label{LastItNewNN1}
 \end{figure}
 
 
 \noindent Au fur et à mesure que les itérations se déroulent, les erreurs sur les prédictions s'accumulent corrompant petit à petit les entrées des NN. Cela met en évidence deux origines d'erreur : une locale propre à chaque prédiction, et une globale qui s'accumule.\\
-Ceci pose un problème car a priori les erreurs globales ne devraient pas exister.
+Nous avons testé d'autres cas pour lesquels les erreurs n'étaient pas si grandes mais le cas présenté représente bien la question : comment contrôler l'erreur global ?\\
+La première solution proposé est de modifier la fonction de coût en prenant en compte dans la minimisation la variation des sorties en fonction des entrées \citep{pan2018long}. Des résultats avec cette méthode n'ont pas été probant dans notre cas, nous avons décidé de nous concentrer sur une méthode plus efficace mais également en complète expansion : l'apprentissage renforcé ou \textit{reinforcement learning}.
+
+\brick \subsection{Le reinforcement learning (RL)} \bk
+\noindent Le RL est une partie des machine learning dans lequel un agent apprend à se comporter dans un environnement en réalisant des «actions» selon une politique qui donne des critiques positives ou négatives.\\
+L'agent exécute des actions; si on prend l'exemple du jeu pac-man, l'agent est le pac-man. Il peut aller dans quatre directions (haut, bas, droite, gauche). \\
+La politique sera "critique neutre  tant que pac-man avance", "critique positive si pac-man mange des pac-gommes" et : "critique négaive sur les fantômes mangent par-man".\\
+La prise de décision se fait en analysant l'environnement. Dans le cas du pac-man l'environnement est une série d'images où les fantômes, les pac-gommes et le pac-man sont identifiés.\\
+ Ainsi le RL peut se résumer dans la boucle suivante : 
+\begin{figure}[!ht]
+ \centering
+ \includegraphics[scale=0.5]{RL_scheme.png}
+ \caption{\small{Schéma classique représentant les actions et rétroactions des agents et de l'environnement dans le cas de l'apprentissage renforcé.}}
+ \label{boucleRL}
+ \end{figure} 
+ 
+ \noindent D'un point de vue plus mathématique, pour être sur que l'agent apprennent bien de l'environnement, il faut parcourir l'ensemble des états ET l'ensemble des actions pour pondérer sa prise de décision. Ces différentes étapes sont toutes comprises dans l'équation de Bellman sur laquelle est basée le RL. En résolvant cette équation, on trouve la politique qui permet de prendre les meilleures actions. \\
+La résolution de cette équations nécessite une exploration de toutes les actiones possibles pour les différents états et leur devenir. C'est pourquoi cette méthode peut nécessiter beaucoup de temps. \\
+
+\noindent Très récemment, l'idée de considérer un NN comme agent est née. Le réseau est entraîné au fur et à mesure que les états sont explorés. Les actions sont ici toujours les mêmes puisqu'il s'agit d'effectuer une prédiction à travers un NN, mais les poids de ce NN seront modifiés au fur et à mesure selon la critique. On appelle ce genre d'algorithme des \textit{actor-critics}.\\
+
+\noindent Le majeur problème c'est que l'ensemble de la littérature sur ce sujet considère des images comme environnement. Nous essayons en ce moment d'élaborer un algorithme considérant des critiques liées à la physique comme la conservation de l'énergie.
 
 \pagebreak
 
