@@ -264,7 +264,7 @@ Dans une troisième partie plusieurs pistes d'études autour de ces thématiques
 
 \pagebreak
 
-\navy \section{Combiner vitesse et précision au travers l'association inférence et machine learning}
+\navy \section{Combiner vitesse et précision au travers l'association inférence et machine learning} \label{combiNN_inference}
  \bk
 \noindent L'élaboration d'une théorie Physique ainsi que sa vérification sont toujours pilotées par les données. En effet, face à une situation (un écoulement, une onde se propageant...), les scientifiques réalisent des mesures des quantités d'intérêts, essaient de déterminer les variables décrivant le phénomène et établissent des équations liant ces variables et les quantités observées. Ils confrontent ensuite leur théorie avec les mesures réalisées en amont. \\
 Si la correspondance est bonne, la théorie est acceptée et testée dans d'autres cas. Si les équations ne rendent pas compte convenablement de la réalité, elles sont retravaillées. \\
@@ -462,7 +462,7 @@ En effet, les algorithmes de machine learning (ML) fonctionnent sur un principe 
 Avec la bonne architecture de réseau et des données assez variées, il devient possible d'utiliser le réseau comme une fonction qui à des entrées associe une sortie. Dans les cas qui nous occupe dans cette section, les entrées seront des grandeurs spécifiques au phénomère étudié, les sorties seront toujours des paramètres de correction.
 
 
-\brick \subsection{Les réseaux de neurones} \bk
+\brick \subsection{Les réseaux de neurones} \bk 
 \noindent Sans entrer dans trop de détails historiques ou mathématiques, le réseau de neurones (abrégé NN pour Neural Network) est un algorithme d'intelligence artificielle datant des années 50. Cette algorithme a été sous-estimé et sous-utilisé notamment parce que les ordinateurs de l'époque n'étaient pas en capacité d'exploiter les possibilités de cet outil et qu'on manquait de données.\\
 Aujourd'hui les NN sont utilisés dans énormément de champs de la physique, de la médecine de l'informatique (évidemment) à tel point qu'ils sont omniprésents dans notre vie quotidienne. En ce qui concerne leur utilisation dans le domaine de la Turbulence, les NN se font de plus en plus de place. \\
 On distingue deux grandes tendances dans l'utilisation des IA dans la turbulence : la première consiste à découvrir les \textit{équations} dans les données, on peut citer les travaux de \citep{kutz2017deep} ou \citep{raissi2018hidden} parmi beaucoup d'autres. \\
@@ -597,7 +597,7 @@ En parallèle nous avons eu l'idée de développer un solver en utilisant direct
  \end{itemize}
 
 \noindent Nous avons également tenté d'utiliser les réseaux de neurones comme force brute pour prédire la physique, sans passer par une phase d'inférence qui peut s'avérer assez longue.
-\navy \section{Utiliser les IA pour prédire la physique} \bk
+\navy \section{Utiliser les IA pour prédire la physique} \bk \label{NNdirect}
 \noindent Cette partie est une ébauche de deux travaux en cours. Nous allons tout d'abord présenter les premiers résultats sur l'utilisation d'un réseau de neurones pour la prédiction d'une solution de l'équation de Burgers, y expliquer la procédure que nous avons suivi et également les éléments que nous cherchons à améliorer. \\
 Nous parlerons alors d'un aspect fondamental des NN : leur architecture.\\
 La deuxième partie traitera de l'apprentissage renforcée. Nous y consacrerons quelques lignes car l'idée est encore naissante.
@@ -684,7 +684,7 @@ L'erreur de la fonction de coût décroît fortement jusqu'à quelques unités. 
 Nous avons testé d'autres cas pour lesquels les erreurs n'étaient pas si grandes mais le cas présenté représente bien la question : comment contrôler l'erreur global ?\\
 La première solution proposé est de modifier la fonction de coût en prenant en compte dans la minimisation la variation des sorties en fonction des entrées \citep{pan2018long}. Des résultats avec cette méthode n'ont pas été probant dans notre cas, nous avons décidé de nous concentrer sur une méthode plus efficace mais également en complète expansion : l'apprentissage renforcé ou \textit{reinforcement learning}.
 
-\brick \subsection{Le reinforcement learning (RL)} \bk
+\brick \subsection{Le reinforcement learning (RL)} \bk \label{sec_REIL}
 \noindent Le RL est une partie des machine learning dans lequel un agent apprend à se comporter dans un environnement en réalisant des «actions» selon une politique qui donne des critiques positives ou négatives.\\
 L'agent exécute des actions; si on prend l'exemple du jeu pac-man, l'agent est le pac-man. Il peut aller dans quatre directions (haut, bas, droite, gauche). \\
 La politique sera "critique neutre  tant que pac-man avance", "critique positive si pac-man mange des pac-gommes" et : "critique négaive sur les fantômes mangent par-man".\\
@@ -700,20 +700,20 @@ La prise de décision se fait en analysant l'environnement. Dans le cas du pac-m
  \noindent D'un point de vue plus mathématique, pour être sur que l'agent apprennent bien de l'environnement, il faut parcourir l'ensemble des états ET l'ensemble des actions pour pondérer sa prise de décision. Ces différentes étapes sont toutes comprises dans l'équation de Bellman sur laquelle est basée le RL. En résolvant cette équation, on trouve la politique qui permet de prendre les meilleures actions. \\
 La résolution de cette équations nécessite une exploration de toutes les actiones possibles pour les différents états et leur devenir. C'est pourquoi cette méthode peut nécessiter beaucoup de temps. \\
 
-\noindent Très récemment, l'idée de considérer un NN comme agent est née. Le réseau est entraîné au fur et à mesure que les états sont explorés. Les actions sont ici toujours les mêmes puisqu'il s'agit d'effectuer une prédiction à travers un NN, mais les poids de ce NN seront modifiés au fur et à mesure selon la critique. On appelle ce genre d'algorithme des \textit{actor-critics}.\\
-
-\noindent Le majeur problème c'est que l'ensemble de la littérature sur ce sujet considère des images comme environnement. Nous essayons en ce moment d'élaborer un algorithme considérant des critiques liées à la physique comme la conservation de l'énergie.
+\noindent Très récemment, l'idée de considérer un NN comme agent est née. C'est ce qu'on appelle le\textit{Deep Reinforcement Learning} (DRL). Le réseau est entraîné au fur et à mesure que les états sont explorés. Les actions sont ici toujours les mêmes puisqu'il s'agit d'effectuer une prédiction à travers un NN, mais les poids de ce NN seront modifiés au fur et à mesure selon la critique. On appelle ce genre d'algorithme des \textbf{\textit{actor-critics}}.
+\noindent Pour l'instant l'ensemble de la littérature sur ce sujet considère des \textit{images} comme environnement. Nous essayons en ce moment d'élaborer un algorithme considérant des critiques liées à la physique comme la conservation de l'énergie.
 
 \pagebreak
 
 \navy \section{Conclusion} \bk
-\noindent Pour résumer, durant cette première année, nous nous sommes tout d'abord concentrés sur les basiques du ML et sur les articles de références comme ceux cités dans le corps du rapport. Ces premiers pas nous ont permis de nous familiariser avec les mathématiques propres à la discipline et nous a aidé à mieux comprendre les enjeux des méthodes et du projet.\\
-À partir d'une étude bibliographique, nous avons pu déterminer les pistes à approfondir pour tenter de mener à bien notre projet qui est d'instiller des loi sde conservations dans un apprentissage pour être sur que la prédiction d'une IA respecte la Physique et qu'elle soit donc viable.\\
-Nous avons alors essayé plusieurs méthodes : des méthodes à deux temps comme la combinaison inférence/Machine learning ou bien des méthodes de prédiction directes comme le deuxième cas de Burgers (section \eqref{d}). Nous avons également essayé d'aller plus loin que l'équation de Burgers en regardant l'équation de Thomas pour le cas magnéto-hydrodynamique.\\
+\noindent Pour résumer, nous nous sommes tout d'abord concentrés sur les basiques du ML et sur les articles de références comme ceux cités dans le corps du rapport. Ces premiers pas nous ont permis de nous familiariser avec les mathématiques propres à la discipline et nous a aidé à mieux comprendre les enjeux des méthodes et du projet.\\
+À partir d'une étude bibliographique, nous avons pu déterminer les pistes à approfondir pour tenter de mener à bien notre projet et d'utiliser toute la puissance des IA tout en étant sur que les prédictions sont précises et fiables physiquement.\\
+Nous avons alors commencé à explorer plusieurs méthodes : des méthodes à deux temps comme la combinaison inférence/Machine learning (section \eqref{combiNN_inference}) ou bien des méthodes de prédiction directes (section \eqref{NNdirect}). \\
+Nous avons également cherché à aller au delà des équations de Burgers ou que des cas thermiques, comme les modèles de MHD les plus utilisés.\\
 	
-\noindent Au moment d'écrire ce rapport nous étudions la possibilité d'utiliser les algorithmes d'\textit{apprentissage renforcé} pour corriger la prédiction d'un réseau de neurones conformément à une politique. Cette politique est bien naturellement la conservation de l'énergie dans le problème avec le champ de vitesse issue de la prédiction du NN. \\
-Si l'énergie est conservée d'une itération à l'autre, alors la politique donne une appréciation positive à la prédiction du NN. Dans le cas contraire, elle donne une apprédiation négative et la prédiction recommence.\\
-Ce procédé s'arrête lorsque les points du NN seront en mesure de faire des prédictions à l'image d'une équation.\\
+\noindent Comme évoqué dans le paragraphe \eqref{sec_REIL}, nous étudions la possibilité d'utiliser les algorithmes d'apprentissage renforcé profond (DRL) pour imposer une direction d'apprentissage vers la bonne solution dans le sens de la Physique.\\
+Nous espérons pouvoir ensuite comparer qualitativement et quantitativement les solutions issus des DRL, des NN et des combinaisons ML/inférence.\\
+
 
 
 
