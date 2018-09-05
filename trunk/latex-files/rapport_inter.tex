@@ -16,7 +16,7 @@
 \usepackage{wrapfig}
 %\usepackage[squaren]{SIunits}
 %\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
-\usepackage[linkcolor=Indigo,colorlinks=true, citecolor=DarkSlateBlue, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage[linkcolor=Indigo, colorlinks=true, citecolor=DarkSlateBlue, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
 \usepackage{listings}					% Pour citer du code
 \usepackage[justification=centering]{caption}
 \usepackage{sistyle} 
@@ -176,11 +176,34 @@ keywordstyle=[0]{\color{red}},
 \makeatother
 
 \begin{document}
-\begin{titlepage} \centering
-\vspace*{\fill}
-\Huge \navy \textbf{Rapport CST fin première année} \bk \normalsize
-\vspace*{\fill}
+	\begin{titlepage} \centering
+		\begin{minipage}[ht]{0.7\textwidth}
+			\centering
+			\includegraphics[scale=1.5]{logo_lmfl_large.png} \hfill
+			\includegraphics[scale=0.5]{univ_lille_logo.png}
+		\end{minipage}
+
+		\vspace*{\fill}
+		\Huge\textbf{Rapport CST fin première année}  \normalsize \\
+		\vspace{1.4cm}		
+		
+		\begin{center}
+			\large \brick \textbf{\textit{Auteur}} :  \bk \large Nathaniel \textbf{\textsc{SAURA}}\\[3mm]
+
+			\large \brick \textbf{\textit{Directeur de thèse}} :  \bk \large Thomas \textbf{\textsc{GOMEZ}}\\[1cm]
+			
+			\large \textit{\navy \textbf{Sujet:} \bk} \large \textbf{Méthodes pilotées par les données pour le développement de modèles de turbulence pour le contrôle de couche limite turbulente.}
+			\end{center}
+			
+		\vspace*{\fill}
+	\begin{minipage}[ht]{0.7\textwidth}
+			\centering
+			\includegraphics[scale=1.5]{logo_lmfl_large.png} \hfill
+			\includegraphics[scale=0.5]{univ_lille_logo.png}
+		\end{minipage}
+		
 \end{titlepage}
+
 %\maketitle
 %\end{center}
 \newpage
@@ -200,7 +223,7 @@ Les termes d'inerties ou de convection (nous considérons ici des flux ou des tr
 
 Reynolds construisit un nombre sans dimension comparant les effets d'inertie sur les 
 effets visqueux; il est appelé nombre de Reynolds, abrégé Reynolds; il peut s'écrire comme $$ \text{Re} = \bepar{u_j\, \frac{\partial u_i}{\partial x_j}} / \bepar{\nu \frac{\partial^2 u_i }{\partial x_j^2}} = \frac{\text{Effets inertiels} }{\text{Effets visqueux}} $$ 
-Ce nombre  caractérise l'état de l'écoulement. Pour un Reynolds faible (jusqu'à quelques centaines voire quelques miliers selon les cas), l'écoulement est dit laminaire. Lorsqu'il est au delà de la dizaine de milliers, l'écoulement est dit turbulent. \\
+Ce nombre  caractérise l'état de l'écoulement. Pour un Reynolds faible (jusqu'à quelques centaines voire quelques milliers selon les cas), l'écoulement est dit laminaire. Lorsqu'il est au delà de la dizaine de milliers, l'écoulement est dit turbulent. \\
 Entre les deux états, on parlera d'état de transition : des instabilités naissent dans l'écoulement rendant le champ de vitesse fluctuant. Plus le Reynolds augmente et plus ces fluctutations sont fortes, jusqu'à arriver à un champ de vitesse complétement aléatoire (turbulent). \\
 
 \noindent  Par analyse dimensionnelle, le nombre de Reynolds peut être construit comme le rapport 
@@ -210,17 +233,17 @@ Entre les deux états, on parlera d'état de transition : des instabilités nais
  La notion clé dans la théorie de la turbulence est que les échelles spatiales L, temporelles T et leurs combinaisons (comme la vitesse U = L/T) se décomposent en un nombre très élevé de sous-échelles.
 Dans le cadre de la turbulence, on fera allusion au Reynolds des plus grandes échelles lorsqu'il sera question de nombre de Reynolds sans plus de précision sur l'échelle spatiale ou de vitesse. \\
 Le passage du laminaire au turbulent est marqué par un changement topographique de l'écoulement. La première structure turbulente qui apparaît est en général un tourbillon dont les échelles caractéristiques sont similaires à celles du Reynolds «global». Sur ces échelles on pourra définir un temps caractéristique de retournement du tourbillon $\tau_{\text{retournement}} = L/U$. \\
-Plus le Reynolds est grand et moins le fluide sera capable d'absorber les instabilités induites par l'inertie du fluide. En conséquence, à haut Reynolds, de l'énergie est constamment injectée dans la zone d'intérêt. Cette énergie est à l'origine de la multitude des échelles spatiales (et donc de toutes les autres) ; on parle de cascade\footnote{L'idée de cascade fut proposée par Richardson, mais sa description s'est avérée fausse. Kolmogorov en 1941 mis en évidence la casacade de Richardson de manière plus mathématique, sans pour autant utiliser cette appellation.} ou de brisure des échelles, \cad $ $ que l'énergie cinétique des premières structures de turbulence est distribuée à des structures de taille plus petite. Ce processus est répété jusqu'à ce que le fluide soit capable de dissiper en chaleur l'énergie cinétique liées aux structures ainsi créées. \\
+Plus le Reynolds est grand et moins le fluide sera capable d'absorber les instabilités induites par l'inertie du fluide. En conséquence, à haut Reynolds, de l'énergie est constamment injectée dans la zone d'intérêt. Cette énergie est à l'origine de la multitude des échelles spatiales (et donc de toutes les autres) ; on parle de cascade\footnote{L'idée de cascade fut proposée par Richardson, mais sa description s'est avérée fausse. Kolmogorov en 1941 mis en évidence la casacade de Richardson de manière plus mathématique, sans pour autant utiliser cette appellation.} ou de brisure des échelles, \cad $ $ que l'énergie cinétique des premières structures de turbulence est distribuée à des structures de taille plus petite. Ce processus est répété jusqu'à ce que le fluide soit capable de dissiper en chaleur, l'énergie cinétique liées aux structures ainsi créées. \\
 
 \noindent D'un point de vue pratique, les équations de \NS $ $ ne sont actuellement solubles «à la main» seulement pour des cas relativemenent simples. Pour la majorité des écoulements turbulents, il est nécessaire d'utiliser des outils numériques.\\
-L'approche la plus précise pour résoudre ces équations est la méthode dite directe, ou DNS (Direct Numerical Simulation). Cette méthode entend résoudre les équations de \NS $ $ à toutes les échelles, et nécessite donc un maillage très resserré dans toutes les dimensions du problème, dont le pas est donnée par la théorie elle même. \\
-La DNS nécessite des ordinateurs très performants et souvent plusieurs mois de calculs. Ces résultats sont utilisés comme référence (au même titre que les résultats expérimentaux) et de base pour évaluer les résultats de modèles numériques moins couteux et moins précis.\\
-Dans un ordre de précision, les méthodes dites de LES (Large Eddy Scales) suivent les DNS. Schématiquement, cette catégorie de méthodes consiste à définir un seuil de prise en compte des échelles, accélérant ainsi les calculs. Pour assurer une prise en compte de la physique des plus petites échelles, différents termes modélisant l'action des petite échelles et leurs avec les plus grandes sont construits. Ces méthodes sont fiables mais encore trop lentes pour un usage en industrie.\\
+L'approche la plus précise pour résoudre ces équations est la méthode dite directe, ou DNS (Direct Numerical Simulation). Cette méthode entend résoudre les équations de \NS $ $ à toutes les échelles, et nécessite donc un maillage très resserré dans toutes les dimensions du problème, dont le pas est donné par la théorie elle même. \\
+Les DNS nécessitent des ordinateurs très performants et souvent plusieurs mois de calculs. Ces résultats (avec ceux expérimentaux) sont utilisés comme références et comme bases pour évaluer les résultats de modèles numériques moins couteux et moins précis.\\
+Dans un ordre de précision, les méthodes dites de LES (Large Eddy Scales) suivent les DNS. Schématiquement, cette catégorie de méthodes consiste à définir un seuil de prise en compte des échelles, accélérant ainsi les calculs. Pour assurer une prise en compte de la physique des plus petites échelles, plusieurs termes modélisant l'action des petites échelles avec les plus grandes, ainsi que leurs corrélations, ont éte construits et constituent encore un secteur actif de recherche. Ces méthodes sont fiables mais trop lentes pour un usage en industrie.\\
 
-\noindent Enfin, il existe une dernière catégorie appelées RANS qui regroupe des méthodes rapides mais dont la fiabilité varie fortement selon les cas. Les designers de ces approches entendaient résoudre la turbulence uniquement pour les grandes échelles. La modélisation des échelles plus petites se fait par l'ajout d'équation(s) de transport (comme Navier-Stokes) pour des grandeurs clés de la turbulence comme l'énergie cinétique turbulente $k$, du taux de dissipation de cette énergie $\varepsilon$, parfois les deux, ou d'autres quantités. On parle de modèle à un ou deux équations. \\% (comme l'intermittence $\gamma$ ou la viscosité turbulente $\nu_T$).\\
+\noindent Enfin, il existe une dernière catégorie de méthodes appelées RANS. Ce sont des méthodes rapides mais dont la fiabilité varie fortement selon les cas. Les designers de ces approches entendaient résoudre la turbulence uniquement pour les grandes échelles. La modélisation des échelles plus petites se fait par l'ajout d'équation(s) de transport (comme Navier-Stokes) pour des grandeurs clés de la turbulence comme l'énergie cinétique turbulente $k$, du taux de dissipation de cette énergie $\varepsilon$, parfois les deux, ou d'autres quantités. On parle de modèle à un ou deux équations. \\% (comme l'intermittence $\gamma$ ou la viscosité turbulente $\nu_T$).\\
 %; les plus connus sont le \keps, le Spalart-Allmaras et le $k-\omega$.\\
 
-\noindent Les grandes échelles évoquées ici correspondent en fait au champ moyen de l'écoulement. En effet, une des idées de base de la théorie de la turbulence est la décomposition, dite de Reynolds. Elle consiste à écrire un champ turbulent en une somme d'une partie moyenne (temporelle) et d'une partie fluctuante. Les conventions variant d'un auteur à l'autre, dans le cadre de ce travail, les champs moyens seront écrits avec une barre au dessus (par exemple $\overline{U_i}$), les champs fluctuants seront écrits en minuscule. \\
+\noindent Les grandes échelles évoquées ici correspondent en fait au champ moyen de l'écoulement. En effet, une des idées de base de la théorie de la turbulence est la décomposition, dite de Reynolds. Elle consiste à écrire un champ turbulent en une somme d'une partie moyenne (moyenne temporelle) et d'une partie fluctuante. Les conventions variant d'un auteur à l'autre, les champs moyens seront écrits en majuscule chapeautés d'une barre (par exemple $\overline{U_i}$), les champs fluctuants seront écrits en minuscule. \\
 Lorsque l'on injecte cette décomposition dans les équations de \NS $ $ sur la vitesse et la pression, on peut distinguer deux équations, une pour chacun des champs moyen et fluctuant. Pour plus de clarté, on écrit l'équation de \NS $ $ pour le champ moyen : 
 \begin{equation}
  \frac{\partial \overline{U}_i}{\partial t} + \overline{U}_j \frac{\partial \overline{U}_i}{\partial x_j} = -\frac{1}{\rho} \frac{\partial \overline{P}}{\partial x_j} + \nu \frac{\partial^2 \overline{U}_i}{\partial x_j^2}  - \frac{\partial \, \overline{u_iu_j}}{\partial x_j} \label{meanfield}
@@ -228,14 +251,14 @@ Lorsque l'on injecte cette décomposition dans les équations de \NS $ $ sur la 
   Cette équation est appelée RANS pour Reynolds Averaged \NS. On peut remarquer que l'évolution du champ moyen prend en compte des quantités moyennes mais aussi un flux d'énergie cinétique de la partie fluctuante. Ce flux d'énergie représentée par le tenseur d'ordre deux $-\rho \overline{u_iu_j}$ est appelé tenseur de Reynolds. On le note $\tau_{ij}$.\\
 Pour modéliser $\tau_{ij}$, il est nécesaire de modéliser le tenseur d'ordre trois $-\overline{u_iu_ju_k}$ dont la modélisation nécessite celle du tenseur d'ordre quatre $-\overline{u_iu_ju_ku_l}$ et ainsi de suite. \\
 %Le fait de d'avoir besoin d'un tenseur d'ordre n+1 pour la modélisation de celui d'ordre n schématise la cascade sus-décrite et indique que les fluctuations aux différentes échelles sont fortement couplées.\\
-  Il s'avère en fait que le système formé des équations RANS et de celles du champ fluctuant est ouvert \cad $ $ qu'il y a plus d'inconnus que d'équations, il faudra rajouter une équation de fermeture, c'est l'objet des méthodes à une ou plusieurs équation(s).\\ %L'effort dans ces approches et de simuler le terme de fluctuations pour obtenir le champ moyen, d'où l'appellation RANS.\\
+  Il s'avère en fait que le système formé des équations RANS et de celles du champ fluctuant est ouvert, \cad $ $ qu'il y a plus d'inconnus que d'équations. Pour résoudre ces équations, il est nécessaire d'ajouter une équation de fermeture, c'est l'objet des méthodes RANS.\\ %L'effort dans ces approches et de simuler le terme de fluctuations pour obtenir le champ moyen, d'où l'appellation RANS.\\
   
-\noindent Dans ces méthodes RANS, on utilise l'hypothèse de Boussinesq. Celle-ci se base sur le fait que la création de nouvelles échelles augmente la stochasticité du champ de vitesse et donc de la friction au sein de l'écoulement.\\
-  Il est alors proposé de construire un terme de viscosité liée à la turbulence à partir d'une analagie à la viscosité cinématique. La formule proposée par Boussinesq en 1890 s'écrit alors : 
+\noindent Ces méthodes se construisent à partir de l'hypothèse de Boussinesq. Celle-ci se base sur le fait que la création de nouvelles échelles augmente la stochasticité du champ de vitesse et donc de la friction au sein de l'écoulement.\\
+  Il est alors proposé de construire un terme de viscosité liée à la turbulence analogue à la viscosité cinématique. La formule proposée par Boussinesq en 1890 s'écrit alors : 
 \begin{equation}
 \tau_{ij} = \rho \nu_T\bepar{\frac{\partial \overline{U}_i}{\partial x_j} + \frac{\partial \overline{U}_j}{\partial x_i}} - \frac{2}{3} \rho \overline{u_iu_i} \delta_{ij} \label{boussi}
 \end{equation} 
-La troisième et dernière idée des méthodes RANS est d'utiliser des observations pour écrire des relations entre différentes quantités turbulente de l'écoulement, en s'appuyant également sur \eqref{boussi}. \\
+La troisième et dernière idée des méthodes RANS est d'utiliser des observations pour écrire des relations entre différentes quantités turbulente de l'écoulement, en s'appuyant notamment sur \eqref{boussi}. \\
 Par exemple pour les modèles à deux équations \keps $ $ ou $k-\omega$ respectivement, on utilisera une relation entre $k$ $\nu_t$ et $\varepsilon$ (resp. $\omega$). Les équations de transports modéliseront l'évolution (spatiale car ce sont des modèles stationnaires) de $k$ et de $\varepsilon$ (resp. $\omega$). Ces équations sont construites en injectant des constantes empiriques qui ont pour but de modéliser les actions (et les rétro-actions puisqu'il y a couplage) des petites échelles.\\
 
 %Pour les approches DNS les résultats corroborent exactement avec les résultats expérimentaux, la majeur contrepartie est le temps de calculs qui est encore très élevé malgré la parallélisation massive et l'utilisation de cluster d'ordinateurs. \\
@@ -243,9 +266,9 @@ Par exemple pour les modèles à deux équations \keps $ $ ou $k-\omega$ respect
 %Les méthodes RANS reposent beaucoup sur des constantes dont les valeurs sont déterminées par l'intuition, du réglages ou sur des valeurs standards définies à partir d'observations expérimentales sur une plage de cas peu variés, ou du moins non représentatif de la variété et la complexité des écoulements que l'on peut retrouver dans la nature.\\
 %Alors que les industriels n'utilisent en majorité que ce type d'approche afin de générer des résultats représentatifs rapidement, la question de la fiabilité des résultats se pose. En parallèle la théorie de la turbulence n'a que très peu avancé depuis les années 1980 et de nouvelles approches doivent être explorées comme il fut fait dans le passé.\\[2mm]
 
-\noindent Au fur et à mesure que les méthodes numériques se développaient, les machines et les méthodes expérimentales se perfectionnaient, une quantité importante de données a pu être accumulée couvrant des écoulements classiques aux complexes, balayant des topologies variées et des spécificités propres aux différentes branches de la mécanique des fluides. Des méthodes ayant pour but d'utiliser ces données ont alors vu le jour, on parle de méthodes pilotées par les données. Une des plus couramment utilisée est la méthode dite d'inversion : elle consiste à retrouver les paramètres d'un modèle, disposant auparavant des données issues de ce dernier et de ses variables d'états. \\
+\noindent Au fur et à mesure que les méthodes numériques se développaient, les machines et les méthodes expérimentales se perfectionnaient. Une quantité importante de données a pu être accumulée couvrant une gamme d'écoulements du classiques aux complexes, avec des topologies variées et des spécificités propres aux différentes branches de la mécanique des fluides. Des méthodes ayant pour but d'utiliser ces données ont alors vu le jour, on parle de méthodes pilotées par les données. Une des plus couramment utilisées est la méthode dite d'inversion : elle consiste à retrouver les paramètres d'un modèle, disposant auparavant de données issues de ce dernier et de ses variables d'états. \\
 
-\noindent En parallèle, une forme de méthode pilotée par les données vit également le jour dans les années 1950 ce sont les intelligences artificielles : des algorithmes capable de découvrir une règle implicite dans les données liant les caractéristiques avec les observations, les entrées et les sorties. En plus d'«apprendre» ces règles, ces algorithmes sont capables de prédire la sortie d'entrées inédites, \cad $ $ de généraliser leur apprentissage. \\
+\noindent En parallèle, une forme de méthode pilotée par les données vit également le jour dans les années 1950 et seront plus tard désignées sous le nom d'intelligences artificielles (IA): des algorithmes capable de découvrir une règle implicite dans les données liant alors caractéristiques avec observations, entrées et sorties. En plus d'\textit{apprendre} ces règles, ces algorithmes les \textit{appliquer} pour prédire la sortie d'entrées inédites. On parle de \textit{généralisation}.\\
 Ces méthodes ont connu une explosion dès lors que les ordinateurs ont gagné en puissance et en capacité. Depuis les années 2000, la recherche en Physique a vu l'incorporation toujours plus grande d'IA que ce soit pour améliorer la prédiction de modèles plus ou moins fiables, pour l'analyse de données, pour la détection de structures entre autres. \\
 
 \noindent Un des objectifs de notre thèse est d'utiliser les intelligences artificielles et les méthodes pilotées par les données pour améliorer les résultats de modèles peu fiables comme le RANS, mais également fournir d'autres outils de prédictions, en s'assurant que la Physique au travers les lois de conservation, est bien respectée.
@@ -258,42 +281,45 @@ Ces méthodes ont connu une explosion dès lors que les ordinateurs ont gagné e
 
 %La solution à ce problème fut également élaborée le siècle dernier. En effet, des méthodes d'apprentissage et de généralisation de pattern émergèrent. Une fois encore, la communauté scientifique saisit l'énorme (voire infini) potentiel de ces algorithmes avec l'amélioration des capacités des ordinateurs et la disponibilité des données.\\ L'ensemble de ces méthodes sont désignées aujourd'hui sous l'appellation d'intelligence artificielle (IA). Bien implémentées, ces méthodes permettent d'assimiler le processus liant les données entre elles et permettent sous certaines conditions de généraliser les données.\\
 
-\noindent Avant d'entrer dans le vif du rapport, nous en présentons succintement le plan : le cœur de la première partie sera l'inférence et sa généralisation par réseau de neurones ou autres algorithmes. Les étapes du procédés seront détaillées ainsi que des résultats obtenu sur des problèmes différents. Les objectifs sur le court et le moyen terme seront également évoqués.\\
-La deuxième partie se concentrera sur l'utilisation des réseaux de neurones comme seul outil de prédiction. Plusieurs remarques concernant le devenir de ces travaux au cours des deux prochaines années seront faites.\\
+\noindent Avant d'entrer dans le vif du rapport, nous en présentons succintement le plan : le cœur de la première partie sera l'inférence et sa généralisation par réseau de neurones ou autres algorithmes. Les étapes capitales du procédé seront détaillées et les résultats les plus représentatifs seront présentés. Les objectifs sur le court et le moyen terme seront également évoqués.\\
+La deuxième partie se concentrera sur l'utilisation des réseaux de neurones comme seul outil de prédiction. Plusieurs remarques concernant le devenir de ces travaux au cours des deux prochaines années sont faites.\\
 Dans une troisième partie plusieurs pistes d'études autour de ces thématiques seront abordées de manières plus brèves. L'accent sera porté sur l'origine de ces idées et sur l'importance qu'elles occuperont par la suite.
 
+\pagebreak
+{
+\hypersetup{hidelinks}
+\tableofcontents
+}
 \pagebreak
 
 \navy \section{Combiner vitesse et précision au travers l'association inférence et machine learning} \label{combiNN_inference}
  \bk
 \noindent L'élaboration d'une théorie Physique ainsi que sa vérification sont toujours pilotées par les données. En effet, face à une situation (un écoulement, une onde se propageant...), les scientifiques réalisent des mesures des quantités d'intérêts, essaient de déterminer les variables décrivant le phénomène et établissent des équations liant ces variables et les quantités observées. Ils confrontent ensuite leur théorie avec les mesures réalisées en amont. \\
-Si la correspondance est bonne, la théorie est acceptée et testée dans d'autres cas. Si les équations ne rendent pas compte convenablement de la réalité, elles sont retravaillées. \\
+Si la correspondance est bonne, la théorie est acceptée et testée dans d'autres cas. Si les équations ne rendent pas convenablement compte de la réalité, elles sont retravaillées. \\
 Cette procédure résume les différentes étapes de l'inférence Bayesienne dans la recherche de paramètres optimaux alliant prédictions et observations.
  
  
 \brick \subsection{Présentation de l'inférence et de ses outils} \bk
-\noindent L'inférence ou l'inversion consiste à résoudre un problème de la solution aux entrées. \cad $ $ qu'à partir d'observations et d'équations présentant des paramètres notés dans un vecteur $\beta$, réaliser une inversion consiste trouver les valeurs des composantes de ce vecteurs de paramètres, minimisant le plus possible l'écart entre la solution observée et celle obtenue avec les équations paramétrées. \\
+\noindent L'inférence ou l'inversion consiste à résoudre un problème de la solution aux entrées. À partir d'observations et d'équations présentant des paramètres notés dans un vecteur $\beta$, réaliser une inversion consiste à trouver les valeurs des composantes de ce vecteur, minimisant le plus possible l'écart entre la solution observée et celle obtenue avec les équations paramétrées. \\
 Nous proposons ici de rentrer plus en détail dans la théorie et dans son utilisation.
 
 \dsb \subsubsection{Théorème de Bayes et fonction de correspondance} \bk
-\noindent L'inférence Bayesienne se base sur le théorème de Bayes établit fin du $\overline{\underline{\text{XVIII}}}^{\, \text{ème}}$ siècle. Il permet d'évaluer une distribution de probabilité des paramètres que l'on cherche à évaluer, sachant les observations ou les mesures.\\
-Dans l'étude présentée, le paramètre recherché est un vecteur noté $\beta$. Le théorème de Bayes permettra d'évaluer la probabilité $p\bepar{\beta\,|\,\textbf{d}}$, \textbf{d} représentant les observations; il établit 
+\noindent L'inférence Bayesienne se base sur le théorème de Bayes établit fin du $\overline{\underline{\text{XVIII}}}^{\, \text{ème}}$ siècle. Il permet d'évaluer une distribution de probabilités du vecteur de paramètres $\beta$ sachant les observations ou les mesures. Cette distribution s'écrit $p\bepar{\beta\,|\,\textbf{d}}$, \textbf{d} représentant les observations.\\
+Le théorème de Bayes permet d'évaluer cette probabilité ; il établit 
 \begin{equation}
 p\bepar{\beta\,|\,\textbf{d}} = \frac{\mathcal{L}\bepar{\textbf{d}\,|\,\beta}p\bepar{\beta}}{c} %\tag{Théorème de Bayes}
 \end{equation}
-Ce théorème lie la distribution de correspondance ou \textit{likelihood distribution} $\mathcal{L}\bepar{\textbf{d}\,|\,\beta}$, avec la distribution \textit{a priori} $p\bepar{\beta}$, du vecteur $\beta$. $\mathcal{L}$ représente la probabilité d'obtenir les observations sachant un premier essai de $\beta$ (on parlera d'information \textit{à priori}),\\
-Au dénominateur, le terme $c$ représente la \textit{likelihood marginalisée} par tous les paramètres possibles. Le but étant de construire une moyenne de $\mathcal{L}\bepar{\textbf{d}\,|\,\beta}$ par rapport aux choix de paramètres à priori. $c$ s'écrira donc 
+Cette formule lie \textit{la distribution de correspondance} ou \textit{likelihood distribution} $\mathcal{L}\bepar{\textbf{d}\,|\,\beta}$, avec la distribution \textit{a priori} $p\bepar{\beta}$, du vecteur $\beta$. De manière moins formelle, $\mathcal{L}$ représente la probabilité d'obtenir les observations \textbf{d} sachant un premier essai de $\beta$ (on parlera d'information \textit{à priori}).\\
+Au dénominateur, le terme $c$ représente la \textit{likelihood marginalisée} sur tous les paramètres possibles. Le but étant de construire une moyenne de $\mathcal{L}\bepar{\textbf{d}\,|\,\beta}$ par rapport aux choix de paramètres \textit{a priori}, $c$ s'écrira donc 
 \begin{equation}
 c = \int_{\beta} \mathcal{L}\bepar{\textbf{d}\,|\,\beta}p\bepar{\beta} d\beta
 \end{equation} \\
-Calculer $p\bepar{\beta\,|\,\textbf{d}}$ peut se faire en supposant que \textbf{d}, $\beta$ et $\mathcal{L}$ ont des distributions gaussiennes comme suggéré par \citep{parish2016paradigm}, \citep{tarantola2005inverse} ou d'autre.\\
-La méthode MAP pour \textit{Maximum A Posteriori} utilisée par les références citées, consiste à calculer la valeur de $\beta$ la plus probable plutôt que de déterminer de l'entière distribution. L'objectif est alors de maximiser la correspondance entre modèle et observation soit 
+Calculer $p\bepar{\beta\,|\,\textbf{d}}$ peut se faire en supposant que \textbf{d}, $\beta$ et $\mathcal{L}$ ont des distributions gaussiennes comme suggéré par \citep{parish2016paradigm}, \citep{tarantola2005inverse} ou d'autres.\\
+La méthode MAP pour \textit{Maximum A Posteriori} utilisée par les références citées, consiste à calculer la valeur de $\beta$ la plus probable plutôt que de déterminer l'entière distribution. L'objectif est alors de maximiser la correspondance entre modèle et observations soit 
 \begin{equation}
 \beta_{\text{MAP}} = \underset{\beta}{\text{arg}\, \text{max}} \ p\bepar{\beta\,|\,\textbf{d}} \label{bmap}
 \end{equation}
-
-\noindent À partir de développement mathématiques dont il ne sera pas question ici, il est possible d'écrire $\mathcal{L}$ comme une fonction de coût.\\
-Souvent les données expérimentales sont obtenues avec une incertitude propre à la méthode de mesure ou aux outils utilisés. Ces incertitudes devant apparaître, on construit une matrice de covariance $\covobs$ (nous n'utiliserons que son inverse). \\
+\noindent À partir de développement mathématiques, on montre que $\mathcal{L}$ peut s'écrire comme une fonction de coût et que résoudre \eqref{bmap} revient en fait à minimiser cette fonction de coût. Cette fonction de coût fait intervenir des termes particuliers. En effet, souvent les données expérimentales sont obtenues avec une incertitude propre à la méthode de mesure ou aux outils utilisés. Ces incertitudes devant apparaître, il est nécessaire de construire une matrice de covariance $\covobs$.
 Idem, puisque $\mathcal{L}$ prend en compte la première valeur (premier choix ou first guess) $\beta_{\text{pri}}$ et sa distribution, la fonction de coût équivalente doit faire apparaître la covariance $\covpri$.\\
 Finalement avec $\textbf{h}_\beta \equiv \textbf{h}(\beta)$ la prédiction du modèle qu'on essaie de corriger, effectuer une inversion revient à estimer 
 \begin{equation}
@@ -304,11 +330,11 @@ La fonction à minimiser est la fonction de coût sus-mentionnée, elle est not�
 \dsb \subsubsection{L'algorithme BFGS} \bk
 
 \noindent La résolution de ce problème devient alors un problème de minimisation. Nous utilisons l'algorithme Broyden-Fletcher-Goldfarb-Shanno abbrégé BFGS dans la suite \citep{nocedal2006numerical}.
-Contrairement aux Algorithmes de gradient classiques, le BFGS est un algorithme d'ordre deux. Il utilise une une approximation de la hessienne de $\J$ afin de ne pas avoir à effectuer le calcul de cette matrice qui peut s'avérer très lourd.\\
+Contrairement aux algorithmes de gradient classiques, le BFGS est un algorithme d'ordre deux. Il utilise une approximation de la hessienne de $\J$ afin de ne pas avoir à effectuer le calcul de cette matrice qui peut s'avérer très lourd.\\
 C'est une méthode itérative mettant à jour le vecteur d'intérêt $\beta_k$ ainsi que sa hesienne inverse notée $B^{-1}_k$ à partir d'un algorithme d'exploration appelé \textit{line search} dont nous évoquerons brièvement les spécificités.\\
 Pour atteindre le minimum global de l'équation \eqref{bmapJ}, il est nécessaire d'incrémenter la valeur de $\beta_k$ par une variation $d\beta_k$ vérifiant l'inégalité suivante
 \begin{equation}
-\nabla\J_k = \frac{\partial \J}{\partial \beta_k} = \frac{\J\bepar{\beta_k+ d\beta_k} - \J\bepar{\beta_k}}{d\beta_k} < 0
+\nabla_k\J = \frac{\partial \J}{\partial \beta_k} = \frac{\J\bepar{\beta_k+ d\beta_k} - \J\bepar{\beta_k}}{d\beta_k} < 0
 \end{equation}
 Pour déterminer la forme de cet incrément le BFGS procède en deux étapes : dans un premier temps l'algorithme détermine la \textit{direction} du gradient puis la \textit{longueur} de l'incrément. \\
 On note le vecteur de direction $\mathbf{p}_k$, il s'écrit :
@@ -319,10 +345,10 @@ Pour vérifier que ce vecteur pointe dans la bonne direction, le produit scalair
 \begin{equation}
 -\nabla_k^T\J\, B_k^{-1}\, \nabla_k\J = \mathbf{p}_k^T\, \nabla_k\J < 0
 \end{equation}
-Cette condition est une conséquence directe du développement de Taylor autour de l'incrément.\\
+Cette condition est une conséquence du développement de Taylor de $\J$ autour de l'incrément.\\
 
 \noindent Une fois la direction calculée, il reste à déterminer l'amplitude de l'incrémentation. En effet, puisque l'on cherche le minimum global de $\J$, il faut veiller à ne pas «tourner autour» du $\bmap$ indéfiniment, et adapter le pas au fur et à mesure que l'optimisation se déroule.\\ 
-Sans rentrer dans dans tous les détails, le BFGS utilise un algorithme de \textit{line search} pour trouver $ \displaystyle \alpha_k$ tel que $d\beta_k = \alpha_k\mathbf{p}_k$. Cette recherche doit satisfaire deux critères sur $\beta_{k+1}$: 
+Sans rentrer dans dans tous les détails, le BFGS utilise un algorithme de \textit{line search} pour trouver $ \displaystyle \alpha_k$ tel que $d\beta_k = \alpha_k\mathbf{p}_k$. Cette recherche doit satisfaire deux critères sur $\beta_{k+1}\equiv\beta_k+ d\beta_k $: 
 \begin{itemize}
 \item[$\bullet$] Une condition sur la nouvelle valeur de la fonction de coût : \begin{equation}
 \J\bepar{\beta_{k+1}} - \J\bepar{\beta_k} < C_1
@@ -341,7 +367,7 @@ La dernière étape de l'algorithme consiste à incrémenter $B_{k+1}^{-1}$ util
 \brick \subsection{Utilisation de l'inférence sur différents cas} \bk
 
 \noindent Nous avons mis en place les outils présentés ci-dessus dans plusieurs cas, nous n'en présenterons que deux : un problème thermique monodimensionnel provenant de \citep{parish2016paradigm}, puis sur la propagation d'une onde à travers l'équation de Burgers 1d. \\
-Nous travaillons également sur l'utilisation de ce procédé pour trouver les paramètres  qui corrigeraient les modèles le moins précis (par exemple RANS ou LES) réduisant alors l'écart les solutions références(DNS ou expériences).
+Nous travaillons également sur l'utilisation de ce procédé pour trouver les paramètres  qui corrigeraient les modèles le moins précis (par exemple RANS ou LES) réduisant alors l'écart les solutions références (DNS ou expériences).
 
 \dsb \subsubsection{Problème thermique} \bk
 Le but est d'établir l'évolution du champ de température dans un barreau dont les températures au début et en fin de domaine sont nulles. Cette évolution se fait sous des termes de conduction, de convection et de radiation. Le paramètre de ce problème sera la température extérieure au barreau $T_\text{inf}$. 
@@ -370,7 +396,7 @@ On note $R$ tel que $\text{Chol}\bepar{B_{\bmap}^{-1}} = \text{R}\text{R}^T$ et 
 p\bepar{\beta\,|\,\textbf{d}} \approx \bmap + \text{R}s \label{distribbmap}
 \end{equation}
 Il devient possible d'évaluer la variance de cette distribution. Sur 250 tirages de $\beta$, on résout \eqref{Tinex}, on calcule les extrema ainsi que les déviations standards. On fait de même avec $\bmap$ solution de l'optimisation de Scipy, et l'on compare les extrema sur chacun des points du domaine; disposant d'une écriture analytique pour $\beta_{\text{True}}$, on peut évaluer la fiabilité de la méthode en traçant toutes ces grandeurs dans une même figure voir Fig.\eqref{comp_bmap_hbmap}. \\
- Il arrive que la méthode scipy sorte de la boucle d'optimisation pour des raisons propres à l'implémentation. C'est en parti pour cela que nous avons recodé la méthode, et aussi pour comprendre le processus et avoir accès aux différents $\beta$, aux valeurs des hessiennes inverse etc.\\
+ Il arrive que la méthode scipy sorte de la boucle d'optimisation pour des raisons propres à l'implémentation. C'est en parti pour cela que nous avons recodé la méthode, mais aussi pour comprendre le processus et avoir accès aux différents $\beta$, aux valeurs des hessiennes inverse etc.\\
  Le temps de calcul est toutefois nettement plus conséquent avec le code «maison». Les différences ne sont jamais vraiment grandes à part pour le cas \tinf = 50 que nous présentons ici. 
 
 \begin{figure}[!ht]
@@ -399,7 +425,7 @@ Il devient possible d'évaluer la variance de cette distribution. Sur 250 tirage
 \centering
 \includegraphics[height=10cm, width=8.43cm]{bmap_50_scipyVStheo.png} \hfill
 \includegraphics[height=10cm, width=8.43cm]{hbmap_50scipy_VS_ObsField.png}
-\caption{\small{Même légende que Fig.\eqref{comp_bmap_hbmap}. La procédure est exactement la même que décrite précedemment sauf que le code BFGS utilisé est celui de Scipy. L'optimisation s'est vraisemblablement terminé avant convergence.}}
+\caption{\small{Même légende que Fig.\eqref{comp_bmap_hbmap}. La procédure est exactement la même que décrite précedemment sauf que le code BFGS utilisé est celui de Scipy. L'optimisation s'est vraisemblablement terminée avant convergence.}}
 \label{scipycomp_bmap_hbmap}
 \end{figure}
 
@@ -412,7 +438,7 @@ Notons que cette démarche s'inscrit dans un projet plus vaste : utiliser une co
 \begin{equation}
 \frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} = \nu\frac{\partial^2 u}{\partial x^2}  \label{VBETrue} \tag{VBE}
 \end{equation}
-Nous résolvons cette équation en utilisant le schéma de Lax-Wendroff. La condition initiale est est un sinus de déphasage nulle, aniti-symétrique par rapport au centre du domaine.\\
+Nous résolvons cette équation en utilisant le schéma de Lax-Wendroff. La condition initiale est un sinus de déphasage nulle, aniti-symétrique par rapport au centre du domaine.\\
 Comme précédemment, il nous faut approximer cette équation avec un terme $\beta$ modélisant un des termes de l'équation précédente. \\
 Nous remplaçons ici le terme non-linéaire de convection $\displaystyle u \frac{\partial u}{\partial x}$. On définit alors :
 \begin{equation}
@@ -451,25 +477,24 @@ Les équations de la Magnéto-Hydrodynamique (MHD) fournit les équations pour t
 \frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} -3h\, \frac{\partial h}{\partial x} &= \nu \frac{\partial^2 u}{\partial x^2} \label{uthomas} \\[3mm]
 \frac{\partial h}{\partial t} + u \frac{\partial h}{\partial x} - h \frac{\partial u}{\partial x} &= \lambda \frac{\partial^2 h}{\partial x^2} 
 \end{align}
-Nous projetons de résoudre dans un premier temps en utilisant un solver de différence finie classique, avec un maillage très resséré pour être pris comme référence.\\
+Nous projetons de le résoudre dans un premier temps en utilisant un solver de différences finies classique, avec un maillage resséré pour être pris comme référence.\\
 Puis nous injecterons un terme $\beta$ dans la première ou la deuxième (ou les deux) équations, utiliserons le procédé d'inférence pour reconstituer les champs $u$ et $h$.\\ On calculera les corrélations des deux champs après inférence mais également les spectres d'énergies afin de contrôler si la Physique est respectée.\\
 
 \noindent Dans cette thèse, mettre en place une procédure d'inférence n'est pas une fin en soi, mais une étape qu'il était indispensable de maîtriser pour l'atteinte des objectifs visés.\\
 Comprendre le formalisme mathématique de cet outil, avec la fonction de correspondance $\mathcal{L}$, l'optimisation de paramètres $\beta$ pour faire correspondre modèle et observations, permet d'avoir une première approche des algorithmes d'entraînement des intelligences artificielles comme le réseau de neurones.\\
 En effet, les algorithmes de machine learning (ML) fonctionnent sur un principe très similaire à celui de l'inférence Bayesienne puisqu'ils cherchent à ajuster plusieurs paramètres (parfois des milliers voire des millions) afin de faire correspondre des entrées (\textit{inputs)} à des sorties, toutes les deux fournies par l'utilisateur; c'est ce qu'on appelle l'entraînement ou \textbf{\textit{training}}. Une fois ces paramètres établis, ces méthodes entendent prédire des sorties à partir d'entrées inédites, c'est ce qu'on appelle \textbf{la prédiction}.\\
 
-\noindent L'idée de généraliser les données de l'inférence par ML est consiste en fait à découvrir la fonctionnelle liant les caractéristiques (\textit{inputs}) d'un problème et le vecteur $\bmap$ calculé au préalable sur plusieurs cas.\\
-Avec la bonne architecture de réseau et des données assez variées, il devient possible d'utiliser le réseau comme une fonction qui à des entrées associe une sortie. Dans les cas qui nous occupe dans cette section, les entrées seront des grandeurs spécifiques au phénomère étudié, les sorties seront toujours des paramètres de correction.
-
+\noindent L'idée de généraliser les données de l'inférence par ML consiste en fait à découvrir la fonctionnelle liant les caractéristiques (\textit{inputs}) d'un problème et le vecteur $\bmap$ calculé au préalable sur plusieurs cas.\\
+Avec la bonne architecture de réseau et des données assez variées, il devient possible d'utiliser le réseau comme une fonction qui à des entrées associe une sortie. Dans les cas qui nous occupe dans cette section, les entrées seront des grandeurs spécifiques au phénomène étudié, les sorties seront toujours des paramètres de correction.
 
 \brick \subsection{Les réseaux de neurones} \bk 
-\noindent Sans entrer dans trop de détails historiques ou mathématiques, le réseau de neurones (abrégé NN pour Neural Network) est un algorithme d'intelligence artificielle datant des années 50. Cette algorithme a été sous-estimé et sous-utilisé notamment parce que les ordinateurs de l'époque n'étaient pas en capacité d'exploiter les possibilités de cet outil et qu'on manquait de données.\\
-Aujourd'hui les NN sont utilisés dans énormément de champs de la physique, de la médecine de l'informatique (évidemment) à tel point qu'ils sont omniprésents dans notre vie quotidienne. En ce qui concerne leur utilisation dans le domaine de la Turbulence, les NN se font de plus en plus de place. \\
-On distingue deux grandes tendances dans l'utilisation des IA dans la turbulence : la première consiste à découvrir les \textit{équations} dans les données, on peut citer les travaux de \citep{kutz2017deep} ou \citep{raissi2018hidden} parmi beaucoup d'autres. \\
+\noindent Sans entrer dans trop de détails historiques ou mathématiques, le réseau de neurones (abrégé NN pour Neural Network) est un algorithme de type intelligence artificielle datant des années 1950. Cet algorithme a longtemps été sous-estimé et sous-utilisé parce que les ordinateurs de l'époque n'étaient pas assez puissant pour exploiter les possibilités de cet outil.\\
+Aujourd'hui les NN sont utilisés dans énormément de champs de la physique et de la médecine à tel point qu'ils sont omniprésents dans notre vie quotidienne. En ce qui concerne leur utilisation dans le domaine de la Turbulence, les NN se font de plus en plus de place. \\
+De cette dernière utilisation on en distingue deux grandes tendances : la première consiste à découvrir les \textit{équations} dans les données, on peut citer les travaux de \citep{kutz2017deep} ou \citep{raissi2018hidden} parmi beaucoup d'autres. \\
 La deuxième approche, celle qui est suivie dans ce travail, est d'essayer de corriger les erreurs pour des modèles qui sont le plus utilisés, comme le \keps $ $. Les études de référence qui constituent la base de cette thèse sont \citep{parish2016paradigm}, \citep{singh2017machine}, \citep{wu2018data} ou encore \citep{wang2017physics} entre autres. \\
 
 \noindent Cette approche peut faire émerger de nouveaux modèles, dits augmentées, qui pourraient ne pas être limités comme le sont les schémas aux différences finies. C'est l'idée qui se cache derrière l'injection du vecteur $\beta$ dans l'équation \eqref{VBEbeta}.\\
-\noindent Nous allons revenir sur les cas évoqués lors de la section précédente et présenter la procédure de généralisation par NN.
+\noindent Nous allons revenir sur les cas évoqués lors de la section précédente et présenter la procédure de généralisation par NN. On commence par introduire superficiellement le réseau de neurones.
 
 \dsb\subsubsection{Présentation schématique d'un réseau de neurones} \bk
 \noindent Schématiquement, un réseau de neurones est une succession de couches de \textit{neurones} densément liées par des poids $w$. Par analogie avec les neurones biologiques, les neurones dont il est question ici sont des éléments de l'algorithme qui somment toutes les entrées dans un sens, qui y ajoutent un biais (pour augmenter la généralisation) et qui transforment cette somme au travers une fonction non-linéaire dite $d'activation$. Par des algorithmes de \textit{backpropagation} les poids liant chaque couche sont ajustés pour minimiser l'écart entre la prédiction et la valeur de référence.
@@ -479,7 +504,7 @@ La deuxième approche, celle qui est suivie dans ce travail, est d'essayer de co
 \caption{\small{Représentation très schématique d'un réseau de neurones.}}
 \label{NN_skeme}
 \end{figure}
-Les fonctions d'activations sont multiples et selon le problème (régression ou classification) l'une ou l'autre permettra une meilleure généralisation. Plusieurs articles comme \citep{krizhevsky2010convolutional} ont discuté des différentes fonction d'activations, et nous avons majoritairement utilisé la fonction SeLu :
+Les fonctions d'activations sont multiples et selon le problème (régression ou classification) l'une ou l'autre permettra une meilleure généralisation. Plusieurs articles comme \citep{krizhevsky2010convolutional} ont discuté des différentes fonction d'activations, et nous avons majoritairement utilisé la fonction SeLu \citep{klambauer2017self} :
 \begin{equation}
 \text{SeLu} = \lambda \,
 \Big \{
@@ -488,17 +513,17 @@ Les fonctions d'activations sont multiples et selon le problème (régression ou
 		\alpha \bepar{ e^x - 1} & \text{if } x \leq 0
 		\end{array}						
 \end{equation}
-Avec $\lambda$ et $\alpha$ ajustable, nous utilisons les valeurs de bases : $\lambda = 1\pnt 0507$ et $\alpha = 1 \pnt 6732$. Cette fonction d'activation possède des propriétés intéressantes dans le cadre du réseau de neurones que nous ne développerons pas ici \citep{klambauer2017self}.\\
-Pour l'optimisation des poids, nous utilisons l'algorithme Adam \citep{kingma2014adam} qui minimise beaucoup plus vite la fonction de coût que le \textit{Gradient Descent} classique et qui devient le standard, du moins dans les problèmes de régression.\\
+Avec $\lambda$ et $\alpha$ ajustable, nous utilisons les valeurs de bases : $\lambda = 1\pnt 0507$ et $\alpha = 1 \pnt 6732$. Cette fonction d'activation possède des propriétés intéressantes dans le cadre du réseau de neurones que nous ne développerons pas ici.\\
+Pour l'optimisation des poids, nous utilisons l'algorithme Adam \citep{kingma2014adam} qui minimise beaucoup plus vite la fonction de coût que le \textit{Gradient Descent} classique et qui devient le standard, du moins dans les problèmes de régression.
 
 \dsb \subsubsection{Problème thermique} \bk
 \noindent Jusqu'à présent, le problème inverse consistait à trouver $\beta$ en fonction des obervations. \\
-La formulation du problème augmenté est directe, \cad  $ $, qu'on va chercher $\beta$ en fonctions de caractéristiques du problème.\\
-La force de cette approche est que l'on peut choisir le nombres de caractéristiques que l'on veut, ou qui s'avèrent prodiguer la meilleur capacité de généralisation du réseau sur des problèmes inédits. L'optimisation des poids d'un NN amène à l'établissement de la fonctionnelle $\mathcal{F}$ : 
+La formulation du problème augmenté est directe, \cad  $ $, qu'on va chercher $\beta$ (sortie) en fonction des caractéristiques (entrées) du problème.\\
+La force de cette approche est que l'on peut choisir le nombre d'entrées que l'on veut, ou qui s'avèrent prodiguer la meilleur capacité de généralisation du réseau sur des problèmes inédits. L'optimisation des poids d'un NN amène à l'établissement de la fonctionnelle $\mathcal{F}$ : 
 \begin{equation}
 \beta = \mathcal{F}\bepar{\eta_1,\,\eta_2,\, ...,\eta_n}
 \end{equation}
-Les $\eta_i$ représentent les caractéristiques ou inputs choisies.\\
+Les $\eta_i$ représentent les caractéristiques choisies.\\
 Dans le cas du problème thermique la température du fluide à l'extérieur du barreau \tinf $ $ ainsi que la température au point courant dans le barreau sont choisies comme $\eta_1$ et $\eta_2$. On cherchera alors donc : 
 \begin{equation}
 \beta_i = \mathcal{F}\bepar{T_{\text{inf}}, \, T_i}, \ \ \forall i \in \becro{0,\, N-1} 
@@ -521,7 +546,7 @@ On peut soit prendre la somme, soit prendre la moyenne de cet écart sur l'ensem
 On minimise cette erreur en cherchant la plus grande pente (voir les algorithmes de Gradient Descent \citep{Goodfellow-et-al-2016} ou Adam \citep{kingma2014adam}).\\
 Enfin après avoir mis à jour les poids, on calcule $\J$ sur le test set. Si l'erreur est suffisamment basse, cela voudra dire que les poids du réseau sont optimum pour pouvoir généraliser les données de l'apprentissage.\\
 
-\noindent On trace dans la figure Fig.\eqref{loglog_tempCost} l'évolution de la somme des erreurs sur le \textit{training set}. On évalue l'erreur sur le test set pour être sur de ne pas overfitté, on utilise le calcule de la valeur absolue de l'erreur moyenne\footnote{\url{http://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_error.html}} entre la prédiction de $X_{\text{test}}$ et $y_{\text{test}}$, elle est évaluée à $0 \pnt 011$.
+\noindent On trace dans la figure Fig.\eqref{loglog_tempCost} l'évolution de la somme des erreurs sur le \textit{training set}. On évalue l'erreur sur le test set pour être sur de ne pas overfitter, on utilise le calcul de la valeur absolue de l'erreur moyenne\footnote{\url{http://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_error.html}} entre la prédiction de $X_{\text{test}}$ et $y_{\text{test}}$, elle est évaluée à $0 \pnt 011$.
 
 \begin{figure}[!ht]
 \centering
@@ -535,7 +560,7 @@ Enfin après avoir mis à jour les poids, on calcule $\J$ sur le test set. Si l'
 À chaque itération, le $\beta$ est prédit, puis la solution \eqref{Tinex} est calculée. Si le résidu entre deux itérations temporelles est inférieur à $10^{-7}$ la solution est considérée comme convergée.\\
 
 \noindent On présente les prédictions du $\beta$ obtenu pour lequel le résidu est inférieur à la tolérance Fig.\eqref{beta35-15cospix}. Cette figure présente des zones où les $\beta$ prédits et théoriques sont bien différents. On pourrait s'attendre à une non-correspondance entre les champs de température prédit (solution de \eqref{Tinex}) et théorique (solution de \eqref{Ttrue}). Ces deux éléments sont représentés Fig.\eqref{Tbeta35-15cospix}.\\
-Le fait que ces deux champs corroborent quasi-parfaitement dans l'ensemble du domaine peut s'expliquer par le fait que l'influence des termes linéaires modélisés par $\beta$ dans \eqref{Tinex} est faible por ce genre de température.\\
+Le fait que ces deux champs corroborent quasi-parfaitement dans l'ensemble du domaine peut s'expliquer par le fait que l'influence des termes linéaires modélisés par $\beta$ dans \eqref{Tinex} est faible pour les \tinf $ $ atteints.\\
 Cette intuition est vérifiée par l'incapacité du réseau de prédire une correction $\beta$ suffisante pour que la solution de \eqref{Tinex} soit précise pour des \tinf $ $  inférieurs ou égales à 15 degré. Pour palier à ce problème, on peut fournir plus de cas avec des \tinf $ $ dans cette plage et améliorer la prédiction des $\beta$ pour les cas intermédiaires.\\
 \vspace{-0.3cm}
 \begin{figure}[!ht]
@@ -575,12 +600,11 @@ Cette intuition est vérifiée par l'incapacité du réseau de prédire une corr
 \item[--] Et réfléchir pour prendre en compte la dynamique.
 \end{itemize}   
 Sur l'apprentissage de la dynamique beaucoup de travaux ont été effecutés notamment en utilisant des méthodes de réduction \citep{parish2016reduced}. Ces travaux se basent sur la théorie de \citep{chorin2002optimal} et \citep{tsung1995phase}. Ces méthodes sont en pleines expansions et nous projettons d'y passer encore du temps.\\
-
 \noindent Sans utiliser ce genre de méthode, et sans se placer dans l'espace des phases, nous avons commencé à tester s'il était possible de résoudre l'équation de Brugers dans une forme linéaire avec un modèle de Crank-Nicholson augmenté par un NN.\\
 Dans un premier temps, il faut réaliser l'inférence sur plusieurs cas en faisant varier la viscosité et en enregistrant la valeur du $\bmap$ pour tous les cas et toutes les itérations temporelles. \\
-Il faut aussi veiller à ce que la valeur de la viscosité soit suffisamment élevée. Dans le cas contraire, les modèles numériques devenant instables au niveau du choc, des valeurs corrompues se propagent dans tout le domaine.\\
+Il faut aussi veiller à ce que la valeur de la viscosité soit suffisamment élevée. Dans le cas contraire, les modèles numériques devenant instables au niveau du choc et des valeurs corrompues se propagent dans tout le domaine.\\
 
-\noindent Il a fallu alors réfléchir aux inputs $\eta_i^n$ à choisir pour constituer la fonctionnelle $\beta^n = \mathcal{F}\bepar{\eta_i^n}$ . En s'inspirant des différence finies, nous avons considéré un nœud spatial centré au point $i$ de l'itération $n$ : $$X = \{ u^n_{i-1},\, u^n_{i},\, u^n_{i+1}\}$$. L'idée est de déterminer si il était possible de trouver dans les données une corrélation spatiale propre au champ de vitesse.\\
+\noindent Il a fallu alors réfléchir aux inputs $\eta_i^n$ à choisir pour constituer la fonctionnelle $\beta^n = \mathcal{F}\bepar{\eta_i^n}$ . En s'inspirant des différence finies, nous avons considéré un nœud spatial centré au point $i$ de l'itération $n$ : $$X = \{ u^n_{i-1},\, u^n_{i},\, u^n_{i+1}\}$$ L'idée est de déterminer si il était possible de trouver dans les données une corrélation spatiale propre au champ de vitesse.\\
 Nous avons également essayé de rajouter les coordonnées spatiales dans chacun des entrées, améliorant la réduction de l'erreur sur le \textit{training set}. La matrice d'entrées devint alors $$X = \{ x_{i-1}, \, x_i,\, x_{i+1},, u^n_{i-1},\, u^n_{i},\, u^n_{i+1}\}$$
 Enfin nous avons également considéré des entrées prenant les valeurs du champ de vitesse aux itérations précédentes (une ou deux). Nous écrivons la matrice $X$ pour une itération : $$ \beta^{n+1} = \bepar{x_{i-1}^n, x_i^n, x^n_{i+1}, U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, U_{i-1}^n, U_i^n, U^n_{i+1}} $$\\
 Tout ces cas sont encore en cours de traîtement, en effet la majeur contrepartie dans ce problème est le manque de diversité de données sur lesquelles les inférences ont été effectuées. Les résultats n'étaient pas probants, il fut long de comprendre la source des erreurs. \\
@@ -606,7 +630,7 @@ La deuxième partie traitera de l'apprentissage renforcée. Nous y consacrerons 
 \begin{equation}
 \frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} = \nu\frac{\partial^2 u}{\partial x^2}  \label{VBETrue2} \tag{VBE}
 \end{equation}
-L'idée ici n'est plus d'injecter un terme à découvrir mais de générer des solutions de cette équations pour des conditions initiales sinusoïdales différentes et tenter d'apprendre à un NN la dynamique régie par \eqref{VBETrue2}. On représente les différentes conditions initiales dans la figure Fig.\eqref{initNN}
+L'idée ici n'est plus d'injecter un terme à découvrir mais de générer des solutions pour des conditions initiales sinusoïdales différentes et tenter d'apprendre à un NN la dynamique régie par \eqref{VBETrue2}. On représente les différentes conditions initiales dans la figure Fig.\eqref{initNN}
 
 \begin{figure}[!ht]
 \centering
@@ -631,10 +655,10 @@ Puis nous voulons construire les matrice $X$ et $y$. Comme nous l'avions évoqu�
 	$$
 	\end{multicols}
   
-\noindent Avec $U_i^n$ la valeur de la vitesse au i$^{\text{ème}}$ point de discrétisation spatiale, à la n$^{\text{ème}}$ itération temporelle.\\
- Les trois premiers inputs imitent les schémas aux différences finies classique avec une maille centré, la quatrième caractéristiques est le taux de variations de ce champ de vitesse pour renseigner la valeur de la pente sur à chaque point \footnote{Cette dernière entrée a été rajoutée après avoir constaté que des informations étaient nécessaire au NN pour découvrir la fonctionnelle}. \\
- Finalement la fonctionnelle $\mathcal{F}$ s'écrit $$U^{n+1}_i =  \mathcal{F}\bepar{U^n_{i-1},U^n_{i}, U^n_{i+1}, \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}}$$.\\
-   On découpe $X$ et $y$ en un \textit{training set} et une partie de nos données pour tester le \textit{training}, nous recentrons les données conformément à ce qu'lon a évoqué plus tôt, et commençons l'optimisation des poids avec la fonction d'activation SeLu pour l'ensemble des neurones et l'algorithme Adam pour l'optimisation. L'architecture du réseau est la suivante : 6 couches de 80 neurones.\\
+\noindent Avec $U_i^n$ la valeur de la vitesse au i$^{\text{ème}}$ point de discrétisation spatiale (80 points et conditions aux limites périodiques), à la n$^{\text{ème}}$ itération temporelle (80 itérations). \\
+ Les trois premiers inputs imitent les schémas aux différences finies classiques avec une maille centrée, la quatrième caractéristique est le taux de variation de ce champ de vitesse qui renseigne la valeur de la pente à chaque point \footnote{Cette dernière entrée a été rajoutée après avoir constaté que des informations étaient nécessaire au NN pour découvrir la fonctionnelle}.
+ Finalement la fonctionnelle $\mathcal{F}$ s'écrit $$U^{n+1}_i =  \mathcal{F}\bepar{U^n_{i-1},U^n_{i}, U^n_{i+1}, \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}}$$
+   On découpe $X$ et $y$ en un \textit{training set} et une partie de nos données pour tester le \textit{training}, nous recentrons les données conformément à ce que l'on a évoqué plus tôt, et commençons l'optimisation des poids aléatoirement initialisés \citep{Goodfellow-et-al-2016}. La fonction d'activation est SeLu pour l'ensemble des neurones et pour l'optimisation nous utilisons l'algorithme Adam. L'architecture du réseau est la suivante : 6 couches de 80 neurones.\\
     On représente la fonction de coût figure Fig.\eqref{trainingNNvbe}
     \begin{figure}[!ht]
     \centering
@@ -646,11 +670,11 @@ Puis nous voulons construire les matrice $X$ et $y$. Comme nous l'avions évoqu�
 \noindent Le choix de l'architecture est fortuit. Nous avions écrit un algorithme génétique pour découvrir l'architecture optimale en revanche ce sont des algorithmes qui nécessitent énormément de temps; nous l'avons donc pas encore utilisé sur ce cas.\\
 L'erreur de la fonction de coût décroît fortement jusqu'à quelques unités. Nous n'avons pas augmenté le nombre d'itération pour ne pas avoir à faire aux problèmes liés à l'overfitting.\\
 
-\noindent Nous générons à présent une condition intiale nouvelle par rapport aux $X$  et $y$. Nous comparons les prédictions à chaque itération avec les données exactes obtenues en résolvant cette condition intiale dans le solver LW. \\
+\noindent Nous générons à présent une condition intiale nouvelle par rapport aux $X$  et $y$. Nous comparons les prédictions à chaque itération avec les données exactes obtenues en résolvant cette condition initiale dans le solver LW. \\
 \begin{figure}[!ht]
 \centering
 \includegraphics[scale=0.5]{Initialisation_cases_Andu1.png}
-\caption{\small{Nous voulons prédire l'évolution du champ de vitesse orange différent en amplitude et déphasage des données utilisées pour l'entraînement}}
+\caption{\small{Nous voulons prédire l'évolution du champ de vitesse \color{orange}\textbf{orange} \bk différent en amplitude et déphasage des données utilisées pour l'entraînement.}}
 \label{newinputNN}
 \end{figure}
 
@@ -680,14 +704,14 @@ L'erreur de la fonction de coût décroît fortement jusqu'à quelques unités. 
 \end{figure}
 
 
-\noindent Au fur et à mesure que les itérations se déroulent, les erreurs sur les prédictions s'accumulent corrompant petit à petit les entrées des NN. Cela met en évidence deux origines d'erreur : une locale propre à chaque prédiction, et une globale qui s'accumule.\\
+\noindent Au fur et à mesure que les itérations se déroulent, les erreurs sur les prédictions s'accumulent corrompant petit à petit les entrées des NN. Cela met en évidence deux origines d'erreurs : une locale propre à chaque prédiction, et une globale qui s'accumule itération après itération.\\
 Nous avons testé d'autres cas pour lesquels les erreurs n'étaient pas si grandes mais le cas présenté représente bien la question : comment contrôler l'erreur global ?\\
-La première solution proposé est de modifier la fonction de coût en prenant en compte dans la minimisation la variation des sorties en fonction des entrées \citep{pan2018long}. Des résultats avec cette méthode n'ont pas été probant dans notre cas, nous avons décidé de nous concentrer sur une méthode plus efficace mais également en complète expansion : l'apprentissage renforcé ou \textit{reinforcement learning}.
+La première solution proposée est de modifier la fonction de coût pour que la minimisation prennent en compte la variation des sorties en fonction des entrées \citep{pan2018long}. Des résultats avec cette méthode n'ont pas été probant dans notre cas, nous avons décidé de nous concentrer sur une méthode plus efficace mais également en complète expansion : l'apprentissage renforcé ou \textit{reinforcement learning}.
 
 \brick \subsection{Le reinforcement learning (RL)} \bk \label{sec_REIL}
-\noindent Le RL est une partie des machine learning dans lequel un agent apprend à se comporter dans un environnement en réalisant des «actions» selon une politique qui donne des critiques positives ou négatives.\\
-L'agent exécute des actions; si on prend l'exemple du jeu pac-man, l'agent est le pac-man. Il peut aller dans quatre directions (haut, bas, droite, gauche). \\
-La politique sera "critique neutre  tant que pac-man avance", "critique positive si pac-man mange des pac-gommes" et : "critique négaive sur les fantômes mangent par-man".\\
+\noindent Le RL est une partie des machine learning dans lequel un agent apprend à se comporter dans un environnement en réalisant des \textit{actions} selon une \textit{politique} qui fourni des \textit{critiques} positives ou négatives à l'agent. Ces critiques indiquent à l'agent les meilleures actions à opérer.\\
+Si on prend l'exemple du jeu pac-man, l'agent est le pac-man. Il peut aller dans quatre directions (haut, bas, droite, gauche). \\
+La politique sera "critique neutre  tant que pac-man avance", "critique positive si pac-man mange des pac-gommes" et : "critique négative sur les fantômes mangent par-man".\\
 La prise de décision se fait en analysant l'environnement. Dans le cas du pac-man l'environnement est une série d'images où les fantômes, les pac-gommes et le pac-man sont identifiés.\\
  Ainsi le RL peut se résumer dans la boucle suivante : 
 \begin{figure}[!ht]
@@ -697,8 +721,8 @@ La prise de décision se fait en analysant l'environnement. Dans le cas du pac-m
  \label{boucleRL}
  \end{figure} 
  
- \noindent D'un point de vue plus mathématique, pour être sur que l'agent apprennent bien de l'environnement, il faut parcourir l'ensemble des états ET l'ensemble des actions pour pondérer sa prise de décision. Ces différentes étapes sont toutes comprises dans l'équation de Bellman sur laquelle est basée le RL. En résolvant cette équation, on trouve la politique qui permet de prendre les meilleures actions. \\
-La résolution de cette équations nécessite une exploration de toutes les actiones possibles pour les différents états et leur devenir. C'est pourquoi cette méthode peut nécessiter beaucoup de temps. \\
+ \noindent D'un point de vue plus mathématique, pour être sûr que l'agent apprennent bien de l'environnement, il faut parcourir l'ensemble des états ET l'ensemble des actions pour pondérer sa prise de décision. Ces différentes étapes sont toutes comprises dans l'équation de Bellman sur laquelle est basée le RL. En résolvant cette équation, on trouve la politique qui permet de prendre les meilleures actions. \\
+La résolution de cette équation nécessite une exploration de toutes les actions possibles pour les différents états et leur devenir, ces algorithmes sont appelées \textit{greedy} car l'exploration systématique des deux ensembles (états/actions) à chaque action nécessite énormément de temps. \\
 
 \noindent Très récemment, l'idée de considérer un NN comme agent est née. C'est ce qu'on appelle le\textit{Deep Reinforcement Learning} (DRL). Le réseau est entraîné au fur et à mesure que les états sont explorés. Les actions sont ici toujours les mêmes puisqu'il s'agit d'effectuer une prédiction à travers un NN, mais les poids de ce NN seront modifiés au fur et à mesure selon la critique. On appelle ce genre d'algorithme des \textbf{\textit{actor-critics}}.
 \noindent Pour l'instant l'ensemble de la littérature sur ce sujet considère des \textit{images} comme environnement. Nous essayons en ce moment d'élaborer un algorithme considérant des critiques liées à la physique comme la conservation de l'énergie.
@@ -707,11 +731,12 @@ La résolution de cette équations nécessite une exploration de toutes les acti
 
 \navy \section{Conclusion} \bk
 \noindent Pour résumer, nous nous sommes tout d'abord concentrés sur les basiques du ML et sur les articles de références comme ceux cités dans le corps du rapport. Ces premiers pas nous ont permis de nous familiariser avec les mathématiques propres à la discipline et nous a aidé à mieux comprendre les enjeux des méthodes et du projet.\\
-À partir d'une étude bibliographique, nous avons pu déterminer les pistes à approfondir pour tenter de mener à bien notre projet et d'utiliser toute la puissance des IA tout en étant sur que les prédictions sont précises et fiables physiquement.\\
+
+\noindent À partir d'une étude bibliographique, nous avons pu déterminer les pistes à approfondir pour tenter de mener à bien notre projet et d'utiliser toute la puissance des IA tout en étant sur que les prédictions sont précises et fiables physiquement.\\
 Nous avons alors commencé à explorer plusieurs méthodes : des méthodes à deux temps comme la combinaison inférence/Machine learning (section \eqref{combiNN_inference}) ou bien des méthodes de prédiction directes (section \eqref{NNdirect}). \\
-Nous avons également cherché à aller au delà des équations de Burgers ou que des cas thermiques, comme les modèles de MHD les plus utilisés.\\
+Nous voulions d'abord nous confronter à des cas moins complexes que la turbulence pour mettre en place les différents outils. En parallèle de ces travaux, le projet de corriger les modèles \keps $ $ ou Spalart-Allmaras, ou bien de prédire l'évolution d'une turbulence isotrope homogène commencent à voir le jour.\\
 	
-\noindent Comme évoqué dans le paragraphe \eqref{sec_REIL}, nous étudions la possibilité d'utiliser les algorithmes d'apprentissage renforcé profond (DRL) pour imposer une direction d'apprentissage vers la bonne solution dans le sens de la Physique.\\
+\noindent Enfin, comme évoqué dans le paragraphe \eqref{sec_REIL}, nous étudions la possibilité d'utiliser les algorithmes d'apprentissage renforcé profond (DRL) pour imposer une direction d'apprentissage vers la bonne solution dans le sens de la Physique. Nous pensons que ces méthodes sont potentiellement extrêmement prometteuses et l'énorme activité scientifique autour de ce thème semble confirmer cette intuition.\\
 Nous espérons pouvoir ensuite comparer qualitativement et quantitativement les solutions issus des DRL, des NN et des combinaisons ML/inférence.\\
 
 
