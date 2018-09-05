@@ -1,5 +1,6 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
+
 import numpy as np
 import pandas as pd
 
@@ -333,7 +334,7 @@ def amp_multiNN_solver(nn_obj, cb=cb):
     p = 0
     p1 = np.pi
     
-    amp = 1.5
+    amp = 1.1
     amp1 = 0.7
     
     u1 =  amp*np.sin(np.pi/cb.L*cb.line_x + p)
@@ -431,4 +432,4 @@ def amp_multiNN_solver(nn_obj, cb=cb):
 
 # amp_nn = amp_multi_buildNN(1e-3, ampDerX_multi, ampDery_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=64,  BN=True)
 
-# amp_multiNN_solver(nn_xs)
+# amp_multiNN_solver(amp_nn)
