@@ -1043,7 +1043,7 @@ if __name__=="__main__":
 
     gen_dict = lambda inputsize : \
                {"I"  : inputsize,\
-               "N1" : 10,\
+               "N1" : 100,\
                "N2" : 10,\
                "N3" : 10,\
                "N4" : 10,\
@@ -1054,7 +1054,7 @@ if __name__=="__main__":
     scaler_name = ["Standard", "MinMax", "Robust", "PCA"]
     names = iter(scaler_name)
     
-    TF = Neural_Network(0.0005, N_=N_, scaler = "Standard", reduce_type="sum", color="black", verbose=True, max_epoch=300, clip=False, r_parameter=0.5, bsz=128, BN=True)#, lasso_param = l, ridge_param = r)
+    TF = Neural_Network(0.0005, N_=N_, scaler = "Standard", reduce_type="sum", color="blue", verbose=True, max_epoch=1000, clip=False, r_parameter=0.5)#, bsz=64, BN=True)#, lasso_param = l, ridge_param = r)
 
     TF.split_and_scale(X,y,shuffle=True, val=False)
 

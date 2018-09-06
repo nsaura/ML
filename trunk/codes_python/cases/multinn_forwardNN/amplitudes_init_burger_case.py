@@ -234,7 +234,7 @@ def amp_xs_compute_true_u(cb, nsamples, amp_line, pi_line, kc=1, plot=False, wri
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 
-amplitude = np.linspace(0.4,2,15)
+amplitude = np.linspace(0.4,2,8)
 dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80, "N4":80, "N5":80, "N6":80}
 
 def amp_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
@@ -334,14 +334,14 @@ def amp_multiNN_solver(nn_obj, cb=cb):
     p = 0
     p1 = np.pi
     
-    amp = 1.1
+#    amp = 1.1
     amp1 = 0.7
     
-    u1 =  amp*np.sin(np.pi/cb.L*cb.line_x + p)
-    u2 = cb.init_u(amp1, p1)
+#    u1 =  amp*np.sin(np.pi/cb.L*cb.line_x + p)
+    u2 = 0.5 + cb.init_u(amp1, p1)
     
-    u = u1 + u2
-    
+#    u = u1 + u2
+    u = u2    
     _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
     print (abs_work)
     fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
