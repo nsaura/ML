@@ -95,6 +95,24 @@ amp_multiNN_solver(amp_nn)
 
 ###############################
 ###############################
+###############################
+
+           EULERLW
+
+###############################
+###############################
+
+run Euler_LW_NN.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/" -itmax 100
+
+ELWDerX_multi, ELWDery_multi = ELW_Der_compute_true_u(cb, 1, amplitude, pi_line, plot=True, write=True)
+
+ELW_nn = ELW_multi_buildNN(1e-3, ELWDerX_multi, ELWDery_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=256,  BN=True)
+
+ELW_multiNN_solver(ELW_nn)
+
+
+###############################
+###############################
 
           Booststrap
 
