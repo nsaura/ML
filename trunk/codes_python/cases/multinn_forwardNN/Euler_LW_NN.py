@@ -54,7 +54,6 @@ cb = cvc.Vitesse_Choc(parser)
 wdir = osp.abspath("./data/burger_dataset/complex_init_NN/ELW/")
 curr_work = osp.join(wdir, "Nx:%d_Nt:%d_nu:%.4f_CFL:%0.2f" % (cb.Nx, cb.Nt, cb.nu, cb.CFL)) #beta_Nx:52_Nt:32_nu:0.025_typei:sin_CFL:0.4_it:017.npy
 
-
 pi_line = np.linspace(-np.pi/2., np.pi/2., 1000)
 #------------------------------------------------------------------
 #------------------------------------------------------------------
@@ -194,12 +193,32 @@ def ELW_Der_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, 
                     X = np.block([[X], [u_curr[j-1], u_curr[j], u_curr[j+1],\
                                 (u_curr[j+1] - u_curr[j-1])*0.5/cb.dx]])
                     y = np.block([[y], [float(u_next[j] - u_curr[j])/cb.dt]])
-        
+    
+    
+    
     X = np.delete(X, 0, axis=0)        
     y = np.delete(y, 0, axis=0)
     
+    write_X_y(X, y)
+    
     return X, y 
 
+
+def write_X_y(X, y) :
+    xys_loc = osp.join(wdir, "Xys")
+    
+    if osp.exists(xys_loc) == False :
+        os.mkdir(xys_loc)
+    
+    PathToCheckx = osp.join(xys_loc, "ELWDerX_multi_" + osp.split(curr_work)[1])
+    PathToChecky = osp.join(xys_loc, "ELWDery_multi_" + osp.split(curr_work)[1])
+    
+    if osp.exists(PathToCheckx) == False or osp.exists(PathToChecky) == False :
+        np.save(PathToCheckx, X)
+        np.save(PathToChecky, y)
+    
+    print ("ELWDerX_multi and ELWDery_multi written in %s" %(xys_loc))
+    
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #------------------------------------------------------------------
@@ -233,7 +252,7 @@ def ELW_Der_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, 
 #------------------------------------------------------------------
 
 amplitude = np.linspace(0.4,1.7,15)
-dict_layers = {"I": 3, "O" :1, "N1":200, "N2":50, "N3":50, "N4":50, "N5":50, "N6":50}
+dict_layers = {"I": 3, "O" :1, "N1":200, "N2":20, "N3":20, "N4":20, "N5":20, "N6":20}
 
 def ELW_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
     plt.ion()
@@ -332,14 +351,14 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
     p = 0
     p1 = np.pi
     
-#    amp = 1.1
+    amp = 0.7
     amp1 = 0.7
     
-#    u1 =  amp*np.sin(np.pi/cb.L*cb.line_x + p)
+    u1 =  amp*np.sin(np.pi/cb.L*cb.line_x + p)
     u2 = 0.5 + cb.init_u(amp1, p1)
     
-#    u = u1 + u2
-    u = u2    
+    u = u1 + u2
+#    u = u2    
     _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
     print (abs_work)
     fetch_real_u = lambda it : np.load(osp.join(abs_work, "u_test_it%d.npy"%(it)))
@@ -370,8 +389,8 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
         add_block = lambda u, j, x : [x[j-1], x[j], x[j+1], u[j-1], u[j], u[j+1],\
                                             (u[j+1] - u[j-1])/(2*cb.dx)]
     euler_block = lambda j, u_euler :\
-        u_euler[j] + cb.nu/cb.dt*(u_euler[j+1] - 2*u_euler[j] + u_euler[j-1])
-#    pred_to_sol = lambda pred, prev, dt : prev + pred*dt
+        u_euler[j] + cb.nu*cb.dt/cb.dx**2*(u_euler[j+1] - 2*u_euler[j] + u_euler[j-1])
+    
     u_euler = np.copy(u)
     
     for it in range(1, cb.itmax + 1)  :
@@ -392,8 +411,6 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
             u_nNext.append(u[j] + P*cb.dt)
             
             u_euler_nNext.append(euler_block(j, u_euler))
-        # u_nNext.shape = 30 
-        # use of list type to insert in a second time boundary condition
         
         ## Conditions aux limites
         u_euler_nNext.insert(0, u_euler[-2])
@@ -404,6 +421,7 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
         
         u_nNext = np.array(u_nNext)
         u_nNext_ex = fetch_real_u(it+1)
+        u_euler_nNext = np.array(u_euler_nNext)
         
         ## Calculs des erreurs
         errs = np.array([(u_nNext[i] -  u_nNext_ex[i]) for i in range(cb.Nx)])
@@ -440,6 +458,8 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
             
             plt.title("Iteration %d" %it)
             plt.pause(2)
+            
+        print u_euler_nNext
 
     return inf_errs
     
