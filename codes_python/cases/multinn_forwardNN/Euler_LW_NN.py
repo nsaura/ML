@@ -346,6 +346,7 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
     
     u_nNext = []
     inf_errs = []
+    u_euler_nNext = []
     
     ax, axx = [], []
     
@@ -368,13 +369,18 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
     if nn_obj.X_train.shape[1] == 7 :
         add_block = lambda u, j, x : [x[j-1], x[j], x[j+1], u[j-1], u[j], u[j+1],\
                                             (u[j+1] - u[j-1])/(2*cb.dx)]
-        
+    euler_block = lambda j, u_euler :\
+        u_euler[j] + cb.nu/cb.dt*(u_euler[j+1] - 2*u_euler[j] + u_euler[j-1])
 #    pred_to_sol = lambda pred, prev, dt : prev + pred*dt
+    u_euler = np.copy(u)
     
     for it in range(1, cb.itmax + 1)  :
         if it > 1 :
             u = u_nNext
+            u_euler = u_euler_nNext
+
             u_nNext = []
+            u_euler_nNext = []
             
         for j in range(1, cb.Nx-1) :
             xs = np.array(add_block(u, j, cb.line_x))
@@ -384,8 +390,14 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
             P = nn_obj.predict(xs)[0,0]
             
             u_nNext.append(u[j] + P*cb.dt)
+            
+            u_euler_nNext.append(euler_block(j, u_euler))
         # u_nNext.shape = 30 
         # use of list type to insert in a second time boundary condition
+        
+        ## Conditions aux limites
+        u_euler_nNext.insert(0, u_euler[-2])
+        u_euler_nNext.insert(len(u_euler), u_euler[1])
         
         u_nNext.insert(0, u[-2])
         u_nNext.insert(len(u), u[1])
@@ -393,12 +405,12 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
         u_nNext = np.array(u_nNext)
         u_nNext_ex = fetch_real_u(it+1)
         
+        ## Calculs des erreurs
         errs = np.array([(u_nNext[i] -  u_nNext_ex[i]) for i in range(cb.Nx)])
-        
         inf_err = np.linalg.norm(errs, 2)**2 / np.linalg.norm(u_nNext_ex, 2)**2
-        
         inf_errs.append(inf_err)
         
+        ## Graph
         if it % 5 == 0 or it ==1:
             axx[0] = ax[0]
             axx[1] = ax[-1]
@@ -408,13 +420,17 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
             
             # Erreur a l'iteration n
             ax[0].plot(cb.line_x, np.abs(errs),\
-            label="Relative Erreur $|| \hat{u}^{n+1} - u^{n+1}_t ||^2_2 / $", c=nn_obj.kwargs["color"])
+            label=r"Relative Erreur $|| \hat{u}^{n+1} - u^{n+1}_t ||^2_2 $", c=nn_obj.kwargs["color"])
             
             # Evolution de la norme infinie de l'erreur 
             ax[1].scatter(it, inf_err, c=nn_obj.kwargs["color"], s=12)
             
+            # Comparaisons des champs de vitesse
             ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext_ex[1:cb.Nx-1], label="True it = %d" %(it+1), c='k')
+            ax[-1].plot(cb.line_x[1:cb.Nx-1], u_euler_nNext[1:cb.Nx-1], label="Euler pred at it = %d" %(it), marker='s', fillstyle = 'none', linestyle= 'none', c='red')
+
             ax[-1].plot(cb.line_x[1:cb.Nx-1], u_nNext[1:cb.Nx-1], label="Predicted at it = %d" %(it), marker='o', fillstyle = 'none', linestyle= 'none', c=nn_obj.kwargs["color"])
+
             
             for a in ax :
                 a.legend(prop={'size': 8})
