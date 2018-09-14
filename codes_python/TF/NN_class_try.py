@@ -47,7 +47,7 @@ config = tf.ConfigProto(
 
 class Neural_Network():
 ###-------------------------------------------------------------------------------
-    def __init__(self, lr, N_={}, scaler, max_epoch=10, verbose=True, graph_name = "./default.ckpt", reduce_type = "sum", **kwargs) :
+    def __init__(self, lr, N_, scaler, max_epoch=10, verbose=True, graph_name = "./default.ckpt", reduce_type = "sum", **kwargs) :
         """
         On veut construire un réseau de neurones assez rapidement pour plusieurs cas.
         Cette classe prend les arguments suivants :
