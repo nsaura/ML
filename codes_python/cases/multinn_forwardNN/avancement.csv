@@ -106,7 +106,11 @@ run Euler_LW_NN.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "
 
 ELWDerX_multi, ELWDery_multi = ELW_Der_compute_true_u(cb, 1, amplitude, pi_line, plot=True, write=True)
 
-ELW_nn = ELW_multi_buildNN(1e-3, ELWDerX_multi, ELWDery_multi, "selu", "Adam", "MSEGrad", 70, "sum", "Standard", N_=dict_layers, color="purple",  bsz=256,  BN=True)
+#Ecrire X et y avec les specificite par exemple :
+np.save("ELWDerX_multi_nu%.3f_CFL%.2f_Nx%d_Nt%d.npy", ELWDerX_multi)
+np.save("ELWDery_multi_nu%.3f_CFL%.2f_Nx%d_Nt%d.npy", ELWDery_multi)
+
+ELW_nn = ELW_multi_buildNN(1e-3, ELWDerX_multi, ELWDery_multi, "selu", "Adam", "Lasso", 500, "sum", "Standard", N_=dict_layers, color="blue", bsz=256,  BN=True)
 
 ELW_multiNN_solver(ELW_nn)
 
