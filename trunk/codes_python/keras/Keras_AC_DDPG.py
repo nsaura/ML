@@ -30,11 +30,34 @@ def tanh(x):
 #####################
 
 class ActorNetwork(object):
+    """
+    This class creates an actor network and a target actor network that will be modified.
+    """
     def __init__(self, sess, state_size, action_size, BATCH_SIZE, TAU, LEARNING_RATE):
+        """
+        During the initialisation, the first actor and a copy of it : the target actor are created.\
+        In accordance with \"continuous control with deep reinforcement learning\" article, the target is to be modified\
+        with a soft update using the sum of the original graph's weights times a discount factor tau with (1-tau) times the target's weights.  
+        Several placeholders are created as well.  All the nodes of the graph are defined\
+        It is then not necessary to go through the graph again to calculate the grads.
+        
+        The optimizer used is Adam.
+        
+        Constructor arguments :
+        -------------------------
+        sess        :   A tensorflow session
+        state_size  :   The size of the states that are the input of the actor net
+        action_size :   The size of the actions that are the output of the actor net
+        BATCH_SIZE  :   The size of the batch considered here for the replay buffer memory
+        TAU         :   The discounted factor to regulate how smooth is the update. Around 0.001
+        LEARNING_RATE : Rate of correcting the weights in the optimizer
+        """
+        
         self.sess = sess
         self.BATCH_SIZE = BATCH_SIZE
         self.TAU = TAU
-        self.LEARNING_RATE = tf.placeholder(tf.float32,shape=[]) #LR decay
+        # Prepare le LR decay
+        self.LEARNING_RATE = tf.placeholder(tf.float32,shape=[]) 
 
         K.set_session(sess)
 
@@ -44,8 +67,9 @@ class ActorNetwork(object):
         # First
         self.model, self.weights, self.state = self.create_actor_network(state_size, action_size)
         
-        # Target
+        # Target to be modified
         self.target_model, self.target_weights, self.target_state = self.create_actor_network(state_size, action_size)
+        
         # Define the place where the gradient will be apply 
         self.action_gradient = tf.placeholder(tf.float32,[None, action_size])
         
@@ -75,7 +99,7 @@ class ActorNetwork(object):
         for i in range(len(actor_weights)):
             actor_target_weights[i] = self.TAU * actor_weights[i] + (1 - self.TAU)* actor_target_weights[i]
         
-        self.target_model.set_weights(actor_target_weights) #Eqvuivalent to assign from tensorflow
+        self.target_model.set_weights(actor_target_weights) # Equivalent to assign from tensorflow
     
     def create_actor_network(self, state_size,action_dim):
         S = Input(shape=[state_size])

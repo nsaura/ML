@@ -366,7 +366,7 @@ La dernière étape de l'algorithme consiste à incrémenter $B_{k+1}^{-1}$ util
 
 \brick \subsection{Utilisation de l'inférence sur différents cas} \bk
 
-\noindent Nous avons mis en place les outils présentés ci-dessus dans plusieurs cas, nous n'en présenterons que deux : un problème thermique monodimensionnel provenant de \citep{parish2016paradigm}, puis sur la propagation d'une onde à travers l'équation de Burgers 1d. \\
+\noindent Nous avons mis en place les outils présentés ci-dessus dans plusieurs cas, nous n'en présenterons que deux : un problème thermique monodimensionnel provenant de \citep{parish2016paradigm}, puis sur la propagation d'un choc à travers l'équation de Burgers 1d. \\
 Nous travaillons également sur l'utilisation de ce procédé pour trouver les paramètres  qui corrigeraient les modèles le moins précis (par exemple RANS ou LES) réduisant alors l'écart les solutions références (DNS ou expériences).
 
 \dsb \subsubsection{Problème thermique} \bk
@@ -429,8 +429,8 @@ Il devient possible d'évaluer la variance de cette distribution. Sur 250 tirage
 \label{scipycomp_bmap_hbmap}
 \end{figure}
 
-\dsb \subsubsection{Propagation d'une onde en fluide visqueux} \bk
-\noindent L'équation de Burgers permet d'étudier la propagation des ondes et peut faire apparaître des chocs. Nous voulons dans un premier temps déterminer si l'inférence peut capturer les chocs. Dans un second temps, nous voulons déterminer si ce genre de méthode permet de capturer les non-linéarités. \\
+\dsb \subsubsection{Propagation d'un choc en fluide visqueux} \bk
+\noindent L'équation de Burgers permet d'étudier la propagation de chocs. Nous voulons dans un premier temps déterminer si l'inférence peut capturer ces chocs. Dans un second temps, nous voulons déterminer si ce genre de méthode permet de capturer les non-linéarités. \\
 Notons que cette démarche s'inscrit dans un projet plus vaste : utiliser une combinaison de méthode pilotée par les données et de machine learning pour construire un modèle de différences finies augmentées dépassant les capacités des méthodes de différences finies classiques.\\
 
 \noindent Contrairement au cas précédent, l'équation de Burgers est instationnaire. Il a fallu alors écrire un code qui réalise une inférence à chaque itération temporelle. Le principe de l'inférence, la façon dont elle est réalisée et son objectif sont les mêmes que décrits plus haut.\\
@@ -593,7 +593,7 @@ Cette intuition est vérifiée par l'incapacité du réseau de prédire une corr
 
 \pagebreak
 
-\dsb \subsubsection{Propagation d'une onde en fluide visqueux} \bk \label{burgerBIF}
+\dsb \subsubsection{Propagation de chocs en fluide visqueux} \bk \label{burgerBIF}
 \noindent On va ici utiliser les mêmes étapes que précédemment dans la construction de $X$ et $y$. Mais le choix des inputs est ici plus compliqué car le problème présente deux aspects à apprendre : 
 \begin{itemize}[leftmargin=5mm]
 \item[--] D'abord apprendre la fonctionnelle entre les entrées et les sorties;
