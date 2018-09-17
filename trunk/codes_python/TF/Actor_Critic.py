@@ -43,7 +43,7 @@ Nx = 81
 L = 3
 line_x = np.arange(0,L,dx)
 
-dict_layers = {"inputs" : [1], "N1" : [800, "selu"], "N2" : ["400", "selu"], "action":[1,"tanh"]}
+dict_layers = {"inputs" : [1], "N1" : [800, "selu"], "N2" : [400, "selu"], "action":[1,"tanh"]}
 
 class Actor() :
     def __init__(self, dict_layers, lr, N_thread = 10, op_name="Adam", loss_name="OLS", reduce_type="sum", case_filename='./../cases/multinn_forwardNN/data/burger_dataset/'):

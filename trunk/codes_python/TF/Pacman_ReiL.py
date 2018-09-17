@@ -191,7 +191,11 @@ with tf.Session() as sess :
         state = next_state
         
         if iteration < training_start or iteration % training_interval != 0 :
+            print "continue ?"
+            print iteration
             continue
+        
+        print "continue ? non"
         
         X_state_val, X_action_val, rewards, X_next_state_val, continues = (
                         sample_memory(batch_size))
