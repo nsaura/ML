@@ -112,6 +112,10 @@ np.save("ELWDery_multi_nu%.3f_CFL%.2f_Nx%d_Nt%d.npy", ELWDery_multi)
 
 ELW_nn = ELW_multi_buildNN(1e-3, ELWDerX_multi, ELWDery_multi, "selu", "Adam", "Lasso", 500, "sum", "Standard", N_=dict_layers, color="blue", bsz=256,  BN=True)
 
+La config suivante donne de bons résultats
+elw_nn500bsz64 = ELW_multi_buildNN(1e-3, ELWDerX_multi, ELWDery_multi, "selu", "Adam", "Lasso", 1000, "sum", "Standard", N_=dict_layers, color="green", bsz=64,  BN=True)
+
+
 ELW_multiNN_solver(ELW_nn)
 
 

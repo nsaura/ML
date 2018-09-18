@@ -154,6 +154,23 @@ def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False
 #------------------------------------------------------------------
 
 def ELW_Der_compute_true_u(cb, nsamples, amp_line, pi_line, kc = 1, plot=False, write=False) :
+    """
+    Considerant plusieurs conditions initiales, cette fonction fait evoluer ces conditions avec un solver LW. 
+    Les solutions sont ensuites concatenees en deux matrices X et y pour etre utilisees comme support 
+    d\'entrainement d\'une intelligence artificielle.
+    
+    Arguments :
+    -----------
+    cb : 
+    nsamples    : nombre de tirages pour chaque cas
+    amp_line    : np.array des amplitudes que l\'on veut considerer pour les conditions intiale ex : [0.4, 0.8, 1.2] 
+    pi_line     : intervalle entre -pi/2 et pi/2 a partir duquel un dephasage est choisi aleatoirement pour chaque CI
+    kc      :   (optionnel) : gere la complexite des conditions initiales, fixe a 1
+    plot    :   (optionnel) : boolen, True si l\'on veut voir l\'evolution de la CI
+    write   :   (optionnel) : booleen, True si l\'on veut ecrire les champs de vitesses pour toutes les iterations
+    
+    
+    """
     X = np.zeros((4))
     y = np.zeros((1))
     
@@ -255,6 +272,11 @@ amplitude = np.linspace(0.4,1.7,15)
 dict_layers = {"I": 3, "O" :1, "N1":200, "N2":20, "N3":20, "N4":20, "N5":20, "N6":20}
 
 def ELW_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler, N_=dict_layers, step=50, early_stop=False, **kwargs) :
+    """
+    On cree et configure un graph sur lequel on entraine un reseau de neurones. Les entrees sont propres a la construction
+    d\'un objet NN_Class_try.
+    Cette fonction ressort un NN entraine
+    """
     plt.ion()
     print (kwargs)
     
@@ -346,6 +368,17 @@ def ELW_multi_buildNN(lr, X, y, act, opti, loss, max_epoch, reduce_type, scaler,
 #------------------------------------------------------------------
 
 def ELW_multiNN_solver(nn_obj, cb=cb):
+    """
+    Fonction qui prédit la physique à partir d'un NN entraine. On resout a chaque iteration temporelle la veritable
+    solution (LW) en parallele on predit iteration par iteteration la solution en utilisant un solver ML avec un schema
+    de Euler. Enfin on calcule egalement une solution euler a partir de la solution intiale.
+    
+    Arguments:
+    ----------
+    nn_obj  :   NN entraine issu de la classe NN_Class_Try
+    cb      :   Un objet de la classe Vitesse_Choc qui contient les elements propres a la resolution du probleme 
+                Cette solution donne le champ de vitesse exact et permet de comparer avec les solver (ML ou Euler)
+    """
     plt.figure()
     
     p = 0
@@ -462,11 +495,9 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
         print u_euler_nNext
 
     return inf_errs
+#### Voir avancement.csv
     
 # run Euler_LW_NN.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
-
 # ELWDerX_multi, ELWDery_multi = ELW_Der_compute_true_u(cb, 1, amplitude, pi_line, plot=True, write=True)
-
 # ELW_nn = ELW_multi_buildNN(1e-3, ELWDerX_multi, ELWDery_multi, "selu", "Adam", "MSEGrad", 150, "sum", "Standard", N_=dict_layers, color="purple",  bsz=256,  BN=True)
-
 # ELW_multiNN_solver(ELW_nn)
