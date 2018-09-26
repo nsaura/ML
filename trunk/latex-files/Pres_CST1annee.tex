@@ -5,6 +5,11 @@
 \usepackage[english]{babel}
 \usepackage[utf8x]{inputenc}
 
+\usepackage{mathtools}
+\usepackage{amsmath, amssymb, amsfonts}
+
+\usepackage{numprint}
+
 \usepackage{tikz}
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (1,.7) -- (.25,.15) -- cycle;}
 
@@ -76,11 +81,13 @@
        \insertframenumber\,/\,\inserttotalframenumber}
 
 % Things for first slide :
-\title[Machine learning in Physics fields]{An attempt to learn Physics : ML in fluid mechanics problems}
-\author{Saura Nathaniel (PHD Student)\\}
+\title[First year CST defence]{\small \bk First year CST defence: \\ \color{red!80!black!85!} \Large Data driven turbulence modeling for turbulent boundary layer control}
+\author[Saura Nathaniel]{\large{Author:} \normalsize Saura Nathaniel\\ \vspace{3mm}
+\large{Supervised by:} \normalsize Gomez Thomas
+}
 
 \date{$5^{\text{th}}$ July 2018}
-\institute{\bf LMFL
+\institute{
 \begin{center}
 	\begin{minipage}[!ht]{0.9\textwidth}
 	\centering
@@ -423,32 +430,40 @@ $T_\infty = 35 + 20\sin(2\pi x)$
 \end{frame}
 
 \begin{frame}{Graph architecture}
-	Graph with \red 6 hidden layers \bk with \red 80 hidden nodes \bk in each. Adam optimizer (better and the most used in literature) and \navy Lasso \bk cost function.\\
+We constructed a NN with the following properties :
+	\begin{itemize}
+	\sarrow \red 6 \bk hidden layers with \red 80 \bk hidden nodes
+	\sarrow \red SeLu \bk \citep{klambauer2017self} as activation function with default params\\
+	\begin{equation*}
+\text{SeLu} = 1. 0507 \,
+\Big \{
+		\begin{array}{c l}
+		x & \text{if } x > 0 \\
+		1 . 6732 \bepar{ e^x - 1} & \text{if } x \leq 0
+		\end{array}						
+\end{equation*}
+	\sarrow \navy Adam \bk optimizer \citep{kingma2014adam} (better and the most used in literature)
+	\sarrow \navy Lasso \bk cost function $$ L = \norm{ y_{\text{tr}} - y_{\text{pred}}}^2_{L_2} + \lambda \norm{w}_{L_1}$$	
+	\end{itemize} 
 	
-	TensorFlow graph that can be visualized with Tensorboard :
-	
-	\begin{multicols}{2}	
-		\noindent		
-		\begin{figure}[H]
-		\centering
-		\includegraphics[scale=0.2]{Graphs.png}
-		\end{figure}
-	
-	\columnbreak
-		\centering
-		\vspace{1cm}
-		\begin{itemize}
-			\sarrow \footnotesize Lasso = $\norm{ y_{\text{tr}} - y_{\text{pred}}}^2_{L_2} + \lambda \norm{w}_{L_1}$		 \\[1.5cm]
-		
-			\sarrow Activation function : selu
-			\begin{figure}[H]
-			\centering
-			\includegraphics[scale=0.3]{SELU.png}
-			\caption{From Wikipedia}
-			\end{figure}
-		
-		\end{itemize}
-	\end{multicols}
+%	TensorFlow graph that can be visualized with Tensorboard :
+%	
+%	\begin{multicols}{2}	
+%		\noindent		
+%		\begin{figure}[H]
+%		\centering
+%		\includegraphics[scale=0.2]{Graphs.png}
+%		\end{figure}
+%	
+%	\columnbreak
+%			\begin{figure}[H]
+%			\centering
+%			\includegraphics[scale=0.3]{SELU.png}
+%			\caption{From Wikipedia}
+%			\end{figure}
+%		
+%		\end{itemize}
+
 \end{frame}
 
 \begin{frame}{Brute Force on VBE 1D I}
@@ -524,30 +539,38 @@ $T_\infty = 35 + 20\sin(2\pi x)$
 	\end{figure} 
 \end{frame}
 
-\begin{frame}{Conclusion on Brute Force}
-VBE is not the simpliest equation to solve since sharp chocs
-	\begin{block}{Still can be improved}
+\begin{frame}{Conclusion and beyond NN Brute Force}
+VBE is not the simpliest equation to evaluate NNBF because of sharp chocs are generated. But this is \navy challenging \bk. \\
+ 
+	\begin{block}{Ideas out of NNBF :}	
 		\begin{itemize}
-			\item[$\bullet$] Good approximations but can be better
-			\item[$\bullet$] Accumulative errors phenomena that impose to differ local error (on the on going iteration) and global errors (accumulated through time iterations)
-			\item[$\bullet$] Genetic Algorithm can be used to get the best architecture but the possible features are infinite \\[0.5cm]
+			\item[$\bullet$] Give good approximations but can be better
+			\item[$\bullet$] \textit{Accumulative errors phenomena} that impose to differ \red local \bk error (on the on going iteration) and \red global \bk errors (growing through time iterations)
+			\item[$\bullet$] Genetic Algorithm can be used to get the best architecture but \red infinite \bk feature combinations possible\\[0.5cm]
 		\end{itemize}
 	\end{block}
+\vspace{3mm}
+Various directions to solve the global error such as modifying the cost function. \red We choosed Deep Reinforcement Learning (DRL)\bk
 
-	\begin{exampleblock}{Solution : Learn !}
-	The solution is to use Reinforcement learning to learn the physics
-	\begin{itemize}
-		\item[\checkmark] Auto ajust weights given an environment 
-		\item[\checkmark] Ensure to respect conservation physics law
-		\item[\checkmark] Auto adjust global and local error
-	\end{itemize}
-	\end{exampleblock}
 \end{frame}
 
-\begin{frame}{OnGoing Deep ReiL Framework}
+\begin{frame}{DRL : How to reduce global and local errors (on goning)}
+	\begin{exampleblock}{Solution : Learn !}
 	
+		
+		The solution is to use Reinforcement learning to learn the physics
 	\begin{itemize}
-		\item[$\bullet$] Deep Reinforcement Learning (DQL) code in ealy stage of test.
+		\item[\checkmark] Optimize weights given a policy (conservation laws)
+		\item[\checkmark] Ensure to minimize local error (per step) 
+		\item[\checkmark] Golbal error should be small at the end of the process
+	\end{itemize}
+	\end{exampleblock}	
+	\begin{itemize}
+		\item[$\bullet$] Deep Reinforcement Learning (DQL) : 
+		\begin{figure}[!ht]
+		\centering
+		\includegraphics[scale=0.2]{RL_scheme.png}
+		\end{figure}
 		\item[$\bullet$] A strategy has been established and wait to be tested
 		
 		\item[$\bullet$] More soon .. ;)
