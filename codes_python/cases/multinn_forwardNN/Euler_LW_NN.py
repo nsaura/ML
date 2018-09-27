@@ -422,7 +422,7 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
         add_block = lambda u, j, x : [x[j-1], x[j], x[j+1], u[j-1], u[j], u[j+1],\
                                             (u[j+1] - u[j-1])/(2*cb.dx)]
     euler_block = lambda j, u_euler :\
-        u_euler[j] + cb.nu*cb.dt/cb.dx**2*(u_euler[j+1] - 2*u_euler[j] + u_euler[j-1])
+        u_euler[j] + cb.dt * (cb.nu/cb.dx**2*(u_euler[j+1] - 2*u_euler[j] + u_euler[j-1]) - 0.25/cb.dx*(u_euler[j+1]**2 - u_euler[j-1]**2))
     
     u_euler = np.copy(u)
     
