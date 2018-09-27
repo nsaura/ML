@@ -50,11 +50,21 @@
 \newcommand{\warrow}{\item[\color{blue!50!black!70} \tiny{\ding{109}}]}
 \newcommand{\sarrow}{\item[\color{blue!50!black!70!orange!60} \tiny{\ding{55}}]}
 
-
+%\usepackage{stmaryrd}
 \usepackage{geometry}
 \geometry{hmargin=1.cm, vmargin=0cm}
 
 \xdefinecolor{bviolet}{named}{BlueViolet}
+%
+%\newcommand{\backupbegin}{
+%   \newcounter{finalframe}
+%   \setcounter{finalframe}{\value{framenumber}}
+%}
+%\newcommand{\backupend}{
+%   \setcounter{framenumber}{\value{finalframe}}
+%}
+
+\usepackage{appendixnumberbeamer}
 
 %%%%%%%%%%%%%%%%%%%%
 %%% Couleurs %%%
@@ -86,7 +96,7 @@
 \large{Supervised by:} \normalsize Gomez Thomas
 }
 
-\date{$5^{\text{th}}$ July 2018}
+\date{$27^{\text{th}}$ September 2018}
 \institute{
 \begin{center}
 	\begin{minipage}[!ht]{0.9\textwidth}
@@ -135,28 +145,30 @@
 
 \section{Bayesian inversion framework (BIF)}
 \begin{frame}{Infer beta through inversion}
-\begin{block}{Modified closure equation }
-The main idea of RANS models is to add a closure equation. The main idea of BI is to add a flexible term in this closure to correct the error injected.  
+\begin{block}{Bayesian inference}
+Inject high fidelity information from DNS to improve turbulence modeling using BI.
 \center{$\displaystyle \mathcal{F}\bepar{\color{BlueViolet} \beta(\mathbf{x}, t) \bk P_{\text{roduction}}  , D_{\text{issipation} }, T_{\text{ransport}}} = 0 $}
+\vspace{2mm}
+\begin{itemize}
+	\item[$\bullet$] Discrepancy vector minimizing the distance between DNS and RANS solutions (can be seen as a vector of latent variables)
+%	\item[$\bullet$] Maximizing $\color{BlueViolet} \beta \bk | \text{Obs}$ 
+\end{itemize}
 \end{block}
 $$ \beta_M = \argmin \mathcal{J}$$
 $$\mathcal{J} = \becro{\frac{1}{2} \bepar{\text{Obs} - h\bepar{\beta}}^T\textbf{C}^{-1}_m\bepar{\text{Obs} - h\bepar{\beta}} + \bepar{\beta - \beta_{\text{p}}}^T\textbf{C}_\beta^{-1}\bepar{\beta - \beta_{\text{p}}}}$$
 
-\begin{block}{Importance and meaning of $\beta$}
-\begin{itemize}
-\item[$\bullet$] Discrepancy vector minimizing the distance between DNS and RANS solutions (can be seen as a vector of latent variables)
-\item[$\bullet$] Maximizing $\color{BlueViolet} \beta \bk | \text{Obs}$ 
-\end{itemize}
-\end{block}
-
+%\begin{block}{Importance and meaning of $\beta$}
+%\begin{itemize}
+%\end{block}
 \end{frame}
+
 \begin{frame}{Bayesian Inversion Framework (BIF)}
 Framework proposed by Duraisamy \textit{et. al} in \citep{parish2016paradigm}
 \begin{multicols*}{2}
 \noindent
 	\begin{figure}[!ht]
 	\centering
-	\includegraphics[scale=0.3]{singh.png}
+	\includegraphics[scale=0.32]{singh.png}
 	\caption{Figure extracted from \citep{singh2017machine}}
 	\end{figure}
 	
@@ -227,7 +239,7 @@ $ \beta_{\text{final}} \equiv \beta \sim \mathcal{N}\bepar{\beta_{\text{MAP}}, {
 \end{frame}
 
 \begin{frame}{BIF : Next Step : Machine Learning}
-Reproduce the previous calculs for T = 5:5:50 \\[1cm]
+Reproduce the previous calculs for $T_\infty  = 5:5:\ang{50}$ C \\[5mm]
 
 Construction $X$ and $y$ in $\mathcal{D} = \left\lbrace \ \underbrace{\bepar{T_{\text{inf}},T(x_i)}}_{X_i}, \ \underbrace{\beta_i}_{y_i}\ \right\rbrace$ for each T.\\
 In matrix notation : 
@@ -269,7 +281,7 @@ $T_\infty = \ang{55}$C
 \end{frame}
 
 \begin{frame}
-$T_\infty = 35 + 20\sin(2\pi x)$ 
+$T_\infty = \ang{35} \text{C}  + 20\sin(2\pi x)$ 
 \begin{figure}[H]
 	\centering	
 	\includegraphics[scale=0.5]{T_True_vs_T_ML_N_sample_5_T_inf_35_+_20sin_2piz_adam-mean.png}
@@ -425,7 +437,7 @@ $T_\infty = 35 + 20\sin(2\pi x)$
 \begin{frame}{Training of the algorithm}
 	\begin{figure}[H]
 		\centering
-		\includegraphics[scale=0.45]{Cost_Evolution_:_loglog_and_lin.png}
+		\includegraphics[scale=0.4]{loglogvbeNN.png}
 	\end{figure}
 \end{frame}
 
@@ -553,40 +565,108 @@ VBE is not the simpliest equation to evaluate NNBF because of sharp chocs are ge
 Various directions to solve the global error such as modifying the cost function. \red We choosed Deep Reinforcement Learning (DRL)\bk
 
 \end{frame}
-
+\section{Few words on Deep Reinforcement Learning (DRL)}
 \begin{frame}{DRL : How to reduce global and local errors (on goning)}
-	\begin{exampleblock}{Solution : Learn !}
+	\begin{exampleblock}{Solution : Learn using a policy}
 	
-		
-		The solution is to use Reinforcement learning to learn the physics
+		The solution is to use Reinforcement learning to learn the Physics from data \textbf{according} to the Physics
 	\begin{itemize}
 		\item[\checkmark] Optimize weights given a policy (conservation laws)
 		\item[\checkmark] Ensure to minimize local error (per step) 
-		\item[\checkmark] Golbal error should be small at the end of the process
+		\item[\checkmark] Global error should be small at the end of the process
 	\end{itemize}
 	\end{exampleblock}	
-	\begin{itemize}
-		\item[$\bullet$] Deep Reinforcement Learning (DQL) : 
-		\begin{figure}[!ht]
-		\centering
-		\includegraphics[scale=0.2]{RL_scheme.png}
-		\end{figure}
-		\item[$\bullet$] A strategy has been established and wait to be tested
 		
-		\item[$\bullet$] More soon .. ;)
+		
+	\begin{multicols}{2}
+		
+	\begin{itemize}
+		\item[$\bullet$] Use of DNNs for action and to assess it (actor-critic) \\[2mm]
+
+		\item[$\bullet$] Use of Deterministic policy gradient : the action is not stocastic \\[2mm]
+		
+		\item[$\bullet$] The actor weights are ajusted according to the reward given by the critic network
 		
 	\end{itemize}
+	
+	\columnbreak
+		\vfill		
+		\begin{figure}[!ht]
+		\centering
+		\includegraphics[scale=0.21]{RL_scheme.png}
+		\end{figure}
+	\end{multicols}
 
 \end{frame}
+\begin{frame}{Sum up of the first year work}
+	\begin{itemize}
+		\item[$\bullet$] First step : learn basics on Machine Learning and on Baysian Inference \\[3mm]
+		\item[$\bullet$] Second step : try the BIF on temperature\\[3mm]
+		\item[$\bullet$] Third step : try to extend it on more complex problem : RANS correction (currently working on it), VBE, Thomas equation (MHD, on going project)\\[3mm]
+		\item[$\bullet$] Fourth step : try a more direct predictive approach : NNBF  \\[3mm]
+		\item[$\bullet$] Fifth step : look beyond with DRL, DDPG algorithm, Asynchroneous update and much more to discover
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Autour de la thèse}
+	\begin{itemize}
+		\item[$\bullet$] Article en préparation sur la comparaison des méthodes BIF, NNBF et méthodes classiques \\[2mm]
+		\item[$\bullet$] Recherche bibliographique et premiers algorithmes écrits sur le Reinforcement Learning. Solution adaptée \\[2mm]
+		\item[$\bullet$] Un deuxième article engloberait les 4 méthodes
+		\item[$\bullet$] Recherche de colloque sur les thèmes de l'intelligence artficielle, la mécanique des fluides idéalement les deux combinés \\[2mm]
+		\item[$\bullet$] 20/60 crédits \\[2mm]
+		\item[$\bullet$] Formation base de la mécanique 1er semestre année 2018/2019 \\[2mm]
+		\item[$\bullet$] Formation base de la mécanique des fluides 2ème semestre \\[2mm]
+		\item[$\bullet$] Projet professionnel
+	\end{itemize}
+\end{frame}
+
 \begin{frame}
 \begin{center}
 	\color{FireBrick} \textbf{\textit{\Large{Thank you for your attention}}} \bk
 \end{center}
 \end{frame}
 
+\appendix
+
+\begin{frame}{BFGS Algorithm}
+	Second order method for unconstrained optimization problem.
+	\begin{itemize}
+%		\item[$\bullet$] Follow the steepest descent $p_k^T \nabla \mathcal{J}_k < 0 $ with $p_k = - \nabla \mathcal{J}_k / \norm{\nabla \mathcal{J}_k}$ 
+		\item[$\bullet$] Search direction : $p_k = -B_k^{-1}\nabla \mathcal{J}_k < 0$ used for $x_{k+1} = x_k + \alpha_k p_k$   \\[3mm]
+		\item[$\bullet$] $B_k^{-1}$  Approximation of $\mathcal{J}$' s hessienne inverse \\[3mm]
+		\item[$\bullet$] From $p_k$ two conditions to find the $\alpha_k$ : \\[2mm]
+		\begin{itemize}
+			\bwarrow Find a list of $\alpha_k$ such as (Armijo Condition):$$ \mathcal{J}\bepar{x_k + \alpha p_k} < \mathcal{J}_k + c\alpha \nabla^T\mathcal{J}_k p_k$$ 	
+			\bwarrow Try them s.a the stong Wolf condition is satisfied :
+			$$|\nabla^T \mathcal{J} \bepar{x_k + \alpha_k p_k} p_k| \leq c_2 |\nabla^T \mathcal{J}_kp_k|$$
+		\end{itemize}
+		\item[$\bullet$] Finally update $x_k$ and $B^{-1}_k$
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Better insight of DRL}
+	\begin{itemize}
+		\sarrow action $a_t \in \mathcal{A} = \mathbb{R}^N$ \\[3mm]
+		\sarrow $\pi$ : $\mathcal{S} \mapsto P\bepar{\mathcal{A}}$ policy, with $P$ the probability distributed over $\mathcal{A}$.\\[3mm]
+		\sarrow $\mathcal{S}$ can be stochastic. We use the Markov Decision Process (MDP) \\[3mm]
+		\begin{itemize}
+			\item[--] Transition probability : P is $p(s_{t+1} | s_t, a_t)$ : transition probability. 				
+			\item[--] Can define a reward as $r(s_t, a_t)$ \\[3mm]
+		\end{itemize}
+		\sarrow Q value : $$Q^\pi(s_t, a_t) = \mathbb{E}_\pi[R_t |s_t, a_t] \text{\hspace{1mm} avec \hspace{1mm}} R_t = \sum^T_{i=t} \gamma^{i-t} r(s_i, a_i) \text{\hspace{1mm} et \hspace{1mm}} \gamma \in \becro{0,\, 1}$$ 
+	
+			   
+	\end{itemize}
+\end{frame}
+
 \begin{frame}
 \bibliographystyle{apalike}
 \bibliography{bibliotheque}
 \end{frame}
+
+
+%\backupend
+
 
 \end{document}
