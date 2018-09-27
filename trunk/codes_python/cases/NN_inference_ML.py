@@ -108,7 +108,7 @@ def build_case(lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch
 
 #   Ce cas nous donne une erreur totale moyennée  0.00099802657]
     
-    nn_obj = NNC.Neural_Network(lr, N_=N_, scaler = "Standard", reduce_type=reduce_type, color=kwargs["color"], verbose=verbose, max_epoch=max_epoch, clip=False, r_parameter=0.5)
+    nn_obj = NNC.Neural_Network(lr, N_=N_, scaler = "Standard", reduce_type=reduce_type, verbose=verbose, max_epoch=max_epoch, clip=False, r_parameter=0.5, **kwargs)
 
     nn_obj.split_and_scale(X, y, shuffle=True, val=False)
     nn_obj.tf_variables()

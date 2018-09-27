@@ -711,7 +711,6 @@ class Neural_Network():
         
         epoch = 0
         
-        
         # Executing Phase
         if self.err_type == "MSEGrad" :
             self.grads_inputs = tf.norm(tf.gradients(self.y_pred_model, [self.x])[0])
