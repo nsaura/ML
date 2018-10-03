@@ -210,4 +210,6 @@ if __name__ == "__main__" :
         play(15)
     
     train()
-        
+
+#run Keras_AC_DDPG_try.py
+
