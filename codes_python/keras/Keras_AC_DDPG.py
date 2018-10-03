@@ -66,11 +66,11 @@ class ActorNetwork(object):
         
         # First
         self.model, self.weights, self.state =\
-                self.create_actor_network(state_size, action_size, name='Actor',HIDDEN1_UNITS, HIDDEN2_UNITS)
+                self.create_actor_network(state_size, action_size, HIDDEN1_UNITS, HIDDEN2_UNITS, name='Actor')
         
         # Target to be modified
         self.target_model, self.target_weights, self.target_state =\
-                self.create_actor_network(state_size, action_size, name='Target_Actor', HIDDEN1_UNITS, HIDDEN2_UNITS)
+                self.create_actor_network(state_size, action_size, HIDDEN1_UNITS, HIDDEN2_UNITS, name='Target_Actor')
         
         # Define the place where the gradient will be apply 
         self.action_gradient = tf.placeholder(tf.float32,[None, action_size])
@@ -103,7 +103,7 @@ class ActorNetwork(object):
         
         self.target_model.set_weights(actor_target_weights) # Equivalent to assign from tensorflow
     
-    def create_actor_network(self, state_size,action_dim, name, HIDDEN1_UNITS, HIDDEN2_UNITS):
+    def create_actor_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
         S = Input(shape=[state_size], name=name+'_Input')
         h0 = Dense(HIDDEN1_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense1')(S)
         h1 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense2')(h0)
@@ -130,9 +130,9 @@ class CriticNetwork(object):
 
         #Now create the model
         self.model, self.action, self.state =\
-                self.create_critic_network(state_size, action_size, name='Critic', HIDDEN1_UNITS, HIDDEN2_UNITS)
+                self.create_critic_network(state_size, action_size, HIDDEN1_UNITS, HIDDEN2_UNITS, name='Critic')
         self.target_model, self.target_action, self.target_state =\
-                self.create_critic_network(state_size, action_size, name="Target_Critic", HIDDEN1_UNITS, HIDDEN2_UNITS)  
+                self.create_critic_network(state_size, action_size, HIDDEN1_UNITS, HIDDEN2_UNITS, name="Target_Critic") 
 
         # Here action is not negative
         self.action_grads = tf.gradients(self.model.output, self.action)  #GRADIENTS for policy update
@@ -151,7 +151,7 @@ class CriticNetwork(object):
             critic_target_weights[i] = self.TAU * critic_weights[i] + (1 - self.TAU)* critic_target_weights[i]
         self.target_model.set_weights(critic_target_weights)
     
-    def create_critic_network(self, state_size,action_dim, name, HIDDEN1_UNITS, HIDDEN2_UNITS):
+    def create_critic_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
         print("Now we build the model")
         S = Input(shape=[state_size])
         A = Input(shape=[action_dim], name='action2')
