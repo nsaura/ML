@@ -385,12 +385,13 @@ def ELW_multiNN_solver(nn_obj, cb=cb):
     p1 = np.pi
     
     amp = 0.7
-    amp1 = 0.7
+#    amp1 = 0.7
     
     u1 =  amp*np.sin(np.pi/cb.L*cb.line_x + p)
-    u2 = 0.5 + cb.init_u(amp1, p1)
+#    u2 = 0.5 + cb.init_u(amp1, p1)
     
-    u = u1 + u2
+#    u = u1 + u2
+    u = u1
 #    u = u2    
     _, abs_work = LW_solver(u, cb.itmax, "u_test", write=True)
     print (abs_work)
