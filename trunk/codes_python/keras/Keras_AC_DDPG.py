@@ -14,8 +14,8 @@ from keras.optimizers import Adam
 import tensorflow as tf
 import keras.backend as K
 
-HIDDEN1_UNITS = 800
-HIDDEN2_UNITS = 400
+HIDDEN1_UNITS = 80
+HIDDEN2_UNITS = 40
 
 def act(x):
         return 1.67653251702 * (x * K.sigmoid(x) - 0.20662096414)
