@@ -7,6 +7,7 @@ from keras.models import Sequential, Model
 from keras.layers import Dense, Flatten, Input, merge
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 plt.ion()
 
 import tensorflow as tf
@@ -30,10 +31,12 @@ trainnum = 0
 noiselevel = 0.5
 
 episodes = 5000     # Nombre d'episodes
-train_times = 100   # Nombre d'iterations 
+train_times = 1000   # Nombre d'iterations 
 
-HIDDEN1_UNITS = 400
-HIDDEN2_UNITS = 200
+colors = iter(cm.plasma_r(np.arange(train_times)))
+
+HIDDEN1_UNITS = 40
+HIDDEN2_UNITS = 20
 
 training_start = 100
 
@@ -42,10 +45,10 @@ buffer_size = 50*400
 actor = KAD.ActorNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_actor)
 critics = KAD.CriticNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_critics)
 
-X = np.linspace(0,1,50)
+X = np.linspace(0,np.pi/2.,50)
 
 I = np.eye(50)
-vvals = np.sin(X)
+vvals = 1 - np.sin(X)
 #fvals = np.zeros_like(X)
 
 from collections import deque
@@ -84,8 +87,8 @@ def modif_noise(noise_t, noise, ep, cpt):
 #   play   #
 ####    ####
 
-max_steps = 500000
-reward = lambda fvals : np.transpose(fvals.ravel()-vvals).dot(I).dot(fvals.ravel()-vvals)*100
+max_steps = 50000
+reward = lambda fvals : (1./(np.transpose(fvals.ravel()-vvals).dot(I).dot(fvals.ravel()-vvals) + 0.000001))
 
 def play(ep):    
     """
@@ -180,7 +183,8 @@ def train () :
         
         with graph.as_default():
             # We set lr of the critic network
-            critics.model.optimizer.learnig_rate = lr_critics
+            critics.model.optimizer.lr = lr_critics
+            
             logs = critics.model.train_on_batch([states, actions], y_t) #(Q-y)**2
             
             a_for_grad = actor.model.predict(states)
@@ -197,9 +201,10 @@ def train () :
             plt.show()
 ##            plt.legend()
         loss += logs
+        
         trainnum += 1
     print ("Train ", len(replay_memory), loss)
-
+    
 if __name__ == "__main__" :
     while len(replay_memory) < BATCH_SIZE :
         play(15)
