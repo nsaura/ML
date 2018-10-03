@@ -42,8 +42,8 @@ training_start = 100
 
 buffer_size = 50*400
 
-actor = KAD.ActorNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_actor)
-critics = KAD.CriticNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_critics)
+actor = KAD.ActorNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_actor, HIDDEN1_UNITS, HIDDEN2_UNITS)
+critics = KAD.CriticNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_critics, HIDDEN1_UNITS, HIDDEN2_UNITS)
 
 X = np.linspace(0,np.pi/2.,50)
 

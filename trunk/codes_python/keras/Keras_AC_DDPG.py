@@ -14,8 +14,8 @@ from keras.optimizers import Adam
 import tensorflow as tf
 import keras.backend as K
 
-HIDDEN1_UNITS = 80
-HIDDEN2_UNITS = 40
+#HIDDEN1_UNITS = 80
+#HIDDEN2_UNITS = 40
 
 def act(x):
         return 1.67653251702 * (x * K.sigmoid(x) - 0.20662096414)
@@ -33,7 +33,7 @@ class ActorNetwork(object):
     """
     This class creates an actor network and a target actor network that will be modified.
     """
-    def __init__(self, sess, state_size, action_size, BATCH_SIZE, TAU, LEARNING_RATE):
+    def __init__(self, sess, state_size, action_size, BATCH_SIZE, TAU, LEARNING_RATE, HIDDEN1_UNITS, HIDDEN2_UNITS):
         """
         During the initialisation, the first actor and a copy of it : the target actor are created.\
         In accordance with \"continuous control with deep reinforcement learning\" article, the target is to be modified\
@@ -66,11 +66,11 @@ class ActorNetwork(object):
         
         # First
         self.model, self.weights, self.state =\
-                self.create_actor_network(state_size, action_size, name='Actor')
+                self.create_actor_network(state_size, action_size, name='Actor',HIDDEN1_UNITS, HIDDEN2_UNITS)
         
         # Target to be modified
         self.target_model, self.target_weights, self.target_state =\
-                self.create_actor_network(state_size, action_size, name='Target_Actor')
+                self.create_actor_network(state_size, action_size, name='Target_Actor', HIDDEN1_UNITS, HIDDEN2_UNITS)
         
         # Define the place where the gradient will be apply 
         self.action_gradient = tf.placeholder(tf.float32,[None, action_size])
@@ -103,7 +103,7 @@ class ActorNetwork(object):
         
         self.target_model.set_weights(actor_target_weights) # Equivalent to assign from tensorflow
     
-    def create_actor_network(self, state_size,action_dim, name):
+    def create_actor_network(self, state_size,action_dim, name, HIDDEN1_UNITS, HIDDEN2_UNITS):
         S = Input(shape=[state_size], name=name+'_Input')
         h0 = Dense(HIDDEN1_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense1')(S)
         h1 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense2')(h0)
@@ -119,7 +119,7 @@ class ActorNetwork(object):
 ######################
 
 class CriticNetwork(object):
-    def __init__(self, sess, state_size, action_size, BATCH_SIZE, TAU, LEARNING_RATE):
+    def __init__(self, sess, state_size, action_size, BATCH_SIZE, TAU, LEARNING_RATE, HIDDEN1_UNITS, HIDDEN2_UNITS):
         self.sess = sess
         self.BATCH_SIZE = BATCH_SIZE
         self.TAU = TAU
@@ -130,9 +130,9 @@ class CriticNetwork(object):
 
         #Now create the model
         self.model, self.action, self.state =\
-                self.create_critic_network(state_size, action_size, name='Critic')
+                self.create_critic_network(state_size, action_size, name='Critic', HIDDEN1_UNITS, HIDDEN2_UNITS)
         self.target_model, self.target_action, self.target_state =\
-                self.create_critic_network(state_size, action_size, name="Target_Critic")  
+                self.create_critic_network(state_size, action_size, name="Target_Critic", HIDDEN1_UNITS, HIDDEN2_UNITS)  
 
         # Here action is not negative
         self.action_grads = tf.gradients(self.model.output, self.action)  #GRADIENTS for policy update
@@ -151,7 +151,7 @@ class CriticNetwork(object):
             critic_target_weights[i] = self.TAU * critic_weights[i] + (1 - self.TAU)* critic_target_weights[i]
         self.target_model.set_weights(critic_target_weights)
     
-    def create_critic_network(self, state_size,action_dim, name):
+    def create_critic_network(self, state_size,action_dim, name, HIDDEN1_UNITS, HIDDEN2_UNITS):
         print("Now we build the model")
         S = Input(shape=[state_size])
         A = Input(shape=[action_dim], name='action2')
