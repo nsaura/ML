@@ -4,6 +4,7 @@
 import sys 
 import time 
 import noise 
+import decays
 import numpy as np
 import os.path as osp
 
@@ -25,6 +26,10 @@ import matplotlib.pyplot as plt
 graph = tf.get_default_graph()
 
 KAD = reload(KAD)
+noise = reload(noise)
+decays = reload(decays)
+solvers = reload(solvers)
+
 
 def samples_memories(BATCH_SIZE):
     indices = np.random.permutation(len(replay_memory))[: BATCH_SIZE]
@@ -78,16 +83,24 @@ HIDDEN2_UNITS = 200
 
 BATCH_SIZE = 128
 TAU = 0.001
-lr_actor = 0.001
-lr_critics = 0.0001
+lr_actor_init = 1e-3
+lr_critics_init = 1e-4
+
+lr_actor_final = 5e-5
+lr_critics_final = 5e-5
+
+
+EpsForNoise_init = 0.5
+EpsForNoise_fina = 0.05
+
 gamma = 0.97
 
 sess = tf.InteractiveSession()
 
 state_size = action_size = Nx
 
-actor = KAD.ActorNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_actor, HIDDEN1_UNITS, HIDDEN2_UNITS)
-critics = KAD.CriticNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_critics, HIDDEN1_UNITS, HIDDEN2_UNITS)
+actor = KAD.ActorNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_actor_init, HIDDEN1_UNITS, HIDDEN2_UNITS)
+critics = KAD.CriticNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_critics_init, HIDDEN1_UNITS, HIDDEN2_UNITS)
 #----------------------------------------------
 def action_with_burger(state) :
     """
@@ -145,8 +158,23 @@ def play(u_init):
         with graph.as_default() :
             a_t_original = actor.model.predict(np.array([s_t]))
             
+        epsilon = decays.create_decay_fn("linear",
+                                         curr_step=j,
+                                         initial_value=EpsForNoise_init,
+                                         final_value=EpsForNoise_fina,
+                                         max_step=max_steps)
         
-        a_t = a_t_original + 
+        if j % 150 == 0 :
+            print ("steps = %d\t eps = %0.8f" %(j, epsilon))
+        
+        args = {"rp_type" : "ornstein-uhlenbeck",
+                "n_action" : 1,
+                "rp_theta" : 0.1,
+                "rp_mu" : 0.,
+                "rp_sigma" : 0.2,
+                "rp_sigma_min" : 0.05}
+        
+        a_t = a_t_original + epsilon*noise.create_random_process(args).sample()
         
         a_t = a_t.ravel()
         s_t1 = action_with_delta_Un(s_t, a_t)
@@ -179,7 +207,7 @@ def play(u_init):
         
         total_rew += r_t
         
-        if len(replay_memory) % 100 ==0 :
+        if len(replay_memory) % 150 ==0 :
             print ("Memory size = %d" % len(replay_memory))
 #----------------------------------------------        
 def train () :
@@ -194,6 +222,21 @@ def train () :
     for ep in range(episodes) :
         loss = 0
         trainnum = 0
+        
+        critics.model.optimizer.lr = decays.create_decay_fn("linear",
+                                                            curr_step = ep,    
+                                                            initial_value = lr_critics_init,
+                                                            final_value = lr_critics_final,
+                                                            max_step = episodes)
+        curr_lr_actor = decays.create_decay_fn("linear",
+                                               curr_step = ep,    
+                                               initial_value = lr_actor_init,
+                                               final_value = lr_actor_final,
+                                               max_step = episodes)
+        if ep % 5 == 0 :
+                    print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
+                                        %(ep, curr_lr_actor, critics.model.optimizer.lr))
+                                                             
         for it in range(max_steps) :
             states, actions, rewards, next_states, goons = (samples_memories(BATCH_SIZE))
 #       Just to test
@@ -215,14 +258,15 @@ def train () :
             
             with graph.as_default():
                 # We set lr of the critic network
-                critics.model.optimizer.lr = lr_critics
                 
+                
+                    
                 logs = critics.model.train_on_batch([states, actions], y_t) #(Q-y)**2
                 
                 a_for_grad = actor.model.predict(states)
                 grad = critics.gradients(states, a_for_grad)
                 
-                actor.train(states, grad, learning_rate=lr_actor)
+                actor.train(states, grad, learning_rate=curr_lr_actor)
 
                 actor.target_train()
                 critics.target_train()         

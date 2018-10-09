@@ -61,12 +61,15 @@ class OrnsteinUhlenbeckProcess(AnnealedGaussianProcess):
 
 
 def create_random_process(args):
-    if args.rp_type == "ornstein-uhlenbeck":
+    """
+    args is a supposed to be a dictionnary
+    """
+    if args["rp_type"] == "ornstein-uhlenbeck":
         return OrnsteinUhlenbeckProcess(
-            size=args.n_action,
-            theta=args.rp_theta,
-            mu=args.rp_mu,
-            sigma=args.rp_sigma,
-            sigma_min=args.rp_sigma_min)
+            size=args["n_action"],
+            theta=args["rp_theta"],
+            mu=args["rp_mu"],
+            sigma=args["rp_sigma"],
+            sigma_min=args["rp_sigma_min"])
     else:
-raise NotImplementedError()
+        raise NotImplementedError()
