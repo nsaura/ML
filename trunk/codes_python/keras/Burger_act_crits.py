@@ -146,7 +146,7 @@ def play(u_init):
             a_t_original = actor.model.predict(np.array([s_t]))
             
         
-        a_t = a_t_original# + noise_t
+        a_t = a_t_original + 
         
         a_t = a_t.ravel()
         s_t1 = action_with_delta_Un(s_t, a_t)
