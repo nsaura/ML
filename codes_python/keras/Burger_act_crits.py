@@ -78,10 +78,10 @@ episodes = 100
 replay_memory_size = 5000
 replay_memory = deque([], maxlen=replay_memory_size)
 
-HIDDEN1_UNITS = 800
-HIDDEN2_UNITS = 200
+HIDDEN1_UNITS = 64
+HIDDEN2_UNITS = 64
 
-BATCH_SIZE = 128
+BATCH_SIZE = 200
 TAU = 0.001
 lr_actor_init = 1e-3
 lr_critics_init = 1e-4
@@ -175,9 +175,19 @@ def play(u_init):
                 "rp_sigma_min" : 0.05}
         
         a_t = a_t_original + epsilon*noise.create_random_process(args).sample()
-        
         a_t = a_t.ravel()
+        
+        a_tt = np.copy(a_t)
+        for a in range(len(a_t)) :
+            if a_tt[a] > 1. :
+                a_tt[a] = 1.
+            elif a_tt[a] < -1. :
+                a_tt[a] = -1.
+            else :
+                pass
+        a_t = np.array([a for a in a_tt])
         s_t1 = action_with_delta_Un(s_t, a_t)
+                
         
 #        return s_t, a_t, st_1
 
