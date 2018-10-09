@@ -1,19 +1,17 @@
 #!/usr/bin/python
 # -*- coding: latin-1 -*-
 
-# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *#
-# * * * * * * * * * * * * * * * * * * * Taken From * * * * * * * * * * * * * * * * * * * #
-# * * * * * https://github.com/Scitator/Run-Skeleton-Run/blob/master/common/ * * * * * * #
-# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *#
-# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *#
-
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+# * * * * * * * * * * * * * * * * *  Taken From * * * * * * * * * * * * * * * * * * * * #
+# * https://github.com/Scitator/Run-Skeleton-Run/blob/master/common/random_process.py * #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
 
 import numpy as np
 
 class RandomProcess(object):
     def reset_states(self):
         pass
-
 
 class AnnealedGaussianProcess(RandomProcess):
 #Simulated annealing (SA) is a probabilistic technique for approximating the global optimum of a given function.
