@@ -2,6 +2,8 @@
 # -*- coding: latin-1 -*-
 
 import sys 
+import time 
+import noise 
 import numpy as np
 import os.path as osp
 
@@ -63,20 +65,22 @@ r = dt / dx
 f = lambda u : 0.5*u**2
 fprime = lambda u : u
 
-max_steps = 500
-numbercases = 3 
+max_steps = 250
+numbercases = 1
 
-replay_memory_size = 500000
+episodes = 100
+
+replay_memory_size = 5000
 replay_memory = deque([], maxlen=replay_memory_size)
 
-HIDDEN1_UNITS = 40
-HIDDEN2_UNITS = 20
+HIDDEN1_UNITS = 800
+HIDDEN2_UNITS = 200
 
-BATCH_SIZE = 500
+BATCH_SIZE = 128
 TAU = 0.001
 lr_actor = 0.001
 lr_critics = 0.0001
-gamma = 0.96
+gamma = 0.97
 
 sess = tf.InteractiveSession()
 
@@ -115,7 +119,7 @@ def reward (next_state, state) :
     
     return np.sum(temp_term + square_term)
 #----------------------------------------------
-def play(ep):    
+def play(u_init):    
     """
     Function that plays a certain number of iterations of the game (until it finishes).
     This function can also be used to construct the rpm.
@@ -123,10 +127,10 @@ def play(ep):
     
     Arguments :
     -----------
-    ep : episode on which the function is requiered
+    u_init : To set the initialisation
     """
     episode_memory = []
-    s_t = np.zeros_like(X)
+    s_t = u_init
     
     total_rew = 0
     a_t = np.zeros([1, s_t.size])
@@ -151,10 +155,10 @@ def play(ep):
 
         r_t = reward(s_t1, s_t)
 
-        print ("state :\n{}".format(s_t))
-        print ("action :\n{}".format(a_t))
-        print ("reward :\n{}".format(r_t))
-        print ("next state :\n{}".format(s_t1))
+#        print ("state :\n{}".format(s_t))
+#        print ("action :\n{}".format(a_t))
+#        print ("reward :\n{}".format(r_t))
+#        print ("next state :\n{}".format(s_t1))
         
         if r_t < 0.001 :   
             goon = False
@@ -171,10 +175,12 @@ def play(ep):
                 replay_memory.pop() # Pop the rightmost element 
         
         s_t = s_t1
-        print ("next_state :\n{}".format(s_t1))
+#        print ("next_state :\n{}".format(s_t1))
         
         total_rew += r_t
-        print "final"
+        
+        if len(replay_memory) % 100 ==0 :
+            print ("Memory size = %d" % len(replay_memory))
 #----------------------------------------------        
 def train () :
     """
@@ -182,56 +188,111 @@ def train () :
     It has to be after the construction of the replay_memory
     """
     loss = 0
+    losses = []
     trainnum = 0 
     global graph
-    for T in range(train_times) :
-        states, actions, rewards, next_states, goons = (samples_memories(BATCH_SIZE))
-        
+    for ep in range(episodes) :
+        loss = 0
+        trainnum = 0
+        for it in range(max_steps) :
+            states, actions, rewards, next_states, goons = (samples_memories(BATCH_SIZE))
 #       Just to test
 #        print ("states shape : ", states.shape)
 #        print ("actions shape : ", actions.shape)
 #        print ("rewards shape: ", rewards.shape)
 #        print ("goons shape  : ", goons.shape)
-        y_t = np.asarray([0.0]*BATCH_SIZE)
-        rewards = np.concatenate(rewards)
-        
-        with graph.as_default() :
-            # Q function evaluation on the target graphs 
-            target_q_values = critics.target_model.predict(
-                            [next_states, actor.target_model.predict(next_states)])
-        target_q_values = target_q_values.reshape([1, target_q_values.shape[0]])[0]
-        
-        for k in range(BATCH_SIZE) :
-            y_t[k] = rewards[k] + goons[k]*gamma*target_q_values[k]
-        
-        with graph.as_default():
-            # We set lr of the critic network
-            critics.model.optimizer.lr = lr_critics
+            y_t = np.asarray([0.0]*BATCH_SIZE)
+            rewards = np.concatenate(rewards)
             
-            logs = critics.model.train_on_batch([states, actions], y_t) #(Q-y)**2
+            with graph.as_default() :
+                # Q function evaluation on the target graphs 
+                target_q_values = critics.target_model.predict(
+                                [next_states, actor.target_model.predict(next_states)])
+            target_q_values = target_q_values.reshape([1, target_q_values.shape[0]])[0]
             
-            a_for_grad = actor.model.predict(states)
-            grad = critics.gradients(states, a_for_grad)
+            for k in range(BATCH_SIZE) :
+                y_t[k] = rewards[k] + goons[k]*gamma*target_q_values[k]
             
-            actor.train(states, grad, learning_rate=lr_actor)
+            with graph.as_default():
+                # We set lr of the critic network
+                critics.model.optimizer.lr = lr_critics
+                
+                logs = critics.model.train_on_batch([states, actions], y_t) #(Q-y)**2
+                
+                a_for_grad = actor.model.predict(states)
+                grad = critics.gradients(states, a_for_grad)
+                
+                actor.train(states, grad, learning_rate=lr_actor)
 
-            actor.target_train()
-            critics.target_train()         
+                actor.target_train()
+                critics.target_train()         
+                
+    #            plt.figure("Comparaison")
+    #            plt.plot(X, vvals, label='True', c='k')
+    #            plt.plot(X, actor.target_model.predict(states[0].reshape(1,-1)).ravel(), label="Process", c='yellow', marker='o', fillstyle="none", linestyle='none')
+    #            plt.show()
+    ###            plt.legend()
+            loss += logs
             
-            plt.figure("Comparaison")
-            plt.plot(X, vvals, label='True', c='k')
-            plt.plot(X, actor.target_model.predict(states[0].reshape(1,-1)).ravel(), label="Process", c='yellow', marker='o', fillstyle="none", linestyle='none')
-            plt.show()
-##            plt.legend()
-        loss += logs
+            trainnum += 1
+        print ("Episode = %d :" % ep)
+        print ("total loss = %.4f" %loss)
         
-        trainnum += 1
-    print ("Train ", len(replay_memory), loss)
+        losses.append(loss)
+        
+        plt.figure("Evolution de Loss sur un episodes vs iteration")
+        plt.semilogy(ep, loss, marker='o', ms=6, linestyle="none", c='r')
+        plt.pause(0.5)
+    
+    return losses
 #----------------------------------------------
     
 if __name__ == "__main__" :
-    while len(replay_memory) < BATCH_SIZE :
-        play()
+    lossess = dict()
+    n_init = numbercases
+    u_init = np.zeros((n_init, X.size))
+    pi_line = np.linspace(0.4, 1.4, 50)
+    amplitude = [np.random.choice(pi_line) for i in range(n_init)]
+
+    for i, amp in enumerate(amplitude) :
+        u_init[i] = amp*np.sin(2*np.pi/L*X) 
+
+#    plt.figure("Sinus initiaux")
+#    for j, u in enumerate(u_init) :
+#        plt.plot(X, u, label="amplitude = %.4f" % amplitude[j])
+#    plt.legend()
     
-    train()
+    colors = iter(cm.plasma_r(np.arange(500)))
+    
+    redo = 10
+    for r in range(redo) :
+        print ("The batch %d is being constructed ..." %(r))
+        replay_memory.clear()
+        while len(replay_memory) < replay_memory_size : 
+            for u in u_init :
+                play(u)
+        print ("The batch %d is ready to be used" %(r))
+        time.sleep(1)
+        
+        print ("Training start")
+        curr_loss = train()
+        lossess[r] = curr_loss
+        
+        print ("Going to delete the curr figures, the results will be displayed in another figs...")
+        time.sleep(5)
+
+        plt.figure("Evolution de Loss sur un episodes vs iteration")
+        plt.clf()
+        
+        plt.figure("Comparaison of the training loss with different replay memories")
+        for j in range(27) :
+            next(colors)
+        plt.semilogy(range(episodes), curr_loss, c = next(colors), label="Loss replay %d" % (r))
+        plt.xlabel("Number of episodes")
+        plt.ylabel("Loss values")
+        plt.legend()
+        
+        plt.pause(0.01)
+        
+    
 
