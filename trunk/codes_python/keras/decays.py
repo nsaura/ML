@@ -9,23 +9,16 @@
 
 import numpy as np
 
-def create_linear_decay_fn(initial_value, final_value, max_step):
-    def decay_fn(step):
-        relative = 1. - step / max_step
-        return initial_value * relative + final_value * (1. - relative)
+def create_linear_decay_fn(curr_step, initial_value, final_value, max_step):
+    relative = 1. - float(curr_step) / max_step
+    return (initial_value * relative + final_value * (1. - relative))
 
-    return decay_fn
-
-
-def create_cycle_decay_fn(initial_value, final_value, cycle_len, num_cycles):
+def create_cycle_decay_fn(curr_step, initial_value, final_value, cycle_len, num_cycles):
     max_step = cycle_len * num_cycles
 
-    def decay_fn(step):
-        relative = 1. - step / max_step
-        relative_cosine = 0.5 * (np.cos(np.pi * np.mod(step, cycle_len) / cycle_len) + 1.0)
-        return relative_cosine * (initial_value - final_value) * relative + final_value
-
-    return decay_fn
+    relative = 1. - float(curr_step) / max_step
+    relative_cosine = 0.5 * (np.cos(np.pi * np.mod(curr_step, cycle_len) / cycle_len) + 1.0)
+    return relative_cosine * (initial_value - final_value) * relative + final_value
 
 
 def create_decay_fn(decay_type, **kwargs):
