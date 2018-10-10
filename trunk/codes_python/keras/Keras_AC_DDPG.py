@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: latin-1 -*-
 
+import keras
 import numpy as np
 #from keras.models import model_from_json
 from keras.models import Sequential, Model
@@ -14,6 +15,8 @@ from keras.optimizers import Adam
 import tensorflow as tf
 import keras.backend as K
 
+init = keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
+
 #HIDDEN1_UNITS = 80
 #HIDDEN2_UNITS = 40
 
@@ -21,7 +24,7 @@ def act(x):
         return 1.67653251702 * (x * K.sigmoid(x) - 0.20662096414)
 
 def tanh(x):
-        return (K.tanh(x) + 1) / 2
+        return K.tanh(x)
 
 #####################
 #####################
@@ -81,7 +84,7 @@ class ActorNetwork(object):
         # pairs params and weights
         grads_and_vars = zip(self.params_grad, self.weights)
         
-        self.optimize=tf.train.AdamOptimizer(learning_rate = self.LEARNING_RATE). apply_gradients(grads_and_vars)
+        self.optimize=tf.train.AdamOptimizer(learning_rate = self.LEARNING_RATE).apply_gradients(grads_and_vars)
 
         self.sess.run(tf.global_variables_initializer())
         # Nodes closed
@@ -99,18 +102,29 @@ class ActorNetwork(object):
         actor_target_weights = self.target_model.get_weights()
         # Formule algo "Continuous control with deep reinforcement learning"
         for i in range(len(actor_weights)):
-            actor_target_weights[i] = self.TAU * actor_weights[i] + (1 - self.TAU)* actor_target_weights[i]
+            actor_target_weights[i] = self.TAU*actor_weights[i] + (1 - self.TAU)*actor_target_weights[i]
         
         self.target_model.set_weights(actor_target_weights) # Equivalent to assign from tensorflow
     
+#    def create_actor_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
+#        S = Input(shape=[state_size], name=name+'_Input')
+#        h0 = Dense(HIDDEN1_UNITS, activation=tanh, kernel_initializer = init, name=name+'_Dense1')(S)
+##        h1 = Dense(HIDDEN2_UNITS, activation=tanh, kernel_initializer = init, name=name+'_Dense2')(h0)
+##        h2 = Dense(HIDDEN2_UNITS, activation=tanh, kernel_initializer = init, name=name+'_Dense3')(h1)
+#        V = Dense(action_dim ,activation=tanh, kernel_initializer = init, name=name+'_Output')(h0)
+#        model = Model(inputs=S,outputs=V)
+#        model.summary()
+#        return model, model.trainable_weights, S
     def create_actor_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
         S = Input(shape=[state_size], name=name+'_Input')
-        h0 = Dense(HIDDEN1_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense1')(S)
-        h1 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense2')(h0)
-        h2 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense3')(h1)
-        V = Dense(action_dim ,activation=tanh, kernel_initializer = 'normal', name=name+'_Output')(h2)
+        h0 = Dense(HIDDEN1_UNITS, activation='selu', name=name+'_Dense1', kernel_initializer = init)(S)
+        h1 = Dense(HIDDEN2_UNITS, activation='selu', name=name+'_Dense2', kernel_initializer = init)(h0)
+#        h2 = Dense(HIDDEN2_UNITS, activation='selu', name=name+'_Dense3', kernel_initializer = init)(h1)
+        V = Dense(action_dim,     activation=tanh,   name=name+'_Output', kernel_initializer = init)(h1)
+        
         model = Model(inputs=S,outputs=V)
         model.summary()
+        
         return model, model.trainable_weights, S
 
 ######################
@@ -152,6 +166,27 @@ class CriticNetwork(object):
             critic_target_weights[i] = self.TAU * critic_weights[i] + (1 - self.TAU)* critic_target_weights[i]
         self.target_model.set_weights(critic_target_weights)
     
+#    def create_critic_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
+#        print("Now we build the model")
+#        S = Input(shape=[state_size])
+#        A = Input(shape=[action_dim], name='action2')
+#        w1 = Dense(HIDDEN1_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseS')(S)
+#        a1 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseA2')(A)
+#        h1 = Dense(HIDDEN1_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseS2')(w1)
+#        h2 = concatenate([h1,a1])
+##        h3 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseConca')(h2)
+##        h4 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseH4')(h3)
+#        V = Dense(1,activation='linear', name=name+'_Output')(h2)
+#        model = Model(inputs=[S,A],outputs=V)
+#        
+#        # Normal Optimization
+#        adam = Adam(lr=self.LEARNING_RATE)
+#        model.compile(loss='mse', optimizer=adam)
+#        model.summary()
+#        
+#        return model, A, S    
+#        
+
     def create_critic_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
         print("Now we build the model")
         S = Input(shape=[state_size])
@@ -161,8 +196,8 @@ class CriticNetwork(object):
         h1 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseS2')(w1)
         h2 = concatenate([h1,a1])
         h3 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseConca')(h2)
-        h4 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseH4')(h3)
-        V = Dense(1,activation='linear', name=name+'_Output')(h4)
+#        h4 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseH4')(h3)
+        V = Dense(1,activation='linear', name=name+'_Output')(h3)
         model = Model(inputs=[S,A],outputs=V)
         
         # Normal Optimization
@@ -171,7 +206,7 @@ class CriticNetwork(object):
         model.summary()
         
         return model, A, S    
-        
+
 # La suite n'est pas utilisée. On essaye deque dans le script Keras_AC_DDPG.py
 
 # From https://github.com/hzwer/NIPS2017-LearningToRun/blob/master/baseline/rpm.py
