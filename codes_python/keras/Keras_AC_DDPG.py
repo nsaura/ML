@@ -107,7 +107,8 @@ class ActorNetwork(object):
         S = Input(shape=[state_size], name=name+'_Input')
         h0 = Dense(HIDDEN1_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense1')(S)
         h1 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense2')(h0)
-        V = Dense(action_dim ,activation=tanh, kernel_initializer = 'normal', name=name+'_Output')(h1)
+        h2 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_Dense3')(h1)
+        V = Dense(action_dim ,activation=tanh, kernel_initializer = 'normal', name=name+'_Output')(h2)
         model = Model(inputs=S,outputs=V)
         model.summary()
         return model, model.trainable_weights, S
@@ -160,7 +161,8 @@ class CriticNetwork(object):
         h1 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseS2')(w1)
         h2 = concatenate([h1,a1])
         h3 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseConca')(h2)
-        V = Dense(1,activation='linear', name=name+'_Output')(h3)
+        h4 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseH4')(h3)
+        V = Dense(1,activation='linear', name=name+'_Output')(h4)
         model = Model(inputs=[S,A],outputs=V)
         
         # Normal Optimization

@@ -71,23 +71,23 @@ f = lambda u : 0.5*u**2
 fprime = lambda u : u
 
 max_steps = 250
-numbercases = 1
+numbercases = 10
 
-episodes = 100
+episodes = 10
 
-replay_memory_size = 5000
+replay_memory_size =  5e3
 replay_memory = deque([], maxlen=replay_memory_size)
 
-HIDDEN1_UNITS = 64
-HIDDEN2_UNITS = 64
+HIDDEN1_UNITS = 500
+HIDDEN2_UNITS = 300
 
-BATCH_SIZE = 200
+BATCH_SIZE = int(2e2)
 TAU = 0.001
-lr_actor_init = 1e-3
+lr_actor_init = 1e-4
 lr_critics_init = 1e-4
 
-lr_actor_final = 5e-5
-lr_critics_final = 5e-5
+lr_actor_final = 1e-6
+lr_critics_final = 1e-6
 
 
 EpsForNoise_init = 0.5
@@ -164,7 +164,7 @@ def play(u_init):
                                          final_value=EpsForNoise_fina,
                                          max_step=max_steps)
         
-        if j % 150 == 0 :
+        if j % 200 == 0 :
             print ("steps = %d\t eps = %0.8f" %(j, epsilon))
         
         args = {"rp_type" : "ornstein-uhlenbeck",
@@ -217,7 +217,7 @@ def play(u_init):
         
         total_rew += r_t
         
-        if len(replay_memory) % 150 ==0 :
+        if len(replay_memory) % 200 ==0 :
             print ("Memory size = %d" % len(replay_memory))
 #----------------------------------------------        
 def train () :
@@ -246,8 +246,12 @@ def train () :
         if ep % 5 == 0 :
                     print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
                                         %(ep, curr_lr_actor, critics.model.optimizer.lr))
-                                                             
-        for it in range(max_steps) :
+        it = 0
+        iterok=False    
+                             
+        totalcounter = 0
+                                           
+        while iterok == False and it < max_steps :
             states, actions, rewards, next_states, goons = (samples_memories(BATCH_SIZE))
 #       Just to test
 #        print ("states shape : ", states.shape)
@@ -268,9 +272,6 @@ def train () :
             
             with graph.as_default():
                 # We set lr of the critic network
-                
-                
-                    
                 logs = critics.model.train_on_batch([states, actions], y_t) #(Q-y)**2
                 
                 a_for_grad = actor.model.predict(states)
@@ -281,11 +282,55 @@ def train () :
                 actor.target_train()
                 critics.target_train()         
                 
+                # In this section we decide wheither we continue or not
+                for i in range(it+1) :
+                    if i ==0 :
+                        test_states = np.sin(np.pi*2.*X/float(L))
+                    else :
+                        test_states = test_next_states
+
+                    test_Delta = actor.target_model.predict(test_states.reshape(1,-1))
+                    
+                    test_next_states = action_with_delta_Un(test_states.reshape(1,-1), test_Delta)
+                
+                    test_reward = reward(test_next_states.ravel(), test_states)
+                
+                    if np.abs(test_reward) < 1. :
+                        iterok = True
+                    else :
+                        iterok = False
+                
+                if iterok == True :
+                    it += 1
+                else :
+                    it = 0
+                
+                totalcounter += 1
+                
+                if (totalcounter-1) % 50 == 0 :
+                    print ("Total iteration : %d. \tFalse iteration : %d\t reward = %0.4f" %(totalcounter, it, test_reward))
+                
+                if np.isnan(test_reward) == True :
+                    sys.exit("Nan")
     #            plt.figure("Comparaison")
     #            plt.plot(X, vvals, label='True', c='k')
     #            plt.plot(X, actor.target_model.predict(states[0].reshape(1,-1)).ravel(), label="Process", c='yellow', marker='o', fillstyle="none", linestyle='none')
     #            plt.show()
     ###            plt.legend()
+                
+                if totalcounter % 1000 == 0 :
+                    replay_memory.clear()
+                    u_init = np.zeros((1, X.size))
+                    pi_line = np.linspace(0.4, 1.4, 50)
+                    amplitude = [np.random.choice(pi_line) for i in range(1)]
+                    for i, amp in enumerate(amplitude) :
+                        u_init[i] = amp*np.sin(2*np.pi/L*X)
+                    
+                    while len(replay_memory) < replay_memory_size : 
+                        for u in u_init :
+                            play(u)
+                        print ("The batch %d is ready to be used" %(r))
+                        time.sleep(1)
             loss += logs
             
             trainnum += 1
@@ -318,7 +363,7 @@ if __name__ == "__main__" :
     
     colors = iter(cm.plasma_r(np.arange(500)))
     
-    redo = 10
+    redo = 1
     for r in range(redo) :
         print ("The batch %d is being constructed ..." %(r))
         replay_memory.clear()
