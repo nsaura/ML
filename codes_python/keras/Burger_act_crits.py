@@ -30,7 +30,6 @@ noise = reload(noise)
 decays = reload(decays)
 solvers = reload(solvers)
 
-
 def samples_memories(BATCH_SIZE):
     indices = np.random.permutation(len(replay_memory))[: BATCH_SIZE]
     # cols[0] : state
@@ -78,22 +77,24 @@ episodes = 10
 replay_memory_size =  5e3
 replay_memory = deque([], maxlen=replay_memory_size)
 
-HIDDEN1_UNITS = 500
-HIDDEN2_UNITS = 300
+HIDDEN1_UNITS = 100
+HIDDEN2_UNITS = 100
 
-BATCH_SIZE = int(2e2)
-TAU = 0.001
-lr_actor_init = 1e-4
-lr_critics_init = 1e-4
+BATCH_SIZE = int(128)
+TAU = 0.1
+lr_actor_init = 1e-2
+lr_critics_init = 1e-3
 
-lr_actor_final = 1e-6
-lr_critics_final = 1e-6
+lr_actor_final = 1e-4
+lr_critics_final = 1e-4
 
 
 EpsForNoise_init = 0.5
 EpsForNoise_fina = 0.05
 
-gamma = 0.97
+step_new_batch = 1
+
+gamma = 0.9
 
 sess = tf.InteractiveSession()
 
@@ -101,6 +102,12 @@ state_size = action_size = Nx
 
 actor = KAD.ActorNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_actor_init, HIDDEN1_UNITS, HIDDEN2_UNITS)
 critics = KAD.CriticNetwork(sess, state_size, action_size, BATCH_SIZE, TAU, lr_critics_init, HIDDEN1_UNITS, HIDDEN2_UNITS)
+
+if plt.fignum_exists("Reward / 50 steps") :
+    plt.figure("Reward / 50 steps")
+    plt.clf()
+    plt.pause(0.01)
+
 #----------------------------------------------
 def action_with_burger(state) :
     """
@@ -110,8 +117,8 @@ def action_with_burger(state) :
     
     for j in range(1,len(state)-1) :
         next_state[j] = solvers.timestep_roe(state, j, r, f, fprime)
-    next_state[0] = next_state[-2]
-    next_state[-1] = next_state[1]
+    next_state[0] = next_state[-3]
+    next_state[-1] = next_state[2]
     return next_state
 #----------------------------------------------
 def action_with_delta_Un(state, action) :
@@ -130,7 +137,7 @@ def reward (next_state, state) :
     square_term[0] = (state[1]**2 - state[-1]**2) * 0.25 / dx
     square_term[-1] = (state[1]**2 - state[-2]**2) * 0.25 / dx
     
-    return np.sum(temp_term + square_term)
+    return np.log(1./np.linalg.norm((temp_term + square_term), np.inf))*10
 #----------------------------------------------
 def play(u_init):    
     """
@@ -164,8 +171,8 @@ def play(u_init):
                                          final_value=EpsForNoise_fina,
                                          max_step=max_steps)
         
-        if j % 200 == 0 :
-            print ("steps = %d\t eps = %0.8f" %(j, epsilon))
+#        if j % 200 == 0 :
+#            print ("steps = %d\t eps = %0.8f" %(j, epsilon))
         
         args = {"rp_type" : "ornstein-uhlenbeck",
                 "n_action" : 1,
@@ -217,8 +224,8 @@ def play(u_init):
         
         total_rew += r_t
         
-        if len(replay_memory) % 200 ==0 :
-            print ("Memory size = %d" % len(replay_memory))
+#        if len(replay_memory) % 200 ==0 :
+#            print ("Memory size = %d" % len(replay_memory))
 #----------------------------------------------        
 def train () :
     """
@@ -233,16 +240,8 @@ def train () :
         loss = 0
         trainnum = 0
         
-        critics.model.optimizer.lr = decays.create_decay_fn("linear",
-                                                            curr_step = ep,    
-                                                            initial_value = lr_critics_init,
-                                                            final_value = lr_critics_final,
-                                                            max_step = episodes)
-        curr_lr_actor = decays.create_decay_fn("linear",
-                                               curr_step = ep,    
-                                               initial_value = lr_actor_init,
-                                               final_value = lr_actor_final,
-                                               max_step = episodes)
+        critics.model.optimizer.lr = lr_critics_init
+        curr_lr_actor = lr_actor_init
         if ep % 5 == 0 :
                     print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
                                         %(ep, curr_lr_actor, critics.model.optimizer.lr))
@@ -250,7 +249,7 @@ def train () :
         iterok=False    
                              
         totalcounter = 0
-                                           
+
         while iterok == False and it < max_steps :
             states, actions, rewards, next_states, goons = (samples_memories(BATCH_SIZE))
 #       Just to test
@@ -294,8 +293,20 @@ def train () :
                     test_next_states = action_with_delta_Un(test_states.reshape(1,-1), test_Delta)
                 
                     test_reward = reward(test_next_states.ravel(), test_states)
-                
-                    if np.abs(test_reward) < 1. :
+                    
+                    plt.figure("Prediction")
+                    plt.clf() 
+                    plt.plot(X, test_next_states.ravel(), label="New state based on actor", color='red')
+                    plt.plot(X, action_with_burger(test_states), label="True next profile", fillstyle='none', marker='o', color='blue')
+                    plt.legend()
+                    plt.pause(5)
+                    
+                    
+                    plt.figure("Evolution de delta Un")
+                    plt.plot(X, test_Delta.ravel())
+                    plt.pause(0.01)
+                    
+                    if np.abs(test_reward) < 0.00001 :
                         iterok = True
                     else :
                         iterok = False
@@ -307,8 +318,7 @@ def train () :
                 
                 totalcounter += 1
                 
-                if (totalcounter-1) % 50 == 0 :
-                    print ("Total iteration : %d. \tFalse iteration : %d\t reward = %0.4f" %(totalcounter, it, test_reward))
+                print ("Total iteration : %d. \tFalse iteration : %d\t reward = %0.4f" %(totalcounter, it, test_reward))
                 
                 if np.isnan(test_reward) == True :
                     sys.exit("Nan")
@@ -318,7 +328,28 @@ def train () :
     #            plt.show()
     ###            plt.legend()
                 
-                if totalcounter % 1000 == 0 :
+#                critics.model.optimizer.lr = lr_critics_init
+#                curr_lr_actor = lr_actor_init
+                critics.model.optimizer.lr = decays.create_decay_fn("linear",
+                                                        curr_step = totalcounter % step_new_batch,    
+                                                        initial_value = lr_critics_init,
+                                                        final_value = lr_critics_final,
+                                                        max_step = step_new_batch)
+                curr_lr_actor = decays.create_decay_fn("linear",
+                                           curr_step = totalcounter % step_new_batch,    
+                                           initial_value = lr_actor_init,
+                                           final_value = lr_actor_final,
+                                           max_step = step_new_batch)
+                
+                print ("totalcounter = %d, \t lr_actor = %.6f\t lr_crits = %.6f" %(totalcounter, curr_lr_actor, critics.model.optimizer.lr))
+                
+                if totalcounter % 50 == 0 :
+                    plt.figure("Reward / 50 steps")
+                    plt.semilogy(totalcounter, test_reward, c='purple', linestyle='none', marker='o', ms = 4)
+                    plt.pause(0.01)
+                    
+                    
+                if totalcounter % step_new_batch == 0 :
                     replay_memory.clear()
                     u_init = np.zeros((1, X.size))
                     pi_line = np.linspace(0.4, 1.4, 50)
@@ -326,11 +357,13 @@ def train () :
                     for i, amp in enumerate(amplitude) :
                         u_init[i] = amp*np.sin(2*np.pi/L*X)
                     
+                    print ("Cleaning of the batch %d ..." %((totalcounter // step_new_batch) -1))
                     while len(replay_memory) < replay_memory_size : 
                         for u in u_init :
                             play(u)
-                        print ("The batch %d is ready to be used" %(r))
                         time.sleep(1)
+                    print ("The batch %d is ready to be used" %( totalcounter // step_new_batch ))
+                    
             loss += logs
             
             trainnum += 1
@@ -354,7 +387,8 @@ if __name__ == "__main__" :
     amplitude = [np.random.choice(pi_line) for i in range(n_init)]
 
     for i, amp in enumerate(amplitude) :
-        u_init[i] = amp*np.sin(2*np.pi/L*X) 
+        u_init[i] = amp*np.sin(2*np.pi/(L-2.*dx)*(X-dx)) 
+    
 
 #    plt.figure("Sinus initiaux")
 #    for j, u in enumerate(u_init) :
