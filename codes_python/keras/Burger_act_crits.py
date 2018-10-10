@@ -90,15 +90,16 @@ HIDDEN2_UNITS = 100
 
 BATCH_SIZE = int(128)
 TAU = 0.1
-lr_actor_init = 1e-2
-lr_critics_init = 1e-3
+lr_actor_init = 1e-3
+lr_critics_init = 1e-4
 
 lr_actor_final = 1e-4
-lr_critics_final = 1e-4
+lr_critics_final = 1e-5
 
+max_steps_lr = 50
 
 EpsForNoise_init = 0.5
-EpsForNoise_fina = 0.05
+EpsForNoise_fina = 0.1
 
 step_new_batch = 1
 
@@ -192,15 +193,15 @@ def play(u_init):
         a_t = a_t_original + epsilon*noise.create_random_process(args).sample()
         a_t = a_t.ravel()
         
-        a_tt = np.copy(a_t)
-        for a in range(len(a_t)) :
-            if a_tt[a] > 1. :
-                a_tt[a] = 1.
-            elif a_tt[a] < -1. :
-                a_tt[a] = -1.
-            else :
-                pass
-        a_t = np.array([a for a in a_tt])
+#        a_tt = np.copy(a_t)
+#        for a in range(len(a_t)) :
+#            if a_tt[a] > 1. :
+#                a_tt[a] = 1.
+#            elif a_tt[a] < -1. :
+#                a_tt[a] = -1.
+#            else :
+#                pass
+#        a_t = np.array([a for a in a_tt])
         s_t1 = action_with_delta_Un(s_t, a_t)
                 
         
@@ -257,7 +258,8 @@ def train () :
         iterok=False    
                              
         totalcounter = 0
-
+        along_reward = []
+        
         while iterok == False and it < max_steps :
             states, actions, rewards, next_states, goons = (samples_memories(BATCH_SIZE))
 #       Just to test
@@ -273,6 +275,7 @@ def train () :
                 target_q_values = critics.target_model.predict(
                                 [next_states, actor.target_model.predict(next_states)])
             target_q_values = target_q_values.reshape([1, target_q_values.shape[0]])[0]
+            print goons
             
             for k in range(BATCH_SIZE) :
                 y_t[k] = rewards[k] + goons[k]*gamma*target_q_values[k]
@@ -282,6 +285,7 @@ def train () :
                 logs = critics.model.train_on_batch([states, actions], y_t) #(Q-y)**2
                 
                 a_for_grad = actor.model.predict(states)
+#                print a_for_grad
                 grad = critics.gradients(states, a_for_grad)
                 
                 actor.train(states, grad, learning_rate=curr_lr_actor)
@@ -301,13 +305,14 @@ def train () :
                     test_next_states = action_with_delta_Un(test_states.reshape(1,-1), test_Delta)
                 
                     test_reward = reward(test_next_states.ravel(), test_states)
+                    along_reward.append(test_reward)
                     
                     plt.figure("Prediction")
                     plt.clf() 
                     plt.plot(X, test_next_states.ravel(), label="New state based on actor", color='red')
                     plt.plot(X, action_with_burger(test_states), label="True next profile", fillstyle='none', marker='o', color='blue')
                     plt.legend()
-                    plt.pause(5)
+                    plt.pause(0.01)
                     
                     
                     plt.figure("Evolution de delta Un")
@@ -324,8 +329,8 @@ def train () :
                 else :
                     it = 0
                 
-                totalcounter += 1
                 
+                totalcounter += 1
                 print ("Total iteration : %d. \tFalse iteration : %d\t reward = %0.4f" %(totalcounter, it, test_reward))
                 
                 if np.isnan(test_reward) == True :
@@ -335,19 +340,22 @@ def train () :
     #            plt.plot(X, actor.target_model.predict(states[0].reshape(1,-1)).ravel(), label="Process", c='yellow', marker='o', fillstyle="none", linestyle='none')
     #            plt.show()
     ###            plt.legend()
+                print (along_reward, "\n")
                 
-#                critics.model.optimizer.lr = lr_critics_init
-#                curr_lr_actor = lr_actor_init
-                critics.model.optimizer.lr = decays.create_decay_fn("linear",
-                                                        curr_step = totalcounter % step_new_batch,    
-                                                        initial_value = lr_critics_init,
-                                                        final_value = lr_critics_final,
-                                                        max_step = step_new_batch)
-                curr_lr_actor = decays.create_decay_fn("linear",
-                                           curr_step = totalcounter % step_new_batch,    
-                                           initial_value = lr_actor_init,
-                                           final_value = lr_actor_final,
-                                           max_step = step_new_batch)
+                critics.model.optimizer.lr = lr_critics_init
+                curr_lr_actor = lr_actor_init
+
+#                if totalcounter % 4 ==0 and totalcounter <= max_steps_lr*4 :
+#                    critics.model.optimizer.lr = decays.create_decay_fn("linear",
+#                                                            curr_step = totalcounter % max_steps_lr,    
+#                                                            initial_value = lr_critics_init,
+#                                                            final_value = lr_critics_final,
+#                                                            max_step = max_steps_lr)
+#                    curr_lr_actor = decays.create_decay_fn("linear",
+#                                               curr_step = totalcounter % max_steps_lr,    
+#                                               initial_value = lr_actor_init,
+#                                               final_value = lr_actor_final,
+#                                               max_step = max_steps_lr)
                 
                 print ("totalcounter = %d, \t lr_actor = %.6f\t lr_crits = %.6f" %(totalcounter, curr_lr_actor, critics.model.optimizer.lr))
                 
@@ -417,6 +425,7 @@ if __name__ == "__main__" :
         
         print ("Training start")
         curr_loss = train()
+            
         lossess[r] = curr_loss
         
         print ("Going to delete the curr figures, the results will be displayed in another figs...")
