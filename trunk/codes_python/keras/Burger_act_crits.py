@@ -25,6 +25,14 @@ import matplotlib.pyplot as plt
 
 graph = tf.get_default_graph()
 
+try:
+    reload  # Python 2.7
+except NameError:
+    try:
+        from importlib import reload  # Python 3.4+
+    except ImportError:
+        from imp import reload  # Python 
+
 KAD = reload(KAD)
 noise = reload(noise)
 decays = reload(decays)
