@@ -118,7 +118,7 @@ class ActorNetwork(object):
     def create_actor_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
         S = Input(shape=[state_size], name=name+'_Input')
         h0 = Dense(HIDDEN1_UNITS, activation='selu', name=name+'_Dense1', kernel_initializer = init)(S)
-        h1 = Dense(HIDDEN2_UNITS, activation='selu', name=name+'_Dense2', kernel_initializer = init)(h0)
+        h1 = Dense(HIDDEN2_UNITS, activation=tanh, name=name+'_Dense2', kernel_initializer = init)(h0)
 #        h2 = Dense(HIDDEN2_UNITS, activation='selu', name=name+'_Dense3', kernel_initializer = init)(h1)
         V = Dense(action_dim,     activation=tanh,   name=name+'_Output', kernel_initializer = init)(h1)
         
