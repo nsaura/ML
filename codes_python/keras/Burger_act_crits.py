@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 
 graph = tf.get_default_graph()
 
+plt.close("all")
+
 try:
     reload  # Python 2.7
 except NameError:
@@ -90,7 +92,7 @@ HIDDEN2_UNITS = 100
 
 BATCH_SIZE = int(128)
 TAU = 0.1
-lr_actor_init = 1e-3
+lr_actor_init = 1e-2
 lr_critics_init = 1e-4
 
 lr_actor_final = 1e-4
@@ -98,8 +100,8 @@ lr_critics_final = 1e-5
 
 max_steps_lr = 50
 
-EpsForNoise_init = 0.5
-EpsForNoise_fina = 0.1
+EpsForNoise_init = 1
+EpsForNoise_fina = 0.8
 
 step_new_batch = 1
 
@@ -146,7 +148,8 @@ def reward (next_state, state) :
     square_term[0] = (state[1]**2 - state[-1]**2) * 0.25 / dx
     square_term[-1] = (state[1]**2 - state[-2]**2) * 0.25 / dx
     
-    return np.log(1./np.linalg.norm((temp_term + square_term), np.inf))*10
+    return np.log(1./(np.linalg.norm((temp_term + square_term), 2)))*100
+
 #----------------------------------------------
 def play(u_init):    
     """
@@ -244,6 +247,10 @@ def train () :
     loss = 0
     losses = []
     trainnum = 0 
+    
+    f = open("rewards.txt", "w")
+    f.close()
+    
     global graph
     for ep in range(episodes) :
         loss = 0
@@ -275,7 +282,10 @@ def train () :
                 target_q_values = critics.target_model.predict(
                                 [next_states, actor.target_model.predict(next_states)])
             target_q_values = target_q_values.reshape([1, target_q_values.shape[0]])[0]
-            print goons
+#            print goons
+            
+#            if totalcounter % 5 == 0 and totalcounter > 0 :
+#                curr_lr_actor /= 10
             
             for k in range(BATCH_SIZE) :
                 y_t[k] = rewards[k] + goons[k]*gamma*target_q_values[k]
@@ -303,8 +313,12 @@ def train () :
                     test_Delta = actor.target_model.predict(test_states.reshape(1,-1))
                     
                     test_next_states = action_with_delta_Un(test_states.reshape(1,-1), test_Delta)
-                
+                    
                     test_reward = reward(test_next_states.ravel(), test_states)
+                    
+                    f = open("rewards.txt", "a")
+                    f.write("%.5f \n" %(test_reward))
+                    f.close()
                     along_reward.append(test_reward)
                     
                     plt.figure("Prediction")
@@ -343,7 +357,7 @@ def train () :
                 print (along_reward, "\n")
                 
                 critics.model.optimizer.lr = lr_critics_init
-                curr_lr_actor = lr_actor_init
+#                curr_lr_actor = lr_actor_init
 
 #                if totalcounter % 4 ==0 and totalcounter <= max_steps_lr*4 :
 #                    critics.model.optimizer.lr = decays.create_decay_fn("linear",
