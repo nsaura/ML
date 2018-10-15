@@ -73,6 +73,9 @@ def timestep_roe (u, j, r, f, fprime) :
     F_ip = which_F(u[j], u[j+1], f, fprime)
     F_im = which_F(u[j-1], u[j], f, fprime)
     
+#    print F_ip
+#    print F_im
+    
     return u[j] - r*(F_ip - F_im)
 #----------------------------------------------    
 def doitROE(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
@@ -101,7 +104,10 @@ def doitROE(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
     if type_init == "choc" :
         for i, x in enumerate(X) :
             u[i] = 0 if x < L/2. else 1
-            
+    
+    if type_init == "sin" :
+        u = 0.7*np.sin(2*np.pi*(X-dx)/(L-dx))
+    
     u_nNext = np.zeros_like(u)
     
     t=0.
@@ -115,15 +121,15 @@ def doitROE(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
     for cnt in range(len(T)-1) :
         for j in range(1, len(X[:-1])) :
            u_nNext[j] = timestep_roe(u, j, r, f, fprime)
-        u_nNext[0] = u_nNext[-2]
-        u_nNext[-1] = u_nNext[1]
+        u_nNext[0] = u_nNext[-3]
+        u_nNext[-1] = u_nNext[2]
         
         t += dt
         
         if cnt % 5 == 0:
             if cnt % 15 == 0 and t > 0 :
                 plt.clf() 
-                print u_nNext
+#                print u_nNext
                 
             plt.figure("Evolution solution Schema de Roe")
             plt.plot(X, u_nNext, label="Solution t = %.4f" %t)
@@ -199,7 +205,10 @@ def doitLW(L ,tf, Nx, Nt, f, type_init = "sin") :
     if type_init == "choc" :
         for i, x in enumerate(X) :
             u[i] = 0. if x < L/2. else 1.
-            
+    
+    if type_init == "sin" :
+        u = 0.7*np.sin(2*np.pi*(X-dx)/(L-dx))
+    
     u_nNext = np.zeros_like(u)
     
     t=0.
@@ -210,20 +219,20 @@ def doitLW(L ,tf, Nx, Nt, f, type_init = "sin") :
     
     plt.pause(1)
     
-    print u.shape
-    print type(f)
+#    print u.shape
+#    print type(f)
     
     for cnt in range(len(T)-1) :
         for j in range(1, len(X[:-1])) :
            u_nNext[j] = timestep_LW(u, j, r, f)
-        u_nNext[0] = u_nNext[-2]
-        u_nNext[-1] = u_nNext[1]
+        u_nNext[0] = u_nNext[-3]
+        u_nNext[-1] = u_nNext[2]
         t += dt
         
-        if cnt % 5 == 0:
-            if cnt % 15 == 0 and t > 0 :
+        if cnt % 3 == 0:
+            if cnt % 9 == 0 and t > 0 :
                 plt.clf() 
-                print u_nNext
+#                print u_nNext
                 
             plt.figure("LW")
             plt.plot(X, u_nNext, label="Solution t = %.4f" %t)
@@ -260,7 +269,10 @@ def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
     if type_init == "choc" :
         for i, x in enumerate(X) :
             u[i] = 0 if x < L/2. else 1
-            
+    
+    if type_init == "sin" :
+        u = 0.7*np.sin(2*np.pi*(X-dx)/(L-dx))
+    
     u_lw = np.copy(u)
     u_roe = np.copy(u)
     
@@ -270,7 +282,7 @@ def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
     t=0.
     plt.figure("Evolution solution Schema de Roe")
     plt.plot(X, u, label="Solution t = %.4f" %t)
-    plt.ylim((-1.1, 1.1))
+    plt.ylim((-1.5, 1.5))
     plt.legend()
     
     plt.pause(1)
@@ -280,23 +292,23 @@ def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
            u_nNext_Lw[j] = timestep_LW(u_lw, j, r, f)
            u_nNext_Roe[j] = timestep_roe(u_roe, j, r, f, fprime)
 
-        u_nNext_Lw[0] = u_nNext_Lw[-2]
-        u_nNext_Lw[-1] = u_nNext_Lw[1]
+        u_nNext_Lw[0] = u_nNext_Lw[-3]
+        u_nNext_Lw[-1] = u_nNext_Lw[2]
         
-        u_nNext_Roe[0] = u_nNext_Roe[-2]
-        u_nNext_Roe[-1] = u_nNext_Roe[1]
+        u_nNext_Roe[0] = u_nNext_Roe[-3]
+        u_nNext_Roe[-1] = u_nNext_Roe[2]
         
         t += dt
         
-        if cnt % 5 == 0:
-            if cnt % 15 == 0 and t > 0 :
+        if cnt % 3 == 0:
+            if cnt % 9 == 0 and t > 0 :
                 plt.clf() 
-                print ([abs(u_nNext_Lw[k] - u_nNext_Roe[k]) for k in range(len(u_nNext_Lw)-1)])
+#                print ([abs(u_nNext_Lw[k] - u_nNext_Roe[k]) for k in range(len(u_nNext_Lw)-1)])
                 
             plt.figure("Comparaison solutions Schema de Roe vs LW")
             plt.plot(X[1 :len(X[:-1])], u_nNext_Roe[1 :len(X[:-1])], label="ROE Solution t = %.4f " %t, color = 'k')
             plt.plot(X[1 :len(X[:-1])], u_nNext_Lw[1 :len(X[:-1])], label="LW Solution t = %.4f " %t, color = 'blue', fillstyle = 'none', marker='o', linestyle='none')
-            plt.ylim((-0.4, 1.6))
+            plt.ylim((-1.5, 1.5))
 
             plt.legend()
             plt.pause(0.5)
