@@ -87,8 +87,8 @@ episodes = 10
 replay_memory_size =  5e3
 replay_memory = deque([], maxlen=replay_memory_size)
 
-HIDDEN1_UNITS = 100
-HIDDEN2_UNITS = 100
+HIDDEN1_UNITS = 512
+HIDDEN2_UNITS = 512
 
 BATCH_SIZE = int(128)
 TAU = 0.1
@@ -128,8 +128,10 @@ def action_with_burger(state) :
     
     for j in range(1,len(state)-1) :
         next_state[j] = solvers.timestep_roe(state, j, r, f, fprime)
+    
     next_state[0] = next_state[-3]
     next_state[-1] = next_state[2]
+    
     return next_state
 #----------------------------------------------
 def action_with_delta_Un(state, action) :
@@ -140,6 +142,7 @@ def action_with_delta_Un(state, action) :
     return next_state
 #----------------------------------------------    
 def reward (next_state, state) :
+    
     temp_term = np.array([(next_state[j] - state[j]) / dt for j in range(len(state))])
     square_term = np.zeros_like(state)
     for j in range(len(state[1:-1])) :
@@ -148,10 +151,10 @@ def reward (next_state, state) :
     square_term[0] = (state[1]**2 - state[-1]**2) * 0.25 / dx
     square_term[-1] = (state[1]**2 - state[-2]**2) * 0.25 / dx
     
-    return np.log(1./(np.linalg.norm((temp_term + square_term), 2)))*100
+    return 1./(np.linalg.norm((temp_term + square_term), np.inf))
 
 #----------------------------------------------
-def play(u_init):    
+def play_without_burger(u_init):    
     """
     Function that plays a certain number of iterations of the game (until it finishes).
     This function can also be used to construct the rpm.
@@ -217,7 +220,91 @@ def play(u_init):
 #        print ("reward :\n{}".format(r_t))
 #        print ("next state :\n{}".format(s_t1))
         
-        if r_t < 0.001 :   
+        if abs(r_t) < 0.001 : 
+            goon = False
+        else :
+            goon = True
+        
+        if len(replay_memory) < replay_memory_size :
+            replay_memory.append((s_t, a_t, r_t, s_t1, goon))
+        
+        else :
+            if abs(np.random.randn()) > 0.5 :
+                replay_memory.popleft() # Pop the leftmost element 
+            else: 
+                replay_memory.pop() # Pop the rightmost element 
+        
+        s_t = s_t1
+#        print ("next_state :\n{}".format(s_t1))
+        
+        total_rew += r_t
+        
+#        if len(replay_memory) % 200 ==0 :
+#            print ("Memory size = %d" % len(replay_memory))
+#----------------------------------------------        
+def play_with_burger(u_init):    
+    """
+    Function that plays a certain number of iterations of the game (until it finishes).
+    This function can also be used to construct the rpm.
+    The loop on the episodes is outside of the function. 
+    
+    we use timestep_roe to provide next steps
+    
+    Arguments :
+    -----------
+    u_init : To set the initialisation
+    """
+    episode_memory = []
+    s_t = u_init
+    
+    total_rew = 0
+    a_t = np.zeros([1, s_t.size])
+    
+    for j in range(max_steps) :
+        s_t1 = action_with_burger(s_t)
+        a_t_original = np.array([s_t1[i] - s_t[i] for i in range(len(s_t))])
+        
+        epsilon = decays.create_decay_fn("linear",
+                                         curr_step=j,
+                                         initial_value=EpsForNoise_init,
+                                         final_value=EpsForNoise_fina,
+                                         max_step=max_steps)
+        
+#        if j % 200 == 0 :
+#            print ("steps = %d\t eps = %0.8f" %(j, epsilon))
+        
+        args = {"rp_type" : "ornstein-uhlenbeck",
+                "n_action" : 1,
+                "rp_theta" : 0.1,
+                "rp_mu" : 0.,
+                "rp_sigma" : 0.2,
+                "rp_sigma_min" : 0.05}
+        
+        a_t = a_t_original + epsilon*noise.create_random_process(args).sample()
+        a_t = a_t.ravel()
+        
+#        a_tt = np.copy(a_t)
+#        for a in range(len(a_t)) :
+#            if a_tt[a] > 1. :
+#                a_tt[a] = 1.
+#            elif a_tt[a] < -1. :
+#                a_tt[a] = -1.
+#            else :
+#                pass
+#        a_t = np.array([a for a in a_tt])
+        s_t1 = action_with_delta_Un(s_t, a_t)
+                
+        
+#        return s_t, a_t, st_1
+
+        r_t = reward(s_t1, s_t)
+
+#        print ("state :\n{}".format(s_t))
+#        print ("action :\n{}".format(a_t))
+#        print ("reward :\n{}".format(r_t))
+#        print ("next state :\n{}".format(s_t1))
+        
+        if abs(r_t) < 10 :   
             goon = False
         else :
             goon = True
@@ -390,7 +477,7 @@ def train () :
                     print ("Cleaning of the batch %d ..." %((totalcounter // step_new_batch) -1))
                     while len(replay_memory) < replay_memory_size : 
                         for u in u_init :
-                            play(u)
+                            play_without_burger(u)
                         time.sleep(1)
                     print ("The batch %d is ready to be used" %( totalcounter // step_new_batch ))
                     
@@ -410,6 +497,8 @@ def train () :
 #----------------------------------------------
     
 if __name__ == "__main__" :
+    
+    print "ok"    
     lossess = dict()
     n_init = numbercases
     u_init = np.zeros((n_init, X.size))
@@ -424,23 +513,23 @@ if __name__ == "__main__" :
 #    for j, u in enumerate(u_init) :
 #        plt.plot(X, u, label="amplitude = %.4f" % amplitude[j])
 #    plt.legend()
-    
+#    
     colors = iter(cm.plasma_r(np.arange(500)))
     
     redo = 1
-    for r in range(redo) :
-        print ("The batch %d is being constructed ..." %(r))
+    for rr in range(redo) :
+        print ("The batch %d is being constructed ..." %(rr))
         replay_memory.clear()
         while len(replay_memory) < replay_memory_size : 
             for u in u_init :
-                play(u)
-        print ("The batch %d is ready to be used" %(r))
+                play_without_burger(u)
+        print ("The batch %d is ready to be used" %(rr))
         time.sleep(1)
         
         print ("Training start")
         curr_loss = train()
             
-        lossess[r] = curr_loss
+        lossess[rr] = curr_loss
         
         print ("Going to delete the curr figures, the results will be displayed in another figs...")
         time.sleep(5)
@@ -449,9 +538,9 @@ if __name__ == "__main__" :
         plt.clf()
         
         plt.figure("Comparaison of the training loss with different replay memories")
-        for j in range(27) :
+        for k in range(27) :
             next(colors)
-        plt.semilogy(range(episodes), curr_loss, c = next(colors), label="Loss replay %d" % (r))
+        plt.semilogy(range(episodes), curr_loss, c = next(colors), label="Loss replay %d" % (rr))
         plt.xlabel("Number of episodes")
         plt.ylabel("Loss values")
         plt.legend()
