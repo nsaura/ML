@@ -106,6 +106,9 @@ class ActorNetwork(object):
         
         self.target_model.set_weights(actor_target_weights) # Equivalent to assign from tensorflow
     
+#    def model_improved_target()
+    
+    
 #    def create_actor_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
 #        S = Input(shape=[state_size], name=name+'_Input')
 #        h0 = Dense(HIDDEN1_UNITS, activation=tanh, kernel_initializer = init, name=name+'_Dense1')(S)
