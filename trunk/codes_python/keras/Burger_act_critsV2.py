@@ -7,7 +7,7 @@ import noise
 import decays
 import numpy as np
 import os.path as osp
-
+from os import mkdir
 #from keras.models import model_from_json
 from keras.models import Sequential, Model
 from keras.layers import Dense, Flatten, Input, merge
@@ -16,12 +16,19 @@ from keras.layers import Dense, Flatten, Input, merge
 code_case_dir = osp.abspath(osp.dirname("../cases/"))
 sys.path.append(code_case_dir)
 
+utils_dir = osp.abspath(osp.dirname("./../utils/"))
+sys.path.append(utils_dir)
+
 import solvers
 import tensorflow as tf
 import matplotlib.cm as cm
 import Keras_AC_DDPG as KAD
 from collections import deque
 import matplotlib.pyplot as plt
+
+import plot_from_file as pff
+pff = reload(pff)
+
 
 graph = tf.get_default_graph()
 
@@ -40,6 +47,11 @@ noise = reload(noise)
 decays = reload(decays)
 solvers = reload(solvers)
 
+colors = iter(cm.plasma_r(np.arange(600)))
+print colors 
+
+
+#----------------------------------------------
 def samples_memories(BATCH_SIZE):
     indices = np.random.permutation(len(replay_memory))[: BATCH_SIZE]
     # cols[0] : state
@@ -55,11 +67,11 @@ def samples_memories(BATCH_SIZE):
             col.append(value)
     cols = [np.array(col) for col in cols]
     return (cols[0], cols[1], cols[2].reshape(-1, 1), cols[3], cols[4].reshape(-1, 1))
-
+#----------------------------------------------
 ## - - - - - - - - - - - - ##
 ##- - - - - - - - - - - - -##
 ## - - - - - - - - - - - - ##
-##  Initialisation du pbs  ##
+##  Initialisation du pb   ##
 ## - - - - - - - - - - - - ##
 ##- - - - - - - - - - - - -##
 ## - - - - - - - - - - - - ##
@@ -73,7 +85,7 @@ cst_simu["Nx"] = 100
 
 # Constantes temporelles 
 cst_simu["tf"] = 1.5
-cst_simu["Nt"] = 1000
+cst_simu["Nt"] = 40
 
 cst_simu["dx"] = float(cst_simu["L"])/(cst_simu["Nx"]-1)
 cst_simu["dt"] = float(cst_simu["tf"])/(cst_simu["Nt"])
@@ -93,7 +105,7 @@ cst_simu["max_steps"] = 150
 cst_REIL["TAU"] = 0.01
 cst_REIL["gamma"] = 0.9
 cst_REIL["episodes"] = 10
-cst_REIL["steps_before_change"] = 10
+cst_REIL["steps_before_change"] = 20
 
 # Deque
 cst_REIL["BATCH_SIZE"] = int(128) 
@@ -109,10 +121,10 @@ cst_REIL["HIDDEN2_UNITS"] = 256
 # Lr decays for actor or critics
 cst_REIL["max_steps_lr"] = 50
 
-cst_REIL["lr_actor_init"] = 1e-2
+cst_REIL["lr_actor_init"] = 1e-3
 cst_REIL["lr_actor_final"] = 1e-4
 
-cst_REIL["lr_critics_final"] = 1e-2
+cst_REIL["lr_critics_final"] = 1e-3
 cst_REIL["lr_critics_init"] = 1e-4
 
 
@@ -120,6 +132,7 @@ cst_REIL["lr_critics_init"] = 1e-4
 cst_REIL["EpsForNoise_init"] = 1
 cst_REIL["EpsForNoise_fina"] = 0.8
 
+facteur_rew = 100
 
 sess = tf.InteractiveSession()
 
@@ -136,6 +149,44 @@ cri = KAD.CriticNetwork(sess, state_size, action_size, cst_REIL["BATCH_SIZE"],
                                                       cst_REIL["lr_critics_init"],
                                                       cst_REIL["HIDDEN1_UNITS"],
                                                       cst_REIL["HIDDEN2_UNITS"])
+#----------------------------------------------
+def save_weights() :
+    act.target_model.save_weights("./ACweights/actmodel.h5", overwrite=True)
+    cri.target_model.save_weights("./ACweights/crimodel.h5", overwrite=True)
+    print("Saved")
+#----------------------------------------------
+def load_weights() :
+    act.model.load_weights("./ACweights/actmodel.h5")
+    act.model.load_weights("./ACweights/actmodel.h5")
+    
+    act.target_model.load_weights("./ACweights/actmodel.h5")
+    cri.target_model.load_weights("./ACweights/crimodel.h5")
+    print("Loaded")
+#----------------------------------------------
+
+if osp.exists("./ACweights/") == False :
+    mkdir("./ACweights/")
+
+save_weights()
+
+#----------------------------------------------
+def reward (next_state, state) :
+    
+#    print("\nIN REWARD\n")
+#    print ("next_state.shape", next_state.shape)
+#    print ("state.shape", state.shape)
+#    
+    temp_term = np.array([(next_state[j] - state[j]) / cst_simu["dt"] for j in range(len(state))])
+    square_term = np.zeros_like(state)
+
+    for j in range(len(state[1:-1])) :
+        square_term[j] =  (state[j+1]**2 - state[j-1]**2) * 0.25 / cst_simu["dx"]
+    
+    square_term[0] = (state[1]**2 - state[-1]**2) * 0.25 / cst_simu["dx"]
+    square_term[-1] = (state[1]**2 - state[-2]**2) * 0.25 / cst_simu["dx"]
+    
+    return 1./(np.linalg.norm((temp_term + square_term), 2))*facteur_rew
+
 #----------------------------------------------
 def action_with_burger(state) :
     """
@@ -158,90 +209,72 @@ def action_with_delta_Un(state, action) :
     next_state = np.array([state[j] + action[j] for j in range(len(state))])
     return next_state
 #----------------------------------------------    
-def reward (next_state, state) :
-    
-#    print("\nIN REWARD\n")
-#    print ("next_state.shape", next_state.shape)
-#    print ("state.shape", state.shape)
+#def play_without_burger(u_init):    
+#    """
+#    Function that plays a certain number of iterations of the game (until it finishes).
+#    This function can also be used to construct the rpm.
+#    The loop on the episodes is outside of the function. 
 #    
-    temp_term = np.array([(next_state[j] - state[j]) / cst_simu["dt"] for j in range(len(state))])
-    square_term = np.zeros_like(state)
+#    Arguments :
+#    -----------
+#    u_init : To set the initialisation
+#    """
+#    episode_memory = []
+#    s_t = u_init
+#    
+#    total_rew = 0
+#    a_t = np.zeros([1, s_t.size])
+#    
+#    # Pour exploration de l'espace des actions
+##    noise = noiselevel
+##    noiselevel = noise * 0.999
+##    noise_t = np.zeros([1, action_size])
+#    
+#    for j in range(cst_simu["max_steps"]) :
+#        global graph
+#        with graph.as_default() :
+#            a_t_original = act.model.predict(np.array([s_t]))
+#            
+#        epsilon = decays.create_decay_fn("linear",
+#                                         curr_step=j,
+#                                         initial_value=cst_REIL['EpsForNoise_init'],
+#                                         final_value=cst_REIL['EpsForNoise_fina'],
+#                                         max_step=cst_simu["max_steps"])
+#        
+#        args = {"rp_type" : "ornstein-uhlenbeck",
+#                "n_action" : 1,
+#                "rp_theta" : 0.1,
+#                "rp_mu" : 0.,
+#                "rp_sigma" : 0.2,
+#                "rp_sigma_min" : 0.05}
+#        
+#        a_t = a_t_original + epsilon*noise.create_random_process(args).sample()
+#        a_t = a_t.ravel()
+#        
+#        s_t1 = action_with_delta_Un(s_t, a_t)
+#        
+#        r_t = reward(s_t1, s_t)
 
-    for j in range(len(state[1:-1])) :
-        square_term[j] =  (state[j+1]**2 - state[j-1]**2) * 0.25 / cst_simu["dx"]
-    
-    square_term[0] = (state[1]**2 - state[-1]**2) * 0.25 / cst_simu["dx"]
-    square_term[-1] = (state[1]**2 - state[-2]**2) * 0.25 / cst_simu["dx"]
-    
-    return 1./(np.linalg.norm((temp_term + square_term), 2))
-
-#----------------------------------------------
-def play_without_burger(u_init):    
-    """
-    Function that plays a certain number of iterations of the game (until it finishes).
-    This function can also be used to construct the rpm.
-    The loop on the episodes is outside of the function. 
-    
-    Arguments :
-    -----------
-    u_init : To set the initialisation
-    """
-    episode_memory = []
-    s_t = u_init
-    
-    total_rew = 0
-    a_t = np.zeros([1, s_t.size])
-    
-    # Pour exploration de l'espace des actions
-#    noise = noiselevel
-#    noiselevel = noise * 0.999
-#    noise_t = np.zeros([1, action_size])
-    
-    for j in range(cst_simu["max_steps"]) :
-        global graph
-        with graph.as_default() :
-            a_t_original = act.model.predict(np.array([s_t]))
-            
-        epsilon = decays.create_decay_fn("linear",
-                                         curr_step=j,
-                                         initial_value=cst_REIL['EpsForNoise_init'],
-                                         final_value=cst_REIL['EpsForNoise_fina'],
-                                         max_step=cst_simu["max_steps"])
-        
-        args = {"rp_type" : "ornstein-uhlenbeck",
-                "n_action" : 1,
-                "rp_theta" : 0.1,
-                "rp_mu" : 0.,
-                "rp_sigma" : 0.2,
-                "rp_sigma_min" : 0.05}
-        
-        a_t = a_t_original + epsilon*noise.create_random_process(args).sample()
-        a_t = a_t.ravel()
-        
-        s_t1 = action_with_delta_Un(s_t, a_t)
-        
-        r_t = reward(s_t1, s_t)
-
-#        print ("state :\n{}".format(s_t))
-#        print ("action :\n{}".format(a_t))
-#        print ("reward :\n{}".format(r_t))
-#        print ("next state :\n{}".format(s_t1))
-        
-        if abs(r_t) < 0.01 :   
-            goon = False
-        else :
-            goon = True
-        
-        if len(replay_memory) < replay_memory_size :
-            replay_memory.append((s_t, a_t, r_t, s_t1, goon))
-        
-        else :
-            if abs(np.random.randn()) > 0.5 :
-                replay_memory.popleft() # Pop the leftmost element 
-            else: 
-                replay_memory.pop() # Pop the rightmost element 
-        
-        s_t = s_t1
+##        print ("state :\n{}".format(s_t))
+##        print ("action :\n{}".format(a_t))
+##        print ("reward :\n{}".format(r_t))
+##        print ("next state :\n{}".format(s_t1))
+#        
+#        if abs(r_t) < 0.01 :   
+#            goon = False
+#        else :
+#            goon = True
+#        
+#        if len(replay_memory) < replay_memory_size :
+#            replay_memory.append((s_t, a_t, r_t, s_t1, goon))
+#        
+#        else :
+#            if abs(np.random.randn()) > 0.5 :
+#                replay_memory.popleft() # Pop the leftmost element 
+#            else: 
+#                replay_memory.pop() # Pop the rightmost element 
+#        
+#        s_t = s_t1
 #----------------------------------------------        
 def play_with_burger(u_init):    
     """
@@ -262,48 +295,73 @@ def play_with_burger(u_init):
     a_t = np.zeros([1, s_t.size])
     plotplot = 0
     
+    f = open("play_reward.txt", "w")
+    f.close()
+    
     for j in range(cst_simu["max_steps"]) :
         s_t1 = action_with_burger(s_t)
         a_t_original = np.array([s_t1[i] - s_t[i] for i in range(len(s_t))])
         
-        epsilon = decays.create_decay_fn("linear",
-                                         curr_step=j,
-                                         initial_value=cst_REIL["EpsForNoise_init"],
-                                         final_value=cst_REIL["EpsForNoise_fina"],
-                                         max_step=cst_simu["max_steps"])
+#        plt.figure("Burger Plot")
+#        plt.clf()
+#        plt.plot(X, s_t, label="st")
+#        plt.plot(X, s_t1, label="s_t1")
+#        plt.legend()
+#        plt.pause(0.01)
         
-        args = {"rp_type" : "ornstein-uhlenbeck",
-                "n_action" : 1,
-                "rp_theta" : 0.1,
-                "rp_mu" : 0.,
-                "rp_sigma" : 0.2,
-                "rp_sigma_min" : 0.05}
         
-        a_t = a_t_original + epsilon*noise.create_random_process(args).sample()
-       
-        if plotplot == 0 :
-            plt.figure("Action and noise")
-            plt.plot(X, a_t_original.ravel(), color='k')
-            plt.plot(X, a_t.ravel(), color='green')
+#        epsilon = decays.create_decay_fn("linear",
+#                                         curr_step=j,
+#                                         initial_value=cst_REIL["EpsForNoise_init"],
+#                                         final_value=cst_REIL["EpsForNoise_fina"],
+#                                         max_step=cst_simu["max_steps"])
+#        
+#        args = {"rp_type" : "ornstein-uhlenbeck",
+#                "n_action" : 1,
+#                "rp_theta" : 0.1,
+#                "rp_mu" : 0.,
+#                "rp_sigma" : 0.2,
+#                "rp_sigma_min" : 0.05}
+#        
+#        a_t = a_t_original + epsilon*noise.create_random_process(args).sample()
+        a_t = a_t_original
+        
+        gg = [abs(a) > 1. for a in a_t]
+        
+#        if plotplot == 0 :
+#            plt.figure("Action and noise")
+#            plt.plot(X, a_t_original.ravel(), color='k')
+#            plt.plot(X, a_t.ravel(), color='green')
             
-        plotplot +=1
-                    
-        a_t = a_t.ravel()
+#        plotplot +=1
         
-        r_t = reward(s_t1, s_t)
+        a_t = a_t.ravel()
 
+        r_t = reward(s_t1, s_t)
+        f = open("play_reward.txt", "a")
+        f.write("%.4f\n" %(r_t))
+        f.close()
+                
 #        print ("state :\n{}".format(s_t))
 #        print ("action :\n{}".format(a_t))
 #        print ("reward :\n{}".format(r_t))
 #        print ("next state :\n{}".format(s_t1))
         
-        if r_t > 0.3 :   
+        if r_t > 0.1*facteur_rew and r_t < 3000 :   
+            goon = False
+            rew = r_t
+            print("Not bad")
+        elif r_t > 3000 :
+            rew = -r_t
+            print ("Very bad")
             goon = False
         else :
             goon = True
+            rew = r_t
+            print ("Yes")
         
         if len(replay_memory) < cst_REIL["replay_memory_size"] :
-            replay_memory.append((s_t, a_t, r_t, s_t1, goon))
+            replay_memory.append((s_t, a_t, rew, s_t1, goon))
         
         else :
             if abs(np.random.randn()) > 0.5 :
@@ -325,7 +383,11 @@ def train (u_init) :
     f = open("rewards.txt", "w")
     f.close()
     
+    f = open("delta_max.txt", "w")
+    f.close()
+    
     global graph
+    global colors 
     for ep in range(cst_REIL["episodes"]) :
         loss = 0
         trainnum = 0
@@ -337,12 +399,16 @@ def train (u_init) :
                                         %(ep, curr_lr_actor, cri.model.optimizer.lr))
         it = 0
         iterok=False    
+
+        delta_max = []
                              
         totalcounter = 0
         along_reward = []
         rew = 0
         while iterok == False and it < cst_simu["max_steps"] :
+            load_weights()
             states, actions, rewards, next_states, goons = (samples_memories(cst_REIL["BATCH_SIZE"]))
+            delta_number_step = []
 #       Just to test
 #        print ("states shape : ", states.shape)
 #        print ("actions shape : ", actions.shape)
@@ -377,6 +443,7 @@ def train (u_init) :
                 # In this section we decide wheither we continue or not
                 # We use those actor and critic target networks for the next steps_before_change steps
                 rew = 0
+                cnt = 0
                 for step in range(cst_REIL["steps_before_change"]) :
                     curr_it = it
                     if curr_it == 0 and step == 0 :
@@ -391,7 +458,8 @@ def train (u_init) :
                     test_Delta = act.target_model.predict(test_states.reshape(1,-1)) #Action
                     test_Delta = test_Delta.ravel()
                     
-                    print test_Delta.max()
+                    delta_number_step.append(test_Delta.max())
+                    print delta_number_step
                     
                     test_next_states = action_with_delta_Un(test_states.reshape(1,-1), test_Delta)
                     test_next_states = test_next_states.ravel()
@@ -404,24 +472,40 @@ def train (u_init) :
                     f = open("rewards.txt", "a")
                     f.write("%.5f \n" %(test_reward))
                     f.close()
-
-                    plt.figure("Prediction")
-                    plt.clf() 
-                    plt.plot(X, test_next_states,
+                    if cnt % 5== 0 :
+                        plt.figure("Prediction")
+                        plt.clf() 
+                        plt.plot(X, test_next_states,
                                         label="New state based on actor", color='red')
-                    plt.plot(X, next_true,
+                        plt.plot(X, next_true,
                                         label="True next profile", fillstyle='none', marker='o', color='blue')
-                    plt.ylim((-2,2))
-                    plt.legend()
-                    
-                    plt.figure("Evolution de delta Un")
-                    plt.plot(X, test_Delta.ravel())
-                    plt.pause(0.1)
-                    
-                if np.abs(rew) > 0.1  :
-                    iterok = True
-                else :
+                        plt.ylim((-2,2))
+                        plt.legend()
+                                                
+                        try :
+                            c = next(colors)
+                        except StopIteration:
+                            del colors 
+                            colors = iter(cm.cubehelix_r(np.arange(600)))
+                            global colors
+                            c = next(colors)
+                        
+                        plt.figure("Evolution de delta Un")
+                        plt.plot(X, test_Delta.ravel(), c=c)
+                        plt.pause(0.1)
+                        
+                save_weights()
+                
+                delta_max.append(np.array(delta_number_step).max())
+                
+                f = open("delta_max.txt", "a")
+                f.write("%d\n" % delta_max[-1])
+                f.close()
+                
+                if np.abs(rew) > 0.02*facteur_rew  :
                     iterok = False
+                else :
+                    iterok = True
                 
                 if iterok == True :
                     it += 1
@@ -492,9 +576,9 @@ if __name__ == "__main__" :
     
     print "ok"    
     lossess = dict()
-    n_init = cst_REIL["episodes"]
+    n_init = 1
     u_init = np.zeros((n_init, X.size))
-    pi_line = np.linspace(0.4, 1.4, 50)
+    pi_line = np.linspace(0.4, 0.5, 50)
     amplitude = [np.random.choice(pi_line) for i in range(n_init)]
     
     for i, amp in enumerate(amplitude) :
@@ -506,7 +590,6 @@ if __name__ == "__main__" :
 #        plt.plot(X, u, label="amplitude = %.4f" % amplitude[j])
 #    plt.legend()
 #    
-    colors = iter(cm.plasma_r(np.arange(500)))
 
     print ("The batch is being constructed ...")
     replay_memory.clear()
@@ -514,7 +597,7 @@ if __name__ == "__main__" :
     while len(replay_memory) < cst_REIL["replay_memory_size"] : 
         for u in u_init :
             play_with_burger(u)
-            
+
     print ("The batch is ready to be used")
     time.sleep(1)
     
