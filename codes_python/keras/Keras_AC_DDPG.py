@@ -79,7 +79,7 @@ class ActorNetwork(object):
         self.action_gradient = tf.placeholder(tf.float32,[None, action_size])
         
         # New gradient values definition : \frac{\partial Out} {\partial w}
-        self.params_grad = tf.gradients(self.model.output, self.weights, -self.action_gradient)
+        self.params_grad = tf.gradients(self.model.output, self.weights, -self.action_gradient) # Le moins enlevé car on veut minimiser r 
         
         # pairs params and weights
         grads_and_vars = zip(self.params_grad, self.weights)
