@@ -32,7 +32,7 @@ import actions_for_KerasAC_DDPG as ACactions
 
 graph = tf.get_default_graph()
 
-plt.close("all")
+#plt.close("all")
 
 try:
     reload  # Python 2.7
@@ -150,8 +150,8 @@ cri = KAD.CriticNetwork(sess, state_size, action_size, cst_REIL["BATCH_SIZE"],
                                                       cst_REIL["HIDDEN1_UNITS"],
                                                       cst_REIL["HIDDEN2_UNITS"])
 
-decay_cri_lr = False
-decay_act_lr = False
+decay_cri_lr = True
+decay_act_lr = True
                                                       
 #----------------------------------------------
 def save_weights() :
@@ -364,18 +364,35 @@ def train (u_init, play_type="AC") :
     file = open("delta_max.txt", "w") ; file.close()
     
     for ep in range(cst_REIL["episodes"]) :
-        if 
+        if ep % 500 == 0 :
+            if decay_cri_lr == True : 
+                cri.model.optimizer.lr =\
+                    decays.create_decay_fn("linear",
+                                           curr_step = ep % int(cst_REIL["episodes"] / 500),    
+                                           initial_value = cst_REIL["lr_critics_init"],
+                                           final_value = cst_REIL["lr_critics_final"] ,
+                                           max_step = int(cst_REIL["episodes"] / 500))
+            else :
+                cri.model.optimizer.lr = cst_REIL["lr_critics_init"]
+                
+            if decay_act_lr == True : 
+                curr_lr_actor = decays.create_decay_fn("linear",
+                                               curr_step = ep % int(cst_REIL["episodes"] / 500),    
+                                               initial_value = cst_REIL["lr_actor_init"],
+                                               final_value = cst_REIL["lr_actor_final"] ,
+                                               max_step = int(cst_REIL["episodes"] / 500))
+            else : 
+                curr_lr_actor = cst_REIL["lr_actor_init"]
+        
+        print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
+                    %(ep, curr_lr_actor, cri.model.optimizer.lr))
+        time.sleep(3)
         
         loss = 0
         trainnum = 0
         
         curr_lr_actor = cst_REIL["lr_actor_init"]
         cri.model.optimizer.lr = cst_REIL["lr_critics_init"]
-
-        if ep % 5 == 0 :
-            print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
-                    %(ep, curr_lr_actor, cri.model.optimizer.lr))
-
 
         rew = 0
         delta_max, along_reward = [], [] 
@@ -412,24 +429,7 @@ def train (u_init, play_type="AC") :
             with graph.as_default():
                 # We set lr of the critic network
                 
-                if decay_cri_lr == True : 
-                    cri.model.optimizer.lr =\
-                            decays.create_decay_fn("linear",
-                                                   curr_step = totalcounter % max_steps_lr,    
-                                                   initial_value = lr_critics_init,
-                                                   final_value = lr_critics_final,
-                                                   max_step = max_steps_lr)
-                else :
-                    cri.model.optimizer.lr = cst_REIL["lr_critics_init"]
                 
-                if decay_act_lr == True : 
-                    curr_lr_actor = decays.create_decay_fn("linear",
-                                                   curr_step = totalcounter % max_steps_lr,    
-                                                   initial_value = lr_actor_init,
-                                                   final_value = lr_actor_final,
-                                                   max_step = max_steps_lr)
-                else : 
-                    curr_lr_actor = cst_REIL["lr_actor_init"]
                     
                 logs = cri.model.train_on_batch([states, actions], y_t)
                 
@@ -460,7 +460,7 @@ def train (u_init, play_type="AC") :
         losses.append(loss)
         
         plt.figure("Evolution de Loss sur un episodes vs iteration")
-        plt.semilogy(ep, loss, marker='o', ms=6, linestyle="none", c='purple')
+        plt.semilogy(ep, loss, marker='o', ms=6, linestyle="none", c='green')
         plt.pause(0.5)
     
     return losses
@@ -490,7 +490,7 @@ if __name__ == "__main__" :
                 play_with_ACpred(u, False)
             else :
                 play_with_burger(u)
-
+    
     print ("The batch is ready to be used")
     time.sleep(1)
     
@@ -500,17 +500,17 @@ if __name__ == "__main__" :
         
         lossess[str(ll)] = curr_loss
         
-        uu = np.copy(u) 
-        uu_prev = np.copy(u)
-        for it in range(cst_simu["max_steps"]) : 
-            u_next = ACactions.action_with_burger(uu, cst_simu["r"], f, fprime)
-            u_next_prev = act.target_model.predict(uu_prev.reshape(1,-1)).ravel() 
-            
-            plt.figure("Comparaison")
-            plt.clf()
-            plt.plot(X, u_next, label="Burger Roe, it = %d" % (it+1), c='r')
-            plt.plot(X, u_next_prev, 'o', label="Burger Act, it = %d" % (it+1), fillstyle='none', c='b')
-            plt.legend()
-            plt.pause(0.2)
-            u_prev = u_next_prev
-            uu = u_next
+uu = np.copy(u) 
+uu_prev = np.copy(u)
+for it in range(cst_simu["max_steps"]) : 
+    u_next = ACactions.action_with_burger(uu, cst_simu["r"], f, fprime)
+    u_next_prev = act.target_model.predict(uu_prev.reshape(1,-1)).ravel() 
+    
+    plt.figure("Comparaison")
+    plt.clf()
+    plt.plot(X, u_next, label="Burger Roe, it = %d" % (it+1), c='r')
+    plt.plot(X, u_next_prev, 'o', label="Burger Act, it = %d" % (it+1), fillstyle='none', c='b')
+    plt.legend()
+    plt.pause(0.2)
+    u_prev = u_next_prev
+    uu = u_next

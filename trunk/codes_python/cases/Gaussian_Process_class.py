@@ -48,7 +48,13 @@ def training_set(T, N_sample, scale=False, shuffle=False):
     variances = []
     bmap_fields = dict()
     chol_fields = dict()
-    
+
+    T.T_inf_lst.append(3)    
+    T.T_inf_lst.append(8)
+    T.T_inf_lst.append(13)
+    T.T_inf_lst.append(16)
+    T.T_inf_lst.append(23)
+    T.T_inf_lst.append(28)    
     for t in T.T_inf_lst :
         sT_inf = "T_inf_" + str(t)  # Clé pour les dictionnaires de l'objet T
         
@@ -62,8 +68,8 @@ def training_set(T, N_sample, scale=False, shuffle=False):
         chol_ = "adj_bfgs_cholesky_%s_N%d_cov%s.npy" %(sT_inf, T.N_discr-2, T.cov_mod)
         print ("Pour T_inf = {}, Adj_BFGS selectionné".format(t))
             
-        bmap_ = osp.join("./data/matrices",bmap_)
-        chol_ = osp.join("./data/matrices",chol_)
+        bmap_ = osp.join("./data/matrices" , bmap_)
+        chol_ = osp.join("./data/matrices" , chol_)
             
         if osp.exists(bmap_) == False or osp.exists(chol_) == False :
             sys.exit("{} or {} or both don't exist. Check".format(bmap_, chol_))
@@ -81,7 +87,7 @@ def training_set(T, N_sample, scale=False, shuffle=False):
             
             T_finale = T.h_beta(distrib_bmap(s_curr), t) # Calcule de T_finale à partir du tirage en béta
             # On empile la ligne "line" sous la dernière ligne du X_train
-            for j,d in zip(T_finale,distrib_bmap(s_curr)) :
+            for j, d in zip(T_finale, distrib_bmap(s_curr)) :
                 line = np.append(t, j) ## Ligne comprenant T_inf et le champ final de température
                 X = np.block([[X], [line]]) 
                 y = np.block([[y], [d]]) 

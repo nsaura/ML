@@ -69,7 +69,7 @@ T.obs_pri_model()
 T.get_prior_statistics()
 
 X,y,v,m,s = GPC.training_set(T, parser.N_sample)
-
+####-------------------------------------------------------------------------------
 def first_shuffle(len_pop, params = nn_params) :
     """
     Première génération de réseaux construite à partir du dictionnaire de listes de possibilités
@@ -96,7 +96,7 @@ def first_shuffle(len_pop, params = nn_params) :
         curr_params = dict()
     
     return new_params
-    
+####-------------------------------------------------------------------------------
 def mutate(c_params) :
     """
     On va effecuter une seule mutation d'un paramètre aléatoire des nouvelles souches
@@ -112,7 +112,7 @@ def mutate(c_params) :
     
     c_params[plague_str] = np.random.choice(nn_params[plague_str])
     return c_params
-    
+####-------------------------------------------------------------------------------
 def breed(m_params, f_params) :
     """
     On crée un nouvel individu à partir d'un mix des paramètres d'un réseau mère et d'un réseau père
@@ -125,7 +125,7 @@ def breed(m_params, f_params) :
         c_params[k] = np.random.choice([m,f])
     
     return c_params
-    
+####-------------------------------------------------------------------------------
 def individual(params, I=2, O=1, max_epoch = 1000, close=True):
     """
     nn_params doit être un dictionnaire de liste prenant plusieurs valeurs des 4 paramètres :
@@ -161,7 +161,7 @@ def individual(params, I=2, O=1, max_epoch = 1000, close=True):
         nn.sess.close()
     
     return nn, train_cost, test_cost
-    
+####-------------------------------------------------------------------------------
 def evolve(network_configurations, len_pop, random_select, mutate_chance,  retain_length = 3, max_epoch = 1000) :
     """
     Dans cette fonction on va définir quels sont les réseaux pertinents pour la prochaine génération. Ce choix se fait évidemment sur le score qu'ils auront obtenus.
@@ -341,7 +341,7 @@ def solver_NN(T, nn_obj, T_inf, body,  N_sample= parser.N_sample, verbose = Fals
     NN_out["NN_beta_ML"] = beta_ML.reshape(n)
     
     return NN_out
-
+####-------------------------------------------------------------------------------
 def main(len_pop, gen_max, nn_params=nn_params, max_epoch=1000) :
     
     def check_params(params) :
@@ -405,6 +405,5 @@ def main(len_pop, gen_max, nn_params=nn_params, max_epoch=1000) :
         gen += 1
         
     return (params_, bests, gen_tree)
-    
     
 # Il semblerait que la combi {'Opt': 'Adam', 'Act': 'selu', 'N_HL': 120, 'N_HN': 400} soit la meilleure
