@@ -62,20 +62,32 @@ temp = ctc.Temperature_cst(parser)
 # X = [tinf, h, xi, eps0]
 # X = [xi, tinf]
 # y = [ti]
-#X = np.zeros((2))
-#y = np.zeros((1))
 
-#wheretoload = osp.split(temp.path_fields)[0]
-#pathfile = lambda tinf, cpt : osp.join(wheretoload, "full_obs_T_inf_%d_N69_%d.npy" %(tinf, cpt))
-#for t in temp.T_inf_lst :
-#    for i in range(temp.num_real) :
-#        file = np.load(pathfile(t, i))
-#        for j in range(len(temp.line_z)) : 
-#            X = np.block([[X], [temp.line_z[j], t]])
-#            y = np.block([[y], [file[j]]])
-#       
-#X = np.delete(X, 0, axis=0)
-#y = np.delete(y, 0, axis=0)
+X = np.zeros((2))
+y = np.zeros((1))
+
+temp.T_inf_lst.append(3)    
+temp.T_inf_lst.append(8)
+temp.T_inf_lst.append(13)
+temp.T_inf_lst.append(16)
+temp.T_inf_lst.append(23)
+temp.T_inf_lst.append(28)   
+
+temp = ctc.Temperature_cst(parser) 
+temp.obs_pri_model()
+temp.get_prior_statistics()
+
+wheretoload = osp.split(temp.path_fields)[0]
+pathfile = lambda tinf, cpt : osp.join(wheretoload, "full_obs_T_inf_%d_N69_%d.npy" %(tinf, cpt))
+for t in temp.T_inf_lst :
+    for i in range(temp.num_real) :
+        file = np.load(pathfile(t, i))
+        for j in range(len(temp.line_z)) : 
+            X = np.block([[X], [temp.line_z[j], t]])
+            y = np.block([[y], [file[j]]])
+       
+X = np.delete(X, 0, axis=0)
+y = np.delete(y, 0, axis=0)
 
 N_ = {"I" : 2,\
                "N1" : 300,\
@@ -93,7 +105,7 @@ N_ = {"I" : 2,\
 #lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, verbose=True, **kwargs) :
 nn = NNI.build_case(1e-3, X, y, "selu", "Adam", "lasso", "sum", N_=N_, max_epoch=150, scale=True, verbose=True, color="purple", **kwargs)
 # full_obs
-
+#-------------------------------------------------------------------------------
 def True_Temp(T, T_inf, body) :
     """
     T_inf doit être une liste
@@ -125,14 +137,11 @@ def True_Temp(T, T_inf, body) :
     print ("Err_obs = {} ".format(err_obs))    
     print ("Iterations = {} ".format(compteur))
     
-#    plt.figure("T_inf : {}".format(body)) 
-#    plt.plot(T.line_z, T_nNext_obs, label="T_inf={}".format(body))
-#    plt.legend()
-    
     return T_nNext_obs
-    
+#-------------------------------------------------------------------------------
 def solve_and_compare(temp, nn, T_inf, body) :
     """ T_inf doit etre une lambda """
+    
     T_inf_list = map(T_inf, temp.line_z)
     true = True_Temp(temp, T_inf_list, body)
     
@@ -153,3 +162,4 @@ def solve_and_compare(temp, nn, T_inf, body) :
     plt.plot(temp.line_z, true, label="True", color='black')
     plt.plot(temp.line_z, T_solved, label="pred", linestyle="none", marker='o', color=nn.kwargs["color"], fillstyle="none")
     plt.legend()
+#-------------------------------------------------------------------------------
