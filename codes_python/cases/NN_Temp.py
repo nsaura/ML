@@ -89,7 +89,7 @@ for t in temp.T_inf_lst :
 X = np.delete(X, 0, axis=0)
 y = np.delete(y, 0, axis=0)
 
-N_ = {"I" : 2,\l
+N_ = {"I" : 2,\
 
                "N1" : 300,\
                "N2" : 80,\
