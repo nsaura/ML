@@ -53,7 +53,7 @@ Class_deque = reload(Class_deque)
 colors = iter(cm.plasma_r(np.arange(600)))
 #----------------------------------------------
 def samples_memories(BATCH_SIZE):
-    indices = np.random.permutation(len(replay_memory))[: BATCH_SIZE]
+    indices = np.random.permutation(deque_obj.size())[: BATCH_SIZE]
     # cols[0] : state
     # cols[1] : action
     # cols[2] : reward
@@ -62,7 +62,7 @@ def samples_memories(BATCH_SIZE):
     cols = [[],[],[],[],[]]
     
     for idx in indices :
-        memory = replay_memory[idx]
+        memory = deque_obj.replay_memory[idx]
         for col, value in zip(cols, memory) :
             col.append(value)
     cols = [np.array(col) for col in cols]
@@ -109,7 +109,7 @@ cst_REIL["steps_before_change"] = 20
 
 # Deque
 cst_REIL["BATCH_SIZE"] = int(512) 
-cst_REIL["replay_memory_size"] = 5e3
+cst_REIL["replay_memory_size"] = 5e4
 
 deque_obj = Class_deque.deque_obj(cst_REIL["replay_memory_size"])
 
@@ -219,56 +219,57 @@ def play_with_ACpred(u_init, noisy):
     
     for j in range(cst_simu["max_steps"]) :
         global graph
-        with graph.as_default() :
-            a_t_original = act.model.predict(np.array([s_t]))
+        while deque_obj.size() < cst_REIL["BATCH_SIZE"] :
+            with graph.as_default() :
+                a_t_original = act.model.predict(np.array([s_t]))
         
-        OU_noise = np.zeros_like(a_t_original)
+            OU_noise = np.zeros_like(a_t_original)
         
-        if noisy == True : 
-            epsilon = decays.create_decay_fn("linear",
-                                             curr_step=j,
-                                             initial_value=cst_REIL['EpsForNoise_init'],
-                                             final_value=cst_REIL['EpsForNoise_fina'],
-                                             max_step=cst_simu["max_steps"])
+            if noisy == True : 
+                epsilon = decays.create_decay_fn("linear",
+                                                 curr_step=j,
+                                                 initial_value=cst_REIL['EpsForNoise_init'],
+                                                 final_value=cst_REIL['EpsForNoise_fina'],
+                                                 max_step=cst_simu["max_steps"])
         
-            args = {"rp_type" : "ornstein-uhlenbeck",
-                    "n_action" : 1,
-                    "rp_theta" : 0.1,
-                    "rp_mu" : 0.,
-                    "rp_sigma" : 0.2,
-                    "rp_sigma_min" : 0.05}
+                args = {"rp_type" : "ornstein-uhlenbeck",
+                        "n_action" : 1,
+                        "rp_theta" : 0.1,
+                        "rp_mu" : 0.,
+                        "rp_sigma" : 0.2,
+                        "rp_sigma_min" : 0.05}
             
-            OU_noise = noise.create_random_process(args).sample()
+                OU_noise = noise.create_random_process(args).sample()
             
-        a_t = a_t_original + epsilon*OU_noise
-        a_t = a_t.ravel()
-        
-        s_t1 = ACactions.action_with_delta_Un(s_t, a_t)
-        
-        r_t = reward(s_t1, s_t)
+            a_t = a_t_original + epsilon*OU_noise
+            a_t = a_t.ravel()
+            
+            s_t1 = ACactions.action_with_delta_Un(s_t, a_t)
+            
+            r_t = reward(s_t1, s_t)
 
-#        print ("state :\n{}".format(s_t))
-#        print ("action :\n{}".format(a_t))
-        print ("reward :\n{}".format(r_t))
-#        print ("next state :\n{}".format(s_t1))
-#        
-#        time.sleep(5)
-        
-        if r_t > 1 and r_t < 1000 :
-            done = True # Game over
-            rew = r_t
-        
-        elif r_t > 1000 :
-            done = True # Game over
-            rew = -r_t  # Grosse pénalité 
-        
-        else :
-            done = False # On continue si c'est bon 
-            rew = r_t
-                
-        deque_obj.append((s_t, a_t, rew, s_t1, done))
+    #        print ("state :\n{}".format(s_t))
+    #        print ("action :\n{}".format(a_t))
+            print ("reward :\n{}".format(r_t))
+    #        print ("next state :\n{}".format(s_t1))
+    #        
+    #        time.sleep(5)
+            
+            if r_t > 1 and r_t < 1000 :
+                done = True # Game over
+                rew = r_t
+            
+            elif r_t > 1000 :
+                done = True # Game over
+                rew = -r_t  # Grosse pénalité 
+            
+            else :
+                done = False # On continue si c'est bon 
+                rew = r_t
+                    
+            deque_obj.append((s_t, a_t, rew, s_t1, done))
 
-        s_t = s_t1
+            s_t = s_t1
 #----------------------------------------------        
 def play_with_burger(u_init):    
     """
@@ -303,7 +304,6 @@ def play_with_burger(u_init):
 #        plt.legend()
 #        plt.pause(0.01)
         
-        
         a_t = a_t_original.ravel()
         
         gg = [abs(a) > 1. for a in a_t]
@@ -330,14 +330,14 @@ def play_with_burger(u_init):
             done = False # On continue si c'est bon 
             rew = r_t
                 
-        if len(replay_memory) < cst_REIL["replay_memory_size"] :
-            replay_memory.append((s_t, a_t, rew, s_t1, done))
+        if deque_obj.size() < cst_REIL["replay_memory_size"] :
+            deque_obj.append((s_t, a_t, rew, s_t1, done))
         
         else :
             if abs(np.random.randn()) > 0.5 :
-                replay_memory.popleft() # Pop the leftmost element 
+                deque_obj.popleft() # Pop the leftmost element 
             else: 
-                replay_memory.pop() # Pop the rightmost element 
+                deque_obj.pop() # Pop the rightmost element 
         
         s_t = s_t1
 #----------------------------------------------        
@@ -349,7 +349,6 @@ def train (u_init, play_type="AC") :
     global graph, colors
 
     loss, losses, trainnum = 0, [], 0
-    
     save_weights()
     
     file = open("rewards.txt", "w") ; file.close()
@@ -376,10 +375,9 @@ def train (u_init, play_type="AC") :
             else : 
                 curr_lr_actor = cst_REIL["lr_actor_init"]
             
-            if ep != 0 :
-                replay_memory.clear()
-                while len(replay_memory) < cst_REIL["BATCH_SIZE"] : 
-                    if plan_type == "AC" :
+            deque_obj.clear()
+            while deque_obj.size() < cst_REIL["BATCH_SIZE"] : 
+                if play_type == "AC" :
                         play_with_ACpred(u_init, False)
             
         print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
@@ -398,7 +396,7 @@ def train (u_init, play_type="AC") :
         it, totalcounter, iterok  = 0, 0, False
 
         while it < cst_simu["max_steps"] :
-            states, actions, rewards, next_states, dones = (samples_memories(cst_REIL["BATCH_SIZE"]))
+            states,actions,rewards,next_states,dones = (samples_memories(cst_REIL["BATCH_SIZE"]))
             delta_number_step = []
 
             y_t = np.asarray([0.0]*cst_REIL["BATCH_SIZE"])
@@ -449,7 +447,31 @@ def train (u_init, play_type="AC") :
                 print (logs / cst_simu["max_steps"])
                 load_weights()
                 
-                replay_memory.append((st, a_t, rew, s_t1, done))
+                new_actions = act.target_model.predict(states)
+                new_next = []                
+                new_reward = []
+#                
+#                for s,a in zip(states, actions) :
+#                    ns = ACactions.action_with_delta_Un(s,a)
+#                    nr = reward(s, ns)
+#                    new_next.append(ns)
+#                    new_reward.append(nr)
+
+#                    if nr > 1 and nr < 1000 :
+#                        done = True 
+#                        rew = nr
+#                
+#                    elif nr > 1000 :
+#                        done = True # Game over
+#                        rew = -nr   
+#                
+#                    else :
+#                        done = False # On continue si c'est bon 
+#                        rew = nr
+#                    
+#                    deque_obj.append((s, a, nr, ns, done))
+#                    
+##                    print deque_obj.size()
                 
             loss += logs / cst_simu["max_steps"]
             it += 1
@@ -482,14 +504,14 @@ if __name__ == "__main__" :
     play_type = "AC"
 
     print ("The batch is being constructed ...")
-    replay_memory.clear()
+    deque_obj.clear()
     
-    while len(replay_memory) < cst_REIL["replay_memory_size"] : 
-        for u in u_init :
-            if play_type== "AC" :
-                play_with_ACpred(u, False)
-            else :
-                play_with_burger(u)
+#    while len(deque_obj.replay_memory) < cst_REIL["BATCH_SIZE"] : 
+#        for u in u_init :
+#            if play_type== "AC" :
+#                play_with_ACpred(u, False)
+#            else :
+#                play_with_burger(u)
     
     print ("The batch is ready to be used")
     time.sleep(1)
@@ -497,20 +519,20 @@ if __name__ == "__main__" :
     print ("Training start")
     for ll, u in enumerate(u_init) :
         curr_loss = train(u, play_type)
-        
-        lossess[str(ll)] = curr_loss
-        
-    uu = np.copy(u) 
-    uu_prev = np.copy(u)
-    for it in range(cst_simu["max_steps"]) : 
-        u_next = ACactions.action_with_burger(uu, cst_simu["r"], f, fprime)
-        u_next_prev = act.target_model.predict(uu_prev.reshape(1,-1)).ravel() 
-        
-        plt.figure("Comparaison")
-        plt.clf()
-        plt.plot(X, u_next, label="Burger Roe, it = %d" % (it+1), c='r')
-        plt.plot(X, u_next_prev, 'o', label="Burger Act, it = %d" % (it+1), fillstyle='none', c='b')
-        plt.legend()
-        plt.pause(0.2)
-        u_prev = u_next_prev
-        uu = u_next
+#        
+#        lossess[str(ll)] = curr_loss
+#        
+#    uu = np.copy(u) 
+#    uu_prev = np.copy(u)
+#    for it in range(cst_simu["max_steps"]) : 
+#        u_next = ACactions.action_with_burger(uu, cst_simu["r"], f, fprime)
+#        u_next_prev = act.target_model.predict(uu_prev.reshape(1,-1)).ravel() 
+#        
+#        plt.figure("Comparaison")
+#        plt.clf()
+#        plt.plot(X, u_next, label="Burger Roe, it = %d" % (it+1), c='r')
+#        plt.plot(X, u_next_prev, 'o', label="Burger Act, it = %d" % (it+1), fillstyle='none', c='b')
+#        plt.legend()
+#        plt.pause(0.2)
+#        u_prev = u_next_prev
+#        uu = u_next
