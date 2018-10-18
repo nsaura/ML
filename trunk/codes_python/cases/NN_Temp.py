@@ -76,6 +76,7 @@ temp.T_inf_lst.append(28)
 temp = ctc.Temperature_cst(parser) 
 temp.obs_pri_model()
 temp.get_prior_statistics()
+temp.
 
 wheretoload = osp.split(temp.path_fields)[0]
 pathfile = lambda tinf, cpt : osp.join(wheretoload, "full_obs_T_inf_%d_N69_%d.npy" %(tinf, cpt))
