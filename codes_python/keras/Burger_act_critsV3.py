@@ -8,6 +8,7 @@ import decays
 import numpy as np
 import os.path as osp
 from os import mkdir, remove
+import Class_deque as Class_deque
 #from keras.models import model_from_json
 from keras.models import Sequential, Model
 from keras.layers import Dense, Flatten, Input, merge
@@ -29,7 +30,6 @@ import matplotlib.pyplot as plt
 import plot_from_file as pff
 import actions_for_KerasAC_DDPG as ACactions
 
-
 graph = tf.get_default_graph()
 
 #plt.close("all")
@@ -48,9 +48,9 @@ noise = reload(noise)
 decays = reload(decays)
 solvers = reload(solvers)
 ACactions = reload(ACactions)
+Class_deque = reload(Class_deque)
 
 colors = iter(cm.plasma_r(np.arange(600)))
-
 #----------------------------------------------
 def samples_memories(BATCH_SIZE):
     indices = np.random.permutation(len(replay_memory))[: BATCH_SIZE]
@@ -110,8 +110,8 @@ cst_REIL["steps_before_change"] = 20
 # Deque
 cst_REIL["BATCH_SIZE"] = int(512) 
 cst_REIL["replay_memory_size"] = 5e3
-replay_memory = deque( [], maxlen=cst_REIL["replay_memory_size"] )
 
+deque_obj = Class_deque.deque_obj(cst_REIL["replay_memory_size"])
 
 # Number of HN for both actor and critics NN
 cst_REIL["HIDDEN1_UNITS"] = 50
@@ -133,7 +133,6 @@ cst_REIL["EpsForNoise_init"] = 1
 cst_REIL["EpsForNoise_fina"] = 0.8
 
 facteur_rew = 100
-
 sess = tf.InteractiveSession()
 
 state_size = action_size = cst_simu["Nx"]
@@ -267,15 +266,8 @@ def play_with_ACpred(u_init, noisy):
             done = False # On continue si c'est bon 
             rew = r_t
                 
-        if len(replay_memory) < cst_REIL["replay_memory_size"] :
-            replay_memory.append((s_t, a_t, rew, s_t1, done))
-        
-        else :
-            if abs(np.random.randn()) > 0.5 :
-                replay_memory.popleft() # Pop the leftmost element 
-            else: 
-                replay_memory.pop() # Pop the rightmost element 
-        
+        deque_obj.append((s_t, a_t, rew, s_t1, done))
+
         s_t = s_t1
 #----------------------------------------------        
 def play_with_burger(u_init):    
@@ -377,13 +369,19 @@ def train (u_init, play_type="AC") :
                 
             if decay_act_lr == True : 
                 curr_lr_actor = decays.create_decay_fn("linear",
-                                               curr_step = ep % int(cst_REIL["episodes"] / 500),    
+                                               curr_step = ep % int(cst_REIL["episodes"] / 500),
                                                initial_value = cst_REIL["lr_actor_init"],
                                                final_value = cst_REIL["lr_actor_final"] ,
                                                max_step = int(cst_REIL["episodes"] / 500))
             else : 
                 curr_lr_actor = cst_REIL["lr_actor_init"]
-        
+            
+            if ep != 0 :
+                replay_memory.clear()
+                while len(replay_memory) < cst_REIL["BATCH_SIZE"] : 
+                    if plan_type == "AC" :
+                        play_with_ACpred(u_init, False)
+            
         print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
                     %(ep, curr_lr_actor, cri.model.optimizer.lr))
         time.sleep(3)
@@ -391,8 +389,8 @@ def train (u_init, play_type="AC") :
         loss = 0
         trainnum = 0
         
-        curr_lr_actor = cst_REIL["lr_actor_init"]
-        cri.model.optimizer.lr = cst_REIL["lr_critics_init"]
+#        curr_lr_actor = cst_REIL["lr_actor_init"]
+#        cri.model.optimizer.lr = cst_REIL["lr_critics_init"]
 
         rew = 0
         delta_max, along_reward = [], [] 
@@ -421,6 +419,7 @@ def train (u_init, play_type="AC") :
             target_q_values = target_q_values.reshape([1, target_q_values.shape[0]])[0]
             
             for k in range(cst_REIL["BATCH_SIZE"]) :
+                
                 if dones[k] :
                     y_t[k] = rewards[k] 
                 else : 
@@ -428,8 +427,6 @@ def train (u_init, play_type="AC") :
                     
             with graph.as_default():
                 # We set lr of the critic network
-                
-                
                     
                 logs = cri.model.train_on_batch([states, actions], y_t)
                 
@@ -437,7 +434,7 @@ def train (u_init, play_type="AC") :
                 grad = cri.gradients(states, a_for_grad)
                 
                 act.train(states, grad, learning_rate=curr_lr_actor)
-
+                
                 act.target_train()
                 cri.target_train()         
                 
@@ -445,11 +442,14 @@ def train (u_init, play_type="AC") :
                 # We use those actor and critic target networks for the next steps_before_change steps
                         
                 save_weights()
-                print ("totalcounter = %d, \t lr_actor = %.6f\t lr_crits = %.6f" %(it, curr_lr_actor, cri.model.optimizer.lr))
+                print ("totalcounter = %d, \t lr_actor = %.6f\t lr_crits = %.6f"\
+                                        %(it, curr_lr_actor, cri.model.optimizer.lr))
                 
                 
                 print (logs / cst_simu["max_steps"])
                 load_weights()
+                
+                replay_memory.append((st, a_t, rew, s_t1, done))
                 
             loss += logs / cst_simu["max_steps"]
             it += 1
@@ -460,7 +460,7 @@ def train (u_init, play_type="AC") :
         losses.append(loss)
         
         plt.figure("Evolution de Loss sur un episodes vs iteration")
-        plt.semilogy(ep, loss, marker='o', ms=6, linestyle="none", c='green')
+        plt.semilogy(ep, loss, marker='o', ms=6, linestyle="none", c='navy')
         plt.pause(0.5)
     
     return losses
@@ -500,17 +500,17 @@ if __name__ == "__main__" :
         
         lossess[str(ll)] = curr_loss
         
-uu = np.copy(u) 
-uu_prev = np.copy(u)
-for it in range(cst_simu["max_steps"]) : 
-    u_next = ACactions.action_with_burger(uu, cst_simu["r"], f, fprime)
-    u_next_prev = act.target_model.predict(uu_prev.reshape(1,-1)).ravel() 
-    
-    plt.figure("Comparaison")
-    plt.clf()
-    plt.plot(X, u_next, label="Burger Roe, it = %d" % (it+1), c='r')
-    plt.plot(X, u_next_prev, 'o', label="Burger Act, it = %d" % (it+1), fillstyle='none', c='b')
-    plt.legend()
-    plt.pause(0.2)
-    u_prev = u_next_prev
-    uu = u_next
+    uu = np.copy(u) 
+    uu_prev = np.copy(u)
+    for it in range(cst_simu["max_steps"]) : 
+        u_next = ACactions.action_with_burger(uu, cst_simu["r"], f, fprime)
+        u_next_prev = act.target_model.predict(uu_prev.reshape(1,-1)).ravel() 
+        
+        plt.figure("Comparaison")
+        plt.clf()
+        plt.plot(X, u_next, label="Burger Roe, it = %d" % (it+1), c='r')
+        plt.plot(X, u_next_prev, 'o', label="Burger Act, it = %d" % (it+1), fillstyle='none', c='b')
+        plt.legend()
+        plt.pause(0.2)
+        u_prev = u_next_prev
+        uu = u_next
