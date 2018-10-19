@@ -151,7 +151,6 @@ cri = KAD.CriticNetwork(sess, state_size, action_size, cst_REIL["BATCH_SIZE"],
 
 decay_cri_lr = True
 decay_act_lr = True
-                                                      
 #----------------------------------------------
 def save_weights() :
     act.target_model.save_weights("./ACweights/actmodel.h5", overwrite=True)
@@ -160,7 +159,7 @@ def save_weights() :
 #----------------------------------------------
 def load_weights() :
     act.model.load_weights("./ACweights/actmodel.h5")
-    act.model.load_weights("./ACweights/actmodel.h5")
+    cri.model.load_weights("./ACweights/crimodel.h5")
     
     act.target_model.load_weights("./ACweights/actmodel.h5")
     cri.target_model.load_weights("./ACweights/crimodel.h5")
@@ -195,7 +194,7 @@ def reward (next_state, state) :
     return (np.linalg.norm((temp_term + square_term), 2))**2
 
 #----------------------------------------------
-def play_with_ACpred(u_init, noisy):    
+def play_with_ACpred(u_init, noisy=True):    
     """
     Function that plays a certain number of iterations of the game (until it finishes).
     This function can also be used to construct the rpm.
@@ -219,7 +218,7 @@ def play_with_ACpred(u_init, noisy):
     
     for j in range(cst_simu["max_steps"]) :
         global graph
-        while deque_obj.size() < cst_REIL["BATCH_SIZE"] :
+        while deque_obj.size() < cst_REIL["replay_memory_size"] :
             with graph.as_default() :
                 a_t_original = act.model.predict(np.array([s_t]))
         
@@ -250,7 +249,6 @@ def play_with_ACpred(u_init, noisy):
 
     #        print ("state :\n{}".format(s_t))
     #        print ("action :\n{}".format(a_t))
-            print ("reward :\n{}".format(r_t))
     #        print ("next state :\n{}".format(s_t1))
     #        
     #        time.sleep(5)
@@ -267,9 +265,10 @@ def play_with_ACpred(u_init, noisy):
                 done = False # On continue si c'est bon 
                 rew = r_t
                     
+            print ("reward :\n{}".format(rew))
             deque_obj.append((s_t, a_t, rew, s_t1, done))
 
-            s_t = s_t1
+            s_t = s_t + noise.create_random_process(args).sample()
 #----------------------------------------------        
 def play_with_burger(u_init):    
     """
@@ -318,11 +317,11 @@ def play_with_burger(u_init):
 #        print ("reward :\n{}".format(r_t))
 #        print ("next state :\n{}".format(s_t1))
         
-        if r_t > 1 and r_t < 10 :
+        if r_t > 1 and r_t < 10000 :
             done = True # Game over
             rew = r_t
         
-        elif r_t > 10 :
+        elif r_t > 10000 :
             done = True # Game over
             rew = -r_t  # Grosse pénalité 
         
@@ -354,8 +353,10 @@ def train (u_init, play_type="AC") :
     file = open("rewards.txt", "w") ; file.close()
     file = open("delta_max.txt", "w") ; file.close()
     
+    s_a_file = open("state_action.txt", "w") ; s_a_file.close()
+    
     for ep in range(cst_REIL["episodes"]) :
-        if ep % 500 == 0 :
+        if ep % 100 == 0 :
             if decay_cri_lr == True : 
                 cri.model.optimizer.lr =\
                     decays.create_decay_fn("linear",
@@ -378,7 +379,7 @@ def train (u_init, play_type="AC") :
             deque_obj.clear()
             while deque_obj.size() < cst_REIL["BATCH_SIZE"] : 
                 if play_type == "AC" :
-                        play_with_ACpred(u_init, False)
+                        play_with_ACpred(u_init)
             
         print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
                     %(ep, curr_lr_actor, cri.model.optimizer.lr))
@@ -391,7 +392,7 @@ def train (u_init, play_type="AC") :
 #        cri.model.optimizer.lr = cst_REIL["lr_critics_init"]
 
         rew = 0
-        delta_max, along_reward = [], [] 
+        delta_max, along_reward = [], []
 
         it, totalcounter, iterok  = 0, 0, False
 
@@ -425,7 +426,7 @@ def train (u_init, play_type="AC") :
                     
             with graph.as_default():
                 # We set lr of the critic network
-                    
+                
                 logs = cri.model.train_on_batch([states, actions], y_t)
                 
                 a_for_grad = act.model.predict(states)
@@ -435,6 +436,15 @@ def train (u_init, play_type="AC") :
                 
                 act.target_train()
                 cri.target_train()         
+                
+                s_a_file = open("state_action.txt", "w")
+                s_a_file.write("Episodes : %d\t Iteration : %d\n" %(ep, it))
+                for s, a, r  in zip(states, actions, rewards) :
+                    s_a_file.write("States \n{} \n".format(s))
+                    s_a_file.write("Actions \n{} \n".format(a))
+                    s_a_file.write("rewards \n{} \n".format(r))
+                
+                s_a_file.close()
                 
                 # In this section we decide wheither we continue or not
                 # We use those actor and critic target networks for the next steps_before_change steps
