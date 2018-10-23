@@ -102,7 +102,7 @@ cst_simu["max_steps"] = 150
 #
 # Constantes for the REIL
 #
-cst_REIL["TAU"] = 0.001
+cst_REIL["TAU"] = 0.01
 cst_REIL["gamma"] = 0.99
 cst_REIL["episodes"] = 50000
 cst_REIL["steps_before_change"] = 20
@@ -121,16 +121,16 @@ cst_REIL["HIDDEN2_UNITS"] = 50
 # Lr decays for actor or critics
 cst_REIL["max_steps_lr"] = 50
 
-cst_REIL["lr_actor_init"] = 1e-4
-cst_REIL["lr_actor_final"] = 1e-5
+cst_REIL["lr_actor_init"] = 1e-3
+cst_REIL["lr_actor_final"] = 1e-4
 
 cst_REIL["lr_critics_final"] = 1e-3
 cst_REIL["lr_critics_init"] = 1e-4
 
 
 # Eps (for noise) decays
-cst_REIL["EpsForNoise_init"] = 1
-cst_REIL["EpsForNoise_fina"] = 0.8
+cst_REIL["EpsForNoise_init"] = 1.3
+cst_REIL["EpsForNoise_fina"] = 0.4
 
 facteur_rew = 100
 sess = tf.InteractiveSession()
@@ -221,7 +221,7 @@ def play_with_ACpred(u_init, noisy=True):
         while deque_obj.size() < cst_REIL["replay_memory_size"] :
             with graph.as_default() :
                 a_t_original = act.model.predict(np.array([s_t]))
-        
+                
             OU_noise = np.zeros_like(a_t_original)
         
             if noisy == True : 
@@ -238,9 +238,11 @@ def play_with_ACpred(u_init, noisy=True):
                         "rp_sigma" : 0.2,
                         "rp_sigma_min" : 0.05}
             
-                OU_noise = noise.create_random_process(args).sample()
-            
-            a_t = a_t_original + epsilon*OU_noise
+                coeffOU_noise = noise.create_random_process(args).sample()
+                OU_noise = coeffOU_noise*(np.array([np.random.rand() for rand in range(X.size)]) - 0.5)                
+                
+                
+            a_t = a_t_original + OU_noise
             a_t = a_t.ravel()
             
             s_t1 = ACactions.action_with_delta_Un(s_t, a_t)
@@ -268,7 +270,15 @@ def play_with_ACpred(u_init, noisy=True):
             print ("reward :\n{}".format(rew))
             deque_obj.append((s_t, a_t, rew, s_t1, done))
 
-            s_t = s_t + noise.create_random_process(args).sample()
+#            plt.figure("comparaison bruit")            
+#            plt.plot(X, s_t, label="Avec bruit", c='red')
+#            plt.plot(X, [s_t[i] + OU_noise[i] for i in range(X.size)], label="Avec bruit", c='b')
+#            plt.legend()
+#            plt.pause(5)
+#            
+#            sys.exit("dd")  
+#            
+            
 #----------------------------------------------        
 def play_with_burger(u_init):    
     """
@@ -284,6 +294,11 @@ def play_with_burger(u_init):
     """
     episode_memory = []
     s_t = u_init
+    
+    # Mettre ici un tirage aléatoire d'un entier q entre 1 et max step.
+    # Résoudre avec Roe jusqua la q eme itération, écrire cela en tant que s_t
+    # Puis faire toute la procédure utilisé jusqu'ici.
+    # Répéter ce processus jusqua ce que le replay buffer soit plein
     
     total_rew = 0
     a_t = np.zeros([1, s_t.size])
@@ -483,7 +498,7 @@ def train (u_init, play_type="AC") :
 #                    
 ##                    print deque_obj.size()
                 
-            loss += logs / cst_simu["max_steps"]
+            loss += abs(logs) / cst_simu["max_steps"]
             it += 1
             trainnum += 1
         print ("Episode = %d :" % ep)
@@ -491,7 +506,7 @@ def train (u_init, play_type="AC") :
         
         losses.append(loss)
         
-        plt.figure("Evolution de Loss sur un episodes vs iteration")
+        plt.figure("Evolution de Loss sur un episodes vs iteration STEP = 100")
         plt.semilogy(ep, loss, marker='o', ms=6, linestyle="none", c='navy')
         plt.pause(0.5)
     

@@ -85,6 +85,10 @@ class Temperature_cst() :
         for i, t in enumerate([i*5 for i in range(1, 11)]) :
             self.prior_sigma["T_inf_%d" %(t)] = prior_sigma_lst[i]
         
+        for t in T_inf_lst :
+            key = "T_inf_%d" %(t) not in self.prior_sigma.keys()
+            self.prior_sigma["T_inf_%d" %(t)] = 1.
+        
         self.line_z  = np.linspace(z_init, z_final, N_discr)[1:N_discr-1]
         self.cpt_max_adj = cpt_max_adj
         self.g_sup_max = g_sup_max  

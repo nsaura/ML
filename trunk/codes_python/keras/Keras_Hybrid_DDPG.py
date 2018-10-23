@@ -26,6 +26,22 @@ def act(x):
 def tanh(x):
         return K.tanh(x)
 
+## Il faut coder la fonction hybride de l'article. En utilisant 
+#https://stackoverflow.com/questions/45961428/make-a-custom-loss-function-in-keras
+
+#First, writing a method for the coefficient/metric. 
+def crit_hybrid(TD, target_q):
+    TD_f = K.flatten(TD)
+    target_q_f = K.flatten(target_q)
+    diff = (K.sum(TD_f) - K.sum(target_q_f))**2
+    return diff
+
+#Second, writing a wrapper function to format things the way Keras needs them to be.
+def crit_hybrid_loss():
+  def loss(TD, target_q)
+    return crit_hybrid(TD, target_q)
+  return dice
+  
 #####################
 #####################
 ### Actor Network ###
@@ -170,26 +186,6 @@ class CriticNetwork(object):
             critic_target_weights[i] = self.TAU * critic_weights[i] + (1 - self.TAU)* critic_target_weights[i]
         self.target_model.set_weights(critic_target_weights)
     
-#    def create_critic_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
-#        print("Now we build the model")
-#        S = Input(shape=[state_size])
-#        A = Input(shape=[action_dim], name='action2')
-#        w1 = Dense(HIDDEN1_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseS')(S)
-#        a1 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseA2')(A)
-#        h1 = Dense(HIDDEN1_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseS2')(w1)
-#        h2 = concatenate([h1,a1])
-##        h3 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseConca')(h2)
-##        h4 = Dense(HIDDEN2_UNITS, activation='selu', kernel_initializer = 'normal', name=name+'_DenseH4')(h3)
-#        V = Dense(1,activation='linear', name=name+'_Output')(h2)
-#        model = Model(inputs=[S,A],outputs=V)
-#        
-#        # Normal Optimization
-#        adam = Adam(lr=self.LEARNING_RATE)
-#        model.compile(loss='mse', optimizer=adam)
-#        model.summary()
-#        
-#        return model, A, S    
-#        
 
     def create_critic_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
         print("Now we build the model")
@@ -206,7 +202,7 @@ class CriticNetwork(object):
         
         # Normal Optimization
         adam = Adam(lr=self.LEARNING_RATE)
-        model.compile(loss='mse', optimizer=adam)
+        model.compile(loss=crit_hybrid_loss(), optimizer=adam)
         model.summary()
         
         return model, A, S    
