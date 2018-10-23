@@ -102,7 +102,7 @@ cst_simu["max_steps"] = 150
 #
 # Constantes for the REIL
 #
-cst_REIL["TAU"] = 0.01
+cst_REIL["TAU"] = 0.001
 cst_REIL["gamma"] = 0.99
 cst_REIL["episodes"] = 50000
 cst_REIL["steps_before_change"] = 20
@@ -418,7 +418,6 @@ def train (u_init, play_type="AC") :
             target_q_values = target_q_values.reshape([1, target_q_values.shape[0]])[0]
             
             for k in range(cst_REIL["BATCH_SIZE"]) :
-                
                 if dones[k] :
                     y_t[k] = rewards[k] 
                 else : 
