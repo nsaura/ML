@@ -6,7 +6,7 @@ import numpy as np
 
 def action_with_burger(state, r, f, fprime) :
     """
-    On utilise Burger comme prediction
+    With one iniitial state, we predict next_state
     """
     next_state = np.zeros_like(state)
     

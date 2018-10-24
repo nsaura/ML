@@ -151,6 +151,8 @@ cri = KAD.CriticNetwork(sess, state_size, action_size, cst_REIL["BATCH_SIZE"],
 
 decay_cri_lr = True
 decay_act_lr = True
+
+#sys.exit()
 #----------------------------------------------
 def save_weights() :
     act.target_model.save_weights("./ACweights/actmodel.h5", overwrite=True)
@@ -191,7 +193,7 @@ def reward (next_state, state) :
     square_term[0] = (state[1]**2 - state[-1]**2) * 0.25 / cst_simu["dx"]
     square_term[-1] = (state[1]**2 - state[-2]**2) * 0.25 / cst_simu["dx"]
     
-    return (np.linalg.norm((temp_term + square_term), 2))**2
+    return (np.linalg.norm((temp_term + square_term), 2))**2 * 50
 
 #----------------------------------------------
 def play_with_ACpred(u_init, noisy=True):    
@@ -205,23 +207,40 @@ def play_with_ACpred(u_init, noisy=True):
     u_init : To set the initialisation
     """
     episode_memory = []
-    s_t = u_init
     
     epsilon = 0
     total_rew = 0
-    a_t = np.zeros([1, s_t.size])
+    a_t = np.zeros([1, X.size])
     
     # Pour exploration de l'espace des actions
 #    noise = noiselevel
 #    noiselevel = noise * 0.999
 #    noise_t = np.zeros([1, action_size])
     
-    for j in range(cst_simu["max_steps"]) :
-        global graph
-        while deque_obj.size() < cst_REIL["replay_memory_size"] :
-            with graph.as_default() :
-                a_t_original = act.model.predict(np.array([s_t]))
-                
+    # Mettre ici un tirage aléatoire d'un entier q entre 1 et max step.
+    # Résoudre avec Roe jusqua la q eme itération, écrire cela en tant que s_t
+    # Puis faire toute la procédure utilisé jusqu'ici.
+    # Répéter ce processus jusqua ce que le replay buffer soit plein    
+
+    global graph
+    while deque_obj.size() < cst_REIL["replay_memory_size"] :
+    
+        int_line = range(0, cst_simu["max_steps"])
+        curr_step = np.random.choice(int_line)
+
+        temp_state = u_init
+
+        for j in range(0, curr_step+1) :
+            temp_state1 = ACactions.action_with_burger(temp_state, cst_simu["r"], f, fprime)
+
+            if j != curr_step :
+                temp_state = temp_state1
+        
+        s_t = temp_state
+    
+        with graph.as_default() :
+            a_t_original = act.model.predict(np.array([s_t]))
+            
             OU_noise = np.zeros_like(a_t_original)
         
             if noisy == True : 
@@ -229,15 +248,16 @@ def play_with_ACpred(u_init, noisy=True):
                                                  curr_step=j,
                                                  initial_value=cst_REIL['EpsForNoise_init'],
                                                  final_value=cst_REIL['EpsForNoise_fina'],
-                                                 max_step=cst_simu["max_steps"])
-        
+                                                 max_step=cst_simu["max_steps"]
+                                                 )
+
                 args = {"rp_type" : "ornstein-uhlenbeck",
                         "n_action" : 1,
                         "rp_theta" : 0.1,
                         "rp_mu" : 0.,
                         "rp_sigma" : 0.2,
                         "rp_sigma_min" : 0.05}
-            
+    
                 coeffOU_noise = noise.create_random_process(args).sample()
                 OU_noise = coeffOU_noise*(np.array([np.random.rand() for rand in range(X.size)]) - 0.5)                
                 
@@ -249,12 +269,12 @@ def play_with_ACpred(u_init, noisy=True):
             
             r_t = reward(s_t1, s_t)
 
-    #        print ("state :\n{}".format(s_t))
-    #        print ("action :\n{}".format(a_t))
-    #        print ("next state :\n{}".format(s_t1))
-    #        
-    #        time.sleep(5)
-            
+#        print ("state :\n{}".format(s_t))
+#        print ("action :\n{}".format(a_t))
+#        print ("next state :\n{}".format(s_t1))
+#        
+#        time.sleep(5)
+        
             if r_t > 1 and r_t < 1000 :
                 done = True # Game over
                 rew = r_t

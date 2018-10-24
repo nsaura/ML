@@ -30,7 +30,7 @@ import Class_Temp_Cst as ctc  #Pour utiliser les fonctions de classs_temp
 import class_functions_aux as cfa #Pour les tracés post-process
 
 #run NN_Temp.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -cptmax 150 -N 71 -g_sup 1e-4 -cov_mod "full"
-
+#run NN_Temp.py -T_inf_lst 3 5 8 10 13 15 18 20 23 25 28 30 35 40 45 50 -N 71 -g_sup 1e-4 -cov_mod "full" -cptmax 150
 plt.ion()
 
 try:
@@ -66,17 +66,10 @@ temp = ctc.Temperature_cst(parser)
 X = np.zeros((2))
 y = np.zeros((1))
 
-temp.T_inf_lst.append(3)    
-temp.T_inf_lst.append(8)
-temp.T_inf_lst.append(13)
-temp.T_inf_lst.append(16)
-temp.T_inf_lst.append(23)
-temp.T_inf_lst.append(28)   
 
 temp = ctc.Temperature_cst(parser) 
 temp.obs_pri_model()
 temp.get_prior_statistics()
-temp.
 
 wheretoload = osp.split(temp.path_fields)[0]
 pathfile = lambda tinf, cpt : osp.join(wheretoload, "full_obs_T_inf_%d_N69_%d.npy" %(tinf, cpt))
