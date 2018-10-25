@@ -71,23 +71,42 @@ temp = ctc.Temperature_cst(parser)
 temp.obs_pri_model()
 temp.get_prior_statistics()
 
-wheretoload = osp.split(temp.path_fields)[0]
-pathfile = lambda tinf, cpt : osp.join(wheretoload, "full_obs_T_inf_%d_N69_%d.npy" %(tinf, cpt))
-for t in temp.T_inf_lst :
-    for i in range(temp.num_real) :
-        file = np.load(pathfile(t, i))
-        for j in range(len(temp.line_z)) : 
-            X = np.block([[X], [temp.line_z[j], t]])
-            y = np.block([[y], [file[j]]])
-       
-X = np.delete(X, 0, axis=0)
-y = np.delete(y, 0, axis=0)
+if osp.exists("./data/xy_files") == False :
+    os.mkdir("./data/xy_files")
+
+case = "0"
+while case not in {"complet", "normal"} :
+    case = str(input("Quel cas ? complet ou normal (boucle infinie sinon) : "))
+    print ("case choisi : %s" % case)
+    
+Xcasetoloadifexists = "./data/xy_files/X_T" + case
+ycasetoloadifexists = "./data/xy_files/y_T" + case
+
+if osp.exists(Xcasetoloadifexists) or osp.exists(ycasetoloadifexists) :
+    X = np.load(Xcasetoloadifexists)
+    y = np.load(ycasetoloadifexists) 
+
+else :
+    wheretoload = osp.split(temp.path_fields)[0]
+    pathfile = lambda tinf, cpt : osp.join(wheretoload, "full_obs_T_inf_%d_N69_%d.npy" %(tinf, cpt))
+    for t in temp.T_inf_lst :
+        for i in range(temp.num_real) :
+            file = np.load(pathfile(t, i))
+            for j in range(len(temp.line_z)) : 
+                X = np.block([[X], [temp.line_z[j], t]])
+                y = np.block([[y], [file[j]]])
+           
+    X = np.delete(X, 0, axis=0)
+    y = np.delete(y, 0, axis=0)
+
+    np.save("./data/xy_files/X_T%s.npy" %(case), X)
+    np.save("./data/xy_files/y_T%s.npy" %(case), y)
 
 N_ = {"I" : 2,\
 
-               "N1" : 300,\
-               "N2" : 80,\
-#               "N3" : 5,\
+               "N1" : 100,\
+               "N2" : 10,\
+               "N3" : 5,\
 #               "N4" : 10,\
 #               "N5" : 10,\
 #               "N6" : 10,\
@@ -98,7 +117,11 @@ N_ = {"I" : 2,\
                "O"  : 1}
 
 #lr, X, y, act, opti, loss, reduce_type, N_=dict_layers, max_epoch=parser.N_epoch, scale=True, verbose=True, **kwargs) :
-nn = NNI.build_case(1e-3, X, y, "selu", "Adam", "lasso", "sum", N_=N_, max_epoch=150, scale=True, verbose=True, color="purple", **kwargs)
+# kwargs should be defined :
+kwargs = {}
+kwargs["BN"] = True
+kwargs["bsz"] = 128
+nn = NNI.build_case(1e-3, X, y, "selu", "Adam", "Lasso", "sum", N_=N_, max_epoch=300, scale=True, verbose=True, color="purple", **kwargs)
 # full_obs
 #-------------------------------------------------------------------------------
 def True_Temp(T, T_inf, body) :
