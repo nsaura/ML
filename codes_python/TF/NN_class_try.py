@@ -737,20 +737,25 @@ class Neural_Network():
                     curr_effective_epoch = n_batch * epoch 
                     final_effective_epoch = n_batch * self.max_epoch
                     
-                    legend_to_plots = "Train error (with batch_size = %d)" % (self.kwargs["bsz"])
+                    legend_to_plots = ["Train error (with batch size = %d)" % (self.kwargs["bsz"]), "Improvement"]
              
             else :
                 err, feeding = self.non_batched_training()
                 curr_effective_epoch = epoch 
                 final_effective_epoch = self.max_epoch
                 
-                legend_to_plots = "Train error (without batch)"
+                legend_to_plots = ["Train error (without batch)", Improvement]
                 
             if early_stop == True :
                 y_pred = self.predict(self.X_train, rescale_tab=False)
                 score_test.append(self.score(y_pred, self.y_train))
             costs.append(err)
-
+            
+            if len(costs) == 1 :
+                tocompare = 0
+            else :
+                tocompare = costs[-2]
+            
             if np.isnan(costs[-1]) : 
                 raise IOError("Warning, (effective) Epoch {}, lr = {}.. nan".format(curr_effective_epochepoch, self.lr))
             
@@ -760,16 +765,18 @@ class Neural_Network():
                     file_writer.add_summary(summary_str, curr_effective_epoch)
                 
                 if self.verbose == True :
+                    temp_comp = costs[-1] - tocompare
                     axes[0].semilogy(epoch, costs[-1], marker='o', color=self.color, linestyle="None")
-                    axes[1].plot(epoch, costs[-1], marker='o', color=self.color, linestyle="None")
+                    axes[1].semilogy(epoch, abs(temp_comp), marker='v' if temp_comp <= 0 else '^', linestyle="None",
+                                                            color='blue' if temp_comp <= 0 else 'red' )
                     
                     fig.tight_layout()
                     plt.pause(0.001)
                 
                 print("(effective) epoch {}/{}, cost = {}".format(curr_effective_epoch, final_effective_epoch, err))
             
-            for a in axes :
-                a.legend([legend_to_plots])
+            for a,l in zip(axes, legend_to_plots) :
+                a.legend([l])
                 
             if np.abs(costs[-1]) < 1e-6 :
                 print ("Final Cost ".format(costs[-1]))
@@ -901,15 +908,18 @@ class Neural_Network():
         subplot = plt.figure("Cost Evolution : loglog and lin")
         axes = subplot.axes
         fig = subplot
-                
+        
+        axes[1].cla()
+        
         axes[0].set_xlabel("#It")
         axes[0].xaxis.set_label_coords(-0.01, -0.06)
         axes[0].yaxis.set_label_position("left")
         axes[0].set_title("loglog")
+        axes[0].set_ylabel("Errors")
         
         axes[1].yaxis.set_label_position("right")
         axes[1].set_title("lin")
-        axes[1].set_ylabel("Errors")
+        axes[1].set_ylabel("Improvement Mag")
         axes[1].yaxis.set_label_position("right")
 
         return fig, axes
