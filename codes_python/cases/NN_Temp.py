@@ -41,8 +41,6 @@ except NameError:
     except ImportError:
         from imp import reload  # Python 3.0 - 3.3
 
-#run script_data_generation.py -T_inf_lst 30 -cptmax 150 -N 71 -g_sup 1e-4 -cov_mod "full"
-#run script_data_generation.py -T_inf_lst 5 10 15 20 25 30 35 40 45 50 -cptmax 150 -N 71 -g_sup 1e-4 -cov_mod "full" 
 ctc = reload(ctc)
 cfa = reload(cfa)
 NNC = reload(NNC)
@@ -121,7 +119,11 @@ N_ = {"I" : 2,\
 kwargs = {}
 kwargs["BN"] = True
 kwargs["bsz"] = 128
-nn = NNI.build_case(1e-3, X, y, "selu", "Adam", "Lasso", "sum", N_=N_, max_epoch=300, scale=True, verbose=True, color="purple", **kwargs)
+
+#nn = NNI.build_case(1e-3, X, y, "selu", "Adam", "Lasso", "sum", N_=N_, max_epoch=300, scale=True, verbose=True, color="purple", **kwargs)
+
+#solve_and_compare(temp, nn, lambda x : 18, "18")
+
 # full_obs
 #-------------------------------------------------------------------------------
 def True_Temp(T, T_inf, body) :
