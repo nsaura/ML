@@ -22,7 +22,6 @@ from sklearn.model_selection import train_test_split
 
 from tensorflow import reset_default_graph
 
-
 ## Import du chemin TF ##
 tf_folder = osp.abspath(osp.dirname("../../TF/"))
 sys.path.append(tf_folder)
@@ -37,7 +36,6 @@ import NN_class_try as NNC
 import Class_write_case as cwc
 import Class_Vit_Choc as cvc
 import harmonic_sinus as harm
-
 
 try:
     reload  # Python 2.7
@@ -64,6 +62,7 @@ curr_work = osp.join(wdir, "Nx:%d_Nt:%d_nu:%.4f_CFL:%0.2f" % (cb.Nx, cb.Nt, cb.n
 
 if osp.exists(curr_work) == False :
     os.makedirs(curr_work)
+
 
 def LW_solver(u_init, itmax=cb.itmax, filename="u_test", write=False, plot=False) :
     r = cb.dt/cb.dx

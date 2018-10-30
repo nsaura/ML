@@ -23,24 +23,28 @@ except :
 
 config = tf.ConfigProto(device_count = {'GPU': 0})
 
-sess =tf.InteractiveSession(config=config)
+sess = tf.InteractiveSession(config=config)
 
-# Page 575
+# Page 590 (a peu pres)
+# On va faire pareil sans utiliser la couche de projection
 
 X = tf.placeholder(tf.float32, [None, n_steps, n_inputs])
 y = tf.placeholder(tf.float32, [None, n_steps, n_outputs])
 
-#cell = tf.contrib.rnn.BasicRNNCell(num_units=n_neurons, activation=tf.nn.relu)
-#outputs, states = tf.nn.dynamic_rnn(cell, X, dtype=tf.float32)
+# On crée une couche récurrente
+cell = tf.contrib.rnn.BasicRNNCell(num_units=n_neurons, activation=tf.nn.relu)
+rnn_outputs, states = tf.nn.dynamic_rnn(cell, X, dtype=tf.float32)  
 
-#On a a présent un vecteur output de taille n_neurons, mais on veut une seule valeur pour une iteration
-# On wrap la loop cell dans un OutputProjectionWrapper
-# Cela consiste a lié toute les sorties avec une couche dense de neurone sans fonction d'activation
+# Puis on reshape cette sortie selon le nombre de neurones :
 
+# On empile ici toutes les sorties de la boucle recurrente
+stacked_rnn_outputs = tf.reshape(rnn_outputs, [-1, n_neurons])
 
-cell = tf.contrib.rnn.OutputProjectionWrapper(
-                    tf.contrib.rnn.BasicRNNCell(num_units=n_neurons, activation=tf.nn.relu), output_size=n_outputs)
-outputs, states = tf.nn.dynamic_rnn(cell, X, dtype=tf.float32)  
+# On projette ensuite tout ces solutions pour n'avoir qu'une seule sortie par entrée
+stacked_outputs =tf.layers.dense(stacked_rnn_outputs, n_outputs) #sans activation car projection
+
+# Et on redistribue la valeurs pour chaque batch
+outputs = tf.reshape(stacked_outputs, [-1, n_outputs])
 
 ## Loss function : MSE
 learning_rate = 1e-3
@@ -117,10 +121,8 @@ yy = Open_filt7[401:421]
 
 preds = sess.run(outputs, feed_dict={X:np.array([xx]).reshape((-1, n_steps, n_inputs))})
 
-plt.figure("Comparaisonsss")
+plt.figure("Comparaisons")
 plt.plot(range(0, len(xx)+1), Open_filt7[400:421], label="True", marker='o', linestyle="None", ms=10)
 plt.plot(range(1, len(xx)+1), preds.ravel(), label="Preds", marker='*', linestyle="None", ms=7)
 plt.legend()
-
-
 
