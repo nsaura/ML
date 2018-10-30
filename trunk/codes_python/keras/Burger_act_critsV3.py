@@ -391,7 +391,7 @@ def train (u_init, play_type="AC") :
     s_a_file = open("state_action.txt", "w") ; s_a_file.close()
     
     for ep in range(cst_REIL["episodes"]) :
-        if ep % 100 == 0 :
+        if ep % 200 == 0 :
             if decay_cri_lr == True : 
                 cri.model.optimizer.lr =\
                     decays.create_decay_fn("linear",
@@ -411,9 +411,10 @@ def train (u_init, play_type="AC") :
             else : 
                 curr_lr_actor = cst_REIL["lr_actor_init"]
             
-            deque_obj.clear()
-            while deque_obj.size() < cst_REIL["BATCH_SIZE"] : 
-                if play_type == "AC" :
+            if ep ==0 :
+                deque_obj.clear()
+                while deque_obj.size() < cst_REIL["BATCH_SIZE"] : 
+                    if play_type == "AC" :
                         play_with_ACpred(u_init)
             
         print ("episodes = %d\t lr_actor_curr = %0.8f \tlr_crits_curr = %0.8f"\
