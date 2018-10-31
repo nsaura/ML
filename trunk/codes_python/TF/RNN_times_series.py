@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+import time
+
 from scipy.signal import savgol_filter
 
 import matplotlib.pyplot as plt
@@ -22,8 +24,7 @@ except :
     pass
 
 config = tf.ConfigProto(device_count = {'GPU': 0})
-
-sess =tf.InteractiveSession(config=config)
+sess = tf.InteractiveSession(config=config)
 
 # Page 575
 
@@ -48,6 +49,7 @@ loss = tf.reduce_sum(tf.square(outputs-y))
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 training_op = optimizer.minimize(loss)
 
+time1 = time.time()
 init = tf.global_variables_initializer()
 
 n_iterations = 1000
@@ -107,7 +109,10 @@ for iteration in range(n_iterations) :
         if iteration % 100 == 0 and iteration != 0 :
             mse.append(loss.eval(feed_dict={X:X_batch, y:y_batch}))
             print (iteration, "\tMSE: ",mse[-1])
-            
+
+time2 = time.time()
+
+print ("Execution time : %.5f s" % abs(time1-time2))  
 
 plt.figure("MSE Cost")
 plt.semilogy(range(len(mse)), mse, c='grey')
