@@ -51,6 +51,9 @@ ACactions = reload(ACactions)
 Class_deque = reload(Class_deque)
 
 colors = iter(cm.plasma_r(np.arange(600)))
+
+plt.figure("Evolution de Loss sur un episodes vs iteration STEP = 100")
+plt.pause(0.01)
 #----------------------------------------------
 def samples_memories(BATCH_SIZE):
     indices = np.random.permutation(deque_obj.size())[: BATCH_SIZE]
@@ -108,8 +111,8 @@ cst_REIL["episodes"] = 50000
 cst_REIL["steps_before_change"] = 20
 
 # Deque
-cst_REIL["BATCH_SIZE"] = int(512) 
-cst_REIL["replay_memory_size"] = 5e4
+cst_REIL["BATCH_SIZE"] = int(1024) 
+cst_REIL["replay_memory_size"] =8e4
 
 deque_obj = Class_deque.deque_obj(cst_REIL["replay_memory_size"])
 
@@ -281,7 +284,7 @@ def play_with_ACpred(u_init, noisy=True):
             
             elif r_t > 1000 :
                 done = True # Game over
-                rew = -r_t  # Grosse pénalité 
+                rew = r_t*10  # Grosse pénalité 
             
             else :
                 done = False # On continue si c'est bon 
@@ -358,7 +361,7 @@ def play_with_burger(u_init):
         
         elif r_t > 10000 :
             done = True # Game over
-            rew = -r_t  # Grosse pénalité 
+            rew = r_t*100  # Grosse pénalité 
         
         else :
             done = False # On continue si c'est bon 
@@ -391,7 +394,7 @@ def train (u_init, play_type="AC") :
     s_a_file = open("state_action.txt", "w") ; s_a_file.close()
     
     for ep in range(cst_REIL["episodes"]) :
-        if ep % 200 == 0 :
+        if ep % 100  == 0 :
             if decay_cri_lr == True : 
                 cri.model.optimizer.lr =\
                     decays.create_decay_fn("linear",
@@ -526,6 +529,10 @@ def train (u_init, play_type="AC") :
         print ("total loss = %.4f" %loss)
         
         losses.append(loss)
+        
+        plt.pause(0.01)
+        if plt.fignum_exists("Evolution de Loss sur un episodes vs iteration STEP = 100") == False :
+            plt.figure("Evolution de Loss sur un episodes vs iteration STEP = 100")
         
         plt.figure("Evolution de Loss sur un episodes vs iteration STEP = 100")
         plt.semilogy(ep, loss, marker='o', ms=6, linestyle="none", c='navy')
