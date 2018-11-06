@@ -232,9 +232,9 @@ class Neural_Network():
             self.strat_done = True
         else :
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state)
-        
+                    
         X_train_mean =  X_train.mean(axis=0)
-        X_train_stdd  =  X_train.std(axis=0, ddof=1)
+        X_train_stdd  =  X_train.std(axis=0, ddof=0)
         
         if standard_scale == True :
             # We have to normalize each dimension
@@ -744,7 +744,7 @@ class Neural_Network():
                 curr_effective_epoch = epoch 
                 final_effective_epoch = self.max_epoch
                 
-                legend_to_plots = ["Train error (without batch)", Improvement]
+                legend_to_plots = ["Train error (without batch)", "Improvement"]
                 
             if early_stop == True :
                 y_pred = self.predict(self.X_train, rescale_tab=False)
@@ -1046,33 +1046,33 @@ from mpl_toolkits.mplot3d import Axes3D
 if __name__=="__main__":
     plt.ion()
     
-    from sklearn.datasets import load_boston
-    boston = load_boston()
-    X, y = boston.data, boston.target
+    from sklearn.datasets import california_housing
+    cali = california_housing.fetch_california_housing()
+    X, y = cali.data, cali.target
 
     gen_dict = lambda inputsize : \
                {"I"  : inputsize,\
-               "N1" : 100,\
-               "N2" : 10,\
-               "N3" : 10,\
-               "N4" : 10,\
+               "N1" : 200,\
+               "N2" : 5,\
+#               "N3" : 10,\
+#               "N4" : 10,\
                "O" :1}
                
     N_= gen_dict(X.shape[1])
     
-    scaler_name = ["Standard", "MinMax", "Robust", "PCA"]
+    scaler_name = ["Standard"]#], "MinMax", "Robust", "PCA"]
     names = iter(scaler_name)
-    
-    TF = Neural_Network(0.0005, N_=N_, scaler = "Standard", reduce_type="sum", color="blue", verbose=True, max_epoch=1000, clip=False, r_parameter=0.5)#, bsz=64, BN=True)#, lasso_param = l, ridge_param = r)
 
-    TF.split_and_scale(X,y,shuffle=True, val=False)
+    TF = Neural_Network(0.001, N_=N_, scaler = "Standard", reduce_type="mean", color="purple", verbose=True, max_epoch=100, clip=False, r_parameter=0.5, bsz=52, BN=True)#, lasso_param = l, ridge_param = r)
+
+    TF.split_and_scale(X, y, shuffle=True, val=False)
 
     TF.tf_variables()
-    TF.layer_stacking_and_act("relu")
+    TF.layer_stacking_and_act("selu")
     TF.def_optimizer("Adam")
     TF.cost_computation("OLS")
     TF.case_specification_recap()
-    
+
     TF.training_phase(1e-3)
 #    
     plt.figure("Prediction")

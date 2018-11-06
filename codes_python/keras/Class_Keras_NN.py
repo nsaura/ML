@@ -2,6 +2,7 @@
 # -*- coding: latin-1 -*-
 from __future__ import division
 
+import sys
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -18,7 +19,11 @@ import tensorflow as tf
 import time
 import argparse
 
+from keras import backend as K
+
 plt.ion()
+#init = keras.initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
+
 #------------------------------------------------------------------------------- 
 def parser() :
     parser = argparse.ArgumentParser(description='Parser for NN with keras')
@@ -28,13 +33,13 @@ def parser() :
                         
     parser.add_argument('--optimizer', '-opti', action='store', type=str, default="Adam",\
                         dest="opti", help='Define an optimizer. Default %(default)s\n')
-    parser.add_argument('--activation', '-act', action='store', type=str, default="relu",\
+    parser.add_argument('--activation', '-act', action='store', type=str, default="selu",\
                         dest="act", help='Define an activation function if the same for all nodes\n')
     parser.add_argument('--loss_function', '-loss', action='store', type=str, default='mse',\
                         dest="loss", help='Define a loss function to be minimized. Default to mse')
     
-    parser.add_argument('--max_epoch', '-maxepoch', action='store', type=int, default=1000,\
-                        dest="maxepoch", help='Define the number of epochs in the training. Default 1000')
+    parser.add_argument('--max_epoch', '-maxepoch', action='store', type=int, default=100,\
+                        dest="maxepoch", help='Define the number of epochs in the training. Default 100')
     
     parser.add_argument('--decay', '-decay', action='store', type=float, default=0.0,\
                         dest="decay", help="Define the learning rate decay. Default 0.0")
@@ -59,6 +64,9 @@ def parser() :
     
     parser.add_argument('--nesterov_bool', '-nest', action='store', type=bool, default=False,\
                         dest='nest', help="Specify if you want to use Nesterov Momentum (NAG) (SGD Algo)")
+    parser.add_argument('--scaling_bool', '-scale', action='store', type=bool, default=True,\
+                        dest='scale', help="Specify if you want to scale the X_train and y_train")
+    
 #    parser.add_argument('--amsgrad_bool', '-amsgrad', action='store', type=bool, default=False,\
 #                        dest='amsgrad', help="Specify if you want to use amsgrad (Adam Algo)")
     return parser.parse_args()
@@ -142,7 +150,7 @@ class K_Neural_Network () :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            activation= self.conv_str_to_acti[self.dict_layers[k][1]],\
 #                                           activity_regularizer=keras.regularizers.l2(0.5),\
-                                           kernel_initializer='random_uniform',\
+                                           kernel_initializer='random_normal',\
                                            bias_initializer='zeros',\
                                            input_dim=self.dict_layers["I"]\
                                           ))
@@ -150,13 +158,13 @@ class K_Neural_Network () :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            activation= self.conv_str_to_acti[self.dict_layers[k][1]],\
 #                                           activity_regularizer=keras.regularizers.l2(0.5),\
-                                           kernel_initializer='random_uniform',\
+                                           kernel_initializer='random_normal',\
                                            bias_initializer='zeros',\
                                            name='Dense-%s' %(k)\
                                           ))
             self.model.add(keras.layers.Dense(self.dict_layers["O"][0],\
-                                     activation=self.conv_str_to_acti[self.dict_layers["O"][1]],\
-                                     kernel_initializer='random_uniform',\
+                                     activation='linear',\
+                                     kernel_initializer='random_normal',\
                                      bias_initializer ='zeros',\
                                      name='Output-Layer'\
                                   ))
@@ -165,24 +173,24 @@ class K_Neural_Network () :
                 if j == 0 :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            input_dim=self.dict_layers["I"],\
-                                           activation=keras.layers.activations.relu,\
+                                           activation=keras.layers.activations.selu,\
 #                                           activity_regularizer=keras.regularizers.l2(0.5),\
-                                           kernel_initializer='random_uniform',\
+                                           kernel_initializer='random_normal',\
                                            bias_initializer ='zeros'\
                                           ))
                                           
                 else :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
-                                           activation=keras.layers.activations.relu,\
+                                           activation=keras.layers.activations.selu,\
 #                                           activity_regularizer=keras.regularizers.l2(0.5),\
-                                           kernel_initializer='random_uniform',\
+                                           kernel_initializer='random_normal',\
                                            bias_initializer ='zeros',\
                                            name='Dense-%s' %(k)\
                                           ))
                #Output line
             self.model.add(keras.layers.Dense(self.dict_layers["O"][0],\
-                                    activation=keras.layers.activations.relu,\
-                                    kernel_initializer='random_uniform',\
+                                    activation='linear',\
+                                    kernel_initializer='random_normal',\
                                     bias_initializer ='zeros',\
                                     name='Output-Layer'\
                                  ))
@@ -218,6 +226,9 @@ class K_Neural_Network () :
         plot_model(self.model, to_file=filename)
 #-------------------------------------------------------------------------------  
     def train_and_split(self, X, y, random_state=0, strat=False, scale=False, shuffle=True):
+        X = np.copy(X)
+        y = np.copy(y)
+        
         if shuffle == True :
             # Inspired by : Sebastian Heinz se :
             # Medium : a simple deep-learning model for stock price prediction using tensorflow
@@ -238,32 +249,36 @@ class K_Neural_Network () :
         X_train, X_test = xxyys[0], xxyys[1]
         y_train, y_test = xxyys[2], xxyys[3]
         
-        X_train_std  =  X_train.std(axis=0)
         X_train_mean =  X_train.mean(axis=0)
+        X_train_stdd  =  X_train.std(axis=0, ddof=0)
         
         if scale == True :
+            print ("Scaling")
+            time.sleep(2)
             X_train_scaled = np.zeros_like(X_train)
             X_test_scaled = np.zeros_like(X_test)
             
-            for i in range(X_train_mean.shape[0]) :
-                X_train_scaled[:, i] = X_train[:, i] - X_train_mean[i]
-                X_test_scaled[:, i] = X_test[:, i] - X_train_mean[i]
+            for i, mean in enumerate(X_train_mean) :
+                print ("i = %d\t mean[i] = %.5f" %(i, mean) )
+                X_train_scaled[:, i] = X_train[:, i] -  mean
+                X_test_scaled[:, i]  = X_test[:, i]  -  mean
                 
-                if np.abs(X_train_std[i]) > 1e-12 :
-                    X_train_scaled[:,i] /= X_train_std[i]
-                    X_test_scaled[:,i] /= X_train_std[i]
-            
-            print ("Scaling done")
-            print ("X_train_mean = \n{}\n X_train_std = \n{}".format(X_train_mean, X_train_std))
+                if np.abs(X_train_stdd[i]) > 1e-12 :
+                    X_train_scaled[:,i] /= X_train_stdd[i]
+                    X_test_scaled[:,i] /= X_train_stdd[i]
             
             X_train = X_train_scaled
             X_test = X_test_scaled
         
         self.scale = scale
         self.X_train_mean = X_train_mean
-        self.X_train_std  = X_train_std
+        self.X_train_stdd  = X_train_stdd
         self.X_train, self.X_test = X_train, X_test
         self.y_train, self.y_test = y_train, y_test
+        
+        print("Après le selfing \n")
+        print "\x1b[1;37;44m X_train.mean = \x1b[0m", self.X_train.mean() 
+        print "\x1b[1;37;44m X_train.std = \x1b[0m", self.X_train.std()
 #-------------------------------------------------------------------------------
     def compile(self, save=True, name="non-trained-model-1.h5"):
         self.summary()
@@ -332,11 +347,13 @@ class K_Neural_Network () :
             self.model.save(name)
 #-------------------------------------------------------------------------------
     def fit_model(self):           
-        bsz = self.kwargs["batch_size"] if self.batched == True else len(self.X_train)
-        self.fit = self.model.fit(self.X_train, self.y_train, epochs=self.max_epoch, batch_size=bsz)
+        x_train = np.copy(self.X_train)
+
+        bsz = self.kwargs["batch_size"] if self.batched == True else len(x_train)
+        self.fit = self.model.fit(x_train, self.y_train, epochs=self.max_epoch, batch_size=bsz)
         
         self.data["Batch_sz"] = bsz
-        self.data["Final_cost"] = self.fit.history["mse"][-1]
+        self.data["Final_cost"] = self.fit.history["mean_squared_error"][-1]
         
         lenm = len(self.metrics)
         color = iter(cm.magma_r(lenm))
@@ -377,7 +394,6 @@ def defined_optimizer(par):
                                     "schedule_decay" : 0.004}\
                         }
                                     
-        dico_pars = par.__dict__
         kwargs = {}
 
         print ("-"*20)
@@ -510,6 +526,8 @@ def defined_optimizer(par):
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 if __name__ == '__main__' : 
+    
+    K.clear_session()
     par = parser()
     
     kwargs = defined_optimizer(par)
@@ -517,32 +535,39 @@ if __name__ == '__main__' :
     print ("-"*20)
     
 #    kwargs = 
-    from sklearn.datasets import load_boston
-    X, y = load_boston().data, load_boston().target
+    from sklearn.datasets import california_housing
+    cali = california_housing.fetch_california_housing()
+    X, y = cali.data, cali.target
     
     datapath = "./../cases/data/burger_dataset/burger_matrices"    
     
+#    sys.exit()
     
-    dict_layers = {"I" : 4,\
-                   "N1" : [100,par.act],\
-                   "N2" : [100,par.act],\
-                   "N3" : [100,par.act],\
-                   "N4" : [100,par.act],\
-                   "N5" : [100,par.act],\
-                   "N6" : [100,par.act],\
-                   "O"  : [1, "relu"]\
+    dict_layers = {"I" : X.shape[-1],\
+                   "N1" : [200,par.act],\
+                   "N2" : [5, par.act],\
+    #                   "N3" : [10,par.act],\
+    #                   "N4" : [100,par.act],\
+    #                   "N5" : [100,par.act],\
+    #                   "N6" : [100,par.act],\
+                   "O"  : [1, "selu"]\
                   }
-    
-    k_nn = K_Neural_Network(dict_layers, opti=par.opti, loss=par.loss, metrics=par.metrics, max_epoch=par.maxepoch,\
-                            verbose=False, non_uniform_act=True, **kwargs) 
 
-#    k_nn.train_and_split(X, y, shuffle=True, scale=True)
+    k_nn = K_Neural_Network(dict_layers, opti=par.opti, loss=par.loss, metrics=par.metrics, max_epoch=par.maxepoch, verbose=False, non_uniform_act=True, **kwargs) 
+
+    k_nn.train_and_split(X, y, shuffle=True, scale=par.scale)
     k_nn.build()
-    
+
     temp = time.strftime("%m_%d_%Hh%M", time.localtime())
     model_name = "non-trained-model-1.h5"
-    
+
     k_nn.compile(save=True, name=model_name)
+#    k_nn.train_and_split(X, y, scale="standard")
+
+
+    k_nn.fit_model()
+
+    
 #    k_nn.model.save("keras_model.h5")
     
 #    run Class_Keras_NN.py -lr 5e-4 -opti Adam -beta1 0.8
