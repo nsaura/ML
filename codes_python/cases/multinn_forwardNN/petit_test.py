@@ -33,3 +33,5 @@ except NameError:
         from imp import reload  # Python 3.0 - 3.3
 
 import NN_class_try as NNC
+
+print ok
