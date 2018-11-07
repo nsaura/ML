@@ -174,7 +174,7 @@ class K_Neural_Network () :
                     self.model.add(keras.layers.Dense(self.dict_layers[k][0],\
                                            input_dim=self.dict_layers["I"],\
                                            activation=keras.layers.activations.selu,\
-#                                           activity_regularizer=keras.regularizers.l2(0.5),\
+                                           activity_regularizer=keras.regularizers.l1(0.01),\
                                            kernel_initializer='random_normal',\
                                            bias_initializer ='zeros'\
                                           ))
@@ -321,27 +321,27 @@ class K_Neural_Network () :
         
         self.model.compile(loss=self.keras_loss, optimizer=optimizer, metrics=self.metrics)
         
-        data = {}
-        data["LR"] = kwargs["lr"]
+        opti_config = {}
+        opti_config["LR"] = self.kwargs["lr"]
         
         if self.opti in ["Adam", "Adamax", "Nadam"] :
-            data["Beta1"] = kwargs["beta1"]
-            data["Beta2"] = kwargs["beta2"]
+            opti_config["Beta1"] = self.kwargs["beta1"]
+            opti_config["Beta2"] = self.kwargs["beta2"]
             try :
-                data["Decay"] = kwargs["decay"]
+                opti_config["Decay"] = self.kwargs["decay"]
             except KeyError :
-                data["Decay"] = kwargs["schedule_decay"]        
+                opti_config["Decay"] = self.kwargs["schedule_decay"]        
         
         if self.opti == "SGD" :
-            data["Decay"] = kwargs["decay"]
-            data["Momentum"] = kwargs["momentum"] 
-            data["Nesterov"] = kwargs["nesterov"]
+            opti_config["Decay"] = self.kwargs["decay"]
+            opti_config["Momentum"] = self.kwargs["momentum"] 
+            opti_config["Nesterov"] = self.kwargs["nesterov"]
         
         if self.opti == "RMSprop":
-            data["Rho"] = kwargs["rho"]
-            data["Decay"] = kwargs["decay"]
+            opti_config["Rho"] = self.kwargs["rho"]
+            opti_config["Decay"] = self.kwargs["decay"]
         
-        self.data = data
+        self.opti_config = opti_config
         
         if save == True :
             self.model.save(name)
@@ -352,8 +352,8 @@ class K_Neural_Network () :
         bsz = self.kwargs["batch_size"] if self.batched == True else len(x_train)
         self.fit = self.model.fit(x_train, self.y_train, epochs=self.max_epoch, batch_size=bsz)
         
-        self.data["Batch_sz"] = bsz
-        self.data["Final_cost"] = self.fit.history["mean_squared_error"][-1]
+        self.opti_config["Batch_sz"] = bsz
+        self.opti_config["Final_cost"] = self.fit.history["mean_squared_error"][-1]
         
         lenm = len(self.metrics)
         color = iter(cm.magma_r(lenm))
@@ -362,7 +362,7 @@ class K_Neural_Network () :
         
         for i in self.metrics :
             c = next(color)
-            plt.plot(self.fit.history['%s' % i], label="%s" % i)
+            plt.semilogy(self.fit.history['%s' % i], label="%s" % i)
         
         plt.legend()
         self.prediction = self.model.predict
