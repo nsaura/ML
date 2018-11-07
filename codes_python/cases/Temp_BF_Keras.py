@@ -102,8 +102,8 @@ else :
 
 dict_layers = {"I" : 2,\
                "N1" : [300,'selu'],\
-               "N2" : [10,'selu'],\
-               "N3" : [5, 'selu'],\
+               "N2" : [100,'selu'],\
+               "N3" : [10, 'selu'],\
 #               "N4" : 10,\
 #               "N5" : 10,\
 #               "N6" : 10,\
@@ -118,8 +118,6 @@ kwargs["batch_size"] = 128
 
 dico = {'opti': 'Adam', 'metrics':['mean_squared_error', 'mean_absolute_error'], 'loss':'mse', 'max_epoch':100,
         'batch_size': 128, 'non_uniform_act' : True, 'save': True, 'scale':True, 'shuffle': True, 'color': 'navy'}
-
-
 
 default_value ={"SGD"   : {"lr" : 0.01,\
                                   "momentum" : 0.0,\
@@ -154,6 +152,9 @@ for k, v in default_value.iteritems():
             kwargs[vk] = vv
 
 def modif_dico(dico, key, new_value) :
+    if key not in dico.keys() :
+        raise KeyError
+        
     dico[key] = new_value
 
 #-------------------------------------------------------------------------------
@@ -193,7 +194,7 @@ def True_Temp(T, T_inf, body) :
 
     tol ,err_obs, compteur = 1e-8, 1.0, 0 
     
-    while (np.abs(err_obs) > tol) and (compteur < 10000) :
+    while (np.abs(err_obs) > tol) and (compteur < 12000) :
         if compteur > 0 :
             T_n_obs = T_nNext_obs
         compteur += 1
@@ -213,7 +214,11 @@ def True_Temp(T, T_inf, body) :
     print ("Iterations = {} ".format(compteur))
     
     return T_nNext_obs
+
 #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
 def solve_and_compare(temp, k_nn, T_inf, body) :
     """ T_inf doit etre une lambda """
     
@@ -240,3 +245,111 @@ def solve_and_compare(temp, k_nn, T_inf, body) :
     plt.plot(temp.line_z, true, label="True", color='black')
     plt.plot(temp.line_z, T_solved, label="pred", linestyle="none", marker='o', color=k_nn.kwargs["color"], fillstyle="none")
     plt.legend()
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+    
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.linear_model import LinearRegression as LR
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+
+path = osp.split(Xcasetoloadifexists)[0]
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+def write_train_and_test_sets(k_nn, action='save', path=path):
+    
+    paths = {'X_train' : [osp.join(path, 'X_train.npy'), k_nn.X_train],
+             'y_train' : [osp.join(path, 'y_train.npy'), k_nn.y_train],
+             'X_test'  : [osp.join(path, 'X_test.npy') , k_nn.X_test] ,
+             'y_test'  : [osp.join(path, 'y_test.npy') , k_nn.y_test] }
+    
+        
+    if action == 'save' :
+        for lsts in paths.values() : 
+            np.save(lsts[0], lsts[1])
+            
+    xtr, ytr = np.load(paths['X_train'][0]), np.load(paths['y_train'][0])
+    xte, yte = np.load(paths['X_test'][0]), np.load(paths['y_test'][0])
+    
+    return xtr, ytr, xte, yte
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+#def scikit_prediction(model, model_name, T_inf)
+
+def processing(T, model, model_name, T_inf, body, scale) :
+    T_ML, beta_ML = T_to_beta(T, model, mean, std, T_inf, body, scale)
+    T_true = GPC.True_Temp(T ,map(T_inf, T.line_z), body)
+    true_beta = GPC.True_Beta(T, T_true, map(T_inf, T.line_z))
+
+    plt.ion()
+    plt.figure("T_%s_vs_True%s" %(model_name, body))
+    plt.plot(T.line_z, T_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML_%s_%s" %(model_name, body))
+    plt.plot(T.line_z, T_true, label="True_%s_%s" %(model_name, body), linestyle='--', c='k')
+    plt.legend()
+
+    plt.figure("beta_%s_vs_True_%s" %(model_name, body))
+    plt.plot(T.line_z, beta_ML, marker='o', linestyle='none', fillstyle='none', c='purple', label="ML_%s_%s" %(model_name, body))
+    plt.plot(T.line_z, true_beta, label="True_%s_%s" %(model_name, body), linestyle='--', c='k')
+    plt.legend()
+    
+    return T_ML, beta_ML, T_true.ravel(), true_beta.ravel()
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+def several_models(X_train, y_train, X_test, y_test) :
+
+    ## Entraînement des modèles
+    ridge = Ridge(alpha=0.0001).fit(X_train,y_train)
+    print("Ridge Score train set : {}".format(ridge.score(X_train, y_train.ravel())))
+    print("Ridge Score test set :  {}\n ".format(ridge.score(X_test, y_test)))
+
+    lasso = Lasso(alpha=0.01, max_iter=100000).fit(X_train,y_train)
+    print("Lasso 0.01 Score train set : {}".format(lasso.score(X_train, y_train)))
+    print("Lasso 0.01 Score test set :  {}\n ".format(lasso.score(X_test, y_test)))
+
+    lasso_ = Lasso(alpha=0.00001, max_iter=100000).fit(X_train,y_train)
+    print("Lasso 0.00001 Score train set : {}".format(lasso_.score(X_train, y_train)))
+    print("Lasso 0.00001 Score test set :  {}\n ".format(lasso_.score(X_test, y_test)))
+
+    LinReg = LR().fit(X_train,y_train)
+    print("Linear Regression Train set : {}".format(LinReg.score(X_train, y_train)))
+    print("Linear Regression Test set :  {}\n ".format(LinReg.score(X_test, y_test)))
+
+    n_esti = 100
+    forest = RandomForestRegressor(n_estimators=n_esti, random_state=0)
+    forest.fit(X_train, y_train)
+    print("Forest n_esti {} Score train set : {}".format(n_esti ,forest.score(X_train, y_train)))
+    print("Forest n_esti {} Score test set :  {}\n ".format(n_esti, forest.score(X_test, y_test)))
+
+    lr, max_depth = 0.1, 5
+    gbrt_mdlow = GradientBoostingRegressor(random_state=0, max_depth=max_depth, learning_rate=lr).fit(X_train, y_train)
+    print("GBRT lr={}, max_dpeth={} score train set: {}".format(lr, max_depth, gbrt_mdlow.score(X_train,y_train)))
+    print("GBRT lr={}, max_depth={} score test set:  {}\n ".format(lr, max_depth, gbrt_mdlow.score(X_test,y_test)))
+
+    max_depth = 4 
+    tree = DecisionTreeRegressor(max_depth=max_depth, random_state=0).fit(X_train, y_train)
+    print("DT max_depth {} Score train set : {}".format(max_depth, tree.score(X_train, y_train)))
+    print("DT max_depth {} Score test set :  {}\n ".format(max_depth, tree.score(X_test, y_test)))
+
+    knn = KNeighborsRegressor(n_neighbors=5).fit(X_train, y_train)
+    print("reg Score train set : {}".format(knn.score(X_train, y_train)))
+    print("reg Score test set :  {}\n ".format(knn.score(X_test, y_test)))
+
+    model = [ridge, lasso, LinReg, forest, gbrt_mdlow, tree, knn]
+    names = ["Ridge", "lasso", "LinReg", "Forest", "GrdBoost", "DT", "knn" ]
+
+    llist = [lambda z : 35-15*z, lambda z: 35+20*np.sin(np.pi*2*z), lambda z: 28]
+    blist = ["35-15z", "35+20sin_2piz", "28"]
+
+    for m, n in zip(model, names): 
+        for T_inf, body in zip(llist, blist):  
+            processing(T, m, n, mean, std, T_inf, body, True)
+
