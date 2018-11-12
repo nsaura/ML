@@ -1,0 +1,111 @@
+\documentclass[french, 12pt]{article}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{array}    %% Pour les tableaux
+\geometry{hmargin=2.5cm, vmargin = 3.0cm}
+%%% Personnalisation des en-têtes et pieds de pages
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+
+\renewcommand{\footrulewidth}{1pt} %%% Une barre en haut
+\renewcommand{\headrulewidth}{1pt} %%% Une barre en haut
+\fancyfoot[L]{\leftmark}
+\fancyfoot[C]{\thepage}
+\fancyfoot[R]{\textbf{Notes sur la cosmologie}}
+
+%\fancyhead[C]{\leftmark}
+
+\usepackage[svgnames]{xcolor}				% Voir : http://calque.pagesperso-orange.fr/latex/latexps.html
+\usepackage{listings}					% Pour citer du code
+\usepackage{etex}
+\usepackage{scrbase}
+\newcommand{\pathpic}{/home/saura/Documents/Latex_files/Pic/}
+
+%%% Couleurs %%%
+\xdefinecolor{purple}{named}{MediumVioletRed}
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{forest}{named}{DarkMagenta}
+\xdefinecolor{dgreen}{named}{DarkOliveGreen}
+\xdefinecolor{sbrown}{named}{SaddleBrown}
+\xdefinecolor{brick}{named}{FireBrick}
+\xdefinecolor{dred}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{choco}{named}{Chocolate}
+
+\newcommand{\brick}{\color{brick}}
+\newcommand{\npurple}{\color{forest}}
+\newcommand{\dgreen}{\color{dgreen}}
+\newcommand{\sbrown}{\color{sbrown}}
+\newcommand{\brik}{\color{brick}}
+\newcommand{\navy}{\color{navy}}
+\newcommand{\dred}{\color{dred}}
+\newcommand{\choco}{\color{choco}}
+
+\newcommand{\bl}{\color{blue}}
+\newcommand{\bk}{\color{black}}
+\newcommand{\red}{\color{red}}
+\newcommand{\gre}{\color{green}}
+
+\newcommand{\cad}{c'est-à-dire}
+\newcommand{\vav}{vis-à-vis}
+\newcommand{\iieme}{i$^{\text{ème}}$}
+\newcommand{\jeme}{j$^{\text{ème}}$}
+
+\newcommand{\xhhu}{$\mathsf{x}$, $\mathsf{h}$ et $\mathsf{hu}$}
+\newcommand{\hhu}{$\mathsf{h}$ et $\mathsf{hu}$}
+\newcommand{\fhfu}{$\mathsf{fh}$ et $\mathsf{fu}$}
+
+% Hyper ref
+\usepackage[linkcolor=Chocolate,colorlinks=true]{hyperref} 	
+
+\newcaptionname{french}{\lstlistingname}{Code }
+
+%%% Élément pour citer des codes %%%
+\lstset{
+language=C++,
+basicstyle=\ttfamily\bfseries\small, %
+identifierstyle=\bfseries\bk, %
+keywordstyle=\color{blue}, %
+stringstyle=\choco, %
+commentstyle=\it\npurple, %
+morekeywords={*, MPI_Init, MPI_Comm_size, MPI_Comm_rank, MPI_Send, MPI_Rec, MPI_Bcast, MPI_Gather, fmax , if, fopen, fclose, fscanf, *}
+columns=flexible, %
+tabsize=4, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, %
+numbers=left, %
+numberstyle=\small, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b
+}
+
+\begin{document}
+
+%\author{\navy \textbf{SAURA} \bk \textbf{Nathaniel}}
+\title{\navy \textbf{Notes Sur la Cosmologie}} \bk
+
+\date{}
+\maketitle
+
+\thispagestyle{fancy}
+
+Un trou noir naît lorsqu'une étoile relativement lourde (quelques masses solaires) s'effondre sur elle même. Cet effondrement se produit lorsque sa quantité de "carburant" nucléaire n'est plus assez suffisante pour contre balancer le poids de cette étoile.\\
+L'espace temps sur lequel cette étoile flottait se retrouve alors déformé. Pour comprendre cette image, on peut imaginer une balle roulant sur un filet tendu aux mailles resserrées : localement, le filet se tord. Si la balle ne bouge plus, elle créé un creux dans le filet, dans notre comparaison, ce creux constitue le trou noir.\\\\
+Le trou noir est vu comme une singularité : un point où la masse est énorme. La loi d'attraction gravitationnelle stipule que l'attraction d'un corps sur un autre est proportionnelle au produit des deux masses, et inversement proportionnelle au carré de la distance séparant ces deux corps. On peut donc l'écrire :
+\begin{equation}
+\vec{F}_{A \rightarrow B} = -G \frac{M_A M_B}{D^2	_{AB}} \vec{U}_{AB}
+\end{equation}
+ \noindent La notation vectorielle ici vient rappeler le caractère attractif de la force : La force que A exerce sur B se traduit par un mouvement de B dans vers A (d' où le signe moins) ; G est une constante universelle.\\
+ L'intensité, ou magnitude, de la force que l'on note $F_{A\rightarrow B} = G \frac{M_A M_B}{D^2	_{AB}}$ dépend essentiellement de trois paramètres : les deux masses et la distances. \\
+ Une première approche consisterait à considérer que les masses et la distance entre les deux corps sont constantes au cours du temps. Dans le cas de la Terre ou et de la Lune par exemple, l'hypothèse de masses identiques paraît tenir, c'est moins évident pour la distance les séparant au cours du temps.\\
+ Dans le cas du trou noir, même les masses varient au cours du temps, c'est ce dont nous allons entre autres discuter dans ce document.
+
+
+\end{document}

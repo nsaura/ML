@@ -1,0 +1,200 @@
+\documentclass[a4paper,12pt]{article} 
+\usepackage[utf8x]{inputenc}
+\usepackage[french]{babel}
+\usepackage{mathtools}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{textcomp}
+\usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
+\usepackage{ifthen}
+\usepackage{tabularx}	 				% Gestion avancée des tableaux
+\usepackage{longtable}		
+%\usepackage{cleveref}
+
+\usepackage{enumitem}
+\usepackage{wrapfig}
+%\usepackage[squaren]{SIunits}
+%\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
+\usepackage[linkcolor=red,colorlinks=true, citecolor=SaddleBrown, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage{listings}					% Pour citer du code
+\usepackage[justification=centering]{caption}
+\usepackage{sistyle} 
+\usepackage{numprint}
+\usepackage{wrapfig}
+\usepackage{cite}	
+\usepackage{url} 					% Pour citer les sites internet dans la
+%\usepackage{cleveref}
+\usepackage{setspace}
+
+\usepackage{graphicx}		 			% Inclusion des figures
+\graphicspath{{./pic/}}
+\usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
+
+%%% Commandes utiles définies%
+\newcommand{\argmin}{\mathop{\mathrm{argmin}}}
+
+\newcommand{\bepar}[1]{
+	\left( #1 \right)  
+}
+
+\newcommand{\becro}[1]{
+	\left[ #1 \right]  
+}
+
+\newcommand{\beacc}[1]{
+	\left\{ #1 \right \}  
+}
+
+\newcommand{\norm}[1]{
+	\left \vert \left \vert #1 \right \vert  \right \vert
+}
+
+\newcommand{\uin}[2]{
+	\underline{\texttt{u}}_{#1}^{#2}
+}
+\newcommand{\ui}[1]{
+	\underline{\texttt{u}}_{#1}^{n}
+}
+\newcommand{\dij}[1]{
+	\delta_{#1,j}
+}
+\usepackage{listings}					% Pour citer du code
+%%%%%%%%%%%%%%%%%%%
+%%% Élément pour citer des codes %%%
+\lstset{
+language=Python,
+basicstyle=\ttfamily\bfseries\small, %
+identifierstyle=\bfseries\color{black}, %
+keywordstyle=\color{blue}, %
+stringstyle=\color{black!90}, %
+commentstyle=\it\color{black!70}, %
+columns=flexible, %
+tabsize=4, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, % %
+numberstyle=\small, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b,
+otherkeywords={cross_val_score},
+keywords=[0]{cv},
+keywordstyle=[0]{\color{red}},
+}
+%%%%%%%%%%%%%%%%%%%%%
+\title{\navy \textbf{Raw Notes from Articles: \color{black}}}%%%%%%%%%%%%%%%%%%%%
+\date{}
+%\usepackage{multicol}
+%\usepackage{etoolbox}
+%\patchcmd{\thebibliography}{\section*{\refname}}
+%    {\begin{multicols}{2}[\section*{\refname}]}{}{}
+%\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
+\usepackage[authoryear]{natbib}
+\usepackage{geometry}
+\geometry{hmargin=2cm, vmargin=2cm}
+
+%%%%%%%%%%%%%%%%%%%%
+%%% Couleurs %%%
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{midblue}{named}{MidnightBlue}
+\xdefinecolor{dsb}{named}{DarkSlateGray}
+\xdefinecolor{dgreen}{named}{DarkGreen}
+\xdefinecolor{indian}{named}{IndianRed}
+
+%%% 	Raccourcis 	%%%
+\newcommand{\keps}{$k-\varepsilon$}
+\newcommand\bk{\color{black}}
+\newcommand\brick{\color{brick}}
+\newcommand\navy{\color{navy}}
+\newcommand\midblue{\color{midblue}}
+\newcommand\dsb{\color{dsb}}
+\newcommand{\dgreen}{\color{dgreen}}
+\newcommand{\dpurple}{\color{indian}}
+\newcommand\red{\color{red}}
+
+%%%%%%%% Cigles
+\newcommand{\rap}{par rapport}
+\newcommand{\cad}{c'est-à-dire}
+\newcommand{\vav}{vis-à-vis}
+
+%%%%%%%% Autres
+
+%%%%%%%%%%%%%%%%%%%
+% Syntax: \colorboxed[<color model>]{<color specification>}{<math formula>}
+\newcommand*{\colorboxed}{}
+\def\colorboxed#1#{%
+  \colorboxedAux{#1}%
+}
+\newcommand*{\colorboxedAux}[3]{%
+  % #1: optional argument for color model
+  % #2: color specification
+  % #3: formula
+  \begingroup
+    \colorlet{cb@saved}{.}%
+    \color#1{#2}%
+    \boxed{%
+      \color{cb@saved}%
+      #3%
+    }%
+  \endgroup
+}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\textbf{Nathaniel} \brick \textbf{\textsc{Saura}}}
+\rhead{\markright}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\numberwithin{equation}{section} %%%% To count the equation like Section.Number
+
+\usepackage{accents}
+\newcommand{\vect}[1]{\accentset{\Rightarrow}{#1}}
+
+\usepackage{multicol}		% Pour utiliser \hfill et découper une partie de son texte en colonnes
+\setlength{\columnseprule}{0.1pt}
+\def\columnseprulecolor{\color{red}}
+\setlength{\columnsep}{1.5cm}
+
+% Numéro Roman pour le texte
+\makeatletter
+\newcommand*{\rom}[1]{\expandafter\@slowromancap\romannumeral #1@}
+\makeatother
+
+\begin{document}
+\section*{Raw notes}
+\subsubsection*{\citep{LIN2003611} on PCA}
+The preprocessing could improve not only training efficiency but also prediction capability of ANN models [19,20]. Some researches [17,23] reported that the technique of \red \textbf{Principal Component Analysis (PCA) could efficiently reduce the number of input variables in a dynamic neural network by eliminating redundant input variables} \bk. The efficiency of PCA is highly depended on the characteristics of data set used as input data. In the work of Bakker et al.[16], they used the raw data of electrical capacitance tomography (ECT) measurements. By applying PCA, \red \textbf{the 66 capacitances were reduced to only three principal components} \bk that explained almost 99\% of the variance of the data. In our work, the time intervals of the original bubble passage time series were used as input data. \\
+It is expected that time interval data contained less high frequency noises and were less linearly correlated. We found the variance of input data sets in this study changed greatly after the processing of PCA. Therefore, PCA is considered not to be effective in our work.\\
+The preliminary study of preprocessing showed that the approach \red \textbf{which is to make the logarithmic transformation of the training data set first and then normalize them with zero mean and unity  standard deviation} \bk was the most efficient data preprocessing method of the viable methods tested.
+
+\subsubsection*{\citep{parish2016reduced} on coarse-grained model}
+The continuous interaction between the resolved and unresolved scales leads \red \textbf{to non-local effects that are challenging to understand and model} \bk. Traditional sub-grid models are based on theoretical arguments and physical observations, such as homogeneity and scale invariance, and are known to be inadequate in many problems of engineering interest.
+
+
+\subsubsection*{\citep{khosravi2011comprehensive}}
+\paragraph*{Chap \rom{1}} : On NN \\ 
+$[...]$ or abrupt changes in weather conditions in the national energy market may have direct impacts on the throughput, performance, or reliability of the underlying systems. 
+[..] Even if these are known or predictable, the targets will be multi-valued, making predictions prone to error. This weakness is due to the theoretical point that NNs generate averaged values of targets conditioned on inputs [...]. \\
+The second problem of NNs is that they only provide point predictions without any indication of their accuracy. Point predictions are less reliable and accurate if the training data is sparse,  if targets are multi-valued, or if targets are affected by probabilistic events [...]. \\
+The main motivation for the construction of \red PIs \bk is to quantify the likely uncertainty in the point forecasts. \navy \textbf{Wide PIs} \bk are an indication of presence of a \navy \textbf{high level of uncertainty}\bk in the operation of the underlying system. \dgreen \textbf{Narrow PIs} \bk mean that decisions can be made \dgreen \textbf{more confidently with less chance of confronting an unexpected} \bk  condition in the future [...].\\
+Often the coverage probability index, the percentage of target values covered by PIs, is used for assessment of the PI quality, and discussion about the width of PIs is either ignored or vaguely presente.
+
+\newpage 
+
+\subsubsection*{Lex Friedman Lecture 2}
+\noindent Drawback or perceptron (bilnary old school NN) learning not smooth.\\
+Perceptron used step function. \\
+Neuron used sigmoid and other improved functions. Learnig is now more robust and so it is the adjustment of weights.\\
+
+\noindent FNN gots Hidden Layers that are at the core of the computationnal power of NN. Their task is forming a representation of data in such a way that it maps inputs with outputs. \\
+We can not prove and understand much in Neural Network because the function is highly non linear but smooth enough for the gradient descend algorithm to find a minima, even if it requires stochastic noise.\\
+S.L. is very good to memorization but not that much in reasoning or generalizing to object beyond its dataset groundtruth.
+
+
+\newpage
+
+\bibliographystyle{apalike}
+\bibliography{bibliotheque}
+
+\end{document}
