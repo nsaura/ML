@@ -1,0 +1,279 @@
+\documentclass[a4paper,12pt]{article} 
+\usepackage[utf8x]{inputenc}
+\usepackage[french]{babel}
+\usepackage{mathtools}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{textcomp}
+\usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
+\usepackage{ifthen}
+\usepackage{tabularx}	 				% Gestion avancée des tableaux
+\usepackage{longtable}		
+%\usepackage{cleveref}
+
+\usepackage{enumitem}
+\usepackage{wrapfig}
+%\usepackage[squaren]{SIunits}
+%\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
+\usepackage[linkcolor=red,colorlinks=true, citecolor=SaddleBrown, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage{listings}					% Pour citer du code
+\usepackage[justification=centering]{caption}
+\usepackage{sistyle} 
+\usepackage{numprint}
+\usepackage{wrapfig}
+\usepackage{cite}	
+\usepackage{url} 					% Pour citer les sites internet dans la
+%\usepackage{cleveref}
+\usepackage{setspace}
+
+\usepackage{graphicx}		 			% Inclusion des figures
+\graphicspath{{./pic/}}
+\usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
+
+%%% Commandes utiles définies%
+\newcommand{\argmin}{\mathop{\mathrm{argmin}}}
+
+\newcommand{\bepar}[1]{
+	\left( #1 \right)  
+}
+
+\newcommand{\becro}[1]{
+	\left[ #1 \right]  
+}
+
+\newcommand{\beacc}[1]{
+	\left\{ #1 \right \}  
+}
+
+\newcommand{\norm}[1]{
+	\left \vert \left \vert #1 \right \vert  \right \vert
+}
+
+\newcommand{\uin}[2]{
+	\underline{\texttt{u}}_{#1}^{#2}
+}
+\newcommand{\ui}[1]{
+	\underline{\texttt{u}}_{#1}^{n}
+}
+\newcommand{\dij}[1]{
+	\delta_{#1,j}
+}
+\usepackage{listings}					% Pour citer du code
+%%%%%%%%%%%%%%%%%%%
+%%% Élément pour citer des codes %%%
+\lstset{
+language=Python,
+basicstyle=\ttfamily\bfseries\small, %
+identifierstyle=\bfseries\color{black}, %
+keywordstyle=\color{blue}, %
+stringstyle=\color{black!90}, %
+commentstyle=\it\color{black!70}, %
+columns=flexible, %
+tabsize=4, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, % %
+numberstyle=\small, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b,
+otherkeywords={cross_val_score},
+keywords=[0]{cv},
+keywordstyle=[0]{\color{red}},
+}
+%%%%%%%%%%%%%%%%%%%%%
+\title{\navy \textbf{Calculs méthode adjoint burger : \color{black}}}%%%%%%%%%%%%%%%%%%%%
+\date{}
+%\usepackage{multicol}
+%\usepackage{etoolbox}
+%\patchcmd{\thebibliography}{\section*{\refname}}
+%    {\begin{multicols}{2}[\section*{\refname}]}{}{}
+%\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
+\usepackage[authoryear]{natbib}
+\usepackage{geometry}
+\geometry{hmargin=2cm, vmargin=2cm}
+
+%%%%%%%%%%%%%%%%%%%%
+%%% Couleurs %%%
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{midblue}{named}{MidnightBlue}
+\xdefinecolor{dsb}{named}{DarkSlateGray}
+\xdefinecolor{dgreen}{named}{DarkGreen}
+\xdefinecolor{indian}{named}{IndianRed}
+
+%%% 	Raccourcis 	%%%
+\newcommand{\keps}{$k-\varepsilon$}
+\newcommand\bk{\color{black}}
+\newcommand\brick{\color{brick}}
+\newcommand\navy{\color{navy}}
+\newcommand\midblue{\color{midblue}}
+\newcommand\dsb{\color{dsb}}
+\newcommand{\dgreen}{\color{dgreen}}
+\newcommand{\dpurple}{\color{indian}}
+\newcommand\red{\color{red}}
+
+%%%%%%%% Cigles
+\newcommand{\rap}{par rapport}
+\newcommand{\cad}{c'est-à-dire}
+\newcommand{\vav}{vis-à-vis}
+
+%%%%%%%% Autres
+
+%%%%%%%%%%%%%%%%%%%
+% Syntax: \colorboxed[<color model>]{<color specification>}{<math formula>}
+\newcommand*{\colorboxed}{}
+\def\colorboxed#1#{%
+  \colorboxedAux{#1}%
+}
+\newcommand*{\colorboxedAux}[3]{%
+  % #1: optional argument for color model
+  % #2: color specification
+  % #3: formula
+  \begingroup
+    \colorlet{cb@saved}{.}%
+    \color#1{#2}%
+    \boxed{%
+      \color{cb@saved}%
+      #3%
+    }%
+  \endgroup
+}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\textbf{Nathaniel} \brick \textbf{\textsc{Saura}}}
+\rhead{\markright}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\numberwithin{equation}{section} %%%% To count the equation like Section.Number
+
+\usepackage{accents}
+\newcommand{\vect}[1]{\accentset{\Rightarrow}{#1}}
+
+\usepackage{multicol}		% Pour utiliser \hfill et découper une partie de son texte en colonnes
+\setlength{\columnseprule}{0.1pt}
+\def\columnseprulecolor{\color{red}}
+\setlength{\columnsep}{1.5cm}
+
+% Numéro Roman pour le texte
+\makeatletter
+\newcommand*{\rom}[1]{\expandafter\@slowromancap\romannumeral #1@}
+\makeatother
+
+\begin{document}
+\maketitle 
+\setcounter{section}{1}
+\noindent On a le problème exact :
+\begin{equation} \tag{1 - exact}
+\partial_t u + \partial_x \frac{u^2}{2} - \nu \partial_{xx}u = 0 \label{pb_ex}
+\end{equation}
+Et le modèle inexact :
+\begin{equation} \tag{2 - inexact}
+\mathcal{R} = \partial_t u + \beta \partial_x u - \nu \partial_{xx}u = 0 \label{pb_inex}
+\end{equation}
+Avec $\beta$ le terme que l'on cherche à inférer.\\
+
+\noindent  On discrétise \eqref{pb_inex} en utilisant Crank Nicholson pour le terme en dérivée seconde :
+\begin{equation} \setcounter{equation}{1}
+\mathcal{R}^n_i = u^{n+1}_i - u^n_i + r \beta  \bepar{u_{i+1} - u_i} - \frac{\alpha}{2} \bepar{u^{n+1}_{i+1} - 2u^{n+1}_i + u^{n+1}_{i-1} + u^{n}_{i+1} - 2 u^{n}_{i} + u^{n}_{i-1}}  = 0 \label{inex_discr}
+\end{equation}
+Avec $\displaystyle r = \frac{\Delta t}{\Delta x}$ et $ \displaystyle\alpha = \frac{\nu\Delta t}{\Delta x ^2}$.\\
+ \\
+ \noindent La méthode adjoint consiste à écrire 
+ \begin{equation}
+\frac{d\mathcal{J}}{d\beta} = \partial_\beta \mathcal{J} - \partial_u \mathcal{J} \bepar{\partial_u \mathcal{R}}^{-1}\partial_\beta\mathcal{R} \label{adjoint}
+ \end{equation}
+ 
+\noindent On écrit $\mathcal{J}$ comme une Ridge regression. On introduit $U^{n+1}_{\text{obs}}$ la solution du problème \eqref{pb_ex} utilisant Lax-Wendroff, et $U^{n+1}_\beta$ la solution de \eqref{pb_inex} utilisant Crank Nicholson.\\
+ \begin{equation}
+ \mathcal{J}^n = \frac{1}{2} \bepar{\bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}}^T \text{C}_\text{obs}^{-1} \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}} + \lambda \bepar{\beta^n - \beta_{\text{p}}}^T \text{I}_d \bepar{\beta^n - \beta_\text{p}}}
+ \end{equation}
+ 
+ 
+\noindent À chaque itération, par le biais d'une minimisation de $\mathcal{J}^n$, on cherchera $\beta^n$ tel que $U^n_{\text{obs}}$ et $U^n_\beta$ soient le plus proches possible, ainsi on fait converger la solution de \eqref{pb_inex} vers celle de \eqref{pb_ex} à l'itération n, pour tout n.\\
+   
+\noindent  On exprime les termes de \eqref{adjoint} : 
+\begin{equation}
+\frac{\partial \mathcal{J}^n }{\partial \beta^n_j} = \lambda \delta_{ij} \bepar{\beta_i^n - \beta_i^{\text{p}}}
+\end{equation}
+\red
+\begin{equation}
+\frac{\partial \mathcal{J}^n}{\partial u_j^n} = -\text{C}_\text{obs}^{-1} \bepar{U^n_{\text{obs, j}} - U^n_{\beta, j}} ^*
+\end{equation}
+\bk
+\begin{equation}
+\frac{\partial \mathcal{R}^n_i }{u_j^n} = \delta_{ij}\bepar{\alpha -\bepar{1 + r \beta_i^n}} + \delta_{i+1, j} \bepar{r \beta^n_i - \frac{\alpha}{2}} + \delta_{i-1, j} \bepar{-\frac{\alpha}{2}} 
+\end{equation}
+\begin{equation}
+\frac{\partial \mathcal{R}_i^n}{\partial \beta_i^n} = \delta_{ij} r \bepar{u^n_{i+1} - u^n_i}
+\end{equation}
+Les différentes matrices sont évaluées puis calcule de DJ et procédure d'optimisation utilisant BFGS, Nelder-Meld, Powell, CG etc.\\
+\red $^*$ Cette équation semble fausse.
+\bk
+\pagebreak
+
+On rappelle l'écriture du Lax-Wendroff (LW) :
+\begin{equation}
+\partial_t \vec{W} +  \partial_x \vec{F} = \nu \partial_{x,x} \vec{W}
+\end{equation}
+(Ici en 1d) Avec $W = u_x = u $ et $\vec{F} = F$ le vecteur flux associé soit ici $\displaystyle \frac{u^2}{2}$.\\
+Le LW est un schéma à deux temps dont la maille est en diamant :
+\begin{equation} \tag{\'etape 1}
+\uin{i + \frac{1}{2}}{n + \frac{1}{2}} = \frac{1}{2} \bepar{\uin{i+1}{n} + \uin{i}{n}} - \frac{r}{2} \bepar{\underline{\texttt{f}}_{i+1}^n - \underline{\texttt{f}}_{i}^n} \label{et1}
+\end{equation}
+\begin{equation} \tag{\'etape 2}
+\uin{i}{n+1} = \uin{i}{n} - r \bepar{\underline{\texttt{f}}_{i+\frac{1}{2}}^{n + \frac{1}{2}} - \underline{\texttt{f}}_{i-\frac{1}{2}}^{n + \frac{1}{2}}} \label{et2}
+\end{equation}
+Or puisque $\displaystyle \underline{\texttt{f}}_{i+1}^n = \frac{\uin{i+1}{n} ²}{2}$ on réécrit l'\ref{et1} en fonction de $\uin{i}{n}$ seulement, aux points $\bepar{ i - \frac{1}{2},\, n+\frac{1}{2}}$ et $\bepar{ i + \frac{1}{2},\, n+\frac{1}{2}}$   :
+\begin{equation}
+\uin{i - \frac{1}{2}}{n+\frac{1}{2}} = \bepar{\frac{1}{2}\bepar{\uin{i}{n}+\uin{i-1}{n}} - \frac{r}{4}\bepar{\bepar{\uin{i}{n}}^2 - \bepar{\uin{i-1}{n}}^2}}
+\end{equation}
+\begin{equation}
+\uin{i + \frac{1}{2}}{n+\frac{1}{2}} = \bepar{\frac{1}{2}\bepar{\uin{i+1}{n}+\uin{i}{n}} - \frac{r}{4}\bepar{\bepar{\uin{i+1}{n}}^2 - \bepar{\uin{i}{n}}^2}}
+\end{equation}
+On exprime alors les carrés de ces deux expressions, et on réécrit la deuxième étapes avec les nouvelles expressions. On obtient alors :
+\begin{align*}
+\uin{i}{n+1} =\  &\uin{i}{n} \\
+ -\ & \frac{r}{8} \bepar{\bepar{\ui{i+1}}^2 + 2\, \ui{n}\bepar{\ui{i+1} - \ui{i-1}} - \bepar{\ui{i-1}}^2} \\
++ & \frac{r^2}{8}\bepar{\bepar{\ui{i+1}}^3 +\ui{i}\bepar{\bepar{\ui{i+1}}^2 + \bepar{\ui{i-1}}^2} - \bepar{ \ui{i}}^2\bepar{\ui{i+1} + \ui{i-1}} + \bepar{\ui{i-1}}^3 } \\
+-\ & \frac{r^3}{32} \bepar{\bepar{\ui{i+1}}^4 -2\,\bepar{\ui{i}}^2 \bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i-1}}^2} - \bepar{\ui{i-1}}^4}
+\end{align*}
+On dérive alors cette expression :
+\begin{align*}
+\frac{\partial \bepar{\uin{i}{n+1}}^\text{LW}}{\partial \ui{j} } &= \\
+ \dij{i} \\
+-\ & \frac{r}{8} \bepar{2\, \ui{i+1} \dij{i+1} + 2\, \dij{i}\bepar{\ui{i+1} - \ui{i-1}} + 2\, \ui{i}\bepar{\dij{i+1}- \dij{i-1}} - 2\, \ui{i-1} \dij{i-1}} \\
++\ & \frac{r^2}{8} \bepar{ 3\bepar{\ui{i+1}}^2\dij{i+1} + \dij{i}\bepar{\bepar{\ui{i+1}}^2 + \bepar{\ui{i-1}}^2} + 2\ui{i}\bepar{\ui{i+1}\dij{i+1} + \ui{i-1}\dij{i-1}}} \\
++\ & \frac{r^2}{8} \bepar{3\bepar{\ui{i-1}}^2\dij{i-1} -2\dij{i}\ui{i}\bepar{\ui{i+1} + \ui{i-1}} - \bepar{\ui{i}}^2\,\bepar{\dij{i+1} + \dij{i-1}}} \\
+-\ & \frac{r^3}{8}\bepar{\bepar{\ui{i+1}}^3 \dij{i+1} -\ui{i}\dij{i}\bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i-1}}^2}- \bepar{\ui{i}}^2\bepar{\ui{i+1}\dij{i+1} - \ui{i-1}\dij{i-1}} -\bepar{\ui{i-1}}^3\dij{i-1} }
+\end{align*}
+On peut écrire ceci de manière matricielle comme une matrice tridiagonale dont les éléments sont :
+\begin{equation} 
+ 1 - \frac{r}{8}\, \becro{2\bepar{\ui{i+1} - \ui{i-1}} - r \bepar{\bepar{\ui{i+1}}^2 + -2\ui{i}\bepar{\ui{i+1} + \ui{i-1}} + \bepar{\ui{i-1}}^2} -r^2\ui{i}\bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i-1}}^2 }}
+ \red \tag{ $\dij{i}$ }
+ \end{equation} 
+ 
+ \begin{equation} 
+ \frac{r}{8}\becro{ 2\bepar{\ui{i}+\ui{i-1}} + r\bepar{\ui{i-1}\bepar{2\ui{i} + 3\ui{i-1}} -\bepar{\ui{i}}^2} -r^2\, \ui{i-1}\bepar{\bepar{\ui{i}}^2 - \bepar{\ui{i-1}}^2} }
+ \red \tag{$\dij{i-1}$ }
+ \end{equation}
+ 
+ \begin{equation}
+ - \frac{r}{8}\, \becro{2\bepar{\ui{i+1} + \ui{i}} - r\,\bepar{\ui{i+1} \bepar{2\ui{i} + 3\ui{i+1}} -\bepar{\ui{i}}^2} + r^2\ui{i+1}\bepar{\bepar{\ui{i+1}}^2 - \bepar{\ui{i}}^2}}
+ \red \tag{$\dij{i+1}$ }
+ \end{equation}
+ 
+ \noindent On exprime à présent la dérivée $\partial_{\ui{j}} \bepar{\uin{i}{n+1}}^\text{CN}$ :
+ \begin{align*}
+ \frac{\partial \bepar{\uin{i}{n+1}}^\text{CN}}{\partial \ui{j} } & = \dij{i}\bepar{1 - \alpha +  \beta r} + \dij{i+1}\bepar{\frac{\alpha}{2} - \beta r} + \dij{i-1}\frac{\alpha}{2}
+ \end{align*}
+%Finalement  
+% \begin{equation} \tag{$\partial \mathcal{J}^n_{u_j^n}$ }
+% \frac{\partial \mathcal{J}^n_i}{\partial u_j^n} = \frac{\partial \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}}^T \text{C}_\text{obs}^{-1} \bepar{\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}}}{\partial u_j^n} \label{djuj}
+% \end{equation}
+% En remplaçant $\bepar{U^{n+1}_{\text{obs}}}^\text{LW} - \bepar{U^{n+1}_\beta}^\text{CN}$ par \textbf{X}, on peut écrire \ref{djuj} comme $\displaystyle \frac{d\textbf{X}^T\textbf{A}\textbf{X}}{d\textbf{X}}$ et utilisé le résultat suivant
+% \begin{equation*}
+% \frac{d\textbf{X}^T\textbf{A}\textbf{X}}{d\textbf{X}} = \textbf{X}^T\bepar{\textbf{A} + \textbf{A}^T}
+% \end{equation*}
+\end{document}

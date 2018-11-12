@@ -1,0 +1,470 @@
+\documentclass[a4paper,12pt]{article} 
+\usepackage[utf8x]{inputenc}
+\usepackage[french]{babel}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}		 			% Inclusion des figures 
+\usepackage{textcomp}
+\usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
+\usepackage{multicol}					% Pour utiliser \hfill
+\usepackage{ifthen}
+\usepackage{tabularx}	 				% Gestion avancée des tableaux
+%\usepackage{cleveref}
+
+\usepackage{enumitem}
+\usepackage{wrapfig}
+%\usepackage[squaren]{SIunits}
+%\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
+\usepackage[linkcolor=DarkRed,colorlinks=true, citecolor= DarkGreen, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage{listings}					% Pour citer du code
+\usepackage[justification=centering]{caption}
+\usepackage{sistyle} 
+\usepackage{numprint}
+\usepackage{wrapfig}
+\usepackage{cite}	
+\usepackage{url} 					% Pour citer les sites internet dans la
+%\usepackage{cleveref}
+\usepackage{setspace}
+
+\usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
+
+\newcommand{\bepar}[1]{
+	\left( #1 \right)  
+}
+
+\newcommand{\becro}[1]{
+	\left[ #1 \right]  
+}
+
+\usepackage{listings}					% Pour citer du code
+%%%%%%%%%%%%%%%%%%%
+%%% Élément pour citer des codes %%%
+\lstset{
+language=Python,
+basicstyle=\ttfamily\bfseries\small, %
+identifierstyle=\bfseries\color{black}, %
+keywordstyle=\color{blue}, %
+stringstyle=\color{black!90}, %
+commentstyle=\it\color{green!95!yellow!1}, %
+columns=flexible, %
+tabsize=4, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, % %
+numberstyle=\small, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b
+}
+%%%%%%%%%%%%%%%%%%%%%
+\title{Avancement des codes Read me 2.0 }%%%%%%%%%%%%%%%%%%%%
+\date{}
+\usepackage{multicol}
+\usepackage{etoolbox}
+\patchcmd{\thebibliography}{\section*{\refname}}
+    {\begin{multicols}{2}[\section*{\refname}]}{}{}
+\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
+
+
+\usepackage{geometry}
+\geometry{hmargin=2cm, vmargin=1.5cm}
+
+%%%%%%%%%%%%%%%%%%%%
+%%% Couleurs %%%
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{midblue}{named}{MidnightBlue}
+\xdefinecolor{dsb}{named}{DarkSlateGray}
+\xdefinecolor{dgreen}{named}{DarkGreen}
+
+%%% 	Raccourcis 	%%%
+\newcommand{\keps}{$k-\varepsilon$}
+\newcommand\bk{\color{black}}
+\newcommand\brick{\color{brick}}
+\newcommand\navy{\color{navy}}
+\newcommand\midblue{\color{midblue}}
+\newcommand\dsb{\color{dsb}}
+\newcommand{\dgreen}{\color{dgreen}}
+
+%%%%%%%% Cigles
+\newcommand{\rap}{par rapport }
+\newcommand{\cad}{c'est-à-dire}
+
+%%%%%%%% Autres
+
+%%%%%%%%%%%%%%%%%%%
+% Syntax: \colorboxed[<color model>]{<color specification>}{<math formula>}
+\newcommand*{\colorboxed}{}
+\def\colorboxed#1#{%
+  \colorboxedAux{#1}%
+}
+\newcommand*{\colorboxedAux}[3]{%
+  % #1: optional argument for color model
+  % #2: color specification
+  % #3: formula
+  \begingroup
+    \colorlet{cb@saved}{.}%
+    \color#1{#2}%
+    \boxed{%
+      \color{cb@saved}%
+      #3%
+    }%
+  \endgroup
+}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\textbf{Nathaniel} \brick \textbf{\textsc{Saura}}}
+\rhead{\markright}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\numberwithin{equation}{section} %%%% To count the equation like Section.Number
+
+%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\maketitle
+\section*{Parser}
+Le parser sert à définir des options à notre code pour limiter les codages en dur.\\
+\noindent Les options de la classe sont disponibles en lançant sur ipython : \brick run class\_temp\_ML -h \bk. La sortie est : 
+
+\begin{lstlisting}
+In [1]: run script_data_generation.py -h
+usage: script_data_generation.py [-h] [--T_inf_lst T_INF_LST [T_INF_LST ...]]
+                                 [--N_discr N_DISCR]
+                                 [--compteur_max_adjoint CPT_MAX_ADJ]
+                                 [--N_sample N_SAMPLE]
+                                 [--GPN_sample GPN_SAMPLE]
+                                 [--max_epoch N_EPOCH] [--H H] [--delta_t DT]
+                                 [--kappa KAPPA]
+                                 [--number_realization NUM_REAL]
+                                 [--tolerance TOL] [--g_sup_max G_SUP_MAX]
+                                 [--beta_prior BETA_PRIOR]
+                                 [--learning_rate LR] [--datapath DATAPATH]
+                                 [--covariance_model COV_MOD]
+                                 [--logbook_path LOGBOOK_PATH]
+
+This parser will be used in several steps both in inference and ML
+postprocessing Each entry is detailed in the help, and each of it has the most
+common default value. (run ... .py -h)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --T_inf_lst T_INF_LST [T_INF_LST ...], -T_inf_lst T_INF_LST [T_INF_LST ...]
+                        List of different T_inf. Default : 50
+  --N_discr N_DISCR, -N N_DISCR
+                        Define the number of discretization points : default
+                        71
+  --compteur_max_adjoint CPT_MAX_ADJ, -cptmax CPT_MAX_ADJ
+                        Define compteur_max (-cptmax) for adjoint method:
+                        default 100
+  --N_sample N_SAMPLE, -N_sample N_SAMPLE
+                        Define the number of dupplication : default 3
+  --GPN_sample GPN_SAMPLE, -GPN_sample GPN_SAMPLE
+                        Define the number of distribution (beta, cholesky)
+                        samples: default 3
+  --max_epoch N_EPOCH, -epoch N_EPOCH
+                        Define the number of training epoch in NN
+                        optimization: default 50
+  --H H, -H H           Define the convection coefficient h
+  --delta_t DT, -dt DT  Define the time step disctretization. Default to
+                        0.00010
+  --kappa KAPPA, -kappa KAPPA
+                        Define the diffusivity number kappa. Default to 1.00
+  --number_realization NUM_REAL, -num_real NUM_REAL
+                        Define how many samples of epsilon(T) to draw for
+                        exact model. Default to 100
+  --tolerance TOL, -tol TOL
+                        Define the tolerance on the optimization error.
+                        Default to 0.00001000
+  --g_sup_max G_SUP_MAX, -g_sup G_SUP_MAX
+                        Define the criteria on grad_J to stop the
+                        optimization. Default to 0.00100
+  --beta_prior BETA_PRIOR, -beta_prior BETA_PRIOR
+                        beta_prior: first guess on the optimization solution.
+                        Value default to 1
+  --learning_rate LR, -lr LR
+                        Define the learning rate for the NN back-propagation.
+                        Value default to 0
+  --datapath DATAPATH, -dp DATAPATH
+                        Define the directory where the data will be stored and
+                        read. Default to ./data
+  --covariance_model COV_MOD, -cov_mod COV_MOD
+                        Define the covariance model. Default to full
+  --logbook_path LOGBOOK_PATH, -p LOGBOOK_PATH
+                        Define the logbook's path. Default to ./logbooks/
+
+\end{lstlisting}
+
+\pagebreak
+
+\dgreen \textbf {Exemple :} \bk \\
+\begin{lstlisting}
+In [42]: run class_temp_ML.py -T_inf_lst 50 -num_real 50 -N 50 -dp dir_data2
+
+Namespace(N_discr=50, T_inf_lst=[50], beta_prior=1, cov_mod='diag', datapath='dir_data2', dt=0.001, h=0.5, kappa=1.0, num_real=50, tol=1e-05)
+
+\end{lstlisting}
+On note alors que les arguments du parser qui n'ont pas été appelés lors de l'exécution valent leur valeur par défaut, que les \textit{str} comme \textbf{datapath} ont bien le type \textit{str} sans forcément avoir eu à utiliser les " ". Idem pour les listes. \\
+
+\noindent D'ailleurs si on veut mettre plusieurs T\_inf dans notre liste on utilisera 
+
+\begin{lstlisting}
+In [46]: run class_temp_ML.py -T_inf_lst 25 50 -num_real 10
+
+Namespace(N_discr=33, T_inf_lst=[25, 50], beta_prior=1, cov_mod='diag', datapath='./data', dt=0.001, h=0.5, kappa=1.0, num_real=10, tol=1e-05)
+\end{lstlisting}
+
+\noindent Normalement, on ne doit mettre dans "cov\_mod" que les éléments \textit{full} ou \textit{diag} puisque cet argument sert à spécifier au code si on veut utiliser la full covariance ou bien la covariance qui a 
+pour éléments diagonaux les $\sigma^2$ calculés sur les températures observées. \\
+Pour éviter toute confusion, j'ai mis un message d'erreur si la valeur de cov\_mod n'est ni \textit{full} ni \textit{diag}.
+
+\subsubsection*{Ajout d'un argument dans le parser}
+
+\noindent Le parser est défini dans la fonction 
+\begin{lstlisting} 
+		def parser()  :
+\end{lstlisting}
+L'ajout se fait ensuite par la commande :
+\begin{lstlisting}                
+Pour un entier (type=int), un float (type=float) ou str (type=str)
+		parser.add_argument('--option', '-raccourci', action='store', type=int, default=valeur, dest=nom_de_la_variable, 
+                help='Description de la var. Valeur par default : %(default)format de la variable (d,f ou s) exemple %(default)d pour un entier \n' )
+\end{lstlisting}
+Par exemple : pour le nombre de discrétisation : 
+\begin{enumerate}[leftmargin=2cm]
+\item[--] l'option (avec les - -) : le nom évocateur (- -N\_discr)
+\item[--] raccourci : -N
+\item[--] acction : 'store' (toujours)
+\item[--] type \textbf{int}
+\item[--] dest (pour destination) :  N\_discr
+\item[--] default sera 33
+\item[--] help : 'Nombre de points de discrétisation. Valeur par défaut : \%(default)d.' 
+\end{enumerate}
+
+ \noindent Cette valeur sera stockée dans \textbf{\textit{parser.N\_discr}}.
+Pour une list, on note l'ajout de la commande 'nargs' qui vaut + pour l'ajout des valeurs proposées dans la liste.
+\begin{lstlisting}    	        
+Pour un liste (ajout de nargs='+' ):
+		parser.add_argument('--T_inf_lst', '-T_inf_lst', nargs='+', action='store', type=int, default=['all'],dest='T_inf_lst', 
+                help='List of different T_inf. Default : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]\n' )
+\end{lstlisting}
+
+\section*{Commandes et utilisation :}
+\brick \subsection*{Méthodes et  procédures d'optimization} \bk
+\noindent Le problème exact que nous considérons est :
+\begin{equation}
+\mathcal{R}_T = \kappa \frac{d^2T}{d^2z} + \becro{1 + 5\, \sin{\bepar{\frac{3\pi}{200} T}} +\exp{\left(0.02T\right)} + \mathcal{N}\left( 0,0.1^2\right)} \times 10^{-4} \bepar{T_{\text{inf}}^4 - T^4} + h \bepar{T_{\text{inf}} - T} = 0 \label{pro_ex}
+\end{equation}
+
+\noindent Nous voulons trouver le $\beta$ optimal tel que la solution du problème «incomplet» soit la plus proche possible du problème exact. On résout alors : 
+\begin{equation}
+\mathcal{R} = \kappa \frac{d^2T}{d^2z} + \beta(z) \varepsilon_0 \bepar{T_{\text{inf}}^4 - T^4}  = 0 \label{pro_inex}
+\end{equation}
+
+\noindent La fonction de coût est codée comme une fonction dont l'inconnue est un vecteur beta. Son expression est \cite{parish2016paradigm, tarantola2005inverse}: 
+
+\begin{lstlisting}
+ 	J = lambda beta : 0.5 * ( 
+                  np.dot( np.dot(np.transpose(curr_d - self.h_beta(beta, T_inf)),
+                    np.linalg.inv(cov_m)) , (curr_d - self.h_beta(beta, T_inf) )  )  
+                + np.dot( np.dot(np.transpose(beta - self.beta_prior), 
+                    np.linalg.inv(cov_prior) ) , (beta - self.beta_prior) ) 
+                         	   )
+\end{lstlisting}
+\noindent Cette expression est aussi appelée Moindres Carrées Ordinaires. Les différents éléments y apparaissent sont : 
+\begin{itemize}
+\item[--]\textbf{curr\_d} : la température exacte moyennée sur les différentes réalisations d'epsilon\footnote{Epsilon est le bruit que l'on injecte dans \eqref{pro_ex}};
+\item[--] \textbf{h\_beta} : est une fonction de la classe qui résout le problème \eqref{pro_inex};
+\item[--] \textbf{cov\_m} : est la matrice de covariance des températures observées. Elle peut être diagonale ou «pleine» selon la valeur du parser.cov\_mod : "diag" ou "full" respectivement;
+\item[--] \textbf{cov\_prior} La matrice de covariance du beta \textit{first guess} tous les deux prédéfinies.
+\end{itemize}
+
+\noindent Le programme en l'état propose trois procédures d'optimisation :
+\begin{itemize}[leftmargin=2cm]
+\item[--] Une première utilise s'appelle \textit{optimization} utilisant principalement le \textit{built-in} \textbf{minimize} de \textit{scipy.optimize} ;
+\item[--] Une deuxième, \textit{minimization\_with\_first\_guess}, est une tentative d'implémentation \textit{maison} de la méthode BFGS. Pour se faire nous avons utilisé \cite{aria}, dans la section BFGS. (plus de détails sur le code à suivre);
+\item[--] Une troisième procédure en construction consiste à calculer le gradient de la fonction de coût en utilisant la méthode des adjoints.
+\end{itemize}
+
+
+\navy\subsubsection*{Optimization}\bk
+\noindent La première procédure d'optimisation se base donc sur le \textit{built-in} \textbf{minimize} de \textit{scipy.optimize} et nécessite en entrée la fonction à minimiser ainsi qu'un «first guess» $\beta_{\text{prior}}$.\\
+La ligne de code dans laquelle cette méthode est utilisée est :
+\begin{lstlisting}
+	from scipy import optimize as op
+			.
+			.
+			.
+	opti_obj = op.minimize(J, self.beta_prior, method="BFGS", tol=self.tol, options = {"disp" : True})
+\end{lstlisting}
+
+\noindent La sortie finale de cette optimisation est un objet qui contient notamment le $\beta_{\text{map}}$ \cad $ $ le vecteur $\beta$ qui minimise la fonction $J$. Il contient également l'inverse de la hessienne évaluée en ce vecteur, qui correspond à la covariance reliée à $\beta_{\text{map}}$ : $C_{\beta_{\text{map}}}$. \\
+\noindent Puis conformément aux articles cités, nous utilisons la décomposition de Cholesky et nous construisons $\beta$ \cad $ $ le générateur de $\beta_{\text{post}}$ comme : 
+\begin{equation}
+\beta = \beta_{\text{map}} + Rs \label{bf}
+\end{equation}  
+Avec $R$ la décomposition de Cholesky et $s$ un vecteur aléatoire ayant une distribution $\mathcal{N}\bepar{0,1}$. Au niveau du code, on construit $s$ et $\beta$ comme : 
+\begin{lstlisting}
+	def tab_normal(self, mu, sigma, length) :
+        return ( sigma * np.random.randn(length) + mu, 
+                (sigma * np.random.randn(length) + mu).mean(), 
+                (sigma * np.random.randn(length) + mu).std()
+               ) 	
+			.
+			.
+			.
+	sT_inf = str("T_inf_%d" %(T_inf)) # sT_inf = T_inf_50 par exemple
+			.
+			.	
+	cholesky[sT_inf]=   np.linalg.cholesky(hess[sT_inf])
+	s = np.asarray(self.tab_normal(0,1,self.N_discr-2)[0])
+			.
+	beta_final[sT_inf]  =   betamap[sT_inf] + np.dot(cholesky[sT_inf], s)
+\end{lstlisting}
+
+\noindent La fonction \textit{tab\_normal} prend en argument mu (une moyenne $\mu$), sigma (une variance $\sigma$) et length (une longueur) et ressort un vecteur de taille length comprenant des valeurs issues d'une distribution gaussienne de moyenne $\mu$ et de variance $\sigma$ (i.e. issues de $\mathcal{N}\bepar{\mu,\sigma}$). Cette fonction permet de contrôler la moyenne du vecteur et sa variance :
+\begin{lstlisting}
+In [5]: T.tab_normal(0,1,100)
+Out[6]:(array(.....),
+		-0.097876148992425541,
+ 		1.0407137503138091)
+\end{lstlisting}
+
+\noindent Cette procédure est celle qui propose la meilleure solution pour l'instant, en partant de $\beta_{\text{prior}} = 1$ et $\sigma_{\text{prior}}=0.8$ pour $T_{\text{inf}} = 50$.\\
+On lance alors 
+\begin{lstlisting}
+run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
+\end{lstlisting}
+\vspace{1cm}
+\noindent On obtient alors les figures : 
+
+\pagebreak
+
+%\begin{figure}[!ht]
+%
+%\includegraphics[scale=0.42]{/home/saura/Documents/trunk/codes_python/cases/results/diag_beta_1_cov_diag.png}
+%\end{figure}
+
+\noindent Pour lancer cette fonction, on peut faire et obtenir la figure précédente :
+\begin{lstlisting}
+		run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
+	
+		T.obs_pri_model() ...
+				.
+	    T.get_prior_statistics() ...
+	    		.
+	    T.optimization(verbose=True) ...
+				.
+		subplot(T, method=" ")    
+\end{lstlisting}
+
+\navy\subsubsection*{Minimization\_with\_first\_guess}\bk
+L'idée et de se servir de la fonction optimize utilisée plus haut, sur quelques itérations puiqu'elle fournit la hessienne inverse et la jacobienne de la fonction de coût $J$. Puis nous implémentons la méthode présentée dans \cite{aria}. \\
+Nous calculons la direction $\mathcal{D} = H_n\, g_n$ avec $H_n$ la hessienne \textbf{inverse} et $g_n$ la jacobienne (ou le gradient) à l'itération $n$.\\
+L'étape suivante est le calcule du pas pour l'incrémentation de $\beta$. \\
+On code la méthode du \textit{Backtracking line search} voir \cite{backline}. Cette méthode permet de trouver $\alpha$ tel que $J\bepar{\beta_n - \alpha\,\mathcal{D}}$ soit minimale, pour un $\beta$ et une direction \textbf{\textit{fixés}}. \\
+
+\noindent Dans le code cette fonction est appelée 
+\begin{lstlisting}
+backline_search(self, J_lambda, var_J_lambda, direction, incr=0.5) : 
+\end{lstlisting}
+
+Comme on l'a dit, pour trouver le bon alpha, il faut au préalable fixer $\beta$ (correspondant à l'argument var\_J\_lambda) et la direction. Le dernier argument est l'incrément propre à la méthode imposant une valeur comprise entre 0 et 1.\\
+ 
+ \noindent On incrémente ensuite $\beta_n$ ainsi que le gradient respectivement :
+ \begin{lstlisting}
+     def Next_hess(self, prev_hess, y_nN, s_nN ) :
+        rho_nN  =   np.dot(y_nN.T, s_nN)
+        n       =   prev_hess.shape[0]
+        Id      =   np.diag([1 for i in range(n)])
+        
+        H_nN    =   np.dot( np.dot(Id - np.dot(np.dot(rho_nN, y_nN), s_nN.T) ,prev_hess ), Id - np.dot(np.dot(rho_nN, s_nN), y_nN.T) ) + \
+                        np.dot(np.dot(rho_nN, s_nN), s_nN)
+        return H_nN
+        		.
+        		.        
+	beta_nNext  =   beta_n - alpha*direction       
+    ## Estimation of H_nNext
+    g_nNext =   nd.Gradient(J)(beta_nNext) # From numdifftools
+    y_nNext =   g_nNext - g_n
+    s_nNext =   beta_nNext - beta_n
+    H_nNext =   self.Next_hess(H_n, y_nNext, s_nNext)
+			
+\end{lstlisting}
+
+\noindent Puis après convergence (\textit{i.e} err = $\left| J\left(\beta_{\text{nNext}}\right) - J\left(\beta_n\right) \right| < \text{tol }$), on utilise la même procédure que durant celle exposée dans la section optimization.
+
+Pour pouvoir utiliser cette fonction on lancera 
+\begin{lstlisting}
+		run class_temp_ML.py -T_inf_lst 50 -kappa 1 -tol 1e-5 -beta_prior 1. -num_real 100 -cov_mod 'diag' -N 50 -dt 1e-4
+	
+		T.obs_pri_model() ...
+				.
+	    T.get_prior_statistics() ...
+	    		.
+	    T.minimization_with_first_guess(verbose=True) ...
+				.
+		subplot(T)    
+\end{lstlisting}
+\noindent De plus, si les deux fonctions (optimization et minimization\_with\_first\_guess) ont été exécutées jusqu'au bout, la fonction subplot comparera les deux résultats dans une figure annexe.
+
+\navy \subsubsection*{Modifier beta prior sans relancer le programme !} \bk
+Lorsqu'une des deux fonctions (ou les deux) ont été exécutée(s), il est possible qu'on veuille étudier le même problème (avec le même parser), mais que l'on veuille modifier $\beta_{\text{prior}}$, on pourra alors utiliser \begin{lstlisting}
+	T.set_beta_prior(nouvelle valeur)
+\end{lstlisting}
+\dgreen \paragraph*{Exemple} : \bk
+\begin{lstlisting}
+	In [8]: T.beta_prior
+array([ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,
+        1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,
+        1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,
+        1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
+
+    In [9]: T.set_beta_prior(1.5)
+Beta prior is now 
+ [ 1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5
+  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5
+  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5  1.5
+  1.5  1.5  1.5]
+
+  In [10]: T.beta_prior
+Out[10]: 
+array([ 1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,
+        1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,
+        1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,
+        1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,  1.5,
+        1.5,  1.5,  1.5,  1.5])
+
+\end{lstlisting}
+On pourra alors relancer une des deux fonctions d'optimisation sans passer par les fonctions obs\_pri\_model (qui résout les deux problèmes \eqref{pro_ex} et \eqref{pro_inex} pour les toutes les températures T\_inf et les tirages d'epsilon) ni get\_prior\_statistics puisque les statistiques de la prior sont définies par Duraisamy lui même (ceci est un peu limite il faudrait en discuter, cela pourrait expliquer les écarts sur les sigma postérieurs que nous avons regardé mercredi).
+
+\navy \subsubsection*{Tracer les $\sigma$ postérieurs et comparaisons} \bk
+Au cours du code dans les méthodes d'optimisations, on calcule le beta avec la formule \eqref{bf}. Dans le même temps, on peut calculer les statistiques de $\beta$ et les comparer avec $\sigma_{\text{true}} = 0.02$ et également avec $\sigma_{\text{base}} = \sigma_{\text{prior}}$ définie par Duraisamy.\\
+Les statistiques de $\beta$ sont appelées $\sigma_{\text{post}}$ et sont disponibles sous différentes appellations (selon la procédure d'optimisation effectuée) :
+\begin{itemize}
+\item[--] Pour \textbf{optimization} T.sigma\_post\_dict
+\item[--] Pour \textbf{minimization\_with\_first\_guess} T.QN\_BFGS\_sigma\_post\_dict
+\end{itemize}
+En ligne de commande, après obtention des résultats pour «optimization», on tapera :
+\begin{lstlisting}
+	plt.figure()
+	plt.semilogy(T.line_z, [0.02 for i in range(T.N_discr-2)], label='true', 	marker = 's' linestyle='none')
+	plt.semilogy(T.line_z, T.sigma_post_dict["T_inf_50"], label="Post")
+	plt.semilogy(T.line_z, [0.8 for i in range(T.N_discr-2)], label="base")
+	plt.legend()
+\end{lstlisting}
+
+\paragraph*{Note} : \\
+Tous les dictionnaires ou du moins la grande majorité sont construits avec des clés identiques afin de faciliter le traitement des résultats. Ces clés sont construites selon le modèle : \textit{sT\_inf = str("T\_inf\_\textit{valeur de la temperature T\_inf en cours}"}) un exemple :
+pour le cas lancer plus haut, T\_inf = 50. La clé de tous les dictionnaires sera alors T\_inf\_50.\\
+
+
+
+\pagebreak
+\bibliographystyle{plain}
+\bibliography{bib_readme}
+
+\end{document}

@@ -1,0 +1,129 @@
+recap :
+
+###############################
+###############################
+
+            Direct
+
+###############################
+###############################
+
+Premier
+
+dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'O': 1}
+itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32
+
+\\ Der \\
+run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+Der_compute_true_u(cb, 12, pi_line, plot=True, write=True)
+dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'O': 1}
+Der_nn = Der_multi_buildNN(1e-3, Der_X_multi, Der_y_multi, "selu", "Adam", "Lasso", 100, "sum", "Standard", N_=dict_layers, color="crimson",  bsz=128,  BN=True)
+[ 9.91330424]
+
+\\ multi \\ 
+run multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+X_multi, y_multi = compute_true_u(cb, 12, pi_line, plot=True, write=True)
+dict_layers = {"I": 3, "O" :1, "N1":80, "N2":80, "N3":80}
+nn = multi_buildNN(1e-3, X_multi, y_multi, "selu", "Adam", "Lasso", 100, "sum", "Standard", N_=dict_layers, color="olive",  bsz=128,  BN=True)
+[ 4.80766461]
+
+\\ multi xs \\
+run multiple_init_NN_xs_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+Xxs_multi, yxs_multi = xs_compute_true_u(cb, 12, pi_line, plot=True, write=True)
+dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'O': 1}
+nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "Lasso", 100, "sum", "Standard", N_=dict_layers, color="dodgerblue",  bsz=128,  BN=True)
+[ 23.29787379]
+###############################
+###############################
+
+###############################
+Deuxieme
+
+run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'O': 1}
+Der_nn = Der_multi_buildNN(1e-3, Der_X_multi, Der_y_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="crimson",  bsz=128,  BN=True)
+[ 4.32636523]
+
+run multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'O': 1}
+nn = multi_buildNN(1e-3, X_multi, y_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="olive",  bsz=128,  BN=True)
+[ 5.56048219]
+
+run multiple_init_NN_xs_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="dodgerblue",  bsz=128,  BN=True)
+[ 40.05745046]
+###############################
+###############################
+
+###############################
+Troisieme 
+
+dict_layers = {'I': 3, 'N1': 80, 'N2': 80, 'N3': 80, 'N4': 80, 'N5': 80, 'O': 1}
+epoch = 200
+bsz = 128
+
+run derivee_multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+Der_nn = Der_multi_buildNN(1e-3, Der_X_multi, Der_y_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="crimson",  bsz=128,  BN=True)
+[ 5.49827846]
+
+run multiple_init_NN_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+nn = multi_buildNN(1e-3, X_multi, y_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="olive",  bsz=128,  BN=True)
+[ 19.16338882]
+
+run multiple_init_NN_xs_burger_case.py -nu 2.5e-2 -itmax 60 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+nn_xs = xs_multi_buildNN(1e-3, Xxs_multi, yxs_multi, "selu", "Adam", "Lasso", 200, "sum", "Standard", N_=dict_layers, color="dodgerblue",  bsz=128,  BN=True)
+[ 8.98071865]
+
+
+###############################
+###############################
+###############################
+
+           Amplitude 
+
+###############################
+###############################
+###############################
+
+run amplitudes_init_burger_case.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -Nx 82 -Nt 32 -dp "../data/burger_dataset/"
+
+ampDerX_multi, ampDery_multi = amp_Der_compute_true_u(cb, 1, amplitude, pi_line, plot=False, write=True) 
+
+amp_nn = amp_multi_buildNN(1e-3, ampDerX_multi, ampDery_multi, "selu", "Adam", "Lasso", 500, "sum", "Standard", N_=dict_layers, color="blue")
+
+amp_multiNN_solver(amp_nn)
+
+################################
+################################
+################################
+#                              # 
+#           EULERLW            #
+#                              #
+################################
+################################
+################################
+
+run Euler_LW_NN.py -nu 2.5e-2 -itmax 80 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -dp "../data/burger_dataset/" -itmax 100
+
+ELWDerX_multi, ELWDery_multi = ELW_Der_compute_true_u(cb, 1, amplitude, pi_line, plot=True, write=True)
+
+#Ecrire X et y avec les specificite par exemple :
+np.save("ELWDerX_multi_nu%.3f_CFL%.2f_Nx%d_Nt%d.npy", ELWDerX_multi)
+np.save("ELWDery_multi_nu%.3f_CFL%.2f_Nx%d_Nt%d.npy", ELWDery_multi)
+
+ELW_nn = ELW_multi_buildNN(1e-3, ELWDerX_multi, ELWDery_multi, "selu", "Adam", "Lasso", 500, "sum", "Standard", N_=dict_layers, color="blue", bsz=256,  BN=True)
+
+La config suivante donne de bons résultats
+elw_nn500bsz64 = ELW_multi_buildNN(1e-3, ELWDerX_multi, ELWDery_multi, "selu", "Adam", "Lasso", 1000, "sum", "Standard", N_=dict_layers, color="green", bsz=64,  BN=True)
+
+
+ELW_multiNN_solver(ELW_nn)
+
+
+###############################
+###############################
+
+          Booststrap
+
+###############################
+###############################

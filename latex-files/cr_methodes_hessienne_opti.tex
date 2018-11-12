@@ -1,0 +1,173 @@
+\documentclass[a4paper,12pt]{article} 
+\usepackage[utf8x]{inputenc}
+\usepackage[french]{babel}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}		 			% Inclusion des figures 
+\usepackage{textcomp}
+\usepackage[nointegrals]{wasysym}			% Collection de symboles mathématiques
+\usepackage{multicol}					% Pour utiliser \hfill
+\usepackage{ifthen}
+\usepackage{tabularx}	 				% Gestion avancée des tableaux
+%\usepackage{cleveref}
+
+\usepackage{enumitem}
+\usepackage{wrapfig}
+%\usepackage[squaren]{SIunits}
+%\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
+\usepackage[linkcolor=DarkRed,colorlinks=true, citecolor= DarkGreen, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage{listings}					% Pour citer du code
+\usepackage[justification=centering]{caption}
+\usepackage{sistyle} 
+\usepackage{numprint}
+\usepackage{wrapfig}
+\usepackage{cite}	
+\usepackage{url} 					% Pour citer les sites internet dans la
+%\usepackage{cleveref}
+\usepackage{setspace}
+
+\usepackage[svgnames]{xcolor}			%https://www.latextemplates.com/svgnames-colors
+
+\newcommand{\bepar}[1]{
+	\left( #1 \right)  
+}
+
+\newcommand{\becro}[1]{
+	\left[ #1 \right]  
+}
+
+\newcommand{\rbk}[1]{\color{red}\textit{#1} \color{black}  
+}
+
+\newcommand{\parfracD}[3]{
+	\frac{\partial^2 #1}{\partial #2 \partial #3}
+}
+\newcommand{\parfrac}[2]{
+	\frac{\partial #1}{\partial #2}
+}
+\newcommand{\kro}[2]{
+\delta_{#1,#2}
+}
+\usepackage{listings}					% Pour citer du code
+%%%%%%%%%%%%%%%%%%%
+%%% Élément pour citer des codes %%%
+\lstset{
+language=Python,
+basicstyle=\ttfamily\bfseries\small, %
+identifierstyle=\bfseries\color{black}, %
+keywordstyle=\color{blue}, %
+stringstyle=\color{black!90}, %
+commentstyle=\it\color{black!70}, %
+columns=flexible, %
+tabsize=4, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, % %
+numberstyle=\small, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b,
+otherkeywords={cross_val_score},
+keywords=[0]{cv},
+keywordstyle=[0]{\color{red}},
+}
+%%%%%%%%%%%%%%%%%%%%%
+\title{\color{red}Notes sur calculs \color{black}}%%%%%%%%%%%%%%%%%%%%
+\date{}
+\usepackage{multicol}
+\usepackage{etoolbox}
+\patchcmd{\thebibliography}{\section*{\refname}}
+    {\begin{multicols}{2}[\section*{\refname}]}{}{}
+\patchcmd{\endthebibliography}{\endlist}{\endlist\end{multicols}}{}{}
+
+
+\usepackage{geometry}
+\geometry{hmargin=2cm, vmargin=2cm}
+
+%%%%%%%%%%%%%%%%%%%%
+%%% Couleurs %%%
+\xdefinecolor{brick}{named}{DarkRed}
+\xdefinecolor{navy}{named}{Navy}
+\xdefinecolor{midblue}{named}{MidnightBlue}
+\xdefinecolor{dsb}{named}{DarkSlateGray}
+\xdefinecolor{dgreen}{named}{DarkGreen}
+
+%%% 	Raccourcis 	%%%
+\newcommand{\keps}{$k-\varepsilon$}
+\newcommand\bk{\color{black}}
+\newcommand\brick{\color{brick}}
+\newcommand\navy{\color{navy}}
+\newcommand\midblue{\color{midblue}}
+\newcommand\dsb{\color{dsb}}
+\newcommand{\dgreen}{\color{dgreen}}
+\newcommand\red{\color{red}}
+
+%%%%%%%% Cigles
+\newcommand{\rap}{par rapport }
+\newcommand{\cad}{c'est-à-dire}
+\newcommand{\epsz}{\varepsilon_0}
+\newcommand{\tinf}{T^4_{\text{inf}}}
+\newcommand{\CP}[2]{C^{-1}_{\text{pri}_{\, \mathbf{#1, #2}}}}
+\newcommand{\CO}[2]{C^{-1}_{\text{obs}_{\, \mathbf{#1, #2}}}}
+\newcommand{\BP}[1]{\beta_{\text{P}_#1}}
+\newcommand{\Jj}{\mathcal{J}}
+\newcommand{\Rr}{\mathcal{R}}
+%%%%%%%% Autres
+
+%%%%%%%%%%%%%%%%%%%
+% Syntax: \colorboxed[<color model>]{<color specification>}{<math formula>}
+\newcommand*{\colorboxed}{}
+\def\colorboxed#1#{%
+  \colorboxedAux{#1}%
+}
+\newcommand*{\colorboxedAux}[3]{%
+  % #1: optional argument for color model
+  % #2: color specification
+  % #3: formula
+  \begingroup
+    \colorlet{cb@saved}{.}%
+    \color#1{#2}%
+    \boxed{%
+      \color{cb@saved}%
+      #3%
+    }%
+  \endgroup
+}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\textbf{Nathaniel} \brick \textbf{\textsc{Saura}}}
+\rhead{\markright}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\numberwithin{equation}{section} %%%% To count the equation like Section.Number
+
+\begin{document}
+\section{Méthodes utilisées pour Cov\_obs}
+On a essayé la hessienne sortie de la fonction \textsc{minimize} de scipy. Cette hessienne inverse peut être assez loin du compte comme on l'avu avec le cas simple de la fonction x**2.\\\\
+On a également essayé l'approximation low rank. Pour se faire on a construit :
+ \begin{equation}
+ F_i = \left(\frac{h(\beta_{\text{map}})_i - d_i}{\sigma_i}\right)^2
+ \end{equation}
+On considère que chacun de ces $F_i$ est une fonction d'erreur pour le $i$ considérant. \\
+On calcule ensuite $\displaystyle \nabla_\beta F_i$ avec la méthode des adjoints. Pour chaque $i$, on calcule $\psi$ définie par :
+ \begin{equation}
+ \psi^{\text{T}} = -\bepar{\frac{\partial F_i}{\partial T}} \bepar{\frac{\partial \mathcal{R}}{\partial T}}
+ \end{equation}
+ Puis conformément à la méthode des adjoints, on exprime le gradient :
+ \begin{equation}
+ \frac{dF_i}{d\beta} = \frac{\partial F_i}{\partial \beta} + \psi^{\text{T}}\, \frac{\partial \mathcal{R}}{\partial \beta} \label{gradF}
+ \end{equation}
+ Puisque $F_i$ est défini pour $\beta = \beta_{\text{map}}$ qui est un minimum locale, si ce n'est globale de $F\_i$, le premier terme de droite est nulle; l'équation \eqref{gradF} devient alors :
+  \begin{equation}
+ \frac{dF_i}{d\beta} = -\bepar{\frac{\partial F_i}{\partial T}} \bepar{\frac{\partial \mathcal{R}}{\partial T}} \bepar{\frac{\partial \mathcal{R}}{\partial \beta}}
+ \end{equation}
+ Conformément à la low rank approximation, on calcule :
+ \begin{equation}
+ H \approx \nabla(\beta)^{\text{T}} \nabla(\beta)
+ \end{equation} \\\\
+ On utilise la formule 14 de l'article en enlevant les termes qui semblent être en trop. On utilise finalement les formules :
+\end{document}
