@@ -1,5 +1,14 @@
 *.pdf
 !pdf_to_commit/*.pdf
 
-*.[pyc, npy, csv, aux, bbl, blg, log, out, synctex.gz, tex.bak, dat]
-**.[log, out, synctex.gz, tex.bak, aux]
+*.tex.bak
+*.log
+*.aux
+*.npy
+*.pyc
+*.bbl
+*.blg
+*.synctex.gz
+*.dat
+*.out
+*.csv
