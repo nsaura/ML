@@ -83,7 +83,9 @@ class ActorNetwork(object):
         # Le moins enlevé car on veut minimiser r  (et non maximiser comme classiquement)
         
         # pairs params and weights
+        # From Doc : grads_and_vars: List of (gradient, variable)
         grads_and_vars = zip(self.params_grad, self.weights)
+        
         
         self.optimize=tf.train.AdamOptimizer(learning_rate = self.LEARNING_RATE).apply_gradients(grads_and_vars)
 
