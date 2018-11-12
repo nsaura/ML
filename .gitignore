@@ -1,5 +1,0 @@
-*.pdf
-!pdf_to_commit/*.pdf
-
-*.[pyc, npy, csv, aux, bbl, blg, log, out, synctex.gz, tex.bak, dat]
-
