@@ -10,6 +10,13 @@ from keras.metrics import mse
 def Ridgeloss(weights, val = 0.01):
     def lossFunction(y_true, y_pred) :
         loss = mse(y_true, y_pred)
-        loss += K.prod(val, K.sum(K.square(layer_weights)))
+        loss += K.prod(val, K.sum(K.square(weights)))
 
+def LassoLoss(weights, val=1e-7) :
+    def lossFunction(y_true, y_pred) :
+        loss = mse(y_true, y_pred)
+        loss += K.prod(val, K.sum(K.abs(weights)))
+
+# To use one of them
+# model.compile(loss=customLoss(weights,0.03), optimizer =..., metrics = ...) 
 

@@ -34,19 +34,19 @@ first_weights = 10
 
 # Basic NN with Keras :
 n_inputs_layers = 8
-n_featurs = 4
-n_inputs = n_inputs_layers*n_featurs
+n_features = 4
+n_inputs = n_inputs_layers*n_features
 
 metrics = ["mean_squared_error", "mean_absolute_error"]
 
 inputs_dict = {}
 first_layers = {}
 
-# COnstruction du model de I a O
+# Construction du model de I a O
 # Voir Keras_AC_DDPG
 
 for in_layer_n in range(n_inputs_layers) :
-    inputs_dict["layers_n%03d" %(in_layer_n)] = keras.layers.Input(shape=(n_featurs,))
+    inputs_dict["layers_n%03d" %(in_layer_n)] = keras.layers.Input(shape=(n_features,))
     first_layers["first_layers_n%03d" %(in_layer_n)] = keras.layers.Dense(1,
                                                      activation = 'selu',
                                                      bias_initializer = 'zeros',

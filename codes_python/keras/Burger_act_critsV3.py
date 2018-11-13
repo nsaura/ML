@@ -70,6 +70,7 @@ def samples_memories(BATCH_SIZE):
             col.append(value)
     cols = [np.array(col) for col in cols]
     return (cols[0], cols[1], cols[2].reshape(-1, 1), cols[3], cols[4].reshape(-1, 1))
+
 #----------------------------------------------
 ## - - - - - - - - - - - - ##
 ##- - - - - - - - - - - - -##
@@ -78,6 +79,7 @@ def samples_memories(BATCH_SIZE):
 ## - - - - - - - - - - - - ##
 ##- - - - - - - - - - - - -##
 ## - - - - - - - - - - - - ##
+#----------------------------------------------
 
 cst_simu = dict()
 cst_REIL = dict()
@@ -146,7 +148,7 @@ act = KAD.ActorNetwork(sess, state_size, action_size, cst_REIL["BATCH_SIZE"],
                                                       cst_REIL["HIDDEN1_UNITS"],
                                                       cst_REIL["HIDDEN2_UNITS"])
 
-cri = KAD.CriticNetwork(sess, state_size, action_size, cst_REIL["BATCH_SIZE"], 
+cri = KAD.CriticNetwork(sess, state_size, action_size,cst_REIL["BATCH_SIZE"], 
                                                       cst_REIL["TAU"], 
                                                       cst_REIL["lr_critics_init"],
                                                       cst_REIL["HIDDEN1_UNITS"],

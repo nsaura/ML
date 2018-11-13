@@ -193,7 +193,7 @@ class CriticNetwork(object):
 #        return model, A, S    
 #        
 
-    def create_critic_network(self, state_size,action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
+    def create_critic_network(self, state_size, action_dim, HIDDEN1_UNITS, HIDDEN2_UNITS, name):
         print("Now we build the model")
         S = Input(shape=[state_size])
         A = Input(shape=[action_dim], name='action2')

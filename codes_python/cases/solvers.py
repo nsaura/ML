@@ -106,7 +106,7 @@ def doitROE(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
             u[i] = 0 if x < L/2. else 1
     
     if type_init == "sin" :
-        u = 0.7*np.sin(2*np.pi*(X-dx)/(L-dx))
+        u = 0.5*np.sin(2*np.pi*(X)/(L))
     
     u_nNext = np.zeros_like(u)
     
@@ -121,7 +121,7 @@ def doitROE(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
     for cnt in range(len(T)-1) :
         for j in range(1, len(X[:-1])) :
            u_nNext[j] = timestep_roe(u, j, r, f, fprime)
-        u_nNext[0] = u_nNext[-3]
+        u_nNext[0] = u_nNext[-2]
         u_nNext[-1] = u_nNext[2]
         
         t += dt
@@ -132,7 +132,7 @@ def doitROE(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
 #                print u_nNext
                 
             plt.figure("Evolution solution Schema de Roe")
-            plt.plot(X, u_nNext, label="Solution t = %.4f" %t)
+            plt.plot(X[1:-1], u_nNext[1:-1], label="Solution t = %.4f" %t)
             plt.ylim((-1.1, 1.1))
 
             plt.legend()
@@ -243,7 +243,7 @@ def doitLW(L ,tf, Nx, Nt, f, type_init = "sin") :
             
         u = u_nNext
 #----------------------------------------------
-def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
+def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin", amp=0.5) :
     """
     Fonction qui compare les solution du schema de Roe et de Lax Wendroff
     
@@ -271,7 +271,7 @@ def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
             u[i] = 0 if x < L/2. else 1
     
     if type_init == "sin" :
-        u = 0.7*np.sin(2*np.pi*(X-dx)/(L-dx))
+        u = amp*np.sin(2*np.pi*(X)/(L))
     
     u_lw = np.copy(u)
     u_roe = np.copy(u)
@@ -282,7 +282,7 @@ def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
     t=0.
     plt.figure("Evolution solution Schema de Roe")
     plt.plot(X, u, label="Solution t = %.4f" %t)
-    plt.ylim((-1.5, 1.5))
+    plt.ylim((-amp*1.25, amp*1.25))
     plt.legend()
     
     plt.pause(1)
@@ -292,10 +292,10 @@ def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
            u_nNext_Lw[j] = timestep_LW(u_lw, j, r, f)
            u_nNext_Roe[j] = timestep_roe(u_roe, j, r, f, fprime)
 
-        u_nNext_Lw[0] = u_nNext_Lw[-3]
+        u_nNext_Lw[0] = u_nNext_Lw[-2]
         u_nNext_Lw[-1] = u_nNext_Lw[2]
         
-        u_nNext_Roe[0] = u_nNext_Roe[-3]
+        u_nNext_Roe[0] = u_nNext_Roe[-2]
         u_nNext_Roe[-1] = u_nNext_Roe[2]
         
         t += dt
@@ -308,7 +308,7 @@ def compa_Roe_LW(L ,tf, Nx, Nt, f, fprime, type_init = "sin") :
             plt.figure("Comparaison solutions Schema de Roe vs LW")
             plt.plot(X[1 :len(X[:-1])], u_nNext_Roe[1 :len(X[:-1])], label="ROE Solution t = %.4f " %t, color = 'k')
             plt.plot(X[1 :len(X[:-1])], u_nNext_Lw[1 :len(X[:-1])], label="LW Solution t = %.4f " %t, color = 'blue', fillstyle = 'none', marker='o', linestyle='none')
-            plt.ylim((-1.5, 1.5))
+            plt.ylim((-1.25*amp, 1.25*amp))
 
             plt.legend()
             plt.pause(0.5)
