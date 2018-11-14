@@ -1,5 +1,6 @@
 *.pdf
-!pdf_to_commit/*.pdf
+
+LB_2017/
 
 *.tex.bak
 *.log
