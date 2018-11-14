@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: latin-1 -*-
 
-
 from __future__ import division
 
 import numpy as np
@@ -47,6 +46,7 @@ conditions= {'L'    :   1,
              }
 
 #--------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
 
 def modify_key(conditions, key, new_value):
     if key not in conditions.keys():
@@ -64,6 +64,7 @@ n_phase = 3
 line_x = np.linspace(0,1,conditions['Nx'])
 szline = line_x[1:-1].size
 
+#--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 
 def create_dataset(conditions, base_path=base_path, str_case=str_case, overwrite=False) :
@@ -115,7 +116,7 @@ def create_dataset(conditions, base_path=base_path, str_case=str_case, overwrite
         
         x = np.array(x)
         
-        X = x.reshape(szline, -1, X.shape[1])
+        X = x.reshape(-1, szline, X.shape[1])
         
         np.save(pathtocheckX, X)
         np.save(pathtochecky, y)
@@ -123,12 +124,21 @@ def create_dataset(conditions, base_path=base_path, str_case=str_case, overwrite
     return X, y 
 
 #--------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
 
-def scale_and_train_test_split(X, y) :
+def scale_and_train_test_split(X, y, train_perc=0.8) :
     X = np.copy(X)
     y = np.copy(y)
     
-    xtr, xte, ytr, yte = train_test_split(X, y, shuffle=True, stratify=None)
+    random_permutation = np.random.permutation(len(X))
+    
+    X = X[random_permutation]
+    y = y[random_permutation]
+    
+    train_size = int(train_perc * X.shape[0])
+    
+    xtr, ytr  = X[:train_size], y[:train_size]
+    xte, yte  = X[train_size:], y[train_size:]
     
     xtr_means = xtr.mean(axis=0)
     xtr_stdds = xtr.std(axis=0)
@@ -146,6 +156,7 @@ def scale_and_train_test_split(X, y) :
 
     return xtr_scaled, ytr, xte_scaled, yte, (xtr_means, xtr_stdds)
 
+#--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 
 def build_NN_conca(X, y, lr, save_plot=True, fit = True) :
@@ -197,6 +208,7 @@ def build_NN_conca(X, y, lr, save_plot=True, fit = True) :
     return model
 
 #--------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
 
 def fit_model(model, xtr, ytr, xte, yte, epochs, bsz) :
     # On doit retravailler xtr car si on ecrit comme a l'accoutumé : mode.fit(xtr, ytr, epochs=150)
@@ -241,6 +253,7 @@ def fit_model(model, xtr, ytr, xte, yte, epochs, bsz) :
     model.save_weights("weights.h5")    
 
 #--------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
 
 def predict(model, raw_new_input, means, stdd) :
     # Les entrees doivent etre reparties sur l'ensemble des sous couches
@@ -270,12 +283,11 @@ def predict(model, raw_new_input, means, stdd) :
 
 if __name__ == '__main__' :
     
-    X, y = create_dataset(conditions, overwrite=True)
-    
-#    mode = build_NN_conca(X, y, 0.0001)
+    X, y = create_dataset(conditions, overwrite=False)
+    xtr, ytr, xte, yte, (means, stdds) = scale_and_train_test_split(X, y)
 
-#    xtr, ytr, xte, yte, (means, stdds) = scale_and_train_test_split(X, y)
-#    
+    mode = build_NN_conca(X, y, 0.0001)
+    
 #    for i in range(1) :
 #        fit_model(mode, xtr, ytr, xte, yte, 1000, 16) 
 #        print ("i = %d\n" %i)
