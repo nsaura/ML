@@ -62,6 +62,7 @@ n_cases = 5
 n_phase = 3
 
 line_x = np.linspace(0,1,conditions['Nx'])
+szline = line_x[1:-1].size
 
 #--------------------------------------------------------------------------------------------
 
@@ -106,6 +107,15 @@ def create_dataset(conditions, base_path=base_path, str_case=str_case, overwrite
                     
         X = np.delete(X, 0, axis=0)
         y = np.delete(y, 0, axis=0)
+        
+        x = []
+
+        for j in range(len(X)//szline) :
+            x.append([X[j*szline:(j+1)*szline]])
+        
+        x = np.array(x)
+        
+        X = x.reshape(szline, -1, X.shape[1])
         
         np.save(pathtocheckX, X)
         np.save(pathtochecky, y)
@@ -199,8 +209,6 @@ def fit_model(model, xtr, ytr, xte, yte, epochs, bsz) :
     raw_xtr = xtr.shape[0] 
     col_xtr = xtr.shape[1]
     
-    szline = line_x[1:-1].size
-    
     xtr = xtr.reshape(-1, 1, col_xtr) 
     # xtr.shape : (54000, 1, 4)
 
@@ -264,17 +272,17 @@ if __name__ == '__main__' :
     
     X, y = create_dataset(conditions, overwrite=True)
     
-    mode = build_NN_conca(X, y, 0.0001)
+#    mode = build_NN_conca(X, y, 0.0001)
 
-    xtr, ytr, xte, yte, (means, stdds) = scale_and_train_test_split(X, y)
-    
-    for i in range(1) :
-        fit_model(mode, xtr, ytr, xte, yte, 1000, 16) 
-        print ("i = %d\n" %i)
-        print ("get_weights[-3:]\n{}".format(mode.get_weights()[-3:]))
+#    xtr, ytr, xte, yte, (means, stdds) = scale_and_train_test_split(X, y)
+#    
+#    for i in range(1) :
+#        fit_model(mode, xtr, ytr, xte, yte, 1000, 16) 
+#        print ("i = %d\n" %i)
+#        print ("get_weights[-3:]\n{}".format(mode.get_weights()[-3:]))
 
-        mode.save_weights("./weights.h5")
-        mode.load_weights("./weights.h5")
+#        mode.save_weights("./weights.h5")
+#        mode.load_weights("./weights.h5")
         
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
