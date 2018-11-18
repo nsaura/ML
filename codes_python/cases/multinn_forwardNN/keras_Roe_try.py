@@ -36,9 +36,9 @@ base_path = './../data/xy_files/'
 str_case = 'keras_concatenate_case'
 
 conditions= {'L'    :   1,
-             'Nt'   :   250,
-             'Nx'   :   50,
-             'tf'   :   0.7,
+             'Nt'   :   400,
+             'Nx'   :   180,
+             'tf'   :   0.2,
              'f'    :   lambda u : u**2,
              'fprime' : lambda u : u,
              'type_init' : "sin",
@@ -87,21 +87,33 @@ def create_dataset(conditions, base_path=base_path, str_case=str_case, overwrite
         X, y = np.zeros((1,4)), np.zeros((1))
 
         add_block = lambda u, j : [u[j-1], u[j], u[j+1], (u[j+1] - u[j-1])/(2*dx)]
+#        plt.figure("Evolution")
         for n in range(n_cases) :
-            amp = np.random.choice(np.linspace(0.4, 0.67, 10))
+            amp = np.random.choice(np.linspace(0.4, 0.55, 10))
 
             for a in range(n_phase) :
                 p = np.random.choice(np.linspace(-np.pi, np.pi, 200))
                 u = amp*np.sin(2*np.pi*(line_x)/(conditions['L']) + p)
                 u_next = amp*np.sin(2*np.pi*(line_x)/(conditions['L']) + p)
                 
+#                plt.clf()
+                
                 for t in range(conditions['Nt']) :
+                    if t != 0 :
+                        u = u_next
+                        u_next = np.zeros_like(u)
                     for j in range(1, len(line_x)-1) :
                         u_next[j] = solvers.timestep_roe(u, j, dt/dx, conditions['f'],
                                                                       conditions['fprime'])
+                    
                     u_next[0] = u_next[-2]
                     u_next[-1] = u_next[2]
                     
+#                    plt.plot(line_x[1:-1], u_next[1:-1])
+#                    plt.pause(0.4)
+#                    if t % 20 == 0 :
+#                        plt.clf()
+                        
                     for j in range(1, len(line_x)-1) :
                         X = np.block( [ [X], add_block(u, j) ] )
                         y = np.block( [ [y], [u_next[j]] ] )
@@ -142,6 +154,8 @@ def scale_and_train_test_split(X, y, train_perc=0.8) :
     
     xtr_means = xtr.mean(axis=0)
     xtr_stdds = xtr.std(axis=0)
+    
+    return xtr_means, xtr_stdds
     
     xtr_scaled = np.zeros_like(xtr)
     xte_scaled = np.zeros_like(xte)
@@ -283,11 +297,11 @@ def predict(model, raw_new_input, means, stdd) :
 
 if __name__ == '__main__' :
     
-    X, y = create_dataset(conditions, overwrite=False)
+    X, y = create_dataset(conditions, overwrite=True)
     xtr, ytr, xte, yte, (means, stdds) = scale_and_train_test_split(X, y)
 
     mode = build_NN_conca(X, y, 0.0001)
-    
+    fit_model(mode, xtr, ytr, xte, yte, epochs=1500, bsz=128)
 #    for i in range(1) :
 #        fit_model(mode, xtr, ytr, xte, yte, 1000, 16) 
 #        print ("i = %d\n" %i)
