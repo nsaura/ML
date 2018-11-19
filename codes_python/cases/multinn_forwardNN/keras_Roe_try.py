@@ -152,23 +152,30 @@ def scale_and_train_test_split(X, y, train_perc=0.8) :
     xtr, ytr  = X[:train_size], y[:train_size]
     xte, yte  = X[train_size:], y[train_size:]
     
-    xtr_means = xtr.mean(axis=0)
-    xtr_stdds = xtr.std(axis=0)
-    
-    return xtr_means, xtr_stdds
-    
+    xtr_means = xtr.mean(axis=0) # Un moyenne par neurones
+    xtr_stdds = xtr.std(axis=0)  # Une deviation standard pour un seul neurone
+        
     xtr_scaled = np.zeros_like(xtr)
     xte_scaled = np.zeros_like(xte)
     
-    for i, mean in enumerate(xtr_means) :
-        xtr_scaled[:, i] = xtr[:, i] -  mean
-        xte_scaled[:, i]  = xte[:, i]  -  mean
-        
-        if np.abs(xtr_stdds[i]) > 1e-12 :
-            xtr_scaled[:,i] /= xtr_stdds[i]
-            xte_scaled[:,i] /= xtr_stdds[i]
+    for j in range(xtr_means.shape[0]) :
+        for k in range(xtr_means.shape[1]) :
+            xtr_scaled[:, j, k] = xtr[:, j, k] - xtr_means[j, k]
+            xte_scaled[:, j, k] = xte[:, j, k] - xtr_means[j, k]
+            
+            if abs(xtr_stdds[j, k]) > 1e-12 :
+                xtr_scaled[:, j, k] /= xtr_stdds[j, k]
+                xte_scaled[:, j, k] /= xtr_stdds[j, k]
+                
+#    for i, mean in enumerate(xtr_means) :
+#        xtr_scaled[:, i] = xtr[:, i] -  mean
+#        xte_scaled[:, i]  = xte[:, i]  -  mean
+#        
+#        if np.abs(xtr_stdds[i]) > 1e-12 :
+#            xtr_scaled[:,i] /= xtr_stdds[i]
+#            xte_scaled[:,i] /= xtr_stdds[i]
 
-    return xtr_scaled, ytr, xte_scaled, yte, (xtr_means, xtr_stdds)
+    return xtr_scaled, ytr, xte_scaled, yte, xtr_means, xtr_stdds
 
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
@@ -224,6 +231,51 @@ def build_NN_conca(X, y, lr, save_plot=True, fit = True) :
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 
+#def fit_model(model, xtr, ytr, xte, yte, epochs, bsz) :
+#    # On doit retravailler xtr car si on ecrit comme a l'accoutumé : mode.fit(xtr, ytr, epochs=150)
+#    # On se retrouve avec l'erreur Error when checking model input: the list of Numpy arrays that you are passing to your model is not the size the model expected. Expected to see 50 array(s), but instead got the following list of 1 arrays:
+#    # Il faut specifier a chaque batch l'entree de chacune des couches Inputs 
+#        
+#    xtr = np.copy(xtr) ; xte = np.copy(xte)
+#    ytr = np.copy(ytr) ; yte = np.copy(yte)
+#    
+#    raw_xtr = xtr.shape[0] 
+#    col_xtr = xtr.shape[1]
+#    
+#    xtr = xtr.reshape(-1, 1, col_xtr) 
+#    # xtr.shape : (54000, 1, 4)
+
+#    xtr_lst_array = [xtr[i] for i in range(len(xtr))]
+#    ytr_lst_array = [ytr[i] for i in range(len(ytr))]
+#    
+#    print ("np.shape(xtr_lst_array) : {}".format(np.shape(xtr_lst_array)))
+#    
+#    final_xtr = []
+#    final_ytr = []
+#    
+##    for i in range(len(xtr) // szline) :
+##        final_xtr.append([xtr_lst_array[i*szline : (i+1)*szline]])
+##        final_ytr.append([ytr_lst_array[i*szline : (i+1)*szline]])
+##        
+##    print ("np.shape(final_xtr) = {}".format(np.shape(final_xtr)))
+##    
+##    xtr_arr_final = np.array(final_xtr)
+##    xtr_arr_final = xtr_arr_final.reshape(szline, raw_xtr//szline, col_xtr)
+##    
+##    ytr_arr_final = np.array(final_ytr)
+##    ytr_arr_final = ytr_arr_final.reshape(raw_xtr//szline, szline)
+##    
+##    print ("np.shape(xtr_arr_final) : {}".format(np.shape(xtr_arr_final)))
+##    print ("np.shape(ytr_arr_final) : {}".format(np.shape(ytr_arr_final)))
+#    
+#    model.load_weights("./weights.h5")
+#    model.fit([i for i in xtr_arr_final], ytr_arr_final, epochs = epochs, batch_size=bsz)
+#    
+#    model.save_weights("weights.h5")    
+
+#--------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
+
 def fit_model(model, xtr, ytr, xte, yte, epochs, bsz) :
     # On doit retravailler xtr car si on ecrit comme a l'accoutumé : mode.fit(xtr, ytr, epochs=150)
     # On se retrouve avec l'erreur Error when checking model input: the list of Numpy arrays that you are passing to your model is not the size the model expected. Expected to see 50 array(s), but instead got the following list of 1 arrays:
@@ -232,43 +284,11 @@ def fit_model(model, xtr, ytr, xte, yte, epochs, bsz) :
     xtr = np.copy(xtr) ; xte = np.copy(xte)
     ytr = np.copy(ytr) ; yte = np.copy(yte)
     
-    raw_xtr = xtr.shape[0] 
-    col_xtr = xtr.shape[1]
-    
-    xtr = xtr.reshape(-1, 1, col_xtr) 
-    # xtr.shape : (54000, 1, 4)
-
-    xtr_lst_array = [xtr[i] for i in range(len(xtr))]
-    ytr_lst_array = [ytr[i] for i in range(len(ytr))]
-    
-    print ("np.shape(xtr_lst_array) : {}".format(np.shape(xtr_lst_array)))
-    
-    final_xtr = []
-    final_ytr = []
-    
-    for i in range(len(xtr) // szline) :
-        final_xtr.append([xtr_lst_array[i*szline : (i+1)*szline]])
-        final_ytr.append([ytr_lst_array[i*szline : (i+1)*szline]])
-        
-    print ("np.shape(final_xtr) = {}".format(np.shape(final_xtr)))
-    
-    xtr_arr_final = np.array(final_xtr)
-    xtr_arr_final = xtr_arr_final.reshape(szline, raw_xtr//szline, col_xtr)
-    
-    ytr_arr_final = np.array(final_ytr)
-    ytr_arr_final = ytr_arr_final.reshape(raw_xtr//szline, szline)
-    
-    print ("np.shape(xtr_arr_final) : {}".format(np.shape(xtr_arr_final)))
-    print ("np.shape(ytr_arr_final) : {}".format(np.shape(ytr_arr_final)))
-    
-    model.load_weights("./weights.h5")
-    model.fit([i for i in xtr_arr_final], ytr_arr_final, epochs = epochs, batch_size=bsz)
+    model.fit([x for x in xtr], ytr, epochs = epochs, batch_size=bsz)
     
     model.save_weights("weights.h5")    
-
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
-
 def predict(model, raw_new_input, means, stdd) :
     # Les entrees doivent etre reparties sur l'ensemble des sous couches
     inp = np.copy(raw_new_input)
@@ -297,11 +317,15 @@ def predict(model, raw_new_input, means, stdd) :
 
 if __name__ == '__main__' :
     
-    X, y = create_dataset(conditions, overwrite=True)
-    xtr, ytr, xte, yte, (means, stdds) = scale_and_train_test_split(X, y)
+    X, y = create_dataset(conditions, overwrite=False)
+    xtr, ytr, xte, yte, means, stdds = scale_and_train_test_split(X, y)
 
-    mode = build_NN_conca(X, y, 0.0001)
-    fit_model(mode, xtr, ytr, xte, yte, epochs=1500, bsz=128)
+#    m, s = scale_and_train_test_split(X, y)
+
+#    mode = build_NN_conca(X, y, 0.0001)
+#    fit_model(mode, xtr, ytr, xte, yte, epochs=1500, bsz=128)
+
+
 #    for i in range(1) :
 #        fit_model(mode, xtr, ytr, xte, yte, 1000, 16) 
 #        print ("i = %d\n" %i)

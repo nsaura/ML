@@ -38,9 +38,6 @@ def parser() :
     parser.add_argument('--diffusion_rate', '-nu', action='store', type=float, default=2.5e-5, dest='nu', 
                         help='Define the convection coefficient h \n' )
     
-    # Pour l'algorithme
-#    parser.add_argument('--delta_t', '-dt', action='store', type=float, default=1e-4, dest='dt', 
-#                        help='Define the time step disctretization. Default to %(default).5f \n' )
     parser.add_argument('--Iteration_max', '-itmax', action='store', type=int, default=500, dest='itmax', 
                         help='Define temporal maximum iteration (-itmax) in both solving problems : default %(default)d \n' )
     parser.add_argument('--compteur_max_adjoint', '-cptmax', action='store', type=int, default=100, dest='cpt_max_adj', 
@@ -303,8 +300,6 @@ class Vitesse_Choc() :
         u_nNext = np.dot(np.linalg.inv(self.A1), u_n_tmp)
 
         u_nNext[-1] = u_nNext[1]
-        u_nNext[0] = u_nNext[-2]
-        
         return u_nNext
 ##---------------------------------------------------         
     def obs_res(self, write=False, plot=False)  : 
