@@ -1,6 +1,6 @@
 \documentclass[10pt,
 			   xcolor=svgnames,
-			   hyperref={linkcolor=red, citecolor = DarkGreen, colorlinks=true, urlcolor=Navy}]{beamer}
+			   hyperref={linkcolor=red, citecolor = DarkGreen, colorlinks=true, urlcolor=Navy}] {beamer}
 			   
 \usepackage[english]{babel}
 \usepackage[utf8x]{inputenc}
@@ -95,35 +95,83 @@
   \titlepage
 \end{frame}
 
-\begin{frame}{Laminaire, transient and Turbulent flows}{Graphs and equations}
-\begin{figure}[!ht]
-\centering
-\includegraphics[scale=0.2]{Reynolds_observations_turbulence_1883.png}
-\caption{}
-\label{}
-\end{figure}
+%\begin{frame}{Laminaire, transient and Turbulent flows}{Graphs and equations}
+%\begin{figure}[!ht]
+%\centering
+%\includegraphics[scale=0.2]{Reynolds_observations_turbulence_1883.png}
+%\caption{}
+%\label{}
+%\end{figure}
+%\end{frame}
+
+\begin{frame}{Introduction}{Big data in fluid mechanics}
+	Within the last 50 years, datasets covering various fluid mechanics aspects have been built. Those are built from
+	\begin{itemize}
+		\warrow Numerical results :	
+		\begin{itemize}
+			\sarrow High fidelity datasets from Direct Numerical Simulation \normalsize or Lattice Boltzmann method\\[1mm]
+			\sarrow Lower fidelity datasets (Large Eddy Simulation ...) 
+		\end{itemize}			
+		\warrow Experimental results (condidered to be the ground truth)
+	\end{itemize}
+Computers being more and more powerful, new datasets are frequently added to this databank.	\\[1mm]
+	
+	\begin{block}{Boom of data driven methods}
+		Data driven method denomination embraces every method that relies on prior knowledge from data. \footnote{To a certain extent, Physics can be seen as data-driven.}
+	\end{block}
 \end{frame}
 
-\begin{frame}{Low fidelity VS. High fidelity methods}
+\begin{frame}{Introduction}{Data-Driven methods and Supervised Machine learning}
+	\begin{block}{Data-driven methods}
+		It consists in infering \textit{latent variables} \textbf{h} of a model \textbf{m} behind some \textit{visible variables} \textbf{v} datas or at least maximize the conditionnal probability $$p\bepar{h|\,v}$$
+		We call this procedure inference or Bayesian Inversion
+	\end{block}
+	
+	\begin{block}{Supervised Machine Learning}	
+		It consists in tuning set of parameters $\omega$ to match predefined input $\eta$ and output $y$ pairs called \textbf{train dataset} in the aim to extend this knowledge for prediction purposes. In other words, we want to maximize 
+					$$ p(\omega|\, \eta_{\text{train}}, y_{\text{train}})$$
+	\end{block}	
+	
+\end{frame}	
 
-\begin{block}{Well known question : cost computation or precision ?}
-\begin{itemize}
-\item[$\bullet$] DNS provides perfect solutions but needs a lot of time computation
-\item[$\bullet$] RANS models provide quicker more or less precise results 
-\end{itemize} 
-\end{block}
-\vspace{1cm}
-\begin{block}{ML algorithms exploding development (in every field)}
-\begin{itemize}
-\item[$\bullet$] Gaussian Process
-\item[$\bullet$] RForests, NNetworks (Supervised) for classification or regression tasks (more and more papers in fluid mechanics)
-\item[$\bullet$] Reinforcement Learning (few papers in fluid mechanics so far)
-\end{itemize}
-\end{block}
+\begin{frame}{Introduction}{Precision or cost computation ?}
+	\checkmark \hspace{2mm} Powerful computers allow to investigate highly complexed Turbulent flows. Then two choices 
+	\begin{itemize}
+		\warrow Consider the whole Physics of the problem
+		\begin{itemize}
+			\item[\dgreen \checkmark] High fidelity results
+			\sarrow Need a huge amount of time 
+		\end{itemize}
+		
+		\warrow Simplify the Physics of the problem (coarse grained modeling)
+		\begin{itemize}
+			\item[\dgreen \checkmark] Results faster obtained
+			\sarrow May be not accurate enough
+		\end{itemize}
+	\end{itemize}
+	
+	\begin{exampleblock}{Solution : both of them}
+		Correct low fidelity but quick model to inject high fidelity information from previous DNS or experimental dataset.\\
+	\end{exampleblock}	
+	\end{frame}
 
-\end{frame}
+%\begin{block}{Well known question : cost computation or precision ?}
+%\begin{itemize}
+%\item[$\bullet$] DNS provides perfect solutions but needs a lot of time computation
+%\item[$\bullet$] RANS models provide quicker more or less precise results 
+%\end{itemize} 
+%\end{block}
+%
+%\begin{block}{ML algorithms exploding development (in every field)}
+%\begin{itemize}
+%\item[$\bullet$] Gaussian Process
+%\item[$\bullet$] RForests, NNetworks (Supervised) for classification or regression tasks (more and more papers in fluid mechanics)
+%\item[$\bullet$] Reinforcement Learning (few papers in fluid mechanics so far)
+%\end{itemize}
+%\end{block}
 
-\begin{frame}{Main idea through few observations}
+
+\begin{frame}{Bayesian inference}
 \begin{block}{Different implementations}
 \begin{itemize}
 	\item[$\bullet$] Data-Driven augmentation (use of high fidelity datasets) with a combination of Bayesian Inference and Gaussian Process (or other ML methods)
@@ -131,7 +179,7 @@
 \end{itemize}
 \end{block} 
 
-\tableofcontents
+%\tableofcontents%
 
 \end{frame}
 
