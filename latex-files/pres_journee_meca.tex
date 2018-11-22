@@ -109,7 +109,7 @@
 	\begin{itemize}
 		\warrow Numerical results :	
 		\begin{itemize}
-			\sarrow High fidelity datasets from Direct Numerical Simulation \normalsize or Lattice Boltzmann method\\[1mm]
+			\sarrow \normalsize High fidelity datasets from Direct Numerical Simulation \normalsize or Lattice Boltzmann method\\[1mm]
 			\sarrow Lower fidelity datasets (Large Eddy Simulation ...) 
 		\end{itemize}			
 		\warrow Experimental results (condidered to be the ground truth)
@@ -135,7 +135,7 @@ Computers being more and more powerful, new datasets are frequently added to thi
 \end{frame}	
 
 \begin{frame}{Introduction}{Precision or cost computation ?}
-	\checkmark \hspace{2mm} Powerful computers allow to investigate highly complexed Turbulent flows. Then two choices 
+	 Current powerful computers allow to investigate highly complex Turbulent flows. Then two choices 
 	\begin{itemize}
 		\warrow Consider the whole Physics of the problem
 		\begin{itemize}
@@ -149,7 +149,7 @@ Computers being more and more powerful, new datasets are frequently added to thi
 			\sarrow May be not accurate enough
 		\end{itemize}
 	\end{itemize}
-	
+	\vspace{2mm}
 	\begin{exampleblock}{Solution : both of them}
 		Correct low fidelity but quick model to inject high fidelity information from previous DNS or experimental dataset.\\
 	\end{exampleblock}	
@@ -171,11 +171,17 @@ Computers being more and more powerful, new datasets are frequently added to thi
 %\end{block}
 
 
-\begin{frame}{Bayesian inference}
-\begin{block}{Different implementations}
+\begin{frame}{Bayesian inference in RANNS (low fidelity) models}
+	\begin{block}{RANNS models : consider mean flow and recover fluctuation flow}
+		The main idea of RANS models is to aonly consider the mean flow \textit{i.e.} large scale. To recover the fluctuation flow, we add closure(s) equation(s) of the forme.  
+		\center{$\displaystyle \mathcal{F}\bepar{\bk P_{\text{roduction}}  , D_{\text{issipation} }, T_{\text{ransport}}} = 0 $}
+	\end{block}
+ 
+\begin{block}{Baysian inference problem}
 \begin{itemize}
-	\item[$\bullet$] Data-Driven augmentation (use of high fidelity datasets) with a combination of Bayesian Inference and Gaussian Process (or other ML methods)
-	\item[$\bullet$] Machine Learning to fully recover physical behaviour
+	\item[$\bullet$] We add a term $\color{BlueViolet} \beta\bepar{\textbf{x}, t} \bk$ to \textit{drive} the RANNS solution according to high fidelity information\\
+	\center{$\displaystyle \mathcal{F}\bepar{\color{BlueViolet} \beta\bepar{\textbf{x}, t} \bk P_{\text{roduction}}  , D_{\text{issipation} }, T_{\text{ransport}}} = 0 $} 
+\flushleft	
 \end{itemize}
 \end{block} 
 
@@ -183,152 +189,91 @@ Computers being more and more powerful, new datasets are frequently added to thi
 
 \end{frame}
 
-\section{Bayesian inversion framework (BIF)}
-\begin{frame}{Infer beta through inversion}
-\begin{block}{Modified closure equation }
-The main idea of RANS models is to add a closure equation. The main idea of BI is to add a flexible term in this closure to correct the error injected.  
-\center{$\displaystyle \mathcal{F}\bepar{\color{BlueViolet} \beta(\mathbf{x}, t) \bk P_{\text{roduction}}  , D_{\text{issipation} }, T_{\text{ransport}}} = 0 $}
-\end{block}
-$$ \beta_M = \argmin \mathcal{J}$$
-$$\mathcal{J} = \becro{\frac{1}{2} \bepar{\text{Obs} - h\bepar{\beta}}^T\textbf{C}^{-1}_m\bepar{\text{Obs} - h\bepar{\beta}} + \bepar{\beta - \beta_{\text{p}}}^T\textbf{C}_\beta^{-1}\bepar{\beta - \beta_{\text{p}}}}$$
+\begin{frame}{Baysian inference problem}
+	\begin{itemize}
+		\warrow Find $\beta$ as the vector maximizing $p\bepar{\beta|\, d_{\text{\textbf{Obs}}}}$  
+		\warrow Equivalent to minimize the cost function 
+		\vspace{-5.5mm}
+		\center{$$\mathcal{J} = \becro{\frac{1}{2} \bepar{d_{\text{\textbf{Obs}}} - h\bepar{\beta}}^T\textbf{C}^{-1}_m\bepar{d_{\text{\textbf{Obs}}} - h\bepar{\beta}} + \bepar{\beta - \beta_{\text{p}}}^T\textbf{C}_\beta^{-1}\bepar{\beta - \beta_{\text{p}}}}$$
+}
+	\end{itemize}
 
-\begin{block}{Importance and meaning of $\beta$}
-\begin{itemize}
-\item[$\bullet$] Discrepancy vector minimizing the distance between DNS and RANS solutions (can be seen as a vector of latent variables)
-\item[$\bullet$] Maximizing $\color{BlueViolet} \beta \bk | \text{Obs}$ 
-\end{itemize}
-\end{block}
-
-\end{frame}
-\begin{frame}{Bayesian Inversion Framework (BIF)}
-Framework proposed by Duraisamy \textit{et. al} in \citep{parish2016paradigm}
-\begin{multicols*}{2}
-\noindent
-	\begin{figure}[!ht]
-	\centering
-	\includegraphics[scale=0.3]{singh.png}
-	\caption{Figure extracted from \citep{singh2017machine}}
-	\end{figure}
+	\vspace{2mm}
+	$\mathcal{J}$ distance between low and high fidelity model solutions, with
 	
+	\begin{multicols}{2}
+	\noindent
+
+	\begin{itemize}
+		\warrow $\textbf{C}^{-1}_m$ inverse of the true data covariance 
+		\warrow $\textbf{C}^{-1}_\beta$ inverse of the prior data covariance 
+	\end{itemize}
+
 	\columnbreak
 
 	\begin{itemize}
-	\item[1 --] Infer descrepancy \color{BlueViolet} \textit{information} \bk $\beta$ as the MAP solution \\[5mm]
-	
-	\item[2 --]	\textit{Generalize} this information using ML methods to have a \color{BlueViolet} \textit{knowledge} \bk: $\beta = \mathcal{F}\bepar{\eta_1, \eta_2,...}$ \\[5mm]
- 
-	\item[3 --] Inject ML predicted correction into model's equation(s) \\[5mm]
-	
-	\end{itemize}
-			
-\end{multicols*}
+		\warrow $d_{\text{\textbf{Obs}}}$ one of the high fidelity field (\textit{e.g. $\textbf{U}$ )}
+		\warrow $h\bepar{\beta}$ same low fidelity field (now depends on $\beta$)    
+	\end{itemize}	
+	\end{multicols}	
+
+\textit{Maximum A Posteriori} method : gives through an iterative process $\beta_M$  
+$$ \beta_M = \argmin \mathcal{J} $$
+
 \end{frame}
 
-\begin{frame}{BIF example : 1D heat conduction with radiative and conductive heat sources}
-\begin{block}{Real and Model equations}
-\begin{itemize}
-\item[$\bullet$] Real equation :
-\begin{center}
-$\displaystyle \frac{d^2T}{dz^2} + \varepsilon(T)\bepar{T^4_\infty - T^4} + h\bepar{T_\infty - T} = 0$
-\end{center}
-\item[$\bullet$] Model equation :
-\begin{center}
-$\displaystyle \frac{d^2T}{dz^2} + \varepsilon_0\color{BlueViolet}\beta(z)\bk\bepar{T^4_\infty - T^4}= 0$
-\end{center}
-\end{itemize} 
-\end{block}
-
-\begin{itemize}
-\item[\dgreen \checkmark] BFGS method to minimize $\mathcal{J}$ $\rightarrow$ $\beta_{\text{MAP}}$ \& $\text{Hess}^{-1}_{\beta_{\text{MAP}}}$
-\item[\dgreen \checkmark] Create $\beta_{\text{final}}$ distribution : \\
-\begin{center}
-$ \beta_{\text{final}} \equiv \beta \sim \mathcal{N}\bepar{\beta_{\text{MAP}}, {\text{Hess}^{-1}_{\beta_{\text{MAP}}}}}$
-\end{center}
-\end{itemize}
-
+\begin{frame}{Example of inference : Thermal problem}
+	Begin with a simple problem	
+	\begin{block}{Real and Model equations}
+		\begin{itemize}
+			\item[$\bullet$] Real equation :
+			\begin{center}
+				$\displaystyle \frac{d^2T}{dz^2} + \varepsilon(T)\bepar{T^4_\infty - T^4} + h\bepar{T_\infty - T} = 0$
+			\end{center}
+			\item[$\bullet$] Model equation :
+			\begin{center}
+				$\displaystyle \frac{d^2T}{dz^2} + \varepsilon_0\color{BlueViolet}\beta(z)\bk\bepar{T^4_\infty - T^4}= 0$
+			\end{center}
+		\end{itemize} 
+	\end{block}
+	
+	\begin{itemize}
+		\item[\dgreen \checkmark] BFGS method to minimize $\mathcal{J}$ $\rightarrow$ $\beta_{\text{MAP}}$ \& $\text{Hess}^{-1}_{\beta_{\text{MAP}}}$
+		\item[\dgreen \checkmark] Create $\beta_{\text{final}}$ distribution : \\
+		\begin{center}
+			$ \beta_{\text{final}} \equiv \beta \sim \mathcal{N}\bepar{\beta_{\text{MAP}}, {\text{Hess}^{-1}_{\beta_{\text{MAP}}}}}$
+		\end{center}
+	\end{itemize}
 \end{frame}
 
 \begin{frame}{BIF : Few figures based on inversion ($T_\infty = \ang{15}$C)}
-\begin{multicols}{2}
-\noindent
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.25]{Pres_Evolution_beta_map.png}
-	\caption{Evolution of beta through the minimization process}
-	\end{figure}
+	\begin{multicols}{2}
+		\noindent
+		\begin{figure}[H]
+			\centering
+			\includegraphics[scale=0.25]{Pres_Evolution_beta_map.png}
+			\caption{Evolution of beta through the minimization process}
+		\end{figure}
 
-\columnbreak
+	\columnbreak
 	
-	\vspace*{-1cm}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[height=4cm, width=6cm]{Pres_T_15_Full_Beta_Comp.png}
-	\end{figure}
+		\vspace*{-1cm}
+		\begin{figure}[H]
+			\centering
+			\includegraphics[height=4cm, width=6cm]{Pres_T_15_Full_Beta_Comp.png}
+		\end{figure}
 	
-	\vspace*{-2.5cm}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[height=4cm, width=6cm]{Evolution_de_l'erreur_T_inf_15.png}
-	\end{figure}		
+		\vspace*{-2.5cm}
+		\begin{figure}[H]
+			\centering
+			\includegraphics[height=4cm, width=6cm]{Evolution_de_l'erreur_T_inf_15.png}
+		\end{figure}		
 
-
-	
-\end{multicols}
+	\end{multicols}
 \end{frame}
-
-\begin{frame}{BIF : Next Step : Machine Learning}
-Reproduce the previous calculs for T = 5:5:50 \\[1cm]
-
-Construction $X$ and $y$ in $\mathcal{D} = \left\lbrace \ \underbrace{\bepar{T_{\text{inf}},T(x_i)}}_{X_i}, \ \underbrace{\beta_i}_{y_i}\ \right\rbrace$ for each T.\\
-In matrix notation : 
-
-\begin{multicols}{2}
-\noindent
-$$ X = \left[ \begin{array}{c} \cdot \\ \cdot \\ T_{\text{inf}},\ T(x) \\ \cdot \\ \cdot
-			  \end{array}
-	   \right]
-$$
-\columnbreak
-$$ y = \left[ \begin{array}{c} \cdot \\ \cdot \\ \beta(x) \\ \cdot \\ \cdot
-			  \end{array}
-	   \right]
-$$
-\end{multicols}
-Neural Network generalization : \\
-\begin{center}
- $\beta_1(x), ..., \beta_n(x) \rightarrow \beta_{\text{ML}} = \mathcal{F}\bepar{\eta_1 = T_{\text{inf}}, \eta_2= T}$
-\end{center}
-\end{frame}
-
-\begin{frame}{(BIF) : Prediction with NN }
-$T_\infty = \ang{28}$C 
-\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.5]{T_True_vs_T_ML_N_sample_5_T_inf_28_Adam-mean.png}
-\end{figure}
-
-\end{frame}
-
-\begin{frame}
-$T_\infty = \ang{55}$C 
-\begin{figure}[H]
-	\centering	
-	\includegraphics[scale=0.5]{TBeta_True_vs_TBeta_ML_N_sample_=_5_T_inf_=_55.png}
-\end{figure}
-
-\end{frame}
-
-\begin{frame}
-$T_\infty = 35 + 20\sin(2\pi x)$ 
-\begin{figure}[H]
-	\centering	
-	\includegraphics[scale=0.5]{T_True_vs_T_ML_N_sample_5_T_inf_35_+_20sin_2piz_adam-mean.png}
-\end{figure}
-\end{frame}
-
 
 \begin{frame}{(BIF) Viscous Burgers Equation 1D}
-	
+	More complex inference problem
 	\begin{block}{Equations}
 		\begin{itemize}
 			\item[$\bullet$] Real equation :
@@ -394,233 +339,418 @@ $T_\infty = 35 + 20\sin(2\pi x)$
 
 \end{frame}
 
-
-\begin{frame}{(BIF) VBE 1D : Machine Learning step}
-	More difficult now : what are $\eta$ to use in $\beta = \mathcal{F}(\eta)$ ?
-	\begin{itemize}
-		\item[$\bullet$]$\beta^{n+1} = \bepar{U_{i-1}^n, U_i^n, U^n_{i+1}}$ 
-		
-		\item[$\bullet$] $\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		
-		
-		\item[$\bullet$] $\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, 
-		U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, 
-		U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		
-		
-		\item[$\bullet$] \scriptsize$\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, 
-		U_{_{\bk i-1}}^{\navy n-2}, U_{\bk i}^{\navy n-2}, U_{_{\bk i+1}}^{\navy n-2},
-		U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		\\[0.54cm]
-	\end{itemize}
-	\normalsize
-
-	Problem linked to this framework :
-	\begin{itemize}
-		\sarrow Inversion can take long time to give $\beta_{\text{MAP}}$
-		\sarrow The need to produce various inferences to construct wide datasets
-	\end{itemize}
-	
-	\begin{exampleblock}{Idea}
-		Can we use NN brute force to infer the behaviour of U through time ?
-	\end{exampleblock}	
-	No more inference needed
-\end{frame}
-
-\section{Neural network brute force (NNBF)}
-\begin{frame}{Building the datasets}
-
-	\begin{itemize}
-		\item[$\bullet$] Different sinusoides as initial conditions
-
+\begin{frame}{Feed Forward Neural Network (FFNN)}
 		\begin{itemize}
-			\sarrow Different amplitudes (between 1 and 2) -- 15 cases
-			\sarrow Random phases
- 		\end{itemize}
-	
-	\begin{figure}[H]
-		\vspace{-0.3cm}		
-		\centering
-		\includegraphics[scale=0.3]{Initialisation_cases.png}
-	\end{figure}			
-		
- 		\item[$\bullet$] Lax Wendroff scheme to solve each initial condition
-	\end{itemize}
-\end{frame}
-
-\begin{frame}{Strategy employed here}
-	We want to find the functionnal linking the solution $U^{n+1}$ and some n$^{\text{th}}$ parameters :\\
-	\begin{center}
-	$ \displaystyle U^{n+1} = \mathcal{F}\bepar{\eta^n}$ \\
-	\end{center}
-	Construction $X$ and $y$ iteration by iteration, case by case.\\
+			\warrow Supervised Machine learning algorithm
+			\warrow Graph from Inputs to Outputs 
+			\warrow In bitween : architectures (layers abb. L) and operations (activation functions, matricial products)
+		\end{itemize}
 
 	\begin{multicols}{2}
-	\noindent
-	$$ X = \left[ \begin{array}{c} \cdot \\ \cdot \\ U^n_{i-1},U^n_{i}, U^n_{i+1}, \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}  \\ \cdot \\ \cdot
-				  \end{array}
-		   \right]
-	$$
-	\columnbreak
-	$$ y = \left[ \begin{array}{c} \cdot \\ \cdot \\ U^{n+1}_i \\ \cdot \\ \cdot
-			  \end{array}
-	   \right]
-	$$
-	\end{multicols}
+	\noindent 
 	
-	\begin{itemize}
-		\item[\checkmark] $\displaystyle \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}$ to better catch chocs \\
-		\item[\checkmark] Each line of X describes the local velocity field around the i$^{\text{th}}$ point and its local variation linked with the value of the velocity at the same i$^{\text{th}}$ point
-	\end{itemize}		
-	
-\end{frame}
-
-\begin{frame}{Training of the algorithm}
-	\begin{figure}[H]
+	\begin{figure}[!ht]
 		\centering
-		\includegraphics[scale=0.45]{Cost_Evolution_:_loglog_and_lin.png}
-	\end{figure}
+		\includegraphics[width=5.5cm, height=3.5cm]{Multi-layer-perceptron.png}	
+	\end{figure}	
+	
+	\columnbreak
+
+		\begin{itemize}
+			\sarrow Input L connected to hidden L connected to hidden L until Output L
+			\sarrow Hidden layer (HL) composed of hidden nodes (HN)			
+		\end{itemize}	
+	\end{multicols}
+
 \end{frame}
 
-\begin{frame}{Graph architecture}
-	Graph with \red 6 hidden layers \bk with \red 80 hidden nodes \bk in each. Adam optimizer (better and the most used in literature) and \navy Lasso \bk cost function.\\
+\begin{frame}{FFNN : light focus on hidden nodes}
+	\begin{multicols}{2}
 	
-	TensorFlow graph that can be visualized with Tensorboard :
-	
-	\begin{multicols}{2}	
 		\noindent		
-		\begin{figure}[H]
+		\begin{figure}[!ht]
 		\centering
-		\includegraphics[scale=0.2]{Graphs.png}
+		\includegraphics[scale=0.4]{hidden_nodes.png}
 		\end{figure}
-	
-	\columnbreak
-		\centering
-		\vspace{1cm}
+		
+		\columnbreak
+
 		\begin{itemize}
-			\sarrow \footnotesize Lasso = $\norm{ y_{\text{tr}} - y_{\text{pred}}}^2_{L_2} + \lambda \norm{w}_{L_1}$		 \\[1.5cm]
+			\sarrow Each HN apply $\text{Output}_\text{HN} = \text{act}\bepar{\sum_j w_{ij}\,{\eta_j}_{\text{HN}}}$ 
+			\sarrow act function add non linearity to transorm inputs into outputs
+			
+		\end{itemize}
+		\vspace{-4mm}
+\begin{figure}[!ht]
+		\centering
+		\includegraphics[scale=0.23]{The-most-common-nonlinear-activation-functions.png}
+		\end{figure}		
 		
-			\sarrow Activation function : selu
-			\begin{figure}[H]
-			\centering
-			\includegraphics[scale=0.3]{SELU.png}
-			\caption{From Wikipedia}
-			\end{figure}
+	\end{multicols}
+
+\end{frame}
+
+\begin{frame}{Training of a Neural Network}
+	\begin{itemize}
+		\item[$\bullet$] Two phases : construction phase (define archtectures), execution phase
+		\item[$\bullet$] Excecution phase : training phase \& testing phase \\[2mm]
+	\end{itemize}
+ 
+Consider X input matrice and y target matrice and split them into 
+	\begin{multicols}{2}
+		\begin{itemize}
+			\warrow $\mathcal{D}_\text{train}$ = $\bepar{X_{\text{train}},\, y_{\text{train}}}$ 
+		\end{itemize}				
 		
+	\columnbreak	
+		\begin{itemize}		
+			\warrow $\mathcal{D}_\text{test}$ = $\bepar{X_{\text{test}},\, y_{\text{test}}}$
 		\end{itemize}
 	\end{multicols}
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D I}
-	New initial velocity field (first we deal with the \color{orange} orange \bk one) : 
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.4]{Initialisation_cases_Andu1.png}
-	\end{figure}
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D I}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.4]{Pres_First_Iteration_1.png}
-	\end{figure} 
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D I}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.5]{Pres_Tenth_Iteration_1.png}
-	\end{figure} 
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D I}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.35]{Pres_50th_Iteration_1.png}
-	\end{figure} 
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D I}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.42]{Pres_Last_Iteration_1.png}
-	\end{figure} 
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D II}
-	New initial velocity field (we deal now with the \color{cyan} cyan \bk one) : 
-\vspace{-0.3cm}	
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.5]{Initialisation_cases_Last.png}
-	\end{figure}
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D II}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.5]{Pres_First_Iteration_2.png}
-	\end{figure} 
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D II}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.5]{Pres_Tenth_Iteration_2.png}
-	\end{figure} 
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D II}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.5]{Pres_50th_Iteration_2.png}
-	\end{figure} 
-\end{frame}
-
-\begin{frame}{Brute Force on VBE 1D II}
-	\begin{figure}[H]
-	\centering
-	\includegraphics[scale=0.5]{Pres_Last_Iteration_2.png}
-	\end{figure} 
-\end{frame}
-
-\begin{frame}{Conclusion on Brute Force}
-VBE is not the simpliest equation to solve since sharp chocs
-	\begin{block}{Still can be improved}
-		\begin{itemize}
-			\item[$\bullet$] Good approximations but can be better
-			\item[$\bullet$] Accumulative errors phenomena that impose to differ local error (on the on going iteration) and global errors (accumulated through time iterations)
-			\item[$\bullet$] Genetic Algorithm can be used to get the best architecture but the possible features are infinite \\[0.5cm]
-		\end{itemize}
-	\end{block}
-
-	\begin{exampleblock}{Solution : Learn !}
-	The solution is to use Reinforcement learning to learn the physics
-	\begin{itemize}
-		\item[\checkmark] Auto ajust weights given an environment 
-		\item[\checkmark] Ensure to respect conservation physics law
-		\item[\checkmark] Auto adjust global and local error
-	\end{itemize}
-	\end{exampleblock}
-\end{frame}
-
-\begin{frame}{OnGoing Deep ReiL Framework}
 	
 	\begin{itemize}
-		\item[$\bullet$] Deep Reinforcement Learning (DQL) code in ealy stage of test.
-		\item[$\bullet$] A strategy has been established and wait to be tested
-		
-		\item[$\bullet$] More soon .. ;)
-		
+		\sarrow Training phase : optimize (through Gradient Descent algorithm) HL weights to maximize the correspondance between $X_{\text{train}},\, y_{\text{train}}$ \\
+		\sarrow Testing phase : evaluate the generalization capacity of the NN on $\mathcal{D}_\text{test}$ \\[3mm]
+		\item[\checkmark] If testing phase is validated we can go beyond and use the NN with the final weights to predict
 	\end{itemize}
+\end{frame}	
 
+\begin{frame}{How it can be used}
+	\begin{itemize}
+		\warrow First thing is to find the good architecure
+	\end{itemize}
+	\vspace{-3mm}
+	\begin{multicols}{2}
+	Classic one
+	\vspace{-8mm}	
+		\begin{figure}[!ht]
+			\centering
+			\includegraphics[scale=0.3]{1bCQl.png}
+		\end{figure}
+
+	\columnbreak
+	AutoEncoder
+	\vspace{-8mm}	
+		\begin{figure}[!ht]
+			\centering
+			\includegraphics[scale=0.23]{Autoencoder_structure.png}
+	\end{figure}	
+	
+	\end{multicols}
+		\vspace{-9mm}	
+	More complicated one 
+	\vspace{-5mm}	
+	\begin{figure}[!ht]
+		\centering
+		\includegraphics[width=11.2cm, height=2.5cm]{model_plot.png}
+	\end{figure}
+	
 \end{frame}
+%\begin{frame}{Bayesian Inversion Framework (BIF)}
+%Framework proposed by Duraisamy \textit{et. al} in \citep{parish2016paradigm}
+%\begin{multicols*}{2}
+%\noindent
+%	\begin{figure}[!ht]
+%	\centering
+%	\includegraphics[scale=0.3]{singh.png}
+%	\caption{Figure extracted from \citep{singh2017machine}}
+%	\end{figure}
+%	
+%	\columnbreak
+%
+%	\begin{itemize}
+%	\item[1 --] Infer descrepancy \color{BlueViolet} \textit{information} \bk $\beta$ as the MAP solution \\[5mm]
+%	
+%	\item[2 --]	\textit{Generalize} this information using ML methods to have a \color{BlueViolet} \textit{knowledge} \bk: $\beta = \mathcal{F}\bepar{\eta_1, \eta_2,...}$ \\[5mm]
+% 
+%	\item[3 --] Inject ML predicted correction into model's equation(s) \\[5mm]
+%	
+%	\end{itemize}
+%			
+%\end{multicols*}
+%\end{frame}
+
+%
+%
+%
+%\begin{frame}{BIF : Next Step : Machine Learning}
+%Reproduce the previous calculs for T = 5:5:50 \\[1cm]
+%
+%Construction $X$ and $y$ in $\mathcal{D} = \left\lbrace \ \underbrace{\bepar{T_{\text{inf}},T(x_i)}}_{X_i}, \ \underbrace{\beta_i}_{y_i}\ \right\rbrace$ for each T.\\
+%In matrix notation : 
+%
+%\begin{multicols}{2}
+%\noindent
+%$$ X = \left[ \begin{array}{c} \cdot \\ \cdot \\ T_{\text{inf}},\ T(x) \\ \cdot \\ \cdot
+%			  \end{array}
+%	   \right]
+%$$
+%\columnbreak
+%$$ y = \left[ \begin{array}{c} \cdot \\ \cdot \\ \beta(x) \\ \cdot \\ \cdot
+%			  \end{array}
+%	   \right]
+%$$
+%\end{multicols}
+%Neural Network generalization : \\
+%\begin{center}
+% $\beta_1(x), ..., \beta_n(x) \rightarrow \beta_{\text{ML}} = \mathcal{F}\bepar{\eta_1 = T_{\text{inf}}, \eta_2= T}$
+%\end{center}
+%\end{frame}
+%
+%\begin{frame}{(BIF) : Prediction with NN }
+%$T_\infty = \ang{28}$C 
+%\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.5]{T_True_vs_T_ML_N_sample_5_T_inf_28_Adam-mean.png}
+%\end{figure}
+%
+%\end{frame}
+%
+%\begin{frame}
+%$T_\infty = \ang{55}$C 
+%\begin{figure}[H]
+%	\centering	
+%	\includegraphics[scale=0.5]{TBeta_True_vs_TBeta_ML_N_sample_=_5_T_inf_=_55.png}
+%\end{figure}
+%
+%\end{frame}
+%
+%\begin{frame}
+%$T_\infty = 35 + 20\sin(2\pi x)$ 
+%\begin{figure}[H]
+%	\centering	
+%	\includegraphics[scale=0.5]{T_True_vs_T_ML_N_sample_5_T_inf_35_+_20sin_2piz_adam-mean.png}
+%\end{figure}
+%\end{frame}
+%
+%
+%
+%\begin{frame}{(BIF) VBE 1D : Machine Learning step}
+%	More difficult now : what are $\eta$ to use in $\beta = \mathcal{F}(\eta)$ ?
+%	\begin{itemize}
+%		\item[$\bullet$]$\beta^{n+1} = \bepar{U_{i-1}^n, U_i^n, U^n_{i+1}}$ 
+%		
+%		\item[$\bullet$] $\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		
+%		
+%		\item[$\bullet$] $\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, 
+%		U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, 
+%		U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		
+%		
+%		\item[$\bullet$] \scriptsize$\beta^{n+1} = \bepar{X_{i-1}^n, X_i^n, X^n_{i+1}, 
+%		U_{_{\bk i-1}}^{\navy n-2}, U_{\bk i}^{\navy n-2}, U_{_{\bk i+1}}^{\navy n-2},
+%		U_{_{\bk i-1}}^{\red n-1}, U_{\bk i}^{\red n-1}, U_{_{\bk i+1}}^{\red n-1}, U_{i-1}^n, U_i^n, U^n_{i+1}}$ 		\\[0.54cm]
+%	\end{itemize}
+%	\normalsize
+%
+%	Problem linked to this framework :
+%	\begin{itemize}
+%		\sarrow Inversion can take long time to give $\beta_{\text{MAP}}$
+%		\sarrow The need to produce various inferences to construct wide datasets
+%	\end{itemize}
+%	
+%	\begin{exampleblock}{Idea}
+%		Can we use NN brute force to infer the behaviour of U through time ?
+%	\end{exampleblock}	
+%	No more inference needed
+%\end{frame}
+%
+%\section{Neural network brute force (NNBF)}
+%\begin{frame}{Building the datasets}
+%
+%	\begin{itemize}
+%		\item[$\bullet$] Different sinusoides as initial conditions
+%
+%		\begin{itemize}
+%			\sarrow Different amplitudes (between 1 and 2) -- 15 cases
+%			\sarrow Random phases
+% 		\end{itemize}
+%	
+%	\begin{figure}[H]
+%		\vspace{-0.3cm}		
+%		\centering
+%		\includegraphics[scale=0.3]{Initialisation_cases.png}
+%	\end{figure}			
+%		
+% 		\item[$\bullet$] Lax Wendroff scheme to solve each initial condition
+%	\end{itemize}
+%\end{frame}
+%
+%\begin{frame}{Strategy employed here}
+%	We want to find the functionnal linking the solution $U^{n+1}$ and some n$^{\text{th}}$ parameters :\\
+%	\begin{center}
+%	$ \displaystyle U^{n+1} = \mathcal{F}\bepar{\eta^n}$ \\
+%	\end{center}
+%	Construction $X$ and $y$ iteration by iteration, case by case.\\
+%
+%	\begin{multicols}{2}
+%	\noindent
+%	$$ X = \left[ \begin{array}{c} \cdot \\ \cdot \\ U^n_{i-1},U^n_{i}, U^n_{i+1}, \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}  \\ \cdot \\ \cdot
+%				  \end{array}
+%		   \right]
+%	$$
+%	\columnbreak
+%	$$ y = \left[ \begin{array}{c} \cdot \\ \cdot \\ U^{n+1}_i \\ \cdot \\ \cdot
+%			  \end{array}
+%	   \right]
+%	$$
+%	\end{multicols}
+%	
+%	\begin{itemize}
+%		\item[\checkmark] $\displaystyle \frac{U^n_{i+1} - U^n_{i-1}}{2\Delta x}$ to better catch chocs \\
+%		\item[\checkmark] Each line of X describes the local velocity field around the i$^{\text{th}}$ point and its local variation linked with the value of the velocity at the same i$^{\text{th}}$ point
+%	\end{itemize}		
+%	
+%\end{frame}
+%
+%\begin{frame}{Training of the algorithm}
+%	\begin{figure}[H]
+%		\centering
+%		\includegraphics[scale=0.45]{Cost_Evolution_:_loglog_and_lin.png}
+%	\end{figure}
+%\end{frame}
+%
+%\begin{frame}{Graph architecture}
+%	Graph with \red 6 hidden layers \bk with \red 80 hidden nodes \bk in each. Adam optimizer (better and the most used in literature) and \navy Lasso \bk cost function.\\
+%	
+%	TensorFlow graph that can be visualized with Tensorboard :
+%	
+%	\begin{multicols}{2}	
+%		\noindent		
+%		\begin{figure}[H]
+%		\centering
+%		\includegraphics[scale=0.2]{Graphs.png}
+%		\end{figure}
+%	
+%	\columnbreak
+%		\centering
+%		\vspace{1cm}
+%		\begin{itemize}
+%			\sarrow \footnotesize Lasso = $\norm{ y_{\text{tr}} - y_{\text{pred}}}^2_{L_2} + \lambda \norm{w}_{L_1}$		 \\[1.5cm]
+%		
+%			\sarrow Activation function : selu
+%			\begin{figure}[H]
+%			\centering
+%			\includegraphics[scale=0.3]{SELU.png}
+%			\caption{From Wikipedia}
+%			\end{figure}
+%		
+%		\end{itemize}
+%	\end{multicols}
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D I}
+%	New initial velocity field (first we deal with the \color{orange} orange \bk one) : 
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.4]{Initialisation_cases_Andu1.png}
+%	\end{figure}
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D I}
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.4]{Pres_First_Iteration_1.png}
+%	\end{figure} 
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D I}
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.5]{Pres_Tenth_Iteration_1.png}
+%	\end{figure} 
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D I}
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.35]{Pres_50th_Iteration_1.png}
+%	\end{figure} 
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D I}
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.42]{Pres_Last_Iteration_1.png}
+%	\end{figure} 
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D II}
+%	New initial velocity field (we deal now with the \color{cyan} cyan \bk one) : 
+%\vspace{-0.3cm}	
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.5]{Initialisation_cases_Last.png}
+%	\end{figure}
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D II}
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.5]{Pres_First_Iteration_2.png}
+%	\end{figure} 
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D II}
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.5]{Pres_Tenth_Iteration_2.png}
+%	\end{figure} 
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D II}
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.5]{Pres_50th_Iteration_2.png}
+%	\end{figure} 
+%\end{frame}
+%
+%\begin{frame}{Brute Force on VBE 1D II}
+%	\begin{figure}[H]
+%	\centering
+%	\includegraphics[scale=0.5]{Pres_Last_Iteration_2.png}
+%	\end{figure} 
+%\end{frame}
+%
+%\begin{frame}{Conclusion on Brute Force}
+%VBE is not the simpliest equation to solve since sharp chocs
+%	\begin{block}{Still can be improved}
+%		\begin{itemize}
+%			\item[$\bullet$] Good approximations but can be better
+%			\item[$\bullet$] Accumulative errors phenomena that impose to differ local error (on the on going iteration) and global errors (accumulated through time iterations)
+%			\item[$\bullet$] Genetic Algorithm can be used to get the best architecture but the possible features are infinite \\[0.5cm]
+%		\end{itemize}
+%	\end{block}
+%
+%	\begin{exampleblock}{Solution : Learn !}
+%	The solution is to use Reinforcement learning to learn the physics
+%	\begin{itemize}
+%		\item[\checkmark] Auto ajust weights given an environment 
+%		\item[\checkmark] Ensure to respect conservation physics law
+%		\item[\checkmark] Auto adjust global and local error
+%	\end{itemize}
+%	\end{exampleblock}
+%\end{frame}
+%
+%\begin{frame}{OnGoing Deep ReiL Framework}
+%	
+%	\begin{itemize}
+%		\item[$\bullet$] Deep Reinforcement Learning (DQL) code in ealy stage of test.
+%		\item[$\bullet$] A strategy has been established and wait to be tested
+%		
+%		\item[$\bullet$] More soon .. ;)
+%		
+%	\end{itemize}
+
+%\end{frame}
 \begin{frame}
 \begin{center}
 	\color{FireBrick} \textbf{\textit{\Large{Thank you for your attention}}} \bk
 \end{center}
 \end{frame}
-
-\begin{frame}
-\bibliographystyle{apalike}
-\bibliography{bibliotheque}
-\end{frame}
+%
+%\begin{frame}
+%\bibliographystyle{apalike}
+%\bibliography{bibliotheque}
+%\end{frame}
 
 \end{document}
