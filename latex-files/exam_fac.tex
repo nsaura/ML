@@ -55,44 +55,37 @@
 \begin{center}
 	\textbf{Licences SESI \& SESI/PEIP -- Semestre 1} \\[2mm]
 	\large{\textbf{Bases de la Mécanique}} \\[1mm]
-	\textit{Contrôle continu -- 18 Octobre 2018}
+	\textit{Contrôle continu -- 27 Novembre 2018}
 \end{center}
 \begin{flushleft}
 Aucun document ni appareil électronique autorisé \hfill Durée : 30 min
 \end{flushleft}
 \hrule
 \vspace{2mm}
-\subsection*{Questions de cours}
-\begin{itemize}
-\item[1)] Donner la définition du moment en K d'une force $\left( \vec{F}, A\right)$.
-\item[2)] Écrire la relation de transport de ce moment en un point J quelconque et démontrer cette relation.
-\item[3)] Énoncer le principe fondamentale de la statique.
-\end{itemize}
-\subsection*{Exercice}
-Un avion léger est au repos sur le tarmac (Fig 1 et 2). On s'intéresse à l'équilibre de l'ensemble S formé de l'aile et de l'atterrisseur droits. On se donne un repère orthonormée de base $\left( \vec{x}, \vec{y}, \vec{z} \right)$.\\
+\subsection*{Questions de cours (5 min)}
+On considère une base fixe $b_0 = \left(\vec{x}_0,\, \vec{y}_0,\, \vec{z}_0 \right)$ ainsi qu'une base $b_1 = \left( \vec{u},\, \vec{v},\, \vec{z}_0 \right)$ tournant autour de $\vec{z}_0$ avec un angle $\varphi(t)$ : $$ b_0 \xrightarrow{\varphi(t)} b_1 $$
+\noindent \textbf{En utilisant la formule de Bour} démontrer les deux résultats suivants
+	\begin{equation*}
+		\frac{d_{b_0} \vec{u}}{dt} = \dot{\varphi}\, \vec{v} \text{\hspace{3mm} et \hspace{3mm}} \frac{d_{b_0} \vec{v}}{dt} = -\dot{\varphi}\, \vec{u}
+	\end{equation*}
+	
+
+\subsection*{Exercice (25 min à traiter avec la \underline{cinématique du point})}
+\noindent On considère le trébuchet\footnote{Arme de siège du moyen âge qui consistait à projeter des pierres} modélisé par la figure ci-dessous. \\[2mm]
+On définit les référentiel $\mathcal{R}_0$ de repère associé $(O, b_0)$ lié au sol, $\mathcal{R}_1$ de repère associé $(O, b_1)$ lié au bras $S_1$ de longeur \textbf{a}, et $\mathcal{R}_2$ de repère associé $(Q, b_2)$ lié au bras $S_2$ de longueur \textbf{c}. \\[2mm]
+La base $b_1$ se déduit de $b_0$ par une rotation d'angle $\alpha(t)$ autour de $\vec{z}_0$, la base $b_2$ se déduit de $b_1$ par une rotation d'angle $\beta(t)$ autour de $\vec{z}_0$.
 
 \begin{figure}[!ht]
 \centering
-\includegraphics[scale=0.32]{pic_exo_statique.png}
+\includegraphics[scale=0.5]{graph_exam.png}
 
 \end{figure}
 
-La modélisation de cet ensemble est donnée par la figure 2 et décrite ci-après :
-\begin{itemize}[leftmargin=2cm]
-	\item[--] La masse de cet ensemble est noté $m$, son centre de gravité $G_2$.
-	\item[--] L'action du sol sur la roue est supposée \textbf{\textit{connue}} et s'écrit $\vec{R_A} = F_A \vec{y}$.
-	\end{itemize}
-
-Le contact en D n'est pas ponctuel et génère : \vspace{1mm}
-	\begin{itemize}[leftmargin=2cm]
-	\item[--] Une force $\vec{R_D} = D_y \vec{y} + D_z \vec{z}$
-	\item[--] Un moment en D, $\vec{M}_D\left( \vec{R_D}, D\right) = M_D\, \vec{x}$ \textbf{\textit{non nul}}
-	\end{itemize}
-
 \begin{itemize}
-\item[1)] Isoler le système S et effectuer un bilan des actions extérieures en précisant si les actions sont connues.\vspace{1mm}
-\item[2)] Écrire ses équations vectorielles puis scalaires.\vspace{1mm}
-\item[3)] En déduire les composantes de forces et de moment générées par le contact en D.  \vspace{2mm}
+\item[1)] Exprimer les vecteurs de rotations instantannées $\vec{\Omega}(b_1/b_0)$, $\vec{\Omega}(b_2/b_1)$ et $\vec{\Omega}(b_2/b_0)$
+\item[2)] Calculer les vitesses et accélérations des points P et Q par rapport à $\mathcal{R}_0$ (on pourra utiliser les formules démontrées plus haut).
+\item[3)] Calculer la vitesse et l'accéleration du point Q par rapport à $\mathcal{R}_1$.
+\vspace{2mm}
 \end{itemize}
-\hrule
+\vspace{5mm}
 \end{document}
