@@ -135,6 +135,8 @@ keywordstyle=[0]{\color{red}},
 
 \numberwithin{equation}{section} %%%% To count the equation like Section.Number
 
+\setlength{\parindent}{0pt}
+
 \begin{document}
 \maketitle
 
@@ -401,11 +403,41 @@ On vérifiera que les estimateurs sont sensibles à des modifications de $\theta
 \newpage
 
 \navy \chapter{Réseaux de neurones à convolutions (CNN)} \bk
-\brick \subsection*{Définition} \bk
+\section{Éléments théoriques et premières définitions}
+\brick \subsection{Définition} \bk
 Une classe de réseaux de neurones artificiels directs profonds, la plupart du temps utilisés pour l'analyse d'images. Les couches du CNN sont telles qu'elles nécessitent très peu de preprocessing en amont, ces couches sont robustes (voire invariantes) aux perturbations petites (et parfois grandes) des entrées. Cela différencie les CNN des autres algorithmes de DNN. 
 D'un point de vue pratique toutefois, les CNN \textit{sont des NN qui utilisent des convolutions à la place des multiplications matricielles classiques (dans au moins une des couches)}.
 
-\navy \subsubsection*{Design} \bk
+\navy \subsubsection{Structure et vocabulaire} \bk
+On commence avec la figure suivante
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.6]{conv_5x5.png}
+\end{figure}
+
+Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pixels glisse sur l'ensemble de l'entrée de taille 32x32x3. La zone qu'il couvre est appelée \textbf{\textit{receptive field}}. \\
+Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 (5x5x3) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{activation map} autrement appelée \textit{feature map} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
+Si on utilisait un autre filtre de forme 5x5x3, on aurait eu une feature map de taille ($28$, $28$, $2$). En utilisant plus de filtres, on est capable de mieux préserver les dimensions spatiales.
+
+\newpage
+
+\section{Notes sur \citep{gens2014deep}}
+\brick \subsection{Symmetry group theory} \bk
+Une symétrie est une transformation qui préserve certaines propriétés de ce sur quoi elle est appliquée. Le groupe de symétrie d'un objet et le groupe des symétries d'un objet (ou plus généralement des transformations qui conservent les longueurs) dont l'opérateur est la convolution.\\
+On peut citer les groupes : 
+\begin{itemize}[leftmargin=2cm]
+\item[--] Le groupe affine est un groupe de transformations qui préservent la colinéarité et le parallélisme. 
+\item[--] Le groupe euclidien est un sous groupe du groupe affine qui conserve les distances et inclut un ensemble de translations et rotations solides dans l'espace 3D.
+\end{itemize}
+On représente les éléments de ce groupe symétrie par des matrices, les compositions sont alors écrit comme des multiplications matricielles.\\
+La transformation $\textbf{Q} \circ \textbf{P}$ qui se lie transformation de \textbf{P} suivie de \textbf{Q} s'écrit alors 
+\begin{equation*}
+\textbf{R} = \textbf{QP}
+\end{equation*}
+La matrice de transformation \textbf{P} est un élément D-dimensionnel avec D dépendant de la représentation du groupe de symétrie ($D=6$ dans le cas de transformations affines dans le plan).
+
+
 \newpage
 
 \navy \chapter{ML dans des environnements non stationnaires} \bk
