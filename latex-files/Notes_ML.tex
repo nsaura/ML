@@ -418,7 +418,8 @@ On commence avec la figure suivante
 
 Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pixels glisse sur l'ensemble de l'entrée de taille 32x32x3. La zone qu'il couvre est appelée \textbf{\textit{receptive field}}. \\
 Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 (5x5x3) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{activation map} autrement appelée \textit{feature map} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
-Si on utilisait un autre filtre de forme 5x5x3, on aurait eu une feature map de taille ($28$, $28$, $2$). En utilisant plus de filtres, on est capable de mieux préserver les dimensions spatiales.
+Si on utilisait un autre filtre de forme 5x5x3, on aurait eu une feature map de taille ($28$, $28$, $2$). En utilisant plus de filtres, on est capable de mieux préserver les dimensions spatiales.\\
+Un example des différentes couches possibles. Des explications sur les différents termes utilisés suivront
 
 \newpage
 
