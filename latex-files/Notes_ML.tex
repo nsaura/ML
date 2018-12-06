@@ -404,22 +404,36 @@ On vérifiera que les estimateurs sont sensibles à des modifications de $\theta
 
 \navy \chapter{Réseaux de neurones à convolutions (CNN)} \bk
 \section{Éléments théoriques et premières définitions}
+On se base sur \citep{nielsen2015neural} et sur \citep{Goodfellow-et-al-2016}.
 \brick \subsection{Définition} \bk
 Une classe de réseaux de neurones artificiels directs profonds, la plupart du temps utilisés pour l'analyse d'images. Les couches du CNN sont telles qu'elles nécessitent très peu de preprocessing en amont, ces couches sont robustes (voire invariantes) aux perturbations petites (et parfois grandes) des entrées. Cela différencie les CNN des autres algorithmes de DNN. 
 D'un point de vue pratique toutefois, les CNN \textit{sont des NN qui utilisent des convolutions à la place des multiplications matricielles classiques (dans au moins une des couches)}.
 
 \navy \subsubsection{Structure et vocabulaire} \bk
-On commence avec la figure suivante
-
+On commence avec les figures suivantes :
 \begin{figure}[!ht]
 \centering
-\includegraphics[scale=0.6]{conv_5x5.png}
-\end{figure}
+\includegraphics[scale=0.43]{5x5_1.png} \hfill
+\includegraphics[scale=0.43]{5x5_2.png} 
 
-Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pixels glisse sur l'ensemble de l'entrée de taille 32x32x3. La zone qu'il couvre est appelée \textbf{\textit{receptive field}}. \\
-Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 (5x5x3) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{activation map} autrement appelée \textit{feature map} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
-Si on utilisait un autre filtre de forme 5x5x3, on aurait eu une feature map de taille ($28$, $28$, $2$). En utilisant plus de filtres, on est capable de mieux préserver les dimensions spatiales.\\
-Un example des différentes couches possibles. Des explications sur les différents termes utilisés suivront
+\end{figure}
+Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pixels glisse sur l'ensemble de l'entrée de taille $32\times32\times3$. La zone qu'il couvre est appelée \textbf{\textit{receptive field}}. La cadence (stride) est ici 1 (cf plus loin).\\
+Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 ($5\times5\times3$) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{activation map} autrement appelée \textit{feature map} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
+La sortie de cette convolution s'écrit pour le j, k-ème neurone :
+\begin{equation*}
+\sigma \left( b + \sum^4_{l=0}\sum^4_{m=0} w_{l,\,m} a_{j+k,\, k+m} \right)
+\end{equation*}
+Avec $w_{lm}$ les poids du filtres (les valeurs) et $a_{j+k,\, k+m}$ les valeurs de la fenêtre d'entrées à convoluer (on note que selon le neurone de sortie, cette fenêtre est décalée). Les poids et les biais sont communs à chaque passage de l'entrée à la sortie, on parlera alors de \textit{shared weights/biaises}. ce sont ces valeurs qui constituent le kernel ou filter.\\
+
+La couche de convolution est composée de trois étapes \citep{Goodfellow-et-al-2016} section 9.3 :
+\begin{itemize}[leftmargin=1cm]
+	\item[1-] C'est la phase de \textit{\textbf{convolution}} à proprement parler. On procède à plusieurs convolutions en parallèle pour produire des représentations différentes de la couche d'entrée. Dans les faits, on prédéfini des filtres, et on convolutionne les entrées avec les différents filtres. \\ On parlera d'activations linéaires ou représentations de l'entrée, en séries, ou encore d'ensemble d'activations linéaires;
+	\item[2-] Puis on applique une fonction d'activation non-lineaire (type ReLu) à chacune de ces représentations pour gagner en sparsity. Autrement dit, on affecte des poids aux zones d'intérêts majeurs relativement à chaque représentation (et donc à chaque filtre). On appelle cette étape la détection (\textit{\textbf{detector stage})};
+	\item[3-] On résume statistiquement cette représentation remaniée pour faciliter la detection de motifs ou de \textit{features} dans chacun des représentations parallèles. On parlera de mutualisation (locale) ou de \textit{\textbf{pooling}}.
+\end{itemize}
+
+%Si on avait utilisé un autre filtre de dimension $5\times5\times 3$, on aurait eu une feature map de dimension ($28$, $28$, $2$). En utilisant plus de filtres, on est capable de mieux préserver les dimensions spatiales.\\
+%Un example des différentes couches possibles. Des explications sur les différents termes utilisés suivront
 
 \newpage
 

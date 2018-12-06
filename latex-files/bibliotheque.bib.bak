@@ -110,6 +110,15 @@
     note={\url{http://www.deeplearningbook.org}},
     year={2016}
 }
+%DL, Convnet
+@book{nielsen2015neural,
+  title={Neural networks and deep learning},
+  author={Nielsen, Michael A},
+  volume={25},
+  year={2015},
+  publisher={Determination press USA}
+}
+
 % Processus Gaussien
 @book{rasmussen2006gaussian,
   title={Gaussian processes for machine learning},
