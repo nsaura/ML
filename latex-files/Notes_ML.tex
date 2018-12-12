@@ -16,7 +16,7 @@
 \usepackage{wrapfig}
 %\usepackage[squaren]{SIunits}
 %\usepackage[T1]{fontenc}				% Indispendable, présent dans tous les codes exemples
-\usepackage[linkcolor=DarkGreen,colorlinks=true, citecolor= DarkGreen, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
+\usepackage[linkcolor=DarkGreen,colorlinks=true, citecolor=DarkGreen, urlcolor=MidnightBlue]{hyperref} 	% Hyper ref
 \usepackage{listings}					% Pour citer du code
 \usepackage[justification=centering]{caption}
 \usepackage{sistyle} 
@@ -418,7 +418,7 @@ On commence avec les figures suivantes :
 
 \end{figure}
 Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pixels glisse sur l'ensemble de l'entrée de taille $32\times32\times3$. La zone qu'il couvre est appelée \textbf{\textit{receptive field}}. La cadence (stride) est ici 1 (cf plus loin).\\
-Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 ($5\times5\times3$) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{activation map} autrement appelée \textit{feature map} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
+Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 ($5\times5\times3$) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{\textbf{activation map}} autrement appelée \textit{\textbf{feature map}} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
 La sortie de cette convolution s'écrit pour le j, k-ème neurone :
 \begin{equation*}
 \sigma \left( b + \sum^4_{l=0}\sum^4_{m=0} w_{l,\,m} a_{j+k,\, k+m} \right)
@@ -434,6 +434,16 @@ La couche de convolution est composée de trois étapes \citep{Goodfellow-et-al-
 
 %Si on avait utilisé un autre filtre de dimension $5\times5\times 3$, on aurait eu une feature map de dimension ($28$, $28$, $2$). En utilisant plus de filtres, on est capable de mieux préserver les dimensions spatiales.\\
 %Un example des différentes couches possibles. Des explications sur les différents termes utilisés suivront
+
+\navy \subsubsection{Image alignment} \bk
+It consists on moving, and possibly deforming, a template to minimize the difference between the template and an image. In \citep{gens2014deep} they use N evaluation points in each feature maps (non-maximum suppression).\\
+Suppose we try to aligne template image $T(\textbf{x})$ to an input image $I(\textbf{x})$, where $\textbf{x} = (x,y)^T$ column vector containing the pixel coordinates. Let $\textbf{W}(\textbf{x}; \textbf{p})$ denote the warp (distorsion, manipulation digitale d'image) and $\textbf{p} = (p_1,\, .\, .\, ., p_n)^T$ a vector of parameters.\\
+
+The goal of image alignment is to find the $\textbf{\textit{p}}^*$ that minimizes the distance between the template $T(\textbf{\textit{x}})$ and the input image, warped back onto the coordinate frame of the tenplate $\textbf{I}(\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}}))$ :
+\begin{equation*}
+\textbf{\textit{p}}^* = \underset{\textbf{\textit{p}}\, \in \, \mathbb{R}^n}{\argmin} \becro{\sum_x \becro{\textbf{\textit{I}}(\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}}) + \Delta \textbf{\textit{p}}) - T(\textbf{\textit{x}})}^2}
+\end{equation*}
+This minimization is made through iterative methods : each iteration ends with $\textbf{\textit{p}} \leftarrow \textit{\textbf{p}} + \Delta \textbf{\textit{p}}$. This process is stopped when $\left\vert\left\vert \Delta \textbf{\textit{p}} \right\vert\right\vert  < \varepsilon$ 
 
 \newpage
 
