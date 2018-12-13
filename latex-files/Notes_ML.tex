@@ -404,8 +404,8 @@ On vérifiera que les estimateurs sont sensibles à des modifications de $\theta
 
 \navy \chapter{Réseaux de neurones à convolutions (CNN)} \bk
 \section{Éléments théoriques et premières définitions}
-On se base sur \citep{nielsen2015neural} et sur \citep{Goodfellow-et-al-2016}.
-\brick \subsection{Définition} \bk
+\brick \subsection{Définitions générales relatives au CNN} \bk
+On se base sur \citep{nielsen2015neural} et sur \citep{Goodfellow-et-al-2016}.\\
 Une classe de réseaux de neurones artificiels directs profonds, la plupart du temps utilisés pour l'analyse d'images. Les couches du CNN sont telles qu'elles nécessitent très peu de preprocessing en amont, ces couches sont robustes (voire invariantes) aux perturbations petites (et parfois grandes) des entrées. Cela différencie les CNN des autres algorithmes de DNN. 
 D'un point de vue pratique toutefois, les CNN \textit{sont des NN qui utilisent des convolutions à la place des multiplications matricielles classiques (dans au moins une des couches)}.
 
@@ -421,7 +421,7 @@ Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pix
 Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 ($5\times5\times3$) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{\textbf{activation map}} autrement appelée \textit{\textbf{feature map}} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
 La sortie de cette convolution s'écrit pour le j, k-ème neurone :
 \begin{equation*}
-\sigma \left( b + \sum^4_{l=0}\sum^4_{m=0} w_{l,\,m} a_{j+k,\, k+m} \right)
+\sigma \left( b + \sum^4_{l=0}\sum^4_{m=0} w_{l,\,m} \, a_{j+k,\, k+m} \right)
 \end{equation*}
 Avec $w_{lm}$ les poids du filtres (les valeurs) et $a_{j+k,\, k+m}$ les valeurs de la fenêtre d'entrées à convoluer (on note que selon le neurone de sortie, cette fenêtre est décalée). Les poids et les biais sont communs à chaque passage de l'entrée à la sortie, on parlera alors de \textit{shared weights/biaises}. ce sont ces valeurs qui constituent le kernel ou filter.\\
 
@@ -432,19 +432,91 @@ La couche de convolution est composée de trois étapes \citep{Goodfellow-et-al-
 	\item[3-] On résume statistiquement cette représentation remaniée pour faciliter la detection de motifs ou de \textit{features} dans chacun des représentations parallèles. On parlera de mutualisation (locale) ou de \textit{\textbf{pooling}}.
 \end{itemize}
 
-%Si on avait utilisé un autre filtre de dimension $5\times5\times 3$, on aurait eu une feature map de dimension ($28$, $28$, $2$). En utilisant plus de filtres, on est capable de mieux préserver les dimensions spatiales.\\
-%Un example des différentes couches possibles. Des explications sur les différents termes utilisés suivront
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.455]{feature_maps.png}
+\captionsetup{labelformat=empty}
+\caption{Figure from \url{https://arxiv.org/pdf/1707.09725.pdf}}
+\end{figure}
 
-\navy \subsubsection{Image alignment} \bk
+Différets types de pooling : 
+\begin{itemize}[leftmargin=2cm]
+	\item[--] Max pooling : $\max \{ a \, \in \, A\}$
+	\item[--] Average / mean pooling : $\frac{1}{\vert A \vert}\sum_{a\in A} a$
+	\item[--] $L_2$ pooling : $\sqrt{\sum^{ ^{ }}_{a\in A} a^2}$
+	\item[--] Stochastic pooling : Each of $a_i$ imposed to positive is picked with probability $$p_i = \frac{a_i}{\sum_{a_j \in A} a_j}$$
+\end{itemize}
+
+\newpage
+
+\brick \subsection{Image alignment and LKA} \bk
 It consists on moving, and possibly deforming, a template to minimize the difference between the template and an image. In \citep{gens2014deep} they use N evaluation points in each feature maps (non-maximum suppression).\\
-Suppose we try to aligne template image $T(\textbf{x})$ to an input image $I(\textbf{x})$, where $\textbf{x} = (x,y)^T$ column vector containing the pixel coordinates. Let $\textbf{W}(\textbf{x}; \textbf{p})$ denote the warp (distorsion, manipulation digitale d'image) and $\textbf{p} = (p_1,\, .\, .\, ., p_n)^T$ a vector of parameters.\\
+Suppose we try to align template image $T(\textbf{x})$ to an input image $\textbf{\textit{I}}(\textbf{x})$, where $\textbf{x} = (x,y)^T$ column vector containing the pixel coordinates. Let $\textbf{W}(\textbf{x}; \textbf{p})$ denote the warp (distorsion, manipulation digitale d'image) and $\textbf{p} = (p_1,\, .\, .\, ., p_n)^T$ a vector of parameters.\\
 
-The goal of image alignment is to find the $\textbf{\textit{p}}^*$ that minimizes the distance between the template $T(\textbf{\textit{x}})$ and the input image, warped back onto the coordinate frame of the tenplate $\textbf{I}(\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}}))$ :
+The warp $\textbf{\textit{W}}(\textbf{\textit{x}};\, \textbf{\textit{p}})$ takes the pixel $\textit{\textbf{x}}$ in the coordinate of the template $T$ and maps it to the sub-pixel location $\textbf{\textit{W}}(\textbf{\textit{x}};\, \textbf{\textit{p}})$ in the coordinate frame of the image $I$. \\
+
+One example of affine warping could be written 
 \begin{equation*}
-\textbf{\textit{p}}^* = \underset{\textbf{\textit{p}}\, \in \, \mathbb{R}^n}{\argmin} \becro{\sum_x \becro{\textbf{\textit{I}}(\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}}) + \Delta \textbf{\textit{p}}) - T(\textbf{\textit{x}})}^2}
+\textbf{\textit{W}}(\textbf{\textit{x}};\, \textbf{\textit{p}}) =  
+\left( 
+	{\begin{array}{cccc}
+		p_1& p_3 & p_5 \\
+		p_2& p_4 & p_6
+ 	\end{array} } 
+\right)
+\left( 
+	{\begin{array}{c}
+		x \\
+		y \\
+		1
+	\end{array} }
+\right)
 \end{equation*}
-This minimization is made through iterative methods : each iteration ends with $\textbf{\textit{p}} \leftarrow \textit{\textbf{p}} + \Delta \textbf{\textit{p}}$. This process is stopped when $\left\vert\left\vert \Delta \textbf{\textit{p}} \right\vert\right\vert  < \varepsilon$ 
 
+The LKA was the original algorithm for image alignment. Its goal (and so it is for the image alignment in general) is to find the $\textbf{\textit{p}}^*$ that minimizes the distance between the template $T(\textbf{\textit{x}})$ and the input image, warped back onto the coordinate frame of the tenplate $\textbf{\textit{I}}(\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}}))$ :
+\begin{equation*}
+\textbf{\textit{p}}^* = \underset{\textbf{\textit{p}}\, \in \, \mathbb{R}^n}{\argmin} \becro{\sum_x \becro{\textbf{\textit{I}}(\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}} + \Delta \textbf{\textit{p}})) - T(\textbf{\textit{x}})}^2}
+\end{equation*}
+The sum performed over all the pixel of the template.\\
+This minimization is made through iterative methods : each iteration ends with $\textbf{\textit{p}} \leftarrow \textit{\textbf{p}} + \Delta \textbf{\textit{p}}$. This process is stopped when $\left\vert\left\vert \Delta \textbf{\textit{p}} \right\vert\right\vert  < \varepsilon$ ($\Delta \textbf{\textit{p}}$ being the increment).\\
+
+A Taylor expansion of $\textbf{\textit{I}}(\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}} + \Delta \textbf{\textit{p}}))$ at first order give :
+\begin{equation}
+\textbf{\textit{I}}(\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}} + \Delta \textbf{\textit{p}})) =  \nabla \textit{\textbf{I}}\bepar{\textit{\textbf{W}}(\textbf{\textit{x}}; \textbf{\textit{p}})}\ \frac{\partial \textbf{\textit{W}}}{\partial \textbf{\textit{p}}} \Delta \textbf{\textit{p}}
+\end{equation}
+With $\nabla \textit{\textbf{I}}\bepar{\textit{\textbf{W}}(\textbf{\textit{x}}; \textbf{\textit{p}})}$ the gradient of the image and $\frac{\partial \textbf{\textit{W}}}{\partial \textbf{\textit{p}}} \Delta \textbf{\textit{p}}$ the Jacobian of the warp.\\
+
+To calculate $\nabla \textit{\textbf{I}}\bepar{\textit{\textbf{W}}(\textbf{\textit{x}}; \textbf{\textit{p}})}$ we first compute $\nabla \textbf{\textit{I}}$ in the coordinate frame of \textit{\textbf{I}} and then warped back onto the coordinate of frame of \textit{T} using the current estimate of the warp $\textit{\textbf{W}}(\textbf{\textit{x}}; \textbf{\textit{p}})$.\\
+
+The Jacobian in 2-D can be expressed as follow :
+\begin{equation*}
+\frac{\partial \textbf{\textit{W}}}{\partial \textbf{\textit{p}}} =
+	\begin{pmatrix} 
+    	\frac{\partial W_x}{\partial p_1} & \frac{\partial W_x}{\partial p_2} & \dots & 		\frac{\partial W_x}{\partial p_n}\\[4mm]
+    	\frac{\partial W_y}{\partial p_1} & \frac{\partial W_y}{\partial p_2} & \dots & 		\frac{\partial W_y}{\partial p_n}\\
+    \end{pmatrix}
+\end{equation*}
+
+We can extract an analytic form for $\Delta\textbf{\textit{p}}$ :
+\begin{equation*}
+\Delta\textbf{\textit{p}} = H^{-1} \sum_\textbf{\textit{x}} \becro{\nabla \textit{\textbf{I}}\,\frac{\partial\textbf{\textit{W}}}{\partial \textbf{\textit{p}}}}^T \becro{T(\textbf{\textit{x}}) - \textit{\textbf{I}}\bepar{\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}})}} \tag{10}
+\end{equation*}
+Where  H is the Gauss-Newton Hessian matrix approximation :
+\begin{equation*}
+H = \sum_\textit{\textbf{x}} \becro{\nabla \textit{\textbf{I}}\,\frac{\partial\textbf{\textit{W}}}{\partial \textbf{\textit{p}}}}^T \becro{\nabla \textit{\textbf{I}}\,\frac{\partial\textbf{\textit{W}}}{\partial \textbf{\textit{p}}}} \tag{11}
+\end{equation*}
+This steps are very similar to the BFGS minimization algorithm. We can then identify a steepest descent parameter updates :
+\begin{equation*}
+\sum_\textbf{\textit{x}} \becro{\nabla \textit{\textbf{I}}\,\frac{\partial\textbf{\textit{W}}}{\partial \textbf{\textit{p}}}}^T \becro{T(\textbf{\textit{x}}) - \textit{\textbf{I}}\bepar{\textbf{\textit{W}}(\textbf{\textit{x}}; \textbf{\textit{p}})}}
+\end{equation*}
+
+The LKA algorithm is given in the following figure 
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.6]{LKA.png}
+\caption{}
+\label{}
+\end{figure}
 \newpage
 
 \section{Notes sur \citep{gens2014deep}}
