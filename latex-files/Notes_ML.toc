@@ -8,28 +8,30 @@
 \contentsline {section}{\numberline {3.1}\IeC {\'E}l\IeC {\'e}ments th\IeC {\'e}oriques et premi\IeC {\`e}res d\IeC {\'e}finitions}{11}{section.3.1}
 \contentsline {subsection}{\numberline {3.1.1}D\IeC {\'e}finitions g\IeC {\'e}n\IeC {\'e}rales relatives au CNN}{11}{subsection.3.1.1}
 \contentsline {subsubsection}{Structure et vocabulaire}{11}{section*.9}
-\contentsline {subsection}{\numberline {3.1.2}Image alignment and LKA}{14}{subsection.3.1.2}
-\contentsline {section}{\numberline {3.2}Notes sur \citep {gens2014deep}}{16}{section.3.2}
-\contentsline {subsection}{\numberline {3.2.1}Symmetry group theory}{16}{subsection.3.2.1}
-\contentsline {chapter}{\numberline {4}ML dans des environnements non stationnaires}{17}{chapter.4}
-\contentsline {chapter}{\numberline {5}Notes TensorFlow et algorithmes relatifs}{18}{chapter.5}
-\contentsline {section}{\numberline {5.1}Optimisation}{19}{section.5.1}
-\contentsline {subsection}{\numberline {5.1.1}GD VS SGD}{19}{subsection.5.1.1}
-\contentsline {chapter}{\numberline {6}Notions et explications math\IeC {\'e}matiques}{20}{chapter.6}
-\contentsline {section}{\numberline {6.1}Information Theory (IT)}{20}{section.6.1}
-\contentsline {subsection}{\numberline {6.1.1}Shannon entropy}{21}{subsection.6.1.1}
-\contentsline {subsection}{\numberline {6.1.2}Kullback\IeC {\textendash }Leibler divergence (DL)}{21}{subsection.6.1.2}
-\contentsline {chapter}{\numberline {7}Notions}{22}{chapter.7}
-\contentsline {chapter}{\numberline {8}Notes ML : \cite {muller2016introduction}}{23}{chapter.8}
-\contentsline {subsection}{\numberline {8.0.1}Classification}{23}{subsection.8.0.1}
-\contentsline {subsubsection}{Binaires}{23}{section*.19}
-\contentsline {subsubsection}{Regression}{23}{section*.21}
-\contentsline {subsection}{\numberline {8.0.2}\IeC {\'E}valuer son mod\IeC {\`e}le : Cross Validation (CV)}{23}{subsection.8.0.2}
-\contentsline {subsubsection}{CV et Stratification (SCV)}{23}{section*.22}
-\contentsline {subsubsection}{KFold CV}{24}{section*.23}
-\contentsline {subsubsection}{Suffle Split CV (SSCV)}{24}{section*.24}
-\contentsline {subsubsection}{Groupe - CV (GCV)}{24}{section*.25}
-\contentsline {subsection}{\numberline {8.0.3}Optimiser son mod\IeC {\`e}le : Grid Search (GS) et NestedCV}{24}{subsection.8.0.3}
-\contentsline {subsubsection}{Simple Grid Search}{25}{section*.26}
-\contentsline {subsubsection}{GridSearchCV}{25}{section*.27}
-\contentsline {subsubsection}{NestedCV}{26}{section*.28}
+\contentsline {subsubsection}{Un mot sur les dimensions}{13}{section*.14}
+\contentsline {subsubsection}{Pooling layer}{14}{section*.17}
+\contentsline {subsection}{\numberline {3.1.2}Image alignment and LKA}{16}{subsection.3.1.2}
+\contentsline {section}{\numberline {3.2}Notes sur \citep {gens2014deep}}{18}{section.3.2}
+\contentsline {subsection}{\numberline {3.2.1}Symmetry group theory}{18}{subsection.3.2.1}
+\contentsline {chapter}{\numberline {4}ML dans des environnements non stationnaires}{19}{chapter.4}
+\contentsline {chapter}{\numberline {5}Notes TensorFlow et algorithmes relatifs}{20}{chapter.5}
+\contentsline {section}{\numberline {5.1}Optimisation}{21}{section.5.1}
+\contentsline {subsection}{\numberline {5.1.1}GD VS SGD}{21}{subsection.5.1.1}
+\contentsline {chapter}{\numberline {6}Notions et explications math\IeC {\'e}matiques}{22}{chapter.6}
+\contentsline {section}{\numberline {6.1}Information Theory (IT)}{22}{section.6.1}
+\contentsline {subsection}{\numberline {6.1.1}Shannon entropy}{23}{subsection.6.1.1}
+\contentsline {subsection}{\numberline {6.1.2}Kullback\IeC {\textendash }Leibler divergence (DL)}{23}{subsection.6.1.2}
+\contentsline {chapter}{\numberline {7}Notions}{24}{chapter.7}
+\contentsline {chapter}{\numberline {8}Notes ML : \cite {muller2016introduction}}{25}{chapter.8}
+\contentsline {subsection}{\numberline {8.0.1}Classification}{25}{subsection.8.0.1}
+\contentsline {subsubsection}{Binaires}{25}{section*.27}
+\contentsline {subsubsection}{Regression}{25}{section*.29}
+\contentsline {subsection}{\numberline {8.0.2}\IeC {\'E}valuer son mod\IeC {\`e}le : Cross Validation (CV)}{25}{subsection.8.0.2}
+\contentsline {subsubsection}{CV et Stratification (SCV)}{25}{section*.30}
+\contentsline {subsubsection}{KFold CV}{26}{section*.31}
+\contentsline {subsubsection}{Suffle Split CV (SSCV)}{26}{section*.32}
+\contentsline {subsubsection}{Groupe - CV (GCV)}{26}{section*.33}
+\contentsline {subsection}{\numberline {8.0.3}Optimiser son mod\IeC {\`e}le : Grid Search (GS) et NestedCV}{26}{subsection.8.0.3}
+\contentsline {subsubsection}{Simple Grid Search}{27}{section*.34}
+\contentsline {subsubsection}{GridSearchCV}{27}{section*.35}
+\contentsline {subsubsection}{NestedCV}{28}{section*.36}
