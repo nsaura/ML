@@ -406,46 +406,108 @@ On vérifiera que les estimateurs sont sensibles à des modifications de $\theta
 \section{Éléments théoriques et premières définitions}
 \brick \subsection{Définitions générales relatives au CNN} \bk
 On se base sur \citep{nielsen2015neural} et sur \citep{Goodfellow-et-al-2016}.\\
-Une classe de réseaux de neurones artificiels directs profonds, la plupart du temps utilisés pour l'analyse d'images. Les couches du CNN sont telles qu'elles nécessitent très peu de preprocessing en amont, ces couches sont robustes (voire invariantes) aux perturbations petites (et parfois grandes) des entrées. Cela différencie les CNN des autres algorithmes de DNN. 
+Une classe de réseaux de neurones artificiels directs profonds, la plupart du temps utilisés pour l'analyse d'images. Les couches du CNN sont telles qu'elles nécessitent très peu de preprocessing en amont, ces couches sont robustes (voire invariantes) aux perturbations petites (et parfois grandes) des entrées. Cela différencie les CNN des autres algorithmes de DNN. \\
 D'un point de vue pratique toutefois, les CNN \textit{sont des NN qui utilisent des convolutions à la place des multiplications matricielles classiques (dans au moins une des couches)}.
 
 \navy \subsubsection{Structure et vocabulaire} \bk
 On commence avec les figures suivantes :
+
 \begin{figure}[!ht]
 \centering
-\includegraphics[scale=0.43]{5x5_1.png} \hfill
-\includegraphics[scale=0.43]{5x5_2.png} 
-
+\vspace{-3mm}
+\includegraphics[scale=0.4]{5x5_1.png} \hfill
+\includegraphics[scale=0.4]{5x5_2.png} 
 \end{figure}
-Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pixels glisse sur l'ensemble de l'entrée de taille $32\times32\times3$. La zone qu'il couvre est appelée \textbf{\textit{receptive field}}. La cadence (stride) est ici 1 (cf plus loin).\\
-Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 ($5\times5\times3$) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{\textbf{activation map}} autrement appelée \textit{\textbf{feature map}} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.35]{conv_act_map.png}
+\end{figure}
+
+Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pixels glisse sur l'ensemble de l'entrée de taille $32\times32\times3$. La zone qu'il couvre est appelée \textbf{\textit{receptive field}}. \\
+Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 ($5\times5\times3$) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{\textbf{activation map}} ou \textit{\textbf{feature map}} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
 La sortie de cette convolution s'écrit pour le j, k-ème neurone :
 \begin{equation*}
 \sigma \left( b + \sum^4_{l=0}\sum^4_{m=0} w_{l,\,m} \, a_{j+k,\, k+m} \right)
 \end{equation*}
 Avec $w_{lm}$ les poids du filtres (les valeurs) et $a_{j+k,\, k+m}$ les valeurs de la fenêtre d'entrées à convoluer (on note que selon le neurone de sortie, cette fenêtre est décalée). Les poids et les biais sont communs à chaque passage de l'entrée à la sortie, on parlera alors de \textit{shared weights/biaises}. ce sont ces valeurs qui constituent le kernel ou filter.\\
 
+On peut décider de convoluer des filtres différents sur une même image d'entrée. Cette convolution créera une nouvelle \textit{feature map} relativement à ce nouveau filtre. \\ 
+On peut voir cela comme l'ajout d'une dimension de représentation de l'entrée. La figure suivante issue de \url{http://cs231n.stanford.edu/slides/2018/cs231n_2018_lecture05.pdf}; on a choisi ici 6 filtres.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.4]{conv_act_mapss.png}
+\end{figure}
+ 
+
 La couche de convolution est composée de trois étapes \citep{Goodfellow-et-al-2016} section 9.3 :
 \begin{itemize}[leftmargin=1cm]
 	\item[1-] C'est la phase de \textit{\textbf{convolution}} à proprement parler. On procède à plusieurs convolutions en parallèle pour produire des représentations différentes de la couche d'entrée. Dans les faits, on prédéfini des filtres, et on convolutionne les entrées avec les différents filtres. \\ On parlera d'activations linéaires ou représentations de l'entrée, en séries, ou encore d'ensemble d'activations linéaires;
 	\item[2-] Puis on applique une fonction d'activation non-lineaire (type ReLu) à chacune de ces représentations pour gagner en sparsity. Autrement dit, on affecte des poids aux zones d'intérêts majeurs relativement à chaque représentation (et donc à chaque filtre). On appelle cette étape la détection (\textit{\textbf{detector stage})};
-	\item[3-] On résume statistiquement cette représentation remaniée pour faciliter la detection de motifs ou de \textit{features} dans chacun des représentations parallèles. On parlera de mutualisation (locale) ou de \textit{\textbf{pooling}}.
+	\item[3-] On résume statistiquement cette représentation remaniée pour faciliter la detection de motifs ou de \textit{features} dans chacun des représentations parallèles. On parlera de mutualisation (locale) ou de \textit{\textbf{pooling}}. 
 \end{itemize}
+
+Il est possible d'effectuer une convolution par rapport à l'entrée, puis de composer cette convolution avec une fonction d'activation (ReLu, SeLu, tanh etc), convoluer encore cette sortie et y appliquer une fonction d'activation sans pooling intermediaire. Cependant, le pooling permet une identification plus rapides des principaux features.
 
 \begin{figure}[!ht]
 \centering
-\includegraphics[scale=0.455]{feature_maps.png}
+\includegraphics[scale=0.43]{feature_maps.png}
 \captionsetup{labelformat=empty}
 \caption{Figure from \url{https://arxiv.org/pdf/1707.09725.pdf}}
 \end{figure}
 
-Différets types de pooling : 
+Différents types de pooling : 
 \begin{itemize}[leftmargin=2cm]
 	\item[--] Max pooling : $\max \{ a \, \in \, A\}$
 	\item[--] Average / mean pooling : $\frac{1}{\vert A \vert}\sum_{a\in A} a$
 	\item[--] $L_2$ pooling : $\sqrt{\sum^{ ^{ }}_{a\in A} a^2}$
 	\item[--] Stochastic pooling : Each of $a_i$ imposed to positive is picked with probability $$p_i = \frac{a_i}{\sum_{a_j \in A} a_j}$$
 \end{itemize}
+
+\navy \subsubsection{Un mot sur les dimensions} \bk
+\begin{wrapfigure}[8]{r}{3cm}
+\centering
+\includegraphics[scale=0.4]{7x3.png}
+%\rule{3cm}{7cm}
+\end{wrapfigure}
+
+Imaginons une fenêtre 3x3 qui parcourt une image 7x7.\\
+Lorsqu'elle glisse horizontalement (de gauche à droite), on remarque qu'on ne pourra faire que trois pas (\textbf{stride=1, no padding}); idem verticalement. La feature map qui résultera de cette convolution aura alors la forme 5x5. \\
+Si on prenait un pas de 2 (\textbf{stride=2, no padding}) entre chaque convolution, on aurait une feature map de taile 3x3.\\
+Avec un décalage de trois case (\textbf{stride=3}), on aura un problème, puisque la dernière translation fera appel à deux colones ou lignes qui n'existent pas. On parle d'incompatibilité du filtre avec l'image.\\
+
+De manière générale, la taille de la sortie sera $$ N_O = \frac{N_I - N_F}{\text{stride}} + 1$$ Avec $N_F$ la taille du filtre et $N_I$ la taille de l'entrée. La taille de la sortie doit être un entier. On remarque que pour stride = 1 ou 2, la taille de la sortie est un entier, mais pour stride = 3, $N_O=2.333$.\\
+
+On peut contourner le problème de l'incompatibilité du filtre avec l'image en utilisant le padding.\\ 
+
+\begin{wrapfigure}[7]{r}{3cm} \vspace{-8mm}
+\centering
+\includegraphics[scale=0.4]{padd.png}
+%\rule{3cm}{7cm}
+\end{wrapfigure}
+
+Le padding (voir figure ci-contre) consiste à rajouter une colonne de zéro à gauche et à droite (mais également en haut et en bas, pour garder une matrice carrée).\\
+Puisqu'on ajoute toujours symétriquement de gauche à droite ou de haut en bas, la notation $p = 1$ impliquera en fait $N_I =N_I + 2p$ \cad $ $ $N_I = N_I + 2$.\\
+Finalement, en présence de padding (zero padding ou autre), la sortie aura la taille :\\ $$ N_O = \frac{N_I +2p - N_F}{\text{stride}} + 1$$
+Au final, la sortie aura la dimension $$ (N_O, N_O, K)$$ Avec K le nombre de filtre que l'on a appliqué sur l'entrée.
+
+\navy \subsubsection{Pooling layer} \bk
+On utilise cette opération pour rendre les représentations (feature map) plus petites et mieux gérables. Le pooling agit sur chacune des features map indépendamment. Le pooling sert à réduire la dimension de l'entrée, on parle de \textit{\textbf{downsampling}}.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.5]{pooling_sketch.png}
+\end{figure}
+
+\newpage
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.5]{BN_CNN.png}
+\captionsetup{labelformat=empty}
+\caption{From \url{http://cs231n.stanford.edu/slides/2018/cs231n_2018_lecture06.pdf}}
+\end{figure}
 
 \newpage
 
@@ -514,8 +576,8 @@ The LKA algorithm is given in the following figure
 \begin{figure}[!ht]
 \centering
 \includegraphics[scale=0.6]{LKA.png}
-\caption{}
-\label{}
+\captionsetup{labelformat=empty}
+\caption{LKA Algorithm}
 \end{figure}
 \newpage
 
