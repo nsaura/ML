@@ -122,12 +122,12 @@ Computers being more and more powerful, new datasets are frequently added to thi
 \end{frame}
 
 \begin{frame}{Introduction}{Data-Driven methods and Supervised Machine learning}
-	\begin{block}{Data-driven methods}
+	\begin{block}{The aim of data-driven methods}
 		It consists in infering \textit{latent variables} \textbf{h} of a model \textbf{m} behind some \textit{visible variables} \textbf{v} datas or at least maximize the conditionnal probability $$p\bepar{h|\,v}$$
 		We call this procedure inference or Bayesian Inversion
 	\end{block}
 	
-	\begin{block}{Supervised Machine Learning}	
+	\begin{block}{Supervised Machine Learning as an inference problem}	
 		It consists in tuning set of parameters $\omega$ to match predefined input $\eta$ and output $y$ pairs called \textbf{train dataset} in the aim to extend this knowledge for prediction purposes. In other words, we want to maximize 
 					$$ p(\omega|\, \eta_{\text{train}}, y_{\text{train}})$$
 	\end{block}	
@@ -217,7 +217,7 @@ Computers being more and more powerful, new datasets are frequently added to thi
 	\end{itemize}	
 	\end{multicols}	
 
-\textit{Maximum A Posteriori} method : gives through an iterative process $\beta_M$  
+\textit{Maximum A Posteriori} method : gives  $\beta_M$ through an iterative process  
 $$ \beta_M = \argmin \mathcal{J} $$
 
 \end{frame}
@@ -342,7 +342,7 @@ $$ \beta_M = \argmin \mathcal{J} $$
 \begin{frame}{Feed Forward Neural Network (FFNN)}
 		\begin{itemize}
 			\warrow Supervised Machine learning algorithm
-			\warrow Graph from Inputs to Outputs 
+			\warrow Graph from Inputs to Outputs : fonctionnal $\mathcal{F}$  discovery
 			\warrow In bitween : architectures (layers abb. L) and operations (activation functions, matricial products)
 		\end{itemize}
 
@@ -446,6 +446,75 @@ Consider X input matrice and y target matrice and split them into
 	\end{figure}
 	
 \end{frame}
+
+\begin{frame}{First use of ML : generalize the beta from inference}{We had...}
+	\begin{block}{Model equations}
+		\begin{itemize}
+			\item[$\bullet$] Model equation :
+			\begin{center}
+				$\displaystyle \frac{d^2T}{dz^2} + \varepsilon_0\color{BlueViolet}\beta(z)\bk\bepar{T^4_\infty - T^4}= 0$
+			\end{center}
+		\end{itemize} 
+	\end{block}
+	
+	\begin{itemize}
+		\warrow Obtain the $\beta_{\text{final}}$ distribution for $T_\infty$ in 5:5:50 : \\
+		\begin{center}
+			$ \beta_{\text{final}} \equiv \beta \sim \mathcal{N}\bepar{\beta_{\text{MAP}}, {\text{Hess}^{-1}_{\beta_{\text{MAP}}}}}$
+		\end{center}
+		\warrow Here $\beta$ depends on space. But with Machine learning we can \textit{generalize} this local information into \textit{knowledge}, but choosing a set of features
+	
+		\warrow Construction $\mathcal{D} = \left\lbrace \ \underbrace{\bepar{T_{\text{inf}},T(x_i)}}_{X_i}, \ \underbrace{\beta_i}_{y_i}\ \right\rbrace$ \\	
+	 
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{First use of ML : generalize the beta from inference}
+Reproduce the previous calculs for T = 5:5:50 \\[1cm]
+
+
+In matrix notation : 
+
+\begin{multicols}{2}
+\noindent
+$$ X = \left[ \begin{array}{c} \cdot \\ \cdot \\ T_{\text{inf}},\ T(x) \\ \cdot \\ \cdot
+			  \end{array}
+	   \right]
+$$
+\columnbreak
+$$ y = \left[ \begin{array}{c} \cdot \\ \cdot \\ \beta(x) \\ \cdot \\ \cdot
+			  \end{array}
+	   \right]
+$$
+\end{multicols}
+Neural Network generalization : \\
+\begin{center}
+ $\beta_1(x), ..., \beta_n(x) \rightarrow \beta_{\text{ML}} = \mathcal{F}\bepar{\eta_1 = T_{\text{inf}}, \eta_2= T}$
+\end{center}
+\end{frame}
+
+\begin{frame}{New case to test the generalization of $\beta$ knowledge}
+	$T_\infty = 35 + 20\sin(2\pi x)$ 
+	\begin{figure}[H]
+		\centering	
+		\includegraphics[scale=0.5]{T_True_vs_T_ML_N_sample_5_T_inf_35_+_20sin_2piz_adam-mean.png}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{What we are doing}
+	\begin{itemize}
+		\sarrow We try to incorporate physical information in the NN learning (problem invariants...)
+		\sarrow Different tries :
+			\begin{itemize}
+				\warrow Select the best features and the best outputs as it can be done in (Wu et al. 2018)
+				\warrow Select the best architecture : scaling, activation function, matrix operator number of HL and HN etc.
+				\warrow Select the best algorithm for the weight optimization, or the cost function to incorborate robustness in the learning
+			\end{itemize}
+		\sarrow We also tried Reinforcement learning 
+		\sarrow Consider using the Reccurent NN.
+	\end{itemize}
+\end{frame}
+
 %\begin{frame}{Bayesian Inversion Framework (BIF)}
 %Framework proposed by Duraisamy \textit{et. al} in \citep{parish2016paradigm}
 %\begin{multicols*}{2}
