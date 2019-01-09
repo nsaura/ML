@@ -205,4 +205,4 @@ ddd =   d.doit()
 #    title_and_labels(axes[2], "contour")
 
 
-    #a,b,c = sy.symbols('a,b,c', char=True)
+#    a,b,c = sy.symbols('a,b,c', char=True)

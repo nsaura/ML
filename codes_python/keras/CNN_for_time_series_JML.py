@@ -63,11 +63,21 @@ X = X.reshape((X.shape[0], X.shape[1], n_features))
 model = Sequential()
 model.add(Conv1D(filters=32, kernel_size=2, activation='selu', 
                 input_shape=(n_steps, n_features))) # en vrai relu, filters = 64
-                
+
+#(None, 2, 32)
+
 model.add(MaxPooling1D(pool_size=2))
+# (None, 1, 32)
+
 model.add(Flatten())
+# (None, 32)
+
 model.add(Dense(10, activation='selu')) # en vrai 50, 'relu'
+# (None, 10)
+
 model.add(Dense(1))
+# (None, 1)
+
 model.compile(optimizer='adam', loss='mse')
 
 # fit model

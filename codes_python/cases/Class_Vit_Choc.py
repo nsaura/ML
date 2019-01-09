@@ -52,7 +52,7 @@ def parser() :
     # Strings
     parser.add_argument('--init_u', '-init_u', action='store', type=str, default='sin', dest='type_init', 
                         help='Choose initial condition on u. Defaut sin\n')
-    parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data/burger_dataset/', dest='datapath', 
+    parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data/2019_burger_data/', dest='datapath', 
                         help='Define the directory where the data will be stored and read. Default to %(default)s \n')
     parser.add_argument('--covariance_model', '-cov_mod', action='store', type=str, default='full', dest='cov_mod', 
                         help='Define the covariance model. Default to %(default)s \n')
@@ -659,7 +659,7 @@ class Vitesse_Choc() :
                  
                 plt.pause(0.01)
                 
-                plt.savefig("./res_all_T_inf/burger_fig/nu%.4f_CFL%.2f_Nx_%d_InferenceVSTrue_it%d.png" %(self.nu, self.CFL, self.Nx, it))
+#                plt.savefig("./res_all_T_inf/burger_fig/nu%.4f_CFL%.2f_Nx_%d_InferenceVSTrue_it%d.png" %(self.nu, self.CFL, self.Nx, it))
                 
                 evol += 1
             ## End of the while loop ## 
@@ -700,10 +700,24 @@ if __name__ == '__main__' :
 #    plt.close("all")
     
     cb = Vitesse_Choc(parser)   
-#    cb.obs_res(True, True)
-#    cb.obs_res(write=False, plot=True)
-#    cb.get_obs_statistics(write=True)
+    try :
+        cb.obs_res(True, True)
     
+    except KeyboardInterrupt :
+        b = bool(input("Flush %s ? 1/0 " %(cb.datapath)))
+        
+        if b == 1 :
+            thisfolder = os.getcwd()
+            os.chdir(cb.datapath)
+            print ("Deleting npy files in %s" %(os.getcwd()))
+            os.system("rm *.npy")
+            os.chdir(thisfolder)
+            
+            print ("Current folder : %s" %(os.getcwd()))
+
+        sys.exit()    
+
+#    cb.get_obs_statistics(write=True)
 #    cb.minimization()
 
 
