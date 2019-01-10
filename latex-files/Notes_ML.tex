@@ -425,7 +425,7 @@ On commence avec les figures suivantes :
 \end{figure}
 
 Le filtre (\textit{\textbf{filter}} ou \textit{\textbf{kernel}}) sur les 5x5 pixels glisse sur l'ensemble de l'entrée de taille $32\times32\times3$. La zone qu'il couvre est appelée \textbf{\textit{receptive field}}. \\
-Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 ($5\times5\times3$) valeurs sont sommées dans une seule case de la première HL (voir figure). En réitérant cette convolution, on construit une \textit{\textbf{activation map}} ou \textit{\textbf{feature map}} de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$). \\
+Le filtre qui est un tableau de valeurs, est convolué avec le receptive field courant, les 75 ($5\times5\times3$) valeurs sont sommées dans une seule case de la première HL. En réitérant cette convolution, on construit une \textit{\textbf{channel}}, \textit{\textbf{activation map}} ou encore \textit{\textbf{feature map}} (définitions équivalentes sauf pour l'input composée de channels) de forme ($32-5+1$, $35-5+1$, $1$) = ($28$, $28$, $1$).\\
 La sortie de cette convolution s'écrit pour le j, k-ème neurone :
 \begin{equation*}
 \sigma \left( b + \sum^4_{l=0}\sum^4_{m=0} w_{l,\,m} \, a_{j+k,\, k+m} \right)

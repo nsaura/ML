@@ -88,7 +88,7 @@ model.add(MaxPooling1D(pool_size=2))
 #(None, 1, 64)
 
 model.add(Flatten())
-
+# Flatten serves as a connection between the convolution and dense layers
 
 #(None, 64)
 
@@ -111,41 +111,58 @@ yhat = model.predict(x_input, verbose=0)
 
 print yhat
 
-#### Notes on Dimensions des poids ####
-## On se base sur model.get_weights() 
-## On parle ici de taille des matrices de poids
-
-## A = np.array(model.get_weights()), A.shape = (6,), 6 matrices de matrices (parfois) ou matrices simples
+#-----------------------------------------#
+####   Notes sur Dimension des poids   ####
+#-----------------------------------------#
+#
+# --> voir model.get_weights() 
+# 
+#
+# A = np.array(model.get_weights()), A.shape = (6,), 6 matrices de matrices (parfois) ou matrices simples
 
 # A[0]
-# La couche Conv1D(filters=64, kernel_size=2, activation='relu', input_shape=(n_steps, n_features) générera des poids de la taille (kernel_size, n_features, filters)
-
-# A[1]
-# La couche de pooling (avec le flatten qui effectue  va évaluer sur une zone pool_size x pool_size la max (ici) et générer une couche de poids = filters de la taille (filters,) 
-
+#   
+#   La couche Conv1D(filters=64, kernel_size=2, activation='relu', input_shape=(n_steps, n_features) générera des poids de la taille (kernel_size, n_features, filters)
+#
+#
+# A[1] <<<----- Biais ajouté à la couche de convolution de la taille du nombre de filtre
+#   
+# La couche de pooling réduit la dimension et résume les informations des filtres 
+# Le Flatten applatit les tableaux (None, 1, 64) en (None, dim1*dim2*etc)
+#
+#
 # A[2] et A[3]
-# La couche Dense lie la couche précédente avec la taille demandée en premier argument de la fonction. Ainsi ici les poids de la première couche dense sera un matrice de taille (filters, n_neurons_dense_layer)
-# A cette couche de poids, s'ajoute les biais, un vecteur de taille (n_neurons_dense_layer)
-
+# 
+#   La couche Dense lie la couche précédente avec la taille demandée en premier argument de la fonction. Ainsi ici les poids de la première couche dense sera un matrice de taille (filters, n_neurons_dense_layer)
+#   A cette couche de poids, s'ajoute les biais, un vecteur de taille (n_neurons_dense_layer)
+#
+#
 # A[4] et A[5]
-# Idem pour la couche suivant, on aura une matrice de poids (n_neurons_dense_layer, n_output)
-# Et donc un vecteur de biais (n_output)
+#   Idem pour la couche suivant, on aura une matrice de poids (n_neurons_dense_layer, n_output)
+#   Et donc un vecteur de biais (n_output)
+#
+#
+#  Au total on aura sum(A[i].size for i in range(A.size)) = 3621 paramètres à optimiser
 
-# Au total on aura sum(A[i].size for i in range(A.size)) = 3621 paramètres à optimiser
 
-
-#### Notes sur les dimensions des couches --> voir model.output_shape sur chaque couche ####
-
+#------------------------------------------------#
+####   Notes sur les dimensions des couches   ####
+#------------------------------------------------#
+#
+# --> voir model.output_shape sur chaque couche  #
+#
+#
 # L'entrée est toujours de taille (n_steps, n_features)
-
+#
 # On note new_steps = (n_steps-kernel_size)/strides + 1
-
-
-# La convolution sort une matrice de taille (None, new_steps, 64) sans padding 
-# Le Pooling réduit la taille de feature 
-
-# Le flatten "empile" toutes les données dans une matrice (None, filters*new_steps*autres_dim)
-
-# La couche dense aura une sortie de la taille de n_neurons_dense_layer
+#
+#
+#   La convolution sort une matrice de taille (None, new_steps, 64) sans padding plus généralement (batch, new_steps, filters)
+#
+#   Le Pooling réduit la taille de feature 
+#
+#   Le flatten "empile" toutes les données dans une matrice (None, filters*new_steps*autres_dim)
+#
+#   La couche dense aura une sortie de la taille de n_neurons_dense_layer
 
 	

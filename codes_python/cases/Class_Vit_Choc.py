@@ -694,9 +694,9 @@ class Vitesse_Choc() :
 ###---------------------------------------------------##   
 ##----------------------------------------------------##
 if __name__ == '__main__' :
-#    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 52 -Nt 52
-#    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10
+#    run Class_Vit_Choc.py -nu 5e-2 -itmax 180 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -typeJ "u"
     parser = parser()
+    
 #    plt.close("all")
     
     cb = Vitesse_Choc(parser)   
@@ -718,14 +718,13 @@ if __name__ == '__main__' :
         sys.exit()    
 
 #    cb.get_obs_statistics(write=True)
-#    cb.minimization()
+#    cb.minimization(maxiter=50, solver="BFGS"  , step=5)
 
+#######    run Class_Vit_Choc.py -nu 2.5e-2 -itmax 200 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10
 
 ## Pour lancer ce code : 
-# run Class_Vit_Choc -h #Pour visualiser les parametres a tuner ou leur valeur par defaut 
 
 # On pourra essayer :
-# run Class_Vit_Choc.py -nu 2.5e-2 -itmax 40 -CFL 0.4 -num_real 5 -Nx 32 -Nt 32 -beta_prior 10 -typeJ "u"
 # cb.obs_res(True, True)
 # cb.minimization(maxiter=50, solver="BFGS", step=5) # Ici aussi on pourra modifier ces parametres
 
