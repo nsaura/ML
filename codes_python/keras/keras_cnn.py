@@ -2,6 +2,7 @@
 # -*- coding: latin-1 -*-
 
 import sys
+import numpy as np
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D
@@ -28,16 +29,35 @@ y_test = to_categorical(y_test)
 #create model
 model = Sequential()
 
+#Init signature: Conv2D(self, filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None, **kwargs)
+
+input_shape = (28,28,1)
+strides = (1,1)
+feature_maps = 64
+kernel_size = 5
+
+padding = 'same'
+
+new_steps = [(input_shape[i] - kernel_size)/strides[i] + 1 for i in range(2)]
+
+print new_steps
+
+for j, n in enumerate(new_steps) :
+    if (input_shape[j] - kernel_size) % strides[j] != 0 :
+        print ("For %d, there sould be a problem" % j)
+
 #add model layers
-model.add(Conv2D(64, kernel_size=3, activation='relu', input_shape=(28,28,1)))
+model.add(Conv2D(feature_maps, kernel_size=kernel_size, activation='relu', strides=strides, padding=padding, input_shape=input_shape))
 # (None, 26, 26, 64)
+
+print model.output_shape 
+sys.exit()
 
 model.add(Conv2D(32, kernel_size=3, activation='relu'))
 # (None, 24, 24, 32)
 
 model.add(MaxPooling2D(pool_size=4))
-print model.output_shape 
-sys.exit()
+
 
 
 #In between the Conv2D layers and the dense layer, there is a 'Flatten' layer. Flatten serves as a connection between the convolution and dense layers.
@@ -54,6 +74,55 @@ model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3)
 
 
 ###
+
+#------------------------------------------------#
+####   Notes sur les dimensions des couches   ####
+#------------------------------------------------#
+#
+# --> voir model.output_shape sur chaque couche  #
+#
+#
+# L'entrée est toujours de taille (n_steps, n_features)
+#
+# On note new_steps = (n_steps-kernel_size)/strides + 1
+#
+#   
+#   La convolution sort une matrice de taille (None, new_steps, new_steps, 64) sans padding 
+#   
+#   Strides = (1,1)
+#   Lorsque kernel_size = 2 : new_steps = 28-2 + 1 = 27
+#   Lorsque kernel_size = 3 : new_steps = 28-3 + 1 = 26
+#   Lorsque kernel_size = 4 : new_steps = 28-4 + 1 = 25
+#   
+#   Strides = (2,2)
+#   Lorsque kernel_size = 2 : new_steps = (28-2)/2 + 1 = 14
+#   ETC
+#   
+#
+#   Lorsque padding = 'same', output_shape = input_shape (Inconsistent lorsque Strides > (1,1))
+#   c'est le zéro padding (Vérifier)
+#
+#   La formule de new_steps devient : (n_steps-kernel_size + 2*padding)/strides + 1
+#
+#   Exemple
+#   kernel_size = 3, padding='same', strides=(1,1), feature_maps = 64
+#   new_steps = 28 = (28 - 3 + 2*p) + 1 => p = 1, i.e. une ligne de 0 tout en haut et bas
+#   La sortie est effectivement (None, 28, 28, 64)
+#   
+#   Supposons maintenant kernel_size = 6, strides et feature_maps identiques   
+#   new_steps = 28 = (28 - 5 + 2*p) + 1 => p = 2, i.e. deux lignes de 0 tout en haut et bas
+#
+#   On fera bien ce calcul avant pour savoir si p entier. (e.g. kernel_size = 6 => p = 2.5 pb)
+#   L'erreur n'est pas affichée et la sortie à la forme valide, mais traitement nécessaire.
+#
+#
+#   Voir DL page 344 Fig. 9.10. Il est possible que la convolution soit fait sur des zones plus petites (a cause du strides) 
+#   Le Pooling réduit la taille de feature 
+#
+#   Le flatten "empile" toutes les données dans une matrice (None, filters*new_steps*autres_dim)
+#
+#   La couche dense aura une sortie de la taille de n_neurons_dense_layer
+
 
 
 # 26 = 28-3 + 1
@@ -91,23 +160,4 @@ model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3)
 #  Au total on aura sum(A[i].size for i in range(A.size)) = 3621 paramètres à optimiser
 
 
-#------------------------------------------------#
-####   Notes sur les dimensions des couches   ####
-#------------------------------------------------#
-#
-# --> voir model.output_shape sur chaque couche  #
-#
-#
-# L'entrée est toujours de taille (n_steps, n_features)
-#
-# On note new_steps = (n_steps-kernel_size)/strides + 1
-#
-#
-#   La convolution sort une matrice de taille (None, new_steps, 64) sans padding 
-#
-#   Le Pooling réduit la taille de feature 
-#
-#   Le flatten "empile" toutes les données dans une matrice (None, filters*new_steps*autres_dim)
-#
-#   La couche dense aura une sortie de la taille de n_neurons_dense_layer
 

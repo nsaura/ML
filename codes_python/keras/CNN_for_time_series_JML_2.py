@@ -122,7 +122,7 @@ print yhat
 
 # A[0]
 #   
-#   La couche Conv1D(filters=64, kernel_size=2, activation='relu', input_shape=(n_steps, n_features) générera des poids de la taille (kernel_size, n_features, filters)
+#   La couche Conv1D(filters=64, kernel_size=2, activation='relu', input_shape=(n_steps, n_features) génère des poids de la taille (kernel_size, n_features, filters)
 #
 #
 # A[1] <<<----- Biais ajouté à la couche de convolution de la taille du nombre de filtre
