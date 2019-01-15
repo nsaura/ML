@@ -31,7 +31,7 @@ model = Sequential()
 
 #Init signature: Conv2D(self, filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None, **kwargs)
 
-input_shape = (28,28,1)
+input_shape = (7,7,1)
 strides = (1,1)
 feature_maps = 64
 kernel_size = 5
@@ -47,17 +47,18 @@ for j, n in enumerate(new_steps) :
         print ("For %d, there sould be a problem" % j)
 
 #add model layers
-model.add(Conv2D(feature_maps, kernel_size=kernel_size, activation='relu', strides=strides, padding=padding, input_shape=input_shape))
+model.add(Conv2D(feature_maps, kernel_size=kernel_size, activation='relu', strides=strides, padding='same', input_shape=input_shape))
 # (None, 26, 26, 64)
 
-print model.output_shape 
-sys.exit()
+print "Output Convo2D shape : {}".format(model.output_shape)
 
-model.add(Conv2D(32, kernel_size=3, activation='relu'))
+#model.add(Conv2D(32, kernel_size=3, activation='relu'))
 # (None, 24, 24, 32)
 
-model.add(MaxPooling2D(pool_size=4))
+model.add(MaxPooling2D(pool_size=2, padding='same'))
 
+print "Output Maxpooling2D shape : {}".format(model.output_shape)
+sys.exit()
 
 
 #In between the Conv2D layers and the dense layer, there is a 'Flatten' layer. Flatten serves as a connection between the convolution and dense layers.
@@ -123,9 +124,40 @@ model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3)
 #
 #   La couche dense aura une sortie de la taille de n_neurons_dense_layer
 
+#-----------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------
+
+# A propos du padding dans max pool et en règle général :
+#
+# Voir https://stackoverflow.com/questions/37674306/what-is-the-difference-between-same-and-valid-padding-in-tf-nn-max-pool-of-t
+# Reponse de Shital Shah
+#
+# VALID: Don't apply any padding, i.e., assume that all dimensions are valid so that input image fully gets covered by filter and stride you specified.
+# SAME: Apply padding to input (if needed) so that input image gets fully covered by filter and stride you specified. For stride 1, this will ensure that output image size is same as input.
+
+# Exemple :
+# 1 - Maxpooling Padding = valid (suppose que les dimensions sont bonnes)
+#   input_shape = (7,7,1)
+#   model.add(Conv2D(feature_maps, kernel_size=kernel_size, activation='relu', strides=strides, padding='same', input_shape=input_shape))
+#   model.add(MaxPooling2D(pool_size=2, padding='valid'))
+#------
+#   Output Convo2D shape : (None, 7, 7, 64)
+#   Output Maxpooling2D shape : (None, 3, 3, 64)
+#
+#
+# 2 - Maxpooling Padding = same (auto pads pour que toute l'image soit parcourue par le filtre en fonction du stride
+#   input_shape = (7,7,1)
+#   model.add(Conv2D(feature_maps, kernel_size=kernel_size, activation='relu', strides=strides, padding='same', input_shape=input_shape))
+#   model.add(MaxPooling2D(pool_size=2, padding='same'))
+#------
+#   Output Convo2D shape : (None, 7, 7, 64)
+#   Output Maxpooling2D shape : (None, 4, 4, 64)
+
+# On voit alors que les dimensions n'étaient pas bonnes et en "valid" des informations ont sûrement été perdues
+# Olivier Moindrot (accepted answer) précise que "max pool with 2x2 kernel, stride 2 and SAME padding (this is the classic way to go)"
 
 
-# 26 = 28-3 + 1
+
 # dim (batch, new_rows, new_cols, filters)
 #-----------------------------------------#
 ####   Notes sur Dimension des poids   ####
