@@ -168,7 +168,6 @@ class Vitesse_Choc() :
         self.CFL_str = str(self.CFL).replace(".","_")
         self.type_init = parser.type_init
         
-        
         bool_method = dict()
         bool_written= dict()
         
