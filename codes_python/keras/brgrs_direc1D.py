@@ -1,8 +1,13 @@
 #!/usr/bin/python2.7
 # -*- coding: latin-1 -*-
-import numpy as np
-import pandas as pd
 
+import os
+import csv
+import sys 
+import time
+import os.path as osp
+
+import numpy as np
 try:
     reload  # Python 2.7
 except NameError:
@@ -15,12 +20,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sys, warnings, argparse
 
-import os
-import sys 
-import os.path as osp
-
-import time
-
 ## Import de la classe CVC ##
 cases_folder = osp.abspath(osp.dirname("../cases/"))
 sys.path.append(cases_folder)
@@ -30,9 +29,10 @@ import tensorflow as tf
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers import Input, Flatten, Dense, MaxPool1D, UpSampling1D, Activation, Conv1D
+import keras.optimizers as optimizers
 
-import Class_Vit_Choc as cvc
-cvc = reload(cvc)
+import Roe_inference_burgers as rib
+rib = reload(rib)
 
 from visu_strides import glide1D
 
@@ -41,17 +41,17 @@ try :
 except :
     pass
 
-def model():
+def model(Nx)
     # Unet 
-    input_shape = (80,1)
+    input_shape = (Nx,1)
 
     input_data = Input(shape=input_shape)
-    x = Conv1D(32, kernel_size=3, padding='same')(input_data)
+    x = Conv1D(2, kernel_size=3, padding='same')(input_data)
     #Rajouter une couche BN
     x = Activation('relu')(x)
     print ("in --> Conv1D(32, 2, same) = {}".format(x.get_shape())) # (?, 81, 32)
 
-    x = Conv1D(32, kernel_size=2, padding='same')(input_data)
+    x = Conv1D(4, kernel_size=2, padding='same')(input_data)
     x = Activation('relu')(x)   
     print ("Conv1D --> Conv1D(32, 2, same). Out_shape = {} \n".format(x.get_shape()))
     #print x.get_shape() # (?, 81, 32)
@@ -64,7 +64,7 @@ def model():
     print (" ")
     # 
 
-    x = Conv1D(64, kernel_size=2, padding='same')(x)
+    x = Conv1D(8, kernel_size=2, padding='same')(x)
     #Rajouter une couche BN
     x = Activation('relu')(x)
     print ("Pooled --> Conv1D(64, 2, same). Out_shape = {}".format(x.get_shape()))
@@ -81,12 +81,12 @@ def model():
     print ("MaxPool1D(2nd enc): in_shape = {}\tOut_shape = {}".format(in_pool_shape, x.get_shape()))
     print (" ")
 
-    x = Conv1D(128, kernel_size=2, padding='same')(x)
+    x = Conv1D(16, kernel_size=2, padding='same')(x)
     #Rajouter une couche BN
     x = Activation('relu')(x)
     print ("Pooled --> Conv1D(128, 2, same). Out_shape = {}".format(x.get_shape()))
 
-    x = Conv1D(128, kernel_size=2, padding='same')(x)
+    x = Conv1D(16, kernel_size=2, padding='same')(x)
     #Rajouter une couche BN
     x = Activation('relu')(x)
     print ("Conv1D --> Conv1D(128, 2, same). Out_shape = {} \n".format(x.get_shape()))
@@ -98,12 +98,12 @@ def model():
     print ("UpSampling(1st dec): in_shape= {}\tOut_shape = {}".format(in_samp_shape, x.get_shape()))
     print (" ")
 
-    x = Conv1D(64, kernel_size=2, padding='same')(x)
+    x = Conv1D(8, kernel_size=2, padding='same')(x)
     #Rajouter une couche BN
     x = Activation('relu')(x)
     print ("Upsampled --> Conv1D(64, 2, same). Out_shape = {}".format(x.get_shape()))
 
-    x = Conv1D(64, kernel_size=2, padding='same')(x)
+    x = Conv1D(4, kernel_size=2, padding='same')(x)
     #Rajouter une couche BN
     x = Activation('relu')(x)
     print ("Conv1D --> Conv1D(64, 2, same). Out_shape = {} \n".format(x.get_shape()))
@@ -115,12 +115,12 @@ def model():
     print ("UpSampling(2nd dec): in_shape= {}\tOut_shape = {}".format(in_samp_shape, x.get_shape()))
     print (" ")
 
-    x = Conv1D(32, kernel_size=3, padding='same')(x)
+    x = Conv1D(2, kernel_size=3, padding='valid')(x)
     #Rajouter une couche BN
     x = Activation('relu')(x)
     print ("Upsampled --> Conv1D(32, 2, same). Out_shape = {}".format(x.get_shape()))
 
-    x = Conv1D(1, kernel_size=1, padding='same')(x)
+    x = Conv1D(1, kernel_size=1, padding='valid')(x)
     #Rajouter une couche BN
     output = Activation('relu')(x)
     print ("Conv1D --> Conv1D(1, 1, same) (Output). Out_shape = {}".format(x.get_shape()))
@@ -134,69 +134,45 @@ def model():
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # u_it139_0_Nt52_Nx82_CFL0_4_nu0_05_sin.npy
 
-
-
 parser = cvc.parser()
-cb = cvc.Vitesse_Choc(parser)
+cb = crb.Vitesse_Choc(parser)
 
-def build_dataset(cb) :
-    nu52_avail = [0.05, 0.035, 0.025, 0.015]
-    Nt = 52
-    Nx = 82
-    CFL = '0_4'
-    str_nu52_avail = [str(i).replace('.', '_') for i in nu52_avail]
+def build_dataset(roe) :
+    data_file = csv.reader(open("roe_inference_case_done.txt","r"), delimiter="\t")
+    lines = []
     
-#    u_it168_4_Nt52_Nx82_CFL0_4_nu0_05_sin.npy
+    for line in data_file :
+        lines.append(line)
     
-    true_data =lambda it,neval,s_nu : "u_it%d_%d_Nt52_Nx82_CFL0_4_nu%s_sin.npy" % (it, neval, s_nu)
+    return lines
     
-    warp_name = lambda it, neval, s_nu : osp.join(cb.datapath, true_data(it, neval, s_nu))
+    n_params = np.shape(p)[1]
+    n_case = np.shape(p)[1] - 1 
     
-    u_means = dict()
+    p = [[lines[j][i].replace(' ','') for j in range(n_case)] for i in range(n_params)]
+    
+    for l in range(len(p)) :
+        for j in range(1, n_case + 1) : #+1 because key is still in lists
+            try :
+                p[l][j] = p[l][j]
+            except :
+                pass
+    
+    keys = []
+    cases = []
+    
+    keys = [p[j][0] for j in range(n_params)]
+    cases = [p[j][1:] for j in range(n_params)] 
+    
+    return p, keys, cases
+    
+    header_file = lambda Nx, Nt, CFL, amp, harm, phase, it, real : \
+        "Nt%d_Nx%d_CFL%s_sin_amp%s_harm%s_phase%s_U_adv%s_u_it%d_%d.npy" % \
+        (Nx, Nt, CFL, amp, harm, phase, it, real)
+        
     
     
-    uu = np.zeros((Nx))
-    tempu = np.zeros(Nx-2)
     
-    path_dataset = osp.join(cb.datapath, 'burger_matrices/cas_u')
-    
-    std_name = lambda std, it, s_nu : '%s_Nx_82_Nt_52_nu_%s_typei_sin_CFL_0_4_it_%03d.npy' % (std, s_nu, it)
-    
-    key_dict = lambda it, s_nu : "u_it%d_Nt52_Nx_82_nu%s" %(it, s_nu)
-
-    ### Calcul de la moyenne 
-    for s in str_nu52_avail :
-        for i in range(cb.itmax) :
-            tempu = np.zeros(Nx-2)
-            for ev in range(cb.num_real) :
-                uu = np.load(warp_name(i, ev, s))
-                for j in range(1, Nx-1) :
-                    tempu[j-1] += uu[j] / cb.num_real
-                
-            u_means[key_dict(i, s)] = tempu
-
-    X, y = np.zeros_like(cb.line_x[1:-1]), np.zeros_like(cb.line_x[1:-1])
-    cnt = 0
-    
-    X_keys, y_keys = dict(), dict()
-    
-    for s in str_nu52_avail :
-        for i in range(cb.itmax) :
-            betafile = os.path.join(cb.datapath, "burger_matrices/cas_u/betas", std_name("beta", i, s))
-#            chol_file = os.path.join(cb.datapath, "burger_matrices/cas_u/cholesky", std_name(chol, i, s))
-            
-            vel_file = u_means[key_dict(i, s)]
-            
-            X = np.block([ [X], [vel_file] ])
-            y = np.block([ [y], [np.load(betafile)[1:-1]] ])
-            
-            X_keys[cnt] = key_dict(i, s)
-            y_keys[cnt] = betafile
-            
-            cnt += 1 
-            
-    X = np.delete(X, 0, axis=0) 
-    y = np.delete(y, 0, axis=0)     
     return X, y, (cnt, X_keys, y_keys, u_means)
 
 def split_data(X, y):
@@ -218,33 +194,49 @@ def split_data(X, y):
     
     return xtr, ytr, xte, yte, xval, yval
 
+def see_pred(cb, unet, u_means, key, indice) :
+    u_n = xval[indice]
+    beta_pred = unet.predict(u_n.reshape(1, 82, 1)).ravel()
+    
+    u_n = u_n.ravel()
+    true_beta = yval[indice].ravel()
 
+#    u_beta(self, beta, u_n, verbose=False)
+    u_npred = cb.u_beta(beta_pred, u_n)
+    
+#    u_nexact = 
+    
+    
 
 if __name__ == '__main__':
-    #    run brgrs1D.py -nu 5e-2 -itmax 180 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -typeJ "u" -dp "./../cases/data/2019_burger_data/"
-    parser = cvc.parser()
-    cb = cvc.Vitesse_Choc(parser)
+    #    run brgrs1D_beta.py -nu 5e-2 -itmax 180 -CFL 0.4 -num_real 5 -Nx 82 -Nt 32 -typeJ "u" -dp "./../cases/data/2019_burger_data/"
+    parser = rib.parser()
+    roe = rib.Class_Roe_BFGS(parser)
     
-    unet = model()
-    X, y, _ = build_dataset(cb)
+    unet = model(roe.Nx)
+    X, y, utils = build_dataset(roe)
+    
+    u_means = utils[-1]
     
     xtr, ytr, xte, yte, xval, yval = split_data(X, y)
     
-    unet.compile(optimizer='adam', loss='mse')
     from keras.callbacks import TensorBoard
     
-    x_train = np.reshape(xtr, (len(xtr), 80, 1))
-    y_train = np.reshape(ytr, (len(ytr), 80, 1))
+    adam = optimizers.Adam(lr=1e-2, decay=1e-5)
+    unet.compile(loss='mean_squared_error', optimizer=adam)
     
-    x_test = np.reshape(xte, (len(xte), 80, 1))
-    y_test = np.reshape(yte, (len(yte), 80, 1))
+    x_train = np.reshape(xtr, (len(xtr), 82, 1))
+    y_train = np.reshape(ytr, (len(ytr), 82, 1))
     
-    x_validation = np.reshape(xval, (len(xval), 80, 1))
-    y_validation = np.reshape(yval, (len(yval), 80, 1))
+    x_test = np.reshape(xte, (len(xte), 82, 1))
+    y_test = np.reshape(yte, (len(yte), 82, 1))
+    
+    x_validation = np.reshape(xval, (len(xval), 82, 1))
+    y_validation = np.reshape(yval, (len(yval), 82, 1))
     
     unet.fit(x_train, y_train,
-                epochs=1000,
-                batch_size=16,
+                epochs=10,
+#                batch_size=32,
                 shuffle=True,
                 validation_data=(x_test, y_test))
 #                callbacks=[TensorBoard(log_dir='/tmp/autoencoder')])

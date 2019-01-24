@@ -542,8 +542,7 @@ class Vitesse_Choc() :
                 
             t1 = time.time()
             
-            print ("it = ".format(it))
-            print ("it + 1 = ".format(it+1))
+            print ("it = {}".format(it))
             
             u_obs_nt = self.U_moy_obs["u_moy_it%d" %(it+1)]
             cov_obs_nt = self.full_cov_obs_dict["full_cov_obs_it%d"%(it+1)] # Pour avoir la bonne taille de matrice
@@ -690,6 +689,8 @@ class Vitesse_Choc() :
         axes[1].legend(loc = "best")
             
         plt.pause(0.01)
+    
+    
 ###---------------------------------------------------##   
 ##----------------------------------------------------##
 if __name__ == '__main__' :

@@ -54,17 +54,19 @@ def parser() :
                         help='Define final time; default %(default)f \n')
     parser.add_argument('--CFL', '-CFL', action='store', type=float, default=float(0.4), dest='CFL',\
                         help='CFL: velocity adimensionned; default %(default)f \n')
-    parser.add_argument('--Umax', '-U', type=float ,action='store', default=0.4 ,dest='U_adv',\
-                        help='U_adv: Advection veloctiy. Value default to %(default)d\n')   
     parser.add_argument('--amplitude', '-amp', action='store', type=float, default=0.5, dest="amp",\
                         help='amplitude: the amplitude of sinus or init choc; Value default : %(default)f\n') 
     parser.add_argument('--Iteration_max', '-itmax', action='store', type=int, default=500, dest='itmax', 
-                        help='itmax: max iteration in obs or inference : default %(default)d \n' )                    
-
+                        help='itmax: max iteration in obs or inference : default %(default)d \n' ) 
+    parser.add_argument('--n_harmonic', '-harm', action='store', type=int, default=1, dest='harm', 
+                        help='harm: harmonic in the sin init : default %(default)d \n' )                   
+    parser.add_argument('--phase', '-phase', action='store', type=float, default=0.,  dest='phase',
+                        help='phase: choose the phase in the sin init (pi inside) : default %(default)f \n' )
+    parser.add_argument('--U_advection', '-U_adv', action='store', type = float, default=1., dest='U_adv',
+                        help='U_adv is a advection velocity. default %(default)f \n' )
+    
     parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=10, dest='num_real', 
                         help='Define how many samples of epsilon(T) to draw for exact model. Default to %(default)d\n' )
-    parser.add_argument('--g_sup_max', '-g_sup', action='store', type=float, default=0.001, dest='g_sup_max', 
-                        help='Define the criteria on grad_J to stop the optimization. Default to %(default).5f \n' )
     parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', default=1 ,dest='beta_prior',\
                         help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
     # Strings
@@ -72,7 +74,6 @@ def parser() :
                         help='Choose initial condition on u. Defaut sin\n')
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data/roe/', dest='datapath', 
                         help='Define the directory where the data will be stored and read. Default to %(default)s \n')
-   
     parser.add_argument('--type_J', '-typeJ', action='store', type=str, default="u", dest='typeJ',\
                         help='Define the type of term you want to simulate')
     
@@ -103,12 +104,14 @@ class Class_Roe_BFGS():
         
         self.datapath  = osp.abspath(parser.datapath)
         self.num_real  = parser.num_real
-        self.g_sup_max = parser.g_sup_max
         self.itmax     = parser.itmax
         self.typeJ     = parser.typeJ
         self.cov_mod = "full"      
         self.type_init = parser.type_init
         self.line_x = np.linspace(0, self.L, self.Nx)
+        
+        self.phase = parser.phase
+        self.harm  = parser.harm
         
         self.itmax= parser.itmax
         
@@ -143,35 +146,39 @@ class Class_Roe_BFGS():
         
         self.sCFL = "%.2f" % self.CFL
         self.samp = "%.2f" % self.amp
-        self.sU_adv = "%.2f" % self.U_adv       
-
+        self.sU_adv = "%.2f" % self.U_adv
+        self.sphase = "%.2f" % self.phase
+        self.sharm = "%.2f" % self.harm
+                
         self.sCFL = self.sCFL.replace('.', '_')
         self.samp = self.samp.replace('.', '_')
         self.sU_adv = self.sU_adv.replace('.', '_')
-        
+        self.sphase = self.sphase.replace('.', '_')
+        self.sharm = self.sharm.replace('.', '_')
+
         file_name = "roe_inference_case_done.txt"
         file_loc = osp.join(self.datapath, file_name)
         
         if osp.isfile(file_loc) == False :
             ffile = open(file_loc, "w+")
-            ffile.write("Nx\t Nt\t CFL\t amp\t U_adv\t itmax\n")
-            ffile.write("%d\t %d\t %s\t %s\t %s\t %d\n"\
-                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.itmax))
+            ffile.write("Nx\t Nt\t CFL\t amp\t U_adv\t init\t harm\t phase\t itmax\n")
+            ffile.write("%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d\n"\
+                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax))
         else :
             ffile = open(file_loc, "a+")
             ff = csv.reader(ffile, delimiter='\t')
             
             for r in csv.reader(open(file_loc, "a+"), delimiter='\t') :
-                curr_line = "%d\t %d\t %s\t %s\t %s\t %d"\
-                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.itmax)
+                curr_line = "%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d"\
+                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax)
 
                 rr = [i.replace(' ','') for i in r]
                 
                 if rr == curr_line.split() :
                     sys.exit("%s\nAlready exists case (see %s)" %(curr_line, file_name))
             
-            ffile.write("%d\t %d\t %s\t %s\t %s\t %d\n"\
-                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.itmax))
+            ffile.write("%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d\n"\
+                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax))
         ffile.close()
         
 #---------------------------------------------------------------#        
@@ -206,22 +213,29 @@ class Class_Roe_BFGS():
         return u_next 
 #---------------------------------------------------------------#
 #---------------------------------------------------------------#
-    def init_u(self, low = 0., high=1., phase=np.pi*0.5) :
-        u_init = np.zeros((0))
+    def init_u(self, low = 0., high=1.) :
+        u_init = np.zeros_like(self.line_x)
         if self.type_init == 'choc' :
             for j, x in enumerate(self.line_x) :
-                if abs(x) < L/2. :
+                if abs(x) < self.L/2. :
                     u_init[j] = low
                 else :
                     u_init[j] = high
                     
         if self.type_init == 'sin' :
-            u_init = self.amp*np.sin(2.*np.pi*self.line_x/self.L + phase)
+            u_init = self.amp*np.sin(2.*self.harm*np.pi*self.line_x/self.L + np.pi*self.phase)
         
         return u_init
 #---------------------------------------------------------------#
 #---------------------------------------------------------------#
-    def obs_res(self, write=False, plot=False, overwrite=False, low=0, high=1., phase=np.pi/2.)  :
+    def obs_res(self, write=False, plot=False, overwrite=False, low=0, high=1.)  :
+        
+        self.file = lambda Nt, Nx, CFL, amp, U_adv, type_init, harm, phase, it, real : \
+                    "Nt%d_Nx%d_CFL%s_amp%s_U_adv%s_%s_harm%s_phase%s_u_it%d_%d.npy" \
+                    %(Nt, Nx, CFL, amp, U_adv, type_init, harm, phase, it, real)
+
+        init = self.type_init
+
         ## Déf des données du probleme 
         if overwrite == True :
             curr = os.getcwd()
@@ -235,7 +249,7 @@ class Class_Roe_BFGS():
             
         for j, bruit in enumerate(self.bruits) :
             # Initialisation des champs u (boucles while)
-            u = self.init_u(low = low, high = high, phase = phase) + bruit
+            u = self.init_u(low = low, high = high) + bruit
             u_nNext = np.zeros_like(u)
             
             # Tracés figure initialisation : 
@@ -247,17 +261,17 @@ class Class_Roe_BFGS():
                 plt.pause(0.01)
                 
             if write == True or overwrite == True: 
-                filename = osp.join(self.datapath,
-                                    "Nt%d_Nx%d_CFL%s_%s_amp%s_U_adv%s_u_it0_%d.npy"  \
-                                    %(self.Nt ,self.Nx, self.sCFL, self.type_init, self.samp, self.sU_adv, j ))
-                
+                filename = osp.join(self.datapath, 
+                self.file(self.Nt, self.Nx, self.sCFL, self.samp, self.sU_adv, init, self.sharm, self.sphase, 0, j)
+                                   )
+                            
                 np.save(filename, u)
             
             t = it = 0
             
             while it <= self.itmax:
-                filename = osp.join(self.datapath, "Nt%d_Nx%d_CFL%s_%s_amp%s_U_adv%s_u_it%d_%d.npy" \
-                                    %(self.Nt ,self.Nx, self.sCFL, self.type_init, self.samp, self.sU_adv, it+1, j))
+                filename = osp.join(self.datapath, 
+            self.file(self.Nt, self.Nx, self.sCFL, self.samp, self.sU_adv, init, self.sharm, self.sphase, it+1, j))
 
                 if osp.exists(filename) == True and overwrite == False:
                     it+=1
@@ -273,7 +287,7 @@ class Class_Roe_BFGS():
                 t += self.dt
 
                 if plot == True :
-                    if it % 10 == 0 :
+                    if it % 50 == 0 :
                         plt.clf()
                         plt.plot(self.line_x[0:self.Nx-1], u[0:self.Nx-1], c='k') 
                         plt.grid()
@@ -295,8 +309,8 @@ class Class_Roe_BFGS():
             # Calcul de la moyenne pour l'itération en cours
             for n in range(self.num_real) :
                 file_to_get = osp.join(self.datapath, 
-                                       "Nt%d_Nx%d_CFL%s_%s_amp%s_U_adv%s_u_it%d_%d.npy" \
-                                       % (self.Nt ,self.Nx, self.sCFL, self.type_init, self.samp, self.sU_adv, it+1, n))
+                    self.file(self.Nt, self.Nx, self.sCFL, self.samp, self.sU_adv, init, self.sharm, self.sphase, it+1, j))
+                
                 u_t_n = np.load(file_to_get)
                 for i in range(len(u_t_n)) : u_sum[i] += u_t_n[i] / float(self.num_real)
                 
@@ -304,12 +318,11 @@ class Class_Roe_BFGS():
             full_cov = np.zeros((self.Nx, self.Nx))        
             
             # Calcul de la covariance associée à l'itération
-            full_cov_filename = osp.join(self.cov_path, 
-                                        "full_cov_obs_Nt%d_Nx%d_CFL%s_%s_amp%s_U_adv%s_it%d.npy" \
-                                        %(self.Nt, self.Nx, self.sCFL, init, self.samp, self.sU_adv, it)) 
-            diag_cov_filename = osp.join(self.cov_path, 
-                                         "diag_cov_obs_Nt%d_Nx%d_CFL%s_%s_amp%s_U_adv%s_it%d.npy" \
-                                         %(self.Nt, self.Nx, self.sCFL, init, self.samp, self.sU_adv, it))  
+            full_cov_filename = osp.join(self.cov_path, "full_cov_obs_" +
+                self.file(self.Nt, self.Nx, self.sCFL, self.samp, self.sU_adv, init, self.sharm, self.sphase, it, n))
+
+            diag_cov_filename = osp.join(self.cov_path, "diag_cov_obs_" +  
+                self.file(self.Nt, self.Nx, self.sCFL, self.samp, self.sU_adv, init, self.sharm, self.sphase, it, n))
             
             if osp.exists(full_cov_filename) == True and osp.exists(diag_cov_filename) :
                 full_cov_obs_dict["full_cov_obs_it%d"%(it)] = np.load(full_cov_filename) 
@@ -319,8 +332,7 @@ class Class_Roe_BFGS():
             
             for n in range(self.num_real) :
                 file_to_get = osp.join(self.datapath,
-                                        "Nt%d_Nx%d_CFL%s_%s_amp%.2f_U_adv%s_u_it%d_%d.npy"\
-                                        %(self.Nt, self.Nx, self.sCFL, init, self.amp, self.sU_adv, it, n))
+                self.file(self.Nt, self.Nx, self.sCFL, self.samp, self.sU_adv, init, self.sharm, self.sphase, it, n))
                 u_t_n = np.load(file_to_get)
                 
                 for ii in range(self.Nx)  :
@@ -526,11 +538,37 @@ class Class_Roe_BFGS():
 ##----------------------------------------------------##
 
 if __name__ == '__main__':
+
+#   run Roe_inference_burgers.py -L 3 -U 1 -amp 1.3 -itmax 200 -harm 1 -phase 3.141592653589793*0.5
+
     parser = parser()
-    test = Class_Roe_BFGS(parser)
-    test.define_functions(lambda x : test.U_adv*x, lambda x : test.U_adv)
-    test.obs_res(write=True, plot=True, overwrite=False)
-    print ("Statistics")
+    cnt = 0
+    for U_adv in [0.3, 0.6, 0.9, 1.2, 1.5] :
+        for amp in [0.5, 1, 1.5] :
+            for harm in [1,2,3] :
+                for phase in [0, 1./6., 1./3., 1./2.] :
+                    print "U_adv = %.2f  amp = %.2f  harm = %.2f  phase = %.2f\n" % \
+                    (U_adv, amp, harm, phase)
+                    
+                    if abs(U_adv - 0.3) < 1e-5 or (U_adv - 0.5) < 1e-5 :
+                        itmax = 350
+                    
+                    else :
+                        itmax = 200
+                        
+                    parser.U_adv = U_adv
+                    parser.amp = amp
+                    parser.harm = harm
+                    parser.phase = phase
+                    parser.itmax = itmax
+                    test = Class_Roe_BFGS(parser)
+                    test.define_functions(lambda x : test.U_adv*x, lambda x : test.U_adv)
+                    test.obs_res(write=True, plot=True, overwrite=False)
+                    
+                    del test
+                    
+                    cnt += 1
+    print "%d cases" % cnt
 #    test.get_obs_statistics()
     
     
