@@ -543,32 +543,32 @@ if __name__ == '__main__':
 
     parser = parser()
     cnt = 0
-    for U_adv in [0.3, 0.6, 0.9, 1.2, 1.5] :
-        for amp in [0.5, 1, 1.5] :
-            for harm in [1,2,3] :
-                for phase in [0, 1./6., 1./3., 1./2.] :
-                    print "U_adv = %.2f  amp = %.2f  harm = %.2f  phase = %.2f\n" % \
-                    (U_adv, amp, harm, phase)
-                    
-                    if abs(U_adv - 0.3) < 1e-5 or (U_adv - 0.5) < 1e-5 :
-                        itmax = 350
-                    
-                    else :
-                        itmax = 200
-                        
-                    parser.U_adv = U_adv
-                    parser.amp = amp
-                    parser.harm = harm
-                    parser.phase = phase
-                    parser.itmax = itmax
-                    test = Class_Roe_BFGS(parser)
-                    test.define_functions(lambda x : test.U_adv*x, lambda x : test.U_adv)
-                    test.obs_res(write=True, plot=True, overwrite=False)
-                    
-                    del test
-                    
-                    cnt += 1
-    print "%d cases" % cnt
+#    for U_adv in [0.3, 0.6, 0.9, 1.2, 1.5] :
+#        for amp in [0.5, 1, 1.5] :
+#            for harm in [1,2,3] :
+#                for phase in [0, 1./6., 1./3., 1./2.] :
+#                    print "U_adv = %.2f  amp = %.2f  harm = %.2f  phase = %.2f\n" % \
+#                    (U_adv, amp, harm, phase)
+#                    
+#                    if abs(U_adv - 0.3) < 1e-5 or (U_adv - 0.5) < 1e-5 :
+#                        itmax = 350
+#                    
+#                    else :
+#                        itmax = 200
+#                        
+#                    parser.U_adv = U_adv
+#                    parser.amp = amp
+#                    parser.harm = harm
+#                    parser.phase = phase
+#                    parser.itmax = itmax
+#                    test = Class_Roe_BFGS(parser)
+#                    test.define_functions(lambda x : test.U_adv*x, lambda x : test.U_adv)
+#                    test.obs_res(write=True, plot=True, overwrite=False)
+#                    
+#                    del test
+#                    
+#                    cnt += 1
+#    print "%d cases" % cnt
 #    test.get_obs_statistics()
     
     
