@@ -43,35 +43,51 @@ def parser() :
     Each entry is detailed in the help, and each of it has the most common default value. (run ... .py -h)\
     This on is to initialize different aspect of Burger Equation problem')
     ## VaV T_inf
+
     # Caractéristiques de la simulation voulue          
+    # Nx
     parser.add_argument('--Nx', '-Nx', action='store', type=int, default=250, dest='Nx', 
                         help='Define the number of discretization points : default %(default)d \n' )
+    # Nt
     parser.add_argument('--N_temp', '-Nt', action='store', type=int, default=100, dest='Nt', 
                         help='Define the number of time steps; default %(default)d \n' )
+    # L
     parser.add_argument('--domain_length', '-L', action='store', type=int, default=float(1), dest='L',
                         help='Define the length of the domain; default %(default)f \n' )
+    # tf
     parser.add_argument('--tfinal', '-tf', action='store', type=float, default=float(1), dest='tf',\
                         help='Define final time; default %(default)f \n')
+    # CFL
     parser.add_argument('--CFL', '-CFL', action='store', type=float, default=float(0.4), dest='CFL',\
                         help='CFL: velocity adimensionned; default %(default)f \n')
-    parser.add_argument('--amplitude', '-amp', action='store', type=float, default=0.5, dest="amp",\
-                        help='amplitude: the amplitude of sinus or init choc; Value default : %(default)f\n') 
+    # itmax
     parser.add_argument('--Iteration_max', '-itmax', action='store', type=int, default=500, dest='itmax', 
                         help='itmax: max iteration in obs or inference : default %(default)d \n' ) 
-    parser.add_argument('--n_harmonic', '-harm', action='store', type=int, default=1, dest='harm', 
-                        help='harm: harmonic in the sin init : default %(default)d \n' )                   
-    parser.add_argument('--phase', '-phase', action='store', type=float, default=0.,  dest='phase',
-                        help='phase: choose the phase in the sin init (pi inside) : default %(default)f \n' )
+    # U_advection
     parser.add_argument('--U_advection', '-U_adv', action='store', type = float, default=1., dest='U_adv',
                         help='U_adv is a advection velocity. default %(default)f \n' )
-    
-    parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=10, dest='num_real', 
-                        help='Define how many samples of epsilon(T) to draw for exact model. Default to %(default)d\n' )
-    parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', default=1 ,dest='beta_prior',\
-                        help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
-    # Strings
+
+    ## Arg relatifs a la condition initiale
+    # type de condition initiale
     parser.add_argument('--init_u', '-init_u', action='store', type=str, default='sin', dest='type_init', 
                         help='Choose initial condition on u. Defaut sin\n')
+    # Amplitude   
+    parser.add_argument('--amplitude', '-amp', action='store', type=float, default=0.5, dest="amp",\
+                        help='amplitude: the amplitude of sinus or init choc; Value default : %(default)f\n') 
+    # Nomdre d'Harmoniques
+    parser.add_argument('--n_harmonic', '-harm', action='store', type=int, default=1, dest='harm', 
+                        help='harm: harmonic in the sin init : default %(default)d \n' )                   
+    # Déphasage
+    parser.add_argument('--phase', '-phase', action='store', type=float, default=0.,  dest='phase',
+                        help='phase: choose the phase in the sin init (pi inside) : default %(default)f \n' )
+    
+    # Nombre de réalisation    
+    parser.add_argument('--number_realization', '-num_real', action='store', type=int, default=1, dest='num_real', 
+                        help='Define how many samples of epsilon(T) to draw for exact model. Default to %(default)d\n' )
+
+    # Autres paramètres 
+    parser.add_argument('--beta_prior', '-beta_prior', type=float ,action='store', default=1 ,dest='beta_prior',\
+                        help='beta_prior: first guess on the optimization solution. Value default to %(default)d\n')
     parser.add_argument('--datapath', '-dp', action='store', type=str, default='./data/roe/', dest='datapath', 
                         help='Define the directory where the data will be stored and read. Default to %(default)s \n')
     parser.add_argument('--type_J', '-typeJ', action='store', type=str, default="u", dest='typeJ',\
@@ -82,7 +98,7 @@ def parser() :
 class Class_Roe_BFGS():
 #---------------------------------------------------------------#
 #---------------------------------------------------------------#
-    def __init__(self, parser):
+    def __init__(self, parser, call=False):
         self.L, self.tf = parser.L, parser.tf
         self.Nx,  self.Nt   =   parser.Nx, parser.Nt, 
         
@@ -155,31 +171,33 @@ class Class_Roe_BFGS():
         self.sU_adv = self.sU_adv.replace('.', '_')
         self.sphase = self.sphase.replace('.', '_')
         self.sharm = self.sharm.replace('.', '_')
-
-        file_name = "roe_inference_case_done.txt"
-        file_loc = osp.join(self.datapath, file_name)
         
-        if osp.isfile(file_loc) == False :
-            ffile = open(file_loc, "w+")
-            ffile.write("Nx\t Nt\t CFL\t amp\t U_adv\t init\t harm\t phase\t itmax\n")
-            ffile.write("%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d\n"\
-                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax))
-        else :
-            ffile = open(file_loc, "a+")
-            ff = csv.reader(ffile, delimiter='\t')
+        if call == False  :
+        
+            file_name = "roe_inference_case_done.txt"
+            file_loc = osp.join(self.datapath, file_name)
             
-            for r in csv.reader(open(file_loc, "a+"), delimiter='\t') :
-                curr_line = "%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d"\
-                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax)
-
-                rr = [i.replace(' ','') for i in r]
+            if osp.isfile(file_loc) == False :
+                ffile = open(file_loc, "w+")
+                ffile.write("Nx\t Nt\t CFL\t amp\t U_adv\t init\t harm\t phase\t itmax\n")
+                ffile.write("%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d\n"\
+                        %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax))
+            else :
+                ffile = open(file_loc, "a+")
+                ff = csv.reader(ffile, delimiter='\t')
                 
-                if rr == curr_line.split() :
-                    sys.exit("%s\nAlready exists case (see %s)" %(curr_line, file_name))
-            
-            ffile.write("%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d\n"\
-                    %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax))
-        ffile.close()
+                for r in csv.reader(open(file_loc, "a+"), delimiter='\t') :
+                    curr_line = "%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d"\
+                        %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax)
+
+                    rr = [i.replace(' ','') for i in r]
+                    
+                    if rr == curr_line.split() :
+                        sys.exit("%s\nAlready exists case (see %s)" %(curr_line, file_name))
+                
+                ffile.write("%d\t %d\t %s\t %s\t %s\t %s\t %s\t %s\t %d\n"\
+                        %(self.Nx, self.Nt, self.sCFL, self.samp, self.sU_adv, self.type_init, self.sharm, self.sphase, self.itmax))
+            ffile.close()
         
 #---------------------------------------------------------------#        
 #---------------------------------------------------------------#
