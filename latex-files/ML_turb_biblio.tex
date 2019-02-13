@@ -385,15 +385,15 @@ Ils testent deux types de réseaux de neurones : le MLP classique et le TBNN qui
 \end{figure}
  
 \noindent Cette forme de neurones à pour but l'écriture du tenseur anisotropique comme une combinaison linéaire d'une base de tenseur bien particulière.  Les coefficients de cette combinaison sont différentes fonctions des invariants du problème. L'article se base sur les travaux de \cite{pope1975more} et de \cite{smith1965isotropic}.\\
-On alors propose de modifier l'hypothèse de Boussinesq qui consistait à écrire 
+On part de l'hypothèse de Boussinesq qui s'écrit :
 \begin{equation*}
-\overline{u_i' u_j'} = \frac{2}{3} k \delta_{ij} - 2 \nu_t \bar{S_{ij}}
+\overline{u_i' u_j'} = \frac{2}{3} k \delta_{ij} - 2 \nu_t \overline{S_{ij}}
 \end{equation*}
- Il propose plutôt de calculer 
+Puis on choisit une partie déviatorique plus complexe :
 \begin{equation*}
-\frac{\overline!{u_i' u_j'} }{2k}= \frac{1}{3} \delta_{ij} + \sum_\lambda G^\lambda T^\lambda_{ij} 
+\frac{\overline{u_i' u_j'} }{2k}= \frac{1}{3} \delta_{ij} + \sum_\lambda G^\lambda T^\lambda_{ij} 
 \end{equation*}
-Avec une forme bien particulière pour $G$ et $T$. La première est une fonction des invariants du problème qui sont dans le cas tridimensionnel : 
+Avec une forme bien particulière pour $G$ et $T$. La première est une fonction des invariants du problème qui sont dans le cas tridimensionnel (ce sont les inputs de notre NN cf. plus loin) : 
 \begin{equation*}
 \mathbf{\Omega}= \left \{ \{\textbf{S}^2\}, \{\textbf{R}^2\}, \{\textbf{S}^3\}, \{\textbf{R}^2\textbf{S}\}, \{\textbf{R}^2 \textbf{S}^2\}\right \} 
 \end{equation*}
@@ -402,7 +402,7 @@ Avec une forme bien particulière pour $G$ et $T$. La première est une fonction
 \begin{align*}
 \textbf{S} &= \frac{k}{2\varepsilon}\left(\nabla_x\textbf{U} + \nabla^T_x\textbf{U} \right) \\[0.2cm]
 \textbf{R} &= \frac{k}{2 \varepsilon}\left(\nabla_x\textbf{U} - \nabla^T_x\textbf{U} \right) 
-\end{align*}
+\end{align*} 
 
 \pagebreak 
 
@@ -430,8 +430,11 @@ Avec une forme bien particulière pour $G$ et $T$. La première est une fonction
 \end{align*}
 
 \end{multicols}
+\vspace{2mm}
 
-\noindent Si $T$ peut être calculé en cours de processus, le calcul de $G$ reste encore obscur et justement les coefficients par rapport aux invariants sont définis par le training du NN utilisé ici avec 8 HL \footnote{La dernière HL en aura 10.}, 30 nœuds chacune et $learning\_rate = 2.5 \times 10^{-6}$. \\
+Si $T$ peut être calculé en cours de processus, apprendre $G$ est l'objectif.\\[1mm]
+
+ Voici l'architecture du NN utilisé : 7 HL de neurones chacunes et une huitième de 10 neurones. Le learning rate $ \eta = 2.5 \times 10^{-7}$ activation \navy \textit{leakyrelu} \bk. \\
 
 Comme on peut le voir Fig.\eqref{TBNN}, les invariants sont injectés en entrée du réseau, suivent ensuite un processus classique propre au Feed-Forward NN. La dernière HL représentera les combinaisons linéaires de coefficients et de la base $\mathbf{\Omega}$. \\
 L'output s'écrira alors : $$ b_{ij} = \sum_{n=1}^{10} g^{(n)}(\lambda_1,..,\lambda_5) T_{ij}^{(n)}$$ \\
@@ -558,6 +561,10 @@ On résume les normalisation des entrées dans le tableau suivant, les 47 invari
 	$\widehat{q_3}$ & $\displaystyle \frac{\text{Éechelle tempo. Turb}}{\text{Échelle tempo. def. moyenne}}$  & $\displaystyle \frac{k}{\varepsilon}$  &$ \displaystyle \frac{1}{\norm{\textbf{S}}}$ &\\[12mm] \hline
 	\end{tabular}
 \end{table}
+
+\pagebreak
+
+\subsection*{\cite{kaandorp2018stochastic}}
 
 \pagebreak
 
